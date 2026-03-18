@@ -16,8 +16,8 @@ import Strategy from "./pages/Strategy";
 import SocialMedia from "./pages/SocialMedia";
 import Analytics from "./pages/Analytics";
 import ProfilePage from "./pages/ProfilePage";
-
 function Router() {
+  // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
       <Route path="/" component={Dashboard} />

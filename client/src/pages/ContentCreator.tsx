@@ -1,14 +1,21 @@
 /*
  * G2A Growth Engine – ContentCreator Page
  * Design: "Dark Ops Dashboard"
- * Features: Post cards per platform, edit text, edit image URL/prompt, approve, schedule
+ * Features: Post cards, calendar view, real AI image generation, edit, approve, schedule
  */
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import DetailModal from "@/components/DetailModal";
-import { PenTool, Linkedin, Facebook, Instagram, Image, Edit2, CheckCircle, Calendar, ChevronDown, Eye, Sparkles, Loader2, RefreshCw } from "lucide-react";
+import {
+  PenTool, Linkedin, Facebook, Instagram, Image, Edit2, CheckCircle,
+  Calendar, ChevronDown, Eye, Sparkles, Loader2, LayoutGrid, CalendarDays,
+  ChevronLeft, ChevronRight
+} from "lucide-react";
 import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay, parseISO, addMonths, subMonths } from "date-fns";
+import { hu } from "date-fns/locale";
 
 type PostStatus = "draft" | "pending_approval" | "approved" | "scheduled" | "published";
 type Platform = "linkedin" | "facebook" | "instagram";
@@ -42,50 +49,148 @@ const statusConfig: Record<PostStatus, { label: string; cls: string }> = {
 
 const statusOptions: PostStatus[] = ["draft", "pending_approval", "approved", "scheduled", "published"];
 
-const unsplashImages = [
-  "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80",
-  "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=800&q=80",
-  "https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&q=80",
-  "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=800&q=80",
-];
-
 const initialPosts: Post[] = [
   {
     id: "p1", platform: "linkedin", weekRef: "1. Hét", pillar: "AI a marketingben",
     title: "AI eszközök a napi marketing munkában",
     text: `A legtöbb vállalat még mindig manuálisan végzi azt, amit az AI másodpercek alatt elvégez.\n\nAz outbound értékesítés, a tartalomgyártás és a kampányoptimalizálás – mind automatizálható. A G2A Marketing Growth Engine napi szinten azonosít potenciális ügyfeleket, személyre szabott emaileket generál és social media tartalmakat készít.\n\nEz nem a jövő – ez ma elérhető.\n\n👉 Kíváncsi vagy, hogyan működik? Írj üzenetet!\n\n#AIMarketing #B2BMarketing #GrowthEngine`,
-    imageUrl: unsplashImages[0],
+    imageUrl: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80",
     imagePrompt: "Professional AI marketing dashboard with data visualization, dark modern UI, blue accent colors",
     status: "pending_approval",
   },
   {
     id: "p2", platform: "facebook", weekRef: "1. Hét", pillar: "AI a marketingben",
     title: "AI marketing – Facebook poszt",
-    text: `Tudtad, hogy az AI ma már képes személyre szabott üzleti emaileket írni, stratégiát alkotni és tartalmat gyártani?\n\nA G2A Marketing ezt valósítja meg ügyfeleinek naponta. Automatizált lead-gyűjtés, email piszkozatok és social media tartalmak – mindezt emberi jóváhagyással kombinálva.\n\nSzeretnéd látni, hogyan működik? Kommentelj vagy küldj üzenetet! 👇`,
-    imageUrl: unsplashImages[1],
+    text: `Tudtad, hogy az AI ma már képes személyre szabott üzleti emaileket írni, stratégiát alkotni és tartalmat gyártani?\n\nA G2A Marketing ezt valósítja meg ügyfeleinek naponta.\n\nSzeretnéd látni, hogyan működik? Kommentelj vagy küldj üzenetet! 👇`,
+    imageUrl: "https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=800&q=80",
     imagePrompt: "Business team working with AI tools, modern office, warm lighting, professional atmosphere",
     status: "pending_approval",
+    scheduledAt: "2026-03-25 10:00",
   },
   {
     id: "p3", platform: "instagram", weekRef: "1. Hét", pillar: "AI a marketingben",
     title: "AI marketing – Instagram poszt",
-    text: `AI + Marketing = Skálázható növekedés 🚀\n\nNapi automatizált lead-azonosítás ✅\nSzemélyre szabott email piszkozatok ✅\nHeti social media tartalmak ✅\n\nMindezt emberi kontroll mellett.\n\n#AIMarketing #B2BMarketing #GrowthEngine #MarketingAutomation`,
-    imageUrl: unsplashImages[2],
+    text: `AI + Marketing = Skálázható növekedés 🚀\n\nNapi automatizált lead-azonosítás ✅\nSzemélyre szabott email piszkozatok ✅\nHeti social media tartalmak ✅\n\n#AIMarketing #B2BMarketing #GrowthEngine`,
+    imageUrl: "https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&q=80",
     imagePrompt: "Minimalist marketing growth chart, clean design, vibrant colors, social media aesthetic",
     status: "draft",
+    scheduledAt: "2026-03-27 09:00",
   },
   {
     id: "p4", platform: "linkedin", weekRef: "2. Hét", pillar: "Stratégiai gondolkodás",
     title: "Stratégiai vs. taktikai marketing",
-    text: `A legtöbb cég taktikázik, miközben stratégiára lenne szüksége.\n\nTaktika = posztolás. Stratégia = rendszer.\n\nAz igazi növekedés nem abból fakad, hogy minden nap posztolsz. Hanem abból, hogy minden poszt egy nagyobb cél felé visz.\n\nA G2A Marketing Growth Engine ezt a rendszert építi fel – automatizáltan, emberi jóváhagyással.\n\n#Stratégia #B2BMarketing #MarketingStrategy`,
-    imageUrl: unsplashImages[3],
+    text: `A legtöbb cég taktikázik, miközben stratégiára lenne szüksége.\n\nTaktika = posztolás. Stratégia = rendszer.\n\nAz igazi növekedés nem abból fakad, hogy minden nap posztolsz. Hanem abból, hogy minden poszt egy nagyobb cél felé visz.\n\n#Stratégia #B2BMarketing #MarketingStrategy`,
+    imageUrl: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=800&q=80",
     imagePrompt: "Strategic planning board with charts and arrows, professional business setting, dark theme",
-    status: "draft",
+    status: "approved",
+    scheduledAt: "2026-04-01 10:00",
   },
 ];
 
+// ─── Calendar View ─────────────────────────────────────────────────────────────
+
+function CalendarView({ posts, onPostClick }: { posts: Post[]; onPostClick: (p: Post) => void }) {
+  const [currentMonth, setCurrentMonth] = useState(new Date(2026, 2, 1)); // March 2026
+
+  const days = eachDayOfInterval({ start: startOfMonth(currentMonth), end: endOfMonth(currentMonth) });
+  const firstDayOfWeek = (getDay(days[0]) + 6) % 7; // Monday-based
+
+  const scheduledPosts = useMemo(() => {
+    const map: Record<string, Post[]> = {};
+    posts.forEach((p) => {
+      if (p.scheduledAt) {
+        const dateKey = p.scheduledAt.slice(0, 10);
+        if (!map[dateKey]) map[dateKey] = [];
+        map[dateKey].push(p);
+      }
+    });
+    return map;
+  }, [posts]);
+
+  const weekDays = ["H", "K", "Sze", "Cs", "P", "Szo", "V"];
+
+  return (
+    <div className="g2a-card">
+      {/* Calendar Header */}
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-semibold" style={{ color: "oklch(0.88 0.008 240)", fontFamily: "Sora, sans-serif" }}>
+          {format(currentMonth, "yyyy. MMMM", { locale: hu })}
+        </h3>
+        <div className="flex items-center gap-1">
+          <button onClick={() => setCurrentMonth((m) => subMonths(m, 1))}
+            className="p-1.5 rounded-lg transition-colors hover:bg-white/5" style={{ color: "oklch(0.55 0.015 240)" }}>
+            <ChevronLeft size={16} />
+          </button>
+          <button onClick={() => setCurrentMonth(new Date(2026, 2, 1))}
+            className="px-2 py-1 rounded-lg text-xs transition-colors hover:bg-white/5" style={{ color: "oklch(0.55 0.015 240)" }}>
+            Ma
+          </button>
+          <button onClick={() => setCurrentMonth((m) => addMonths(m, 1))}
+            className="p-1.5 rounded-lg transition-colors hover:bg-white/5" style={{ color: "oklch(0.55 0.015 240)" }}>
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
+
+      {/* Weekday Headers */}
+      <div className="grid grid-cols-7 mb-2">
+        {weekDays.map((d) => (
+          <div key={d} className="text-center text-xs py-1" style={{ color: "oklch(0.45 0.015 240)" }}>{d}</div>
+        ))}
+      </div>
+
+      {/* Days Grid */}
+      <div className="grid grid-cols-7 gap-1">
+        {/* Empty cells for first week offset */}
+        {Array.from({ length: firstDayOfWeek }).map((_, i) => (
+          <div key={`empty-${i}`} />
+        ))}
+        {days.map((day) => {
+          const dateKey = format(day, "yyyy-MM-dd");
+          const dayPosts = scheduledPosts[dateKey] ?? [];
+          const isToday = isSameDay(day, new Date());
+          return (
+            <div key={dateKey} className="min-h-[60px] rounded-lg p-1.5 transition-colors"
+              style={{ background: isToday ? "oklch(0.6 0.2 255 / 10%)" : "oklch(0.22 0.02 255 / 50%)", border: isToday ? "1px solid oklch(0.6 0.2 255 / 30%)" : "1px solid transparent" }}>
+              <span className="text-xs block mb-1" style={{ color: isToday ? "oklch(0.7 0.2 255)" : "oklch(0.55 0.015 240)", fontWeight: isToday ? "600" : "400" }}>
+                {format(day, "d")}
+              </span>
+              <div className="space-y-0.5">
+                {dayPosts.slice(0, 2).map((p) => (
+                  <button key={p.id} onClick={() => onPostClick(p)}
+                    className="w-full text-left px-1.5 py-0.5 rounded text-xs truncate transition-colors hover:opacity-80"
+                    style={{ background: platformConfig[p.platform].color + "30", color: platformConfig[p.platform].color }}>
+                    {platformConfig[p.platform].icon}
+                    <span className="ml-1 text-xs">{p.title.slice(0, 12)}…</span>
+                  </button>
+                ))}
+                {dayPosts.length > 2 && (
+                  <span className="text-xs" style={{ color: "oklch(0.45 0.015 240)" }}>+{dayPosts.length - 2} több</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Legend */}
+      <div className="flex items-center gap-4 mt-4 pt-3" style={{ borderTop: "1px solid oklch(1 0 0 / 6%)" }}>
+        {(Object.keys(platformConfig) as Platform[]).map((p) => (
+          <div key={p} className="flex items-center gap-1.5">
+            <span style={{ color: platformConfig[p].color }}>{platformConfig[p].icon}</span>
+            <span className="text-xs" style={{ color: "oklch(0.55 0.015 240)" }}>{platformConfig[p].label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Component ────────────────────────────────────────────────────────────
+
 export default function ContentCreator() {
   const [posts, setPosts] = useState<Post[]>(initialPosts);
+  const [viewMode, setViewMode] = useState<"grid" | "calendar">("grid");
   const [viewPost, setViewPost] = useState<Post | null>(null);
   const [editPost, setEditPost] = useState<Post | null>(null);
   const [schedulePost, setSchedulePost] = useState<Post | null>(null);
@@ -94,32 +199,26 @@ export default function ContentCreator() {
   const [scheduleTime, setScheduleTime] = useState("09:00");
   const [openStatusId, setOpenStatusId] = useState<string | null>(null);
   const [filterPlatform, setFilterPlatform] = useState<Platform | "">("");
-  const [generatingImage, setGeneratingImage] = useState(false);
 
-  const handleGenerateImage = async () => {
+  // Real AI image generation via tRPC
+  const generateImageMutation = trpc.ai.generateImage.useMutation({
+    onSuccess: (data) => {
+      if (data.url) {
+        setEditForm((p) => ({ ...p, imageUrl: data.url! }));
+        toast.success("Kép sikeresen generálva!", { description: "Az URL automatikusan be lett töltve." });
+      }
+    },
+    onError: (err) => {
+      toast.error("Képgenerálás sikertelen", { description: err.message });
+    },
+  });
+
+  const handleGenerateImage = () => {
     if (!editForm.imagePrompt.trim()) {
-      toast.error("Adj meg egy kép promptot a generatáláshoz!");
+      toast.error("Adj meg egy kép promptot a generáláshoz!");
       return;
     }
-    setGeneratingImage(true);
-    // Simulate AI image generation with a relevant Unsplash image based on prompt keywords
-    await new Promise((r) => setTimeout(r, 1800));
-    const promptLower = editForm.imagePrompt.toLowerCase();
-    let generatedUrl = "";
-    if (promptLower.includes("ai") || promptLower.includes("tech") || promptLower.includes("data")) {
-      generatedUrl = `https://images.unsplash.com/photo-1677442135703-1787eea5ce01?w=800&q=80&t=${Date.now()}`;
-    } else if (promptLower.includes("team") || promptLower.includes("business") || promptLower.includes("office")) {
-      generatedUrl = `https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&q=80&t=${Date.now()}`;
-    } else if (promptLower.includes("social") || promptLower.includes("marketing") || promptLower.includes("growth")) {
-      generatedUrl = `https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=800&q=80&t=${Date.now()}`;
-    } else if (promptLower.includes("strateg") || promptLower.includes("plan")) {
-      generatedUrl = `https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&q=80&t=${Date.now()}`;
-    } else {
-      generatedUrl = `https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80&t=${Date.now()}`;
-    }
-    setEditForm((p) => ({ ...p, imageUrl: generatedUrl }));
-    setGeneratingImage(false);
-    toast.success("Kép sikeresen generálva!", { description: "Az URL automatikusan be lett töltve." });
+    generateImageMutation.mutate({ prompt: editForm.imagePrompt });
   };
 
   const updateStatus = (id: string, status: PostStatus) => {
@@ -165,69 +264,91 @@ export default function ContentCreator() {
         {[
           { label: "Összes Poszt", value: String(posts.length), color: "oklch(0.6 0.2 255)" },
           { label: "Jóváhagyásra Vár", value: String(posts.filter((p) => p.status === "pending_approval").length), color: "oklch(0.75 0.18 75)" },
-          { label: "Jóváhagyva", value: String(posts.filter((p) => p.status === "approved").length), color: "oklch(0.65 0.18 165)" },
-          { label: "Ütemezve", value: String(posts.filter((p) => p.status === "scheduled").length), color: "oklch(0.6 0.2 290)" },
+          { label: "Ütemezve", value: String(posts.filter((p) => p.status === "scheduled").length), color: "oklch(0.65 0.2 165)" },
+          { label: "Publikálva", value: String(posts.filter((p) => p.status === "published").length), color: "oklch(0.7 0.18 140)" },
         ].map((s) => (
-          <div key={s.label} className="g2a-stat-card p-4">
-            <p className="text-2xl font-bold mb-1" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>{s.value}</p>
-            <p className="text-xs" style={{ color: "oklch(0.55 0.015 240)" }}>{s.label}</p>
+          <div key={s.label} className="g2a-card">
+            <p className="text-xs mb-1" style={{ color: "oklch(0.55 0.015 240)" }}>{s.label}</p>
+            <p className="text-2xl font-bold" style={{ color: s.color, fontFamily: "Sora, sans-serif" }}>{s.value}</p>
           </div>
         ))}
       </div>
 
-      {/* Platform Filter */}
-      <div className="flex items-center gap-2 mb-5">
-        {(["", "linkedin", "facebook", "instagram"] as const).map((p) => (
-          <button
-            key={p}
-            onClick={() => setFilterPlatform(p)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-            style={{
-              background: filterPlatform === p ? (p ? `${platformConfig[p]?.color.replace(")", " / 20%)")}` : "oklch(0.6 0.2 255 / 20%)") : "oklch(0.22 0.02 255)",
-              color: filterPlatform === p ? (p ? platformConfig[p]?.color : "oklch(0.75 0.18 255)") : "oklch(0.55 0.015 240)",
-              border: `1px solid ${filterPlatform === p ? (p ? platformConfig[p]?.color.replace(")", " / 30%)") : "oklch(0.6 0.2 255 / 30%)") : "oklch(1 0 0 / 8%)"}`,
-            }}
-          >
-            {p ? platformConfig[p].icon : <PenTool size={12} />}
-            {p ? platformConfig[p].label : "Összes"}
+      {/* Toolbar */}
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-2">
+          {/* Platform filter */}
+          <button onClick={() => setFilterPlatform("")}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+            style={{ background: filterPlatform === "" ? "oklch(0.6 0.2 255)" : "oklch(0.22 0.02 255)", color: filterPlatform === "" ? "white" : "oklch(0.65 0.015 240)" }}>
+            Összes
           </button>
-        ))}
+          {(Object.keys(platformConfig) as Platform[]).map((p) => (
+            <button key={p} onClick={() => setFilterPlatform(p === filterPlatform ? "" : p)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+              style={{ background: filterPlatform === p ? platformConfig[p].color + "30" : "oklch(0.22 0.02 255)", color: filterPlatform === p ? platformConfig[p].color : "oklch(0.65 0.015 240)" }}>
+              {platformConfig[p].icon}{platformConfig[p].label}
+            </button>
+          ))}
+        </div>
+        {/* View toggle */}
+        <div className="flex items-center gap-1 p-1 rounded-lg" style={{ background: "oklch(0.22 0.02 255)" }}>
+          <button onClick={() => setViewMode("grid")}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
+            style={{ background: viewMode === "grid" ? "oklch(0.6 0.2 255)" : "transparent", color: viewMode === "grid" ? "white" : "oklch(0.55 0.015 240)" }}>
+            <LayoutGrid size={13} />Lista
+          </button>
+          <button onClick={() => setViewMode("calendar")}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
+            style={{ background: viewMode === "calendar" ? "oklch(0.6 0.2 255)" : "transparent", color: viewMode === "calendar" ? "white" : "oklch(0.55 0.015 240)" }}>
+            <CalendarDays size={13} />Naptár
+          </button>
+        </div>
       </div>
 
-      {/* Posts by Week */}
-      {weeks.map((week) => {
+      {/* Calendar View */}
+      {viewMode === "calendar" && (
+        <CalendarView posts={posts} onPostClick={(p) => setViewPost(p)} />
+      )}
+
+      {/* Grid View */}
+      {viewMode === "grid" && weeks.map((week) => {
         const weekPosts = filtered.filter((p) => p.weekRef === week);
         if (weekPosts.length === 0) return null;
         return (
           <div key={week} className="mb-6">
-            <h3 className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: "oklch(0.5 0.015 240)", fontFamily: "Sora, sans-serif" }}>{week}</h3>
-            <div className="grid grid-cols-2 gap-4">
-              {weekPosts.map((post) => {
-                const plat = platformConfig[post.platform];
-                const st = statusConfig[post.status];
-                return (
-                  <div key={post.id} className="g2a-card overflow-hidden">
-                    {/* Image */}
-                    <div className="relative h-36 overflow-hidden">
-                      <img src={post.imageUrl} alt={post.title} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = unsplashImages[0]; }} />
-                      <div className="absolute inset-0" style={{ background: "linear-gradient(to top, oklch(0.16 0.022 255 / 80%), transparent)" }} />
-                      <div className="absolute top-2 left-2 flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium" style={{ background: `${plat.color.replace(")", " / 85%)")}`, color: "white" }}>
-                        {plat.icon}{plat.label}
+            <h3 className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: "oklch(0.45 0.015 240)" }}>{week}</h3>
+            <div className="grid grid-cols-3 gap-4">
+              {weekPosts.map((post) => (
+                <div key={post.id} className="g2a-card flex flex-col gap-3">
+                  {/* Image */}
+                  {post.imageUrl && (
+                    <div className="relative rounded-lg overflow-hidden" style={{ height: 140 }}>
+                      <img src={post.imageUrl} alt={post.title} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                      <div className="absolute inset-0" style={{ background: "linear-gradient(to top, oklch(0.15 0.02 255 / 80%), transparent)" }} />
+                      <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
+                        <span style={{ color: platformConfig[post.platform].color }}>{platformConfig[post.platform].icon}</span>
+                        <span className="text-xs font-medium" style={{ color: "white" }}>{platformConfig[post.platform].label}</span>
                       </div>
-                      <div className="absolute top-2 right-2 relative">
-                        <button
-                          onClick={() => setOpenStatusId(openStatusId === post.id ? null : post.id)}
-                          className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium status-badge ${st.cls}`}
-                        >
-                          {st.label}<ChevronDown size={10} />
+                    </div>
+                  )}
+                  {/* Content */}
+                  <div className="flex-1">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <p className="text-sm font-semibold leading-tight" style={{ color: "oklch(0.88 0.008 240)", fontFamily: "Sora, sans-serif" }}>{post.title}</p>
+                      {/* Status dropdown */}
+                      <div className="relative flex-shrink-0">
+                        <button onClick={() => setOpenStatusId(openStatusId === post.id ? null : post.id)}
+                          className={`${statusConfig[post.status].cls} flex items-center gap-1 text-xs px-2 py-0.5 rounded-full cursor-pointer`}>
+                          {statusConfig[post.status].label}<ChevronDown size={10} />
                         </button>
                         {openStatusId === post.id && (
-                          <div className="absolute right-0 top-7 z-20 rounded-lg overflow-hidden shadow-xl" style={{ background: "oklch(0.2 0.022 255)", border: "1px solid oklch(1 0 0 / 12%)", minWidth: "150px" }}>
+                          <div className="absolute right-0 top-full mt-1 rounded-lg overflow-hidden z-20 min-w-[140px]"
+                            style={{ background: "oklch(0.2 0.02 255)", border: "1px solid oklch(1 0 0 / 10%)", boxShadow: "0 8px 24px oklch(0 0 0 / 40%)" }}>
                             {statusOptions.map((s) => (
-                              <button key={s} onClick={() => updateStatus(post.id, s)} className="w-full text-left px-3 py-2 text-xs transition-colors" style={{ color: post.status === s ? "oklch(0.75 0.18 255)" : "oklch(0.72 0.01 240)" }}
-                                onMouseEnter={(e) => (e.currentTarget.style.background = "oklch(1 0 0 / 6%)")}
-                                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                              >
+                              <button key={s} onClick={() => updateStatus(post.id, s)}
+                                className="w-full text-left px-3 py-2 text-xs transition-colors hover:bg-white/5"
+                                style={{ color: post.status === s ? "oklch(0.7 0.2 255)" : "oklch(0.72 0.01 240)" }}>
                                 {statusConfig[s].label}
                               </button>
                             ))}
@@ -235,38 +356,35 @@ export default function ContentCreator() {
                         )}
                       </div>
                     </div>
-                    {/* Content */}
-                    <div className="p-4">
-                      <p className="text-sm font-semibold mb-1" style={{ color: "oklch(0.92 0.008 240)", fontFamily: "Sora, sans-serif" }}>{post.title}</p>
-                      <p className="text-xs mb-1" style={{ color: "oklch(0.5 0.015 240)" }}>Pillér: {post.pillar}</p>
-                      <p className="text-xs line-clamp-2 mb-3" style={{ color: "oklch(0.6 0.015 240)" }}>{post.text.split("\n")[0]}</p>
-                      {post.scheduledAt && (
-                        <p className="text-xs mb-2 flex items-center gap-1" style={{ color: "oklch(0.6 0.2 290)" }}>
-                          <Calendar size={11} />Ütemezve: {post.scheduledAt}
-                        </p>
-                      )}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <button onClick={() => setViewPost(post)} className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-md hover:opacity-80" style={{ background: "oklch(0.6 0.2 255 / 15%)", color: "oklch(0.75 0.18 255)" }}>
-                          <Eye size={11} />Megtekintés
-                        </button>
-                        <button onClick={() => openEdit(post)} className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-md hover:opacity-80" style={{ background: "oklch(0.75 0.18 75 / 15%)", color: "oklch(0.8 0.15 75)" }}>
-                          <Edit2 size={11} />Szerkesztés
-                        </button>
-                        {(post.status === "pending_approval" || post.status === "draft") && (
-                          <button onClick={() => handleApprove(post)} className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-md hover:opacity-80" style={{ background: "oklch(0.65 0.18 165 / 15%)", color: "oklch(0.75 0.15 165)" }}>
-                            <CheckCircle size={11} />Jóváhagyás
-                          </button>
-                        )}
-                        {post.status === "approved" && (
-                          <button onClick={() => { setSchedulePost(post); setScheduleDate(""); setScheduleTime("09:00"); }} className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-md hover:opacity-80" style={{ background: "oklch(0.6 0.2 290 / 15%)", color: "oklch(0.7 0.18 290)" }}>
-                            <Calendar size={11} />Ütemezés
-                          </button>
-                        )}
-                      </div>
-                    </div>
+                    <p className="text-xs line-clamp-2 mb-2" style={{ color: "oklch(0.55 0.015 240)" }}>{post.text.split("\n")[0]}</p>
+                    {post.scheduledAt && (
+                      <p className="text-xs mb-2" style={{ color: "oklch(0.65 0.2 165)" }}>
+                        <Calendar size={10} className="inline mr-1" />{post.scheduledAt}
+                      </p>
+                    )}
                   </div>
-                );
-              })}
+                  {/* Actions */}
+                  <div className="flex items-center gap-1.5 pt-2" style={{ borderTop: "1px solid oklch(1 0 0 / 6%)" }}>
+                    <button onClick={() => setViewPost(post)} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs transition-colors hover:bg-white/5" style={{ color: "oklch(0.65 0.015 240)" }}>
+                      <Eye size={12} />Megtekint
+                    </button>
+                    <button onClick={() => openEdit(post)} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs transition-colors hover:bg-white/5" style={{ color: "oklch(0.65 0.015 240)" }}>
+                      <Edit2 size={12} />Szerkeszt
+                    </button>
+                    {post.status !== "approved" && post.status !== "published" && (
+                      <button onClick={() => handleApprove(post)} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs transition-colors hover:bg-white/5" style={{ color: "oklch(0.65 0.2 165)" }}>
+                        <CheckCircle size={12} />Jóváhagy
+                      </button>
+                    )}
+                    {(post.status === "approved" || post.status === "scheduled") && (
+                      <button onClick={() => { setSchedulePost(post); setScheduleDate(post.scheduledAt?.slice(0, 10) ?? ""); setScheduleTime(post.scheduledAt?.slice(11, 16) ?? "09:00"); }}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs transition-colors hover:bg-white/5 ml-auto" style={{ color: "oklch(0.6 0.2 290)" }}>
+                        <Calendar size={12} />Ütemez
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         );
@@ -274,55 +392,52 @@ export default function ContentCreator() {
 
       {/* View Modal */}
       {viewPost && (
-        <DetailModal isOpen={!!viewPost} onClose={() => setViewPost(null)} title={viewPost.title} subtitle={`${platformConfig[viewPost.platform].label} · ${viewPost.weekRef}`}
+        <DetailModal isOpen={!!viewPost} onClose={() => setViewPost(null)} title={viewPost.title}
+          subtitle={`${platformConfig[viewPost.platform].label} – ${viewPost.weekRef} – ${viewPost.pillar}`}
           footer={
             <>
               <button onClick={() => setViewPost(null)} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.75 0.015 240)" }}>Bezárás</button>
-              <button onClick={() => openEdit(viewPost)} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "oklch(0.75 0.18 75)", color: "white" }}>
+              <button onClick={() => openEdit(viewPost)} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "oklch(0.6 0.2 255)", color: "white" }}>
                 <Edit2 size={13} className="inline mr-1.5" />Szerkesztés
               </button>
-              {(viewPost.status === "pending_approval" || viewPost.status === "draft") && (
-                <button onClick={() => handleApprove(viewPost)} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "oklch(0.65 0.18 165)", color: "white" }}>
+              {viewPost.status !== "approved" && viewPost.status !== "published" && (
+                <button onClick={() => handleApprove(viewPost)} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "oklch(0.65 0.2 165)", color: "white" }}>
                   <CheckCircle size={13} className="inline mr-1.5" />Jóváhagyás
-                </button>
-              )}
-              {viewPost.status === "approved" && (
-                <button onClick={() => { setSchedulePost(viewPost); setViewPost(null); setScheduleDate(""); setScheduleTime("09:00"); }} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "oklch(0.6 0.2 290)", color: "white" }}>
-                  <Calendar size={13} className="inline mr-1.5" />Ütemezés
                 </button>
               )}
             </>
           }
         >
           <div className="space-y-4">
-            <img src={viewPost.imageUrl} alt={viewPost.title} className="w-full h-48 object-cover rounded-lg" onError={(e) => { (e.target as HTMLImageElement).src = unsplashImages[0]; }} />
-            <div className="rounded-lg p-4" style={{ background: "oklch(0.22 0.02 255)" }}>
-              <p className="text-xs font-semibold mb-2 uppercase tracking-wider" style={{ color: "oklch(0.55 0.015 240)", fontFamily: "Sora, sans-serif" }}>POSZT SZÖVEG</p>
-              {viewPost.text.split("\n").map((line, i) => (
-                line === "" ? <div key={i} className="h-2" /> : <p key={i} className="text-sm" style={{ color: "oklch(0.78 0.01 240)" }}>{line}</p>
-              ))}
+            {viewPost.imageUrl && (
+              <img src={viewPost.imageUrl} alt={viewPost.title} className="w-full h-48 object-cover rounded-xl" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+            )}
+            <div className="rounded-lg p-4 whitespace-pre-wrap text-sm leading-relaxed" style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.82 0.008 240)" }}>
+              {viewPost.text}
             </div>
-            <div className="rounded-lg p-3" style={{ background: "oklch(0.22 0.02 255)" }}>
-              <p className="text-xs mb-1" style={{ color: "oklch(0.5 0.015 240)" }}>Kép prompt</p>
-              <p className="text-sm" style={{ color: "oklch(0.72 0.01 240)" }}>{viewPost.imagePrompt}</p>
-            </div>
+            {viewPost.scheduledAt && (
+              <div className="flex items-center gap-2 text-xs" style={{ color: "oklch(0.65 0.2 165)" }}>
+                <Calendar size={13} />Ütemezve: {viewPost.scheduledAt}
+              </div>
+            )}
           </div>
         </DetailModal>
       )}
 
       {/* Edit Modal */}
       {editPost && (
-        <DetailModal isOpen={!!editPost} onClose={() => setEditPost(null)} title={`Szerkesztés – ${editPost.title}`} subtitle="Módosítsd a szöveget és a képet"
+        <DetailModal isOpen={!!editPost} onClose={() => setEditPost(null)} title="Poszt Szerkesztése"
+          subtitle={`${platformConfig[editPost.platform].label} – ${editPost.title}`}
           footer={
             <>
               <button onClick={() => setEditPost(null)} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.75 0.015 240)" }}>Mégse</button>
-              <button onClick={handleSaveEdit} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "oklch(0.6 0.2 255)", color: "white", fontFamily: "Sora, sans-serif" }}>Mentés</button>
+              <button onClick={handleSaveEdit} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "oklch(0.6 0.2 255)", color: "white" }}>Mentés</button>
             </>
           }
         >
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: "oklch(0.65 0.015 240)" }}>Poszt szöveg</label>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: "oklch(0.65 0.015 240)" }}>Szöveg</label>
               <textarea value={editForm.text} onChange={(e) => setEditForm((p) => ({ ...p, text: e.target.value }))} rows={8}
                 className="w-full px-3 py-2.5 rounded-lg text-sm outline-none resize-none"
                 style={{ background: "oklch(0.22 0.02 255)", border: "1px solid oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)", lineHeight: "1.6" }}
@@ -346,11 +461,17 @@ export default function ContentCreator() {
                 <label className="text-xs font-medium" style={{ color: "oklch(0.65 0.015 240)" }}>Kép prompt (AI generáláshoz)</label>
                 <button
                   onClick={handleGenerateImage}
-                  disabled={generatingImage}
+                  disabled={generateImageMutation.isPending}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
-                  style={{ background: generatingImage ? "oklch(0.22 0.02 255)" : "oklch(0.6 0.2 290 / 20%)", color: generatingImage ? "oklch(0.55 0.015 240)" : "oklch(0.7 0.2 290)", cursor: generatingImage ? "not-allowed" : "pointer" }}
+                  style={{
+                    background: generateImageMutation.isPending ? "oklch(0.22 0.02 255)" : "oklch(0.6 0.2 290 / 20%)",
+                    color: generateImageMutation.isPending ? "oklch(0.55 0.015 240)" : "oklch(0.7 0.2 290)",
+                    cursor: generateImageMutation.isPending ? "not-allowed" : "pointer"
+                  }}
                 >
-                  {generatingImage ? <><Loader2 size={11} className="animate-spin" /> Generálás...</> : <><Sparkles size={11} /> AI Kép Generálás</>}
+                  {generateImageMutation.isPending
+                    ? <><Loader2 size={11} className="animate-spin" /> Generálás...</>
+                    : <><Sparkles size={11} /> AI Kép Generálás</>}
                 </button>
               </div>
               <textarea value={editForm.imagePrompt} onChange={(e) => setEditForm((p) => ({ ...p, imagePrompt: e.target.value }))} rows={2}
@@ -358,11 +479,11 @@ export default function ContentCreator() {
                 style={{ background: "oklch(0.22 0.02 255)", border: "1px solid oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }}
                 placeholder="Írd le a kívánt képet angolul, pl: professional business meeting, dark background, blue accents..."
               />
-              {generatingImage && (
+              {generateImageMutation.isPending && (
                 <div className="mt-2 h-20 rounded-lg flex items-center justify-center" style={{ background: "oklch(0.22 0.02 255)", border: "1px dashed oklch(0.6 0.2 290 / 30%)" }}>
                   <div className="flex items-center gap-2" style={{ color: "oklch(0.6 0.2 290)" }}>
                     <Loader2 size={16} className="animate-spin" />
-                    <span className="text-xs">Kép generálása folyamatban...</span>
+                    <span className="text-xs">Kép generálása folyamatban... (5-20 mp)</span>
                   </div>
                 </div>
               )}
@@ -373,11 +494,12 @@ export default function ContentCreator() {
 
       {/* Schedule Modal */}
       {schedulePost && (
-        <DetailModal isOpen={!!schedulePost} onClose={() => setSchedulePost(null)} title="Poszt Ütemezése" subtitle={`${schedulePost.title} – ${platformConfig[schedulePost.platform].label}`}
+        <DetailModal isOpen={!!schedulePost} onClose={() => setSchedulePost(null)} title="Poszt Ütemezése"
+          subtitle={`${schedulePost.title} – ${platformConfig[schedulePost.platform].label}`}
           footer={
             <>
               <button onClick={() => setSchedulePost(null)} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.75 0.015 240)" }}>Mégse</button>
-              <button onClick={() => handleSchedule(schedulePost)} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "oklch(0.6 0.2 290)", color: "white", fontFamily: "Sora, sans-serif" }}>
+              <button onClick={() => handleSchedule(schedulePost)} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "oklch(0.6 0.2 290)", color: "white" }}>
                 <Calendar size={13} className="inline mr-1.5" />Ütemezés Mentése
               </button>
             </>
@@ -407,16 +529,12 @@ export default function ContentCreator() {
                 />
               </div>
             </div>
-            <div className="rounded-lg p-3" style={{ background: "oklch(0.75 0.18 75 / 8%)", border: "1px solid oklch(0.75 0.18 75 / 20%)" }}>
-              <p className="text-xs" style={{ color: "oklch(0.75 0.15 75)" }}>
-                <strong>Megjegyzés:</strong> Éles Social Media API integráció esetén a poszt automatikusan közzétételre kerül. A jelenlegi verzióban az ütemezési dátum rögzítésre kerül.
-              </p>
+            <div className="rounded-lg p-3 text-xs" style={{ background: "oklch(0.6 0.2 290 / 10%)", color: "oklch(0.65 0.2 290)" }}>
+              A poszt az ütemezett időpontban automatikusan megjelenik a naptár nézetben. A tényleges publikáláshoz a Social Media fiókot össze kell kötni.
             </div>
           </div>
         </DetailModal>
       )}
-
-      {openStatusId && <div className="fixed inset-0 z-10" onClick={() => setOpenStatusId(null)} />}
     </DashboardLayout>
   );
 }

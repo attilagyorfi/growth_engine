@@ -7,11 +7,11 @@
 import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import DetailModal from "@/components/DetailModal";
-import { useProfile, ClientProfile, ContentPillar } from "@/contexts/ProfileContext";
+import { useProfile, ClientProfile, ContentPillar, SocialAccount } from "@/contexts/ProfileContext";
 import {
   Building2, Globe, Palette, Mic2, LayoutList, Share2,
   Plus, Edit2, Trash2, Check, X, ChevronRight, Linkedin,
-  Facebook, Instagram, Twitter, ExternalLink, Users,
+  Facebook, Instagram, Twitter, ExternalLink, Users, Link,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -83,6 +83,31 @@ export default function ProfilePage() {
   const [newKeyword, setNewKeyword] = useState("");
   const [newPillar, setNewPillar] = useState({ name: "", description: "", percentage: 25 });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [editingSocial, setEditingSocial] = useState(false);
+  const [socialDraft, setSocialDraft] = useState<SocialAccount[]>(activeProfile.socialAccounts);
+
+  const availablePlatforms = ["linkedin", "facebook", "instagram", "twitter"] as const;
+
+  const handleSaveSocial = () => {
+    updateProfile(activeProfile.id, { socialAccounts: socialDraft });
+    setEditingSocial(false);
+    toast.success("Social fiókok mentve!");
+  };
+
+  const addSocialAccount = () => {
+    const existing = socialDraft.map((a) => a.platform);
+    const next = availablePlatforms.find((p) => !existing.includes(p));
+    if (!next) { toast.error("Minden platform már hozzá van adva."); return; }
+    setSocialDraft((prev) => [...prev, { platform: next, handle: "", connected: false }]);
+  };
+
+  const updateSocialAccount = (platform: string, field: keyof SocialAccount, value: string | boolean | number) => {
+    setSocialDraft((prev) => prev.map((a) => a.platform === platform ? { ...a, [field]: value } : a));
+  };
+
+  const removeSocialAccount = (platform: string) => {
+    setSocialDraft((prev) => prev.filter((a) => a.platform !== platform));
+  };
 
   // Sync editData when activeProfile changes
   const handleSwitchProfile = (id: string) => {
@@ -436,9 +461,27 @@ export default function ProfilePage() {
 
           {/* Social Accounts */}
           <div className="rounded-xl p-5" style={{ background: cardBg, border }}>
-            <SectionHeader icon={Share2} title="Social Media Fiókok" />
-            <div className="grid grid-cols-2 gap-3">
-              {data.socialAccounts.map((acc) => {
+            <div className="flex items-center justify-between mb-4">
+              <SectionHeader icon={Share2} title="Social Media Fiókok" />
+              {!editingSocial ? (
+                <button onClick={() => { setSocialDraft([...activeProfile.socialAccounts]); setEditingSocial(true); }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                  style={{ background: "oklch(0.6 0.2 255 / 15%)", color: blue }}>
+                  <Edit2 size={12} /> Szerkesztés
+                </button>
+              ) : (
+                <div className="flex gap-2">
+                  <button onClick={handleSaveSocial} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium" style={{ background: blue, color: "white" }}>
+                    <Check size={12} /> Mentés
+                  </button>
+                  <button onClick={() => setEditingSocial(false)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs" style={{ background: "oklch(1 0 0 / 8%)", color: textMuted }}>
+                    <X size={12} /> Mégse
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="space-y-2">
+              {(editingSocial ? socialDraft : activeProfile.socialAccounts).map((acc) => {
                 const Icon = platformIcons[acc.platform] ?? Share2;
                 const color = platformColors[acc.platform];
                 return (
@@ -446,19 +489,49 @@ export default function ProfilePage() {
                     <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${color.replace(")", " / 15%)")}`, color }}>
                       <Icon size={16} />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold capitalize" style={{ color: textPrimary }}>{acc.platform}</p>
-                      <p className="text-xs truncate" style={{ color: textMuted }}>@{acc.handle || "–"}</p>
-                      {acc.followers && <p className="text-xs" style={{ color: green }}>{acc.followers.toLocaleString()} követő</p>}
-                    </div>
-                    <span className="text-xs px-2 py-0.5 rounded-full flex-shrink-0" style={{ background: acc.connected ? `${green.replace(")", " / 15%)")}` : "oklch(1 0 0 / 8%)", color: acc.connected ? green : textMuted }}>
-                      {acc.connected ? "Csatlakozva" : "Nincs"}
-                    </span>
+                    {editingSocial ? (
+                      <>
+                        <input type="text" value={acc.handle} onChange={(e) => updateSocialAccount(acc.platform, "handle", e.target.value)}
+                          placeholder="@felhasználónév" className="flex-1 text-xs bg-transparent border rounded-lg px-2 py-1.5 outline-none"
+                          style={{ color: textPrimary, borderColor: "oklch(1 0 0 / 15%)" }} />
+                        <input type="number" value={acc.followers ?? 0} onChange={(e) => updateSocialAccount(acc.platform, "followers", Number(e.target.value))}
+                          placeholder="Követők" className="w-20 text-xs bg-transparent border rounded-lg px-2 py-1.5 outline-none text-center"
+                          style={{ color: textPrimary, borderColor: "oklch(1 0 0 / 15%)" }} />
+                        <button onClick={() => updateSocialAccount(acc.platform, "connected", !acc.connected)}
+                          className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs"
+                          style={{ background: acc.connected ? `${green.replace(")", " / 15%)")}` : "oklch(1 0 0 / 8%)", color: acc.connected ? green : textMuted }}>
+                          {acc.connected ? <><Check size={10} />Csatlakozva</> : <><Link size={10} />Nincs csatlakoztatva</>}
+                        </button>
+                        <button onClick={() => removeSocialAccount(acc.platform)} className="p-1.5 rounded-lg" style={{ background: `${red.replace(")", " / 10%)")}`, color: red }}>
+                          <Trash2 size={12} />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold capitalize" style={{ color: textPrimary }}>{acc.platform}</p>
+                          <p className="text-xs truncate" style={{ color: textMuted }}>@{acc.handle || "–"}</p>
+                          {acc.followers && <p className="text-xs" style={{ color: green }}>{acc.followers.toLocaleString()} követő</p>}
+                        </div>
+                        <span className="text-xs px-2 py-0.5 rounded-full flex-shrink-0" style={{ background: acc.connected ? `${green.replace(")", " / 15%)")}` : "oklch(1 0 0 / 8%)", color: acc.connected ? green : textMuted }}>
+                          {acc.connected ? "Csatlakozva" : "Nincs"}
+                        </span>
+                      </>
+                    )}
                   </div>
                 );
               })}
-              {data.socialAccounts.length === 0 && (
-                <p className="text-xs col-span-2 text-center py-4" style={{ color: textMuted }}>Nincsenek social fiókok megadva. A Social Media menüpontban csatlakoztathatsz fiókokat.</p>
+              {(editingSocial ? socialDraft : activeProfile.socialAccounts).length === 0 && (
+                <p className="text-xs text-center py-4" style={{ color: textMuted }}>Nincsenek social fiókok megadva.</p>
+              )}
+              {editingSocial && (
+                <button onClick={addSocialAccount}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs transition-colors"
+                  style={{ border: "1px dashed oklch(1 0 0 / 15%)", color: textMuted }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = `${blue.replace(")", " / 40%)")}` ; e.currentTarget.style.color = blue; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = "oklch(1 0 0 / 15%)"; e.currentTarget.style.color = textMuted; }}>
+                  <Plus size={13} />Fiók hozzáadása
+                </button>
               )}
             </div>
           </div>
