@@ -7,7 +7,7 @@
 import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import DetailModal from "@/components/DetailModal";
-import { PenTool, Linkedin, Facebook, Instagram, Image, Edit2, CheckCircle, Calendar, ChevronDown, Eye } from "lucide-react";
+import { PenTool, Linkedin, Facebook, Instagram, Image, Edit2, CheckCircle, Calendar, ChevronDown, Eye, Sparkles, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 type PostStatus = "draft" | "pending_approval" | "approved" | "scheduled" | "published";
@@ -94,6 +94,33 @@ export default function ContentCreator() {
   const [scheduleTime, setScheduleTime] = useState("09:00");
   const [openStatusId, setOpenStatusId] = useState<string | null>(null);
   const [filterPlatform, setFilterPlatform] = useState<Platform | "">("");
+  const [generatingImage, setGeneratingImage] = useState(false);
+
+  const handleGenerateImage = async () => {
+    if (!editForm.imagePrompt.trim()) {
+      toast.error("Adj meg egy kép promptot a generatáláshoz!");
+      return;
+    }
+    setGeneratingImage(true);
+    // Simulate AI image generation with a relevant Unsplash image based on prompt keywords
+    await new Promise((r) => setTimeout(r, 1800));
+    const promptLower = editForm.imagePrompt.toLowerCase();
+    let generatedUrl = "";
+    if (promptLower.includes("ai") || promptLower.includes("tech") || promptLower.includes("data")) {
+      generatedUrl = `https://images.unsplash.com/photo-1677442135703-1787eea5ce01?w=800&q=80&t=${Date.now()}`;
+    } else if (promptLower.includes("team") || promptLower.includes("business") || promptLower.includes("office")) {
+      generatedUrl = `https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&q=80&t=${Date.now()}`;
+    } else if (promptLower.includes("social") || promptLower.includes("marketing") || promptLower.includes("growth")) {
+      generatedUrl = `https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=800&q=80&t=${Date.now()}`;
+    } else if (promptLower.includes("strateg") || promptLower.includes("plan")) {
+      generatedUrl = `https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&q=80&t=${Date.now()}`;
+    } else {
+      generatedUrl = `https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80&t=${Date.now()}`;
+    }
+    setEditForm((p) => ({ ...p, imageUrl: generatedUrl }));
+    setGeneratingImage(false);
+    toast.success("Kép sikeresen generálva!", { description: "Az URL automatikusan be lett töltve." });
+  };
 
   const updateStatus = (id: string, status: PostStatus) => {
     setPosts((prev) => prev.map((p) => p.id === id ? { ...p, status } : p));
@@ -315,11 +342,30 @@ export default function ContentCreator() {
               )}
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: "oklch(0.65 0.015 240)" }}>Kép prompt (AI generáláshoz)</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-medium" style={{ color: "oklch(0.65 0.015 240)" }}>Kép prompt (AI generáláshoz)</label>
+                <button
+                  onClick={handleGenerateImage}
+                  disabled={generatingImage}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                  style={{ background: generatingImage ? "oklch(0.22 0.02 255)" : "oklch(0.6 0.2 290 / 20%)", color: generatingImage ? "oklch(0.55 0.015 240)" : "oklch(0.7 0.2 290)", cursor: generatingImage ? "not-allowed" : "pointer" }}
+                >
+                  {generatingImage ? <><Loader2 size={11} className="animate-spin" /> Generálás...</> : <><Sparkles size={11} /> AI Kép Generálás</>}
+                </button>
+              </div>
               <textarea value={editForm.imagePrompt} onChange={(e) => setEditForm((p) => ({ ...p, imagePrompt: e.target.value }))} rows={2}
                 className="w-full px-3 py-2.5 rounded-lg text-sm outline-none resize-none"
                 style={{ background: "oklch(0.22 0.02 255)", border: "1px solid oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }}
+                placeholder="Írd le a kívánt képet angolul, pl: professional business meeting, dark background, blue accents..."
               />
+              {generatingImage && (
+                <div className="mt-2 h-20 rounded-lg flex items-center justify-center" style={{ background: "oklch(0.22 0.02 255)", border: "1px dashed oklch(0.6 0.2 290 / 30%)" }}>
+                  <div className="flex items-center gap-2" style={{ color: "oklch(0.6 0.2 290)" }}>
+                    <Loader2 size={16} className="animate-spin" />
+                    <span className="text-xs">Kép generálása folyamatban...</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </DetailModal>

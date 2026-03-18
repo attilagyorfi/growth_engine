@@ -1,17 +1,19 @@
 /*
  * G2A Growth Engine – DashboardLayout
  * Design: "Dark Ops Dashboard"
- * Features: persistent sidebar, notification panel, all nav items
+ * Features: persistent sidebar, notification panel, profile switcher, all nav items
  */
 
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, Users, Mail, FileText, BarChart3,
-  Zap, ChevronRight, Bell, Share2, PenTool, Inbox, X, CheckCircle, AlertCircle, Info,
+  Zap, ChevronRight, Bell, Share2, PenTool, Inbox, X,
+  CheckCircle, AlertCircle, Info, TrendingUp, UserCircle, ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useData } from "@/contexts/DataContext";
+import { useProfile } from "@/contexts/ProfileContext";
 
 const navItems = [
   { href: "/", label: "Áttekintés", icon: LayoutDashboard },
@@ -22,6 +24,8 @@ const navItems = [
   { href: "/content-creator", label: "Tartalomgyártó", icon: PenTool },
   { href: "/strategy", label: "Stratégia", icon: BarChart3 },
   { href: "/social-media", label: "Social Media", icon: Share2 },
+  { href: "/analytics", label: "Analitika", icon: TrendingUp },
+  { href: "/profile", label: "Profilok", icon: UserCircle },
 ];
 
 const notifIcons: Record<string, React.ReactNode> = {
@@ -47,11 +51,18 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children, title, subtitle }: DashboardLayoutProps) {
   const [location, navigate] = useLocation();
   const [showNotifs, setShowNotifs] = useState(false);
+  const [showProfileSwitcher, setShowProfileSwitcher] = useState(false);
   const { notifications, markNotificationRead, markAllNotificationsRead, unreadCount } = useData();
+  const { profiles, activeProfile, setActiveProfileId } = useProfile();
 
   const handleNotifClick = (id: string, link?: string) => {
     markNotificationRead(id);
     if (link) { navigate(link); setShowNotifs(false); }
+  };
+
+  const handleProfileSwitch = (id: string) => {
+    setActiveProfileId(id);
+    setShowProfileSwitcher(false);
   };
 
   return (
@@ -118,7 +129,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
             {/* Notification Bell */}
             <div className="relative">
               <button
-                onClick={() => setShowNotifs((v) => !v)}
+                onClick={() => { setShowNotifs((v) => !v); setShowProfileSwitcher(false); }}
                 className="relative w-9 h-9 rounded-lg flex items-center justify-center transition-colors"
                 style={{ background: showNotifs ? "oklch(0.6 0.2 255 / 20%)" : "oklch(0.22 0.02 255)", color: showNotifs ? "oklch(0.75 0.18 255)" : "oklch(0.65 0.015 240)" }}
               >
@@ -150,10 +161,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
                         key={n.id}
                         onClick={() => handleNotifClick(n.id, n.link)}
                         className="w-full text-left flex items-start gap-3 px-4 py-3 transition-colors border-b last:border-0"
-                        style={{
-                          borderColor: "oklch(1 0 0 / 6%)",
-                          background: n.read ? "transparent" : "oklch(0.6 0.2 255 / 5%)",
-                        }}
+                        style={{ borderColor: "oklch(1 0 0 / 6%)", background: n.read ? "transparent" : "oklch(0.6 0.2 255 / 5%)" }}
                         onMouseEnter={(e) => (e.currentTarget.style.background = "oklch(1 0 0 / 4%)")}
                         onMouseLeave={(e) => (e.currentTarget.style.background = n.read ? "transparent" : "oklch(0.6 0.2 255 / 5%)")}
                       >
@@ -175,8 +183,61 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
               )}
             </div>
 
-            <div className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold" style={{ background: "linear-gradient(135deg, oklch(0.6 0.2 255), oklch(0.55 0.22 280))", color: "white", fontFamily: "Sora, sans-serif" }}>
-              G2
+            {/* Profile Switcher */}
+            <div className="relative">
+              <button
+                onClick={() => { setShowProfileSwitcher((v) => !v); setShowNotifs(false); }}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors"
+                style={{ background: showProfileSwitcher ? "oklch(0.6 0.2 255 / 20%)" : "oklch(0.22 0.02 255)" }}
+              >
+                <div className="w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold text-white" style={{ background: activeProfile.color }}>
+                  {activeProfile.initials}
+                </div>
+                <span className="text-xs font-semibold max-w-24 truncate" style={{ color: "oklch(0.88 0.008 240)", fontFamily: "Sora, sans-serif" }}>
+                  {activeProfile.name}
+                </span>
+                <ChevronDown size={12} style={{ color: "oklch(0.55 0.015 240)" }} />
+              </button>
+
+              {/* Profile Dropdown */}
+              {showProfileSwitcher && (
+                <div className="absolute right-0 top-11 w-64 rounded-xl shadow-2xl z-50 overflow-hidden" style={{ background: "oklch(0.18 0.022 255)", border: "1px solid oklch(1 0 0 / 12%)" }}>
+                  <div className="px-4 py-3 border-b" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
+                    <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.5 0.015 240)" }}>Ügyfél váltás</p>
+                  </div>
+                  <div className="py-1 max-h-64 overflow-y-auto">
+                    {profiles.map((profile) => (
+                      <button
+                        key={profile.id}
+                        onClick={() => handleProfileSwitch(profile.id)}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors"
+                        style={{ background: activeProfile.id === profile.id ? "oklch(0.6 0.2 255 / 10%)" : "transparent" }}
+                        onMouseEnter={(e) => { if (activeProfile.id !== profile.id) e.currentTarget.style.background = "oklch(1 0 0 / 4%)"; }}
+                        onMouseLeave={(e) => { if (activeProfile.id !== profile.id) e.currentTarget.style.background = "transparent"; }}
+                      >
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style={{ background: profile.color }}>
+                          {profile.initials}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold truncate" style={{ color: "oklch(0.92 0.008 240)" }}>{profile.name}</p>
+                          <p className="text-xs truncate" style={{ color: "oklch(0.55 0.015 240)" }}>{profile.industry}</p>
+                        </div>
+                        {activeProfile.id === profile.id && (
+                          <CheckCircle size={14} style={{ color: "oklch(0.65 0.18 165)", flexShrink: 0 }} />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="px-3 py-2 border-t" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
+                    <Link href="/profile" onClick={() => setShowProfileSwitcher(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors w-full" style={{ color: "oklch(0.6 0.2 255)" }}
+                      onMouseEnter={(e: any) => (e.currentTarget.style.background = "oklch(0.6 0.2 255 / 10%)")}
+                      onMouseLeave={(e: any) => (e.currentTarget.style.background = "transparent")}
+                    >
+                      <UserCircle size={13} /> Profilok kezelése
+                    </Link>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </header>
@@ -187,9 +248,9 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
         </main>
       </div>
 
-      {/* Overlay for notification panel */}
-      {showNotifs && (
-        <div className="fixed inset-0 z-40" onClick={() => setShowNotifs(false)} />
+      {/* Overlay for dropdowns */}
+      {(showNotifs || showProfileSwitcher) && (
+        <div className="fixed inset-0 z-40" onClick={() => { setShowNotifs(false); setShowProfileSwitcher(false); }} />
       )}
     </div>
   );

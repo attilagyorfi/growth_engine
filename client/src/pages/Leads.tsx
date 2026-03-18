@@ -4,10 +4,10 @@
  * Features: search filter, status filter, status change dropdown, Add Lead modal, DataContext
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import DetailModal from "@/components/DetailModal";
-import { UserPlus, Search, Filter, X, ChevronDown, CheckCircle } from "lucide-react";
+import { UserPlus, Search, Filter, X, ChevronDown, CheckCircle, Upload, FileText, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useData, Lead, LeadStatus } from "@/contexts/DataContext";
 
@@ -40,6 +40,47 @@ export default function Leads() {
   const [form, setForm] = useState({ ...emptyForm });
   const [formError, setFormError] = useState("");
   const [openStatusId, setOpenStatusId] = useState<string | null>(null);
+  const [showCsvModal, setShowCsvModal] = useState(false);
+  const [csvPreview, setCsvPreview] = useState<Lead[]>([]);
+  const [csvError, setCsvError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleCsvFile = (file: File) => {
+    if (!file.name.endsWith(".csv")) { setCsvError("Csak .csv fájl fogadható el."); return; }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      const lines = text.trim().split("\n").map((l) => l.split(",").map((c) => c.trim().replace(/^"|"$/g, "")));
+      if (lines.length < 2) { setCsvError("A fájl üres vagy nem megfelelő formátumú."); return; }
+      const headers = lines[0].map((h) => h.toLowerCase());
+      const required = ["company", "contact", "email"];
+      const missing = required.filter((r) => !headers.includes(r));
+      if (missing.length > 0) { setCsvError(`Hiányzó oszlopok: ${missing.join(", ")}. Szükséges: company, contact, email`); return; }
+      const parsed: Lead[] = lines.slice(1).filter((row) => row.length >= 3 && row[headers.indexOf("email")]).map((row, i) => ({
+        id: `csv_${Date.now()}_${i}`,
+        company: row[headers.indexOf("company")] ?? "",
+        contact: row[headers.indexOf("contact")] ?? "",
+        title: headers.includes("title") ? (row[headers.indexOf("title")] ?? "") : "",
+        email: row[headers.indexOf("email")] ?? "",
+        industry: headers.includes("industry") ? (row[headers.indexOf("industry")] ?? "Egyéb") : "Egyéb",
+        size: headers.includes("size") ? (row[headers.indexOf("size")] ?? "–") : "–",
+        status: "new" as LeadStatus,
+        added: new Date().toISOString().slice(0, 10),
+      }));
+      if (parsed.length === 0) { setCsvError("Nem sikerült leadeket beolvasni a fájlból."); return; }
+      setCsvError("");
+      setCsvPreview(parsed);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleCsvImport = () => {
+    setLeads((prev) => [...csvPreview, ...prev]);
+    toast.success(`${csvPreview.length} lead sikeresen importálva!`);
+    setCsvPreview([]);
+    setCsvError("");
+    setShowCsvModal(false);
+  };
 
   const filtered = useMemo(() => {
     return leads.filter((l) => {
@@ -104,10 +145,16 @@ export default function Leads() {
             </button>
           )}
         </div>
-        <button onClick={() => setShowAddModal(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90"
-          style={{ background: "oklch(0.6 0.2 255)", color: "white", fontFamily: "Sora, sans-serif" }}>
-          <UserPlus size={14} />Lead Hozzáadása
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => { setShowCsvModal(true); setCsvPreview([]); setCsvError(""); }} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+            style={{ background: "oklch(0.22 0.02 255)", border: "1px solid oklch(1 0 0 / 8%)", color: "oklch(0.75 0.015 240)", fontFamily: "Sora, sans-serif" }}>
+            <Upload size={14} />CSV Import
+          </button>
+          <button onClick={() => setShowAddModal(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90"
+            style={{ background: "oklch(0.6 0.2 255)", color: "white", fontFamily: "Sora, sans-serif" }}>
+            <UserPlus size={14} />Lead Hozzáadása
+          </button>
+        </div>
       </div>
 
       {/* Table */}
@@ -214,6 +261,72 @@ export default function Leads() {
           </div>
         </DetailModal>
       )}
+
+      {/* CSV Import Modal */}
+      <DetailModal isOpen={showCsvModal} onClose={() => { setShowCsvModal(false); setCsvPreview([]); setCsvError(""); }} title="CSV Lead Importálás" subtitle="Tölts fel egy CSV fájlt a tömeges lead importáláshoz"
+        footer={
+          <div className="flex gap-2 justify-end">
+            <button onClick={() => { setShowCsvModal(false); setCsvPreview([]); setCsvError(""); }} className="px-4 py-2 rounded-lg text-sm" style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.75 0.015 240)" }}>Mégse</button>
+            {csvPreview.length > 0 && (
+              <button onClick={handleCsvImport} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "oklch(0.6 0.2 255)", color: "white" }}>
+                {csvPreview.length} lead importálása
+              </button>
+            )}
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="rounded-lg p-3 text-xs" style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.65 0.015 240)" }}>
+            <p className="font-semibold mb-1" style={{ color: "oklch(0.85 0.008 240)" }}>Szükséges CSV formátum:</p>
+            <p className="font-mono">company, contact, email, title, industry, size</p>
+            <p className="mt-1">Kötelező oszlopok: <strong>company</strong>, <strong>contact</strong>, <strong>email</strong></p>
+          </div>
+          <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={(e) => e.target.files?.[0] && handleCsvFile(e.target.files[0])} />
+          <button onClick={() => fileInputRef.current?.click()}
+            className="w-full flex flex-col items-center gap-3 py-8 rounded-xl border-2 border-dashed transition-colors"
+            style={{ borderColor: "oklch(1 0 0 / 15%)", color: "oklch(0.55 0.015 240)" }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = "oklch(0.6 0.2 255 / 40%)"; e.currentTarget.style.background = "oklch(0.6 0.2 255 / 5%)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = "oklch(1 0 0 / 15%)"; e.currentTarget.style.background = "transparent"; }}
+          >
+            <Upload size={24} />
+            <span className="text-sm">Kattints a CSV fájl kiválasztásához</span>
+          </button>
+          {csvError && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs" style={{ background: "oklch(0.65 0.22 25 / 15%)", color: "oklch(0.75 0.2 25)" }}>
+              <AlertTriangle size={13} />{csvError}
+            </div>
+          )}
+          {csvPreview.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold mb-2" style={{ color: "oklch(0.75 0.015 240)" }}>Előnézet ({csvPreview.length} lead):</p>
+              <div className="rounded-lg overflow-hidden" style={{ border: "1px solid oklch(1 0 0 / 8%)" }}>
+                <table className="w-full text-xs">
+                  <thead><tr style={{ background: "oklch(0.22 0.02 255)" }}>
+                    {["Cég", "Kapcsolattartó", "Email", "Iparág"].map((h) => (
+                      <th key={h} className="text-left px-3 py-2" style={{ color: "oklch(0.55 0.015 240)" }}>{h}</th>
+                    ))}
+                  </tr></thead>
+                  <tbody>
+                    {csvPreview.slice(0, 5).map((l) => (
+                      <tr key={l.id} style={{ borderTop: "1px solid oklch(1 0 0 / 6%)" }}>
+                        <td className="px-3 py-2" style={{ color: "oklch(0.88 0.008 240)" }}>{l.company}</td>
+                        <td className="px-3 py-2" style={{ color: "oklch(0.75 0.008 240)" }}>{l.contact}</td>
+                        <td className="px-3 py-2" style={{ color: "oklch(0.65 0.015 240)" }}>{l.email}</td>
+                        <td className="px-3 py-2" style={{ color: "oklch(0.65 0.015 240)" }}>{l.industry}</td>
+                      </tr>
+                    ))}
+                    {csvPreview.length > 5 && (
+                      <tr style={{ borderTop: "1px solid oklch(1 0 0 / 6%)" }}>
+                        <td colSpan={4} className="px-3 py-2 text-center" style={{ color: "oklch(0.5 0.015 240)" }}>...és még {csvPreview.length - 5} lead</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      </DetailModal>
 
       {/* Add Lead Modal */}
       <DetailModal isOpen={showAddModal} onClose={() => { setShowAddModal(false); setForm({ ...emptyForm }); setFormError(""); }} title="Új Lead Hozzáadása" subtitle="Töltsd ki az alábbi mezőket"

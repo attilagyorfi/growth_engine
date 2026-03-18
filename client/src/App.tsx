@@ -5,6 +5,7 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { DataProvider } from "./contexts/DataContext";
+import { ProfileProvider } from "./contexts/ProfileContext";
 import Dashboard from "./pages/Dashboard";
 import Leads from "./pages/Leads";
 import Outbound from "./pages/Outbound";
@@ -13,6 +14,8 @@ import Content from "./pages/Content";
 import ContentCreator from "./pages/ContentCreator";
 import Strategy from "./pages/Strategy";
 import SocialMedia from "./pages/SocialMedia";
+import Analytics from "./pages/Analytics";
+import ProfilePage from "./pages/ProfilePage";
 
 function Router() {
   return (
@@ -25,6 +28,8 @@ function Router() {
       <Route path="/content-creator" component={ContentCreator} />
       <Route path="/strategy" component={Strategy} />
       <Route path="/social-media" component={SocialMedia} />
+      <Route path="/analytics" component={Analytics} />
+      <Route path="/profile" component={ProfilePage} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
@@ -35,12 +40,14 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark">
-        <DataProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Router />
-          </TooltipProvider>
-        </DataProvider>
+        <ProfileProvider>
+          <DataProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Router />
+            </TooltipProvider>
+          </DataProvider>
+        </ProfileProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );
