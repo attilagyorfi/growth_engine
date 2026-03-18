@@ -75,17 +75,14 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
           {navItems.map(({ href, label, icon: Icon }) => {
             const isActive = location === href;
             return (
-              <Link key={href} href={href}>
-                <a
-                  className={cn(
-                    "nav-item",
-                    isActive && "active"
-                  )}
-                >
-                  <Icon size={16} />
-                  <span>{label}</span>
-                  {isActive && <ChevronRight size={14} className="ml-auto opacity-60" />}
-                </a>
+              <Link
+                key={href}
+                href={href}
+                className={cn("nav-item", isActive && "active")}
+              >
+                <Icon size={16} />
+                <span>{label}</span>
+                {isActive && <ChevronRight size={14} className="ml-auto opacity-60" />}
               </Link>
             );
           })}
