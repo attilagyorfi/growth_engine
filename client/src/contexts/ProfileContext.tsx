@@ -1,15 +1,17 @@
-/*
- * G2A Growth Engine – ProfileContext
- * Design: "Dark Ops Dashboard"
- * Multi-client profile management: switch between managed client accounts
+/**
+ * G2A Growth Engine – ProfileContext (tRPC-backed)
+ * Profiles are persisted in the database via tRPC.
+ * Falls back to seed data on first load if DB is empty.
  */
 
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
+import { trpc } from "@/lib/trpc";
+import { nanoid } from "nanoid";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type SocialAccount = {
-  platform: "linkedin" | "facebook" | "instagram" | "twitter";
+  platform: "linkedin" | "facebook" | "instagram" | "twitter" | "tiktok";
   handle: string;
   connected: boolean;
   followers?: number;
@@ -17,10 +19,10 @@ export type SocialAccount = {
 };
 
 export type BrandVoice = {
-  tone: string;           // pl. "Szakmai, hiteles, közvetlen"
-  style: string;          // pl. "B2B, gondolatvezetői tartalom"
-  avoid: string;          // pl. "Túlzott szleng, clickbait"
-  keywords: string[];     // pl. ["AI", "marketing", "növekedés"]
+  tone: string;
+  style: string;
+  avoid: string;
+  keywords: string[];
 };
 
 export type ContentPillar = {
@@ -28,38 +30,33 @@ export type ContentPillar = {
   name: string;
   description: string;
   active: boolean;
-  percentage: number;     // tartalom arány %
+  percentage: number;
 };
 
 export type ClientProfile = {
   id: string;
-  name: string;           // pl. "G2A Marketing"
-  initials: string;       // pl. "G2"
-  color: string;          // oklch szín az avatárhoz
+  name: string;
+  initials: string;
+  color: string;
   website: string;
   industry: string;
   description: string;
   logoUrl?: string;
-  // Arculati kézikönyv
   primaryColor: string;
   secondaryColor: string;
   fontHeading: string;
   fontBody: string;
   brandGuidelineUrl?: string;
-  // Márkahangg
   brandVoice: BrandVoice;
-  // Tartalmi irányok
   contentPillars: ContentPillar[];
-  // Social fiókok
   socialAccounts: SocialAccount[];
-  // Meta
   createdAt: string;
   active: boolean;
 };
 
-// ─── Initial Profiles ─────────────────────────────────────────────────────────
+// ─── Seed Data ────────────────────────────────────────────────────────────────
 
-const initialProfiles: ClientProfile[] = [
+const seedProfiles: Omit<ClientProfile, "createdAt">[] = [
   {
     id: "g2a",
     name: "G2A Marketing",
@@ -88,8 +85,8 @@ const initialProfiles: ClientProfile[] = [
       { platform: "linkedin", handle: "g2a-marketing", connected: true, followers: 1240, lastSync: "2026-03-18" },
       { platform: "facebook", handle: "g2amarketing", connected: false },
       { platform: "instagram", handle: "g2a.marketing", connected: false },
+      { platform: "tiktok", handle: "g2amarketing", connected: false },
     ],
-    createdAt: "2026-01-01",
     active: true,
   },
   {
@@ -119,45 +116,102 @@ const initialProfiles: ClientProfile[] = [
       { platform: "linkedin", handle: "techvision-kft", connected: false },
       { platform: "facebook", handle: "techvisionkft", connected: false },
     ],
-    createdAt: "2026-02-15",
     active: true,
   },
 ];
+
+// ─── Helper: DB row → ClientProfile ──────────────────────────────────────────
+
+function dbToProfile(row: any): ClientProfile {
+  return {
+    id: row.id,
+    name: row.name,
+    initials: row.initials,
+    color: row.color ?? "oklch(0.6 0.2 255)",
+    website: row.website ?? "",
+    industry: row.industry ?? "",
+    description: row.description ?? "",
+    logoUrl: row.logoUrl ?? undefined,
+    primaryColor: row.primaryColor ?? "#3B82F6",
+    secondaryColor: row.secondaryColor ?? "#10B981",
+    fontHeading: row.fontHeading ?? "Sora",
+    fontBody: row.fontBody ?? "Inter",
+    brandGuidelineUrl: row.brandGuidelineUrl ?? undefined,
+    brandVoice: row.brandVoice ?? { tone: "", style: "", avoid: "", keywords: [] },
+    contentPillars: row.contentPillars ?? [],
+    socialAccounts: (row.socialAccounts ?? []) as SocialAccount[],
+    createdAt: row.createdAt ? new Date(row.createdAt).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
+    active: row.active ?? true,
+  };
+}
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 
 type ProfileContextType = {
   profiles: ClientProfile[];
   activeProfile: ClientProfile;
+  isLoading: boolean;
   setActiveProfileId: (id: string) => void;
-  addProfile: (profile: ClientProfile) => void;
-  updateProfile: (id: string, updates: Partial<ClientProfile>) => void;
-  deleteProfile: (id: string) => void;
+  addProfile: (profile: Omit<ClientProfile, "createdAt">) => Promise<void>;
+  updateProfile: (id: string, updates: Partial<ClientProfile>) => Promise<void>;
+  deleteProfile: (id: string) => Promise<void>;
 };
 
 const ProfileContext = createContext<ProfileContextType | null>(null);
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
-  const [profiles, setProfiles] = useState<ClientProfile[]>(initialProfiles);
   const [activeProfileId, setActiveProfileId] = useState<string>("g2a");
+  const [seeded, setSeeded] = useState(false);
 
-  const activeProfile = profiles.find((p) => p.id === activeProfileId) ?? profiles[0];
+  const { data: dbProfiles, isLoading, refetch } = trpc.profiles.list.useQuery(undefined, {
+    staleTime: 30_000,
+  });
 
-  const addProfile = useCallback((profile: ClientProfile) => {
-    setProfiles((prev) => [...prev, profile]);
-  }, []);
+  const upsertMutation = trpc.profiles.upsert.useMutation({ onSuccess: () => refetch() });
+  const deleteMutation = trpc.profiles.delete.useMutation({ onSuccess: () => refetch() });
 
-  const updateProfile = useCallback((id: string, updates: Partial<ClientProfile>) => {
-    setProfiles((prev) => prev.map((p) => p.id === id ? { ...p, ...updates } : p));
-  }, []);
+  // Seed the DB with initial profiles on first load if empty
+  useEffect(() => {
+    if (!isLoading && dbProfiles && dbProfiles.length === 0 && !seeded) {
+      setSeeded(true);
+      Promise.all(seedProfiles.map(p => upsertMutation.mutateAsync(p)));
+    }
+  }, [isLoading, dbProfiles, seeded]);
 
-  const deleteProfile = useCallback((id: string) => {
-    setProfiles((prev) => prev.filter((p) => p.id !== id));
-    setActiveProfileId((prev) => prev === id ? profiles[0]?.id ?? "" : prev);
-  }, [profiles]);
+  const profiles: ClientProfile[] = (dbProfiles && dbProfiles.length > 0)
+    ? dbProfiles.map(dbToProfile)
+    : seedProfiles.map(p => ({ ...p, createdAt: "2026-01-01" }));
+
+  const activeProfile = profiles.find((p) => p.id === activeProfileId) ?? profiles[0] ?? seedProfiles[0] as ClientProfile;
+
+  const addProfile = useCallback(async (profile: Omit<ClientProfile, "createdAt">) => {
+    await upsertMutation.mutateAsync({ ...profile, id: profile.id ?? nanoid() });
+  }, [upsertMutation]);
+
+  const updateProfile = useCallback(async (id: string, updates: Partial<ClientProfile>) => {
+    const existing = profiles.find(p => p.id === id);
+    if (!existing) return;
+    await upsertMutation.mutateAsync({ ...existing, ...updates, id });
+  }, [profiles, upsertMutation]);
+
+  const deleteProfileFn = useCallback(async (id: string) => {
+    await deleteMutation.mutateAsync({ id });
+    if (activeProfileId === id) {
+      const remaining = profiles.filter(p => p.id !== id);
+      setActiveProfileId(remaining[0]?.id ?? "");
+    }
+  }, [deleteMutation, activeProfileId, profiles]);
 
   return (
-    <ProfileContext.Provider value={{ profiles, activeProfile, setActiveProfileId, addProfile, updateProfile, deleteProfile }}>
+    <ProfileContext.Provider value={{
+      profiles,
+      activeProfile,
+      isLoading,
+      setActiveProfileId,
+      addProfile,
+      updateProfile,
+      deleteProfile: deleteProfileFn,
+    }}>
       {children}
     </ProfileContext.Provider>
   );

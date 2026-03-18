@@ -27,14 +27,14 @@ const scheduledTasks = [
 
 export default function Dashboard() {
   const [, navigate] = useLocation();
-  const { leads, outbound, inbound, notifications } = useData();
+  const { leads, outbound, inbound } = useData();
   const [selectedActivity, setSelectedActivity] = useState<null | { title: string; body: string; link?: string }>(null);
 
-  const pendingEmails = outbound.filter((e) => e.status === "pending_approval");
+  const pendingEmails = outbound.filter((e) => e.status === "draft");
   const unreadInbound = inbound.filter((e) => !e.read);
 
   const statCards = [
-    { label: "Összes Lead", value: String(leads.length), sub: `+${leads.length} ma`, color: "oklch(0.6 0.2 255)", icon: Users, link: "/leads" },
+    { label: "Összes Lead", value: String(leads.length), sub: `${leads.filter(l => l.status === "new").length} új`, color: "oklch(0.6 0.2 255)", icon: Users, link: "/leads" },
     { label: "Jóváhagyásra Vár", value: String(pendingEmails.length), sub: "Email piszkozat", color: "oklch(0.75 0.18 75)", icon: Mail, link: "/outbound" },
     { label: "Inbound Válasz", value: String(unreadInbound.length), sub: `${unreadInbound.length} olvasatlan`, color: "oklch(0.65 0.18 165)", icon: Inbox, link: "/inbound" },
     { label: "Aktív Stratégia", value: "1", sub: "Április havi", color: "oklch(0.6 0.2 290)", icon: BarChart3, link: "/strategy" },
@@ -46,20 +46,20 @@ export default function Dashboard() {
       icon: Mail,
       color: "oklch(0.6 0.2 255)",
       title: `Email piszkozat generálva`,
-      desc: `${e.company} – ${e.subject}`,
-      time: e.date,
+      desc: `${e.company ?? e.to} – ${e.subject}`,
+      time: e.createdAt ? new Date(e.createdAt).toLocaleDateString("hu-HU") : "–",
       link: "/outbound",
-      body: `**Cég:** ${e.company}\n**Kapcsolattartó:** ${e.contact}\n**Tárgy:** ${e.subject}\n\n${e.body}`,
+      body: `**Cég:** ${e.company ?? "–"}\n**Kapcsolattartó:** ${e.toName ?? e.to}\n**Tárgy:** ${e.subject}\n\n${e.body}`,
     })),
     ...inbound.slice(0, 2).map((e) => ({
       id: `in_${e.id}`,
       icon: Inbox,
       color: "oklch(0.65 0.18 165)",
       title: `Válasz érkezett`,
-      desc: `${e.from} (${e.company})`,
-      time: e.date,
+      desc: `${e.fromName ?? e.from} (${e.company ?? "–"})`,
+      time: e.receivedAt ? new Date(e.receivedAt).toLocaleDateString("hu-HU") : "–",
       link: "/inbound",
-      body: `**Feladó:** ${e.from}\n**Cég:** ${e.company}\n**Tárgy:** ${e.subject}\n\n${e.body}`,
+      body: `**Feladó:** ${e.fromName ?? e.from}\n**Cég:** ${e.company ?? "–"}\n**Tárgy:** ${e.subject}\n\n${e.body}`,
     })),
     ...leads.slice(0, 1).map((l) => ({
       id: `lead_${l.id}`,
@@ -67,9 +67,9 @@ export default function Dashboard() {
       color: "oklch(0.75 0.18 75)",
       title: `Új lead azonosítva`,
       desc: `${l.company} – ${l.contact}`,
-      time: l.added,
+      time: l.createdAt ? new Date(l.createdAt).toLocaleDateString("hu-HU") : "–",
       link: "/leads",
-      body: `**Cég:** ${l.company}\n**Kapcsolattartó:** ${l.contact}\n**Beosztás:** ${l.title}\n**Email:** ${l.email}\n**Iparág:** ${l.industry}`,
+      body: `**Cég:** ${l.company}\n**Kapcsolattartó:** ${l.contact}\n**Beosztás:** ${l.position ?? "–"}\n**Email:** ${l.email}\n**Iparág:** ${l.industry ?? "–"}`,
     })),
   ].slice(0, 5);
 
@@ -156,7 +156,9 @@ export default function Dashboard() {
           <h3 className="text-sm font-semibold" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>Legutóbbi Tevékenységek</h3>
         </div>
         <div className="space-y-2">
-          {activities.map((a) => {
+          {activities.length === 0 ? (
+            <p className="text-center text-sm py-4" style={{ color: "oklch(0.5 0.015 240)" }}>Még nincs adat. Adj hozzá leadeket vagy emaileket!</p>
+          ) : activities.map((a) => {
             const Icon = a.icon;
             return (
               <button

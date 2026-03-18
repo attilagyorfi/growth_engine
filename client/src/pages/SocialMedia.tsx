@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Linkedin, Facebook, Instagram, Twitter, CheckCircle, AlertCircle, ExternalLink, RefreshCw, Unlink } from "lucide-react";
+import { Linkedin, Facebook, Instagram, Twitter, Music2, CheckCircle, AlertCircle, ExternalLink, RefreshCw, Unlink } from "lucide-react";
 import { toast } from "sonner";
 import DetailModal from "@/components/DetailModal";
 
@@ -68,6 +68,17 @@ const initialPlatforms: Platform[] = [
     authUrl: "https://twitter.com/i/oauth2/authorize",
     description: "Gyors tartalmak, trendek követése és valós idejű kommunikáció.",
     features: ["Tweet ütemezés", "Thread közzététel", "Analytics", "Trending témák figyelés"],
+  },
+  {
+    id: "tiktok",
+    name: "TikTok",
+    handle: "",
+    icon: <Music2 size={22} />,
+    color: "oklch(0.65 0.22 5)",
+    connected: false,
+    authUrl: "https://www.tiktok.com/auth/authorize",
+    description: "Rövid videók és virális tartalmak közzététele, fiatal közönség elérése.",
+    features: ["Videó feltöltés és ütemezés", "TikTok Business API", "Analytics és trendek", "Hashtag követés"],
   },
 ];
 

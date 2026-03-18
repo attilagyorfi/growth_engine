@@ -8,6 +8,20 @@
       "when": 1773843967734,
       "tag": "0000_clever_blizzard",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1773845142156,
+      "tag": "0001_hesitant_microchip",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1773845279730,
+      "tag": "0002_loud_ken_ellis",
+      "breakpoints": true
     }
   ]
 }

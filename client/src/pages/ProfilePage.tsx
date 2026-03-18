@@ -11,7 +11,7 @@ import { useProfile, ClientProfile, ContentPillar, SocialAccount } from "@/conte
 import {
   Building2, Globe, Palette, Mic2, LayoutList, Share2,
   Plus, Edit2, Trash2, Check, X, ChevronRight, Linkedin,
-  Facebook, Instagram, Twitter, ExternalLink, Users, Link,
+  Facebook, Instagram, Twitter, Music2, ExternalLink, Users, Link,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -31,6 +31,7 @@ const platformIcons: Record<string, any> = {
   facebook: Facebook,
   instagram: Instagram,
   twitter: Twitter,
+  tiktok: Music2,
 };
 
 const platformColors: Record<string, string> = {
@@ -38,6 +39,7 @@ const platformColors: Record<string, string> = {
   facebook: "oklch(0.55 0.2 260)",
   instagram: "oklch(0.65 0.2 20)",
   twitter: "oklch(0.6 0.015 240)",
+  tiktok: "oklch(0.65 0.22 5)",
 };
 
 function SectionHeader({ icon: Icon, title }: { icon: any; title: string }) {
