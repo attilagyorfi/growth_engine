@@ -302,3 +302,193 @@ export async function upsertEmailIntegration(integration: InsertEmailIntegration
   await db.insert(emailIntegrations).values(integration).onDuplicateKeyUpdate({ set: integration });
   return getEmailIntegration(integration.profileId);
 }
+
+// ─── Onboarding ───────────────────────────────────────────────────────────────
+
+import {
+  onboardingSessions, InsertOnboardingSession,
+  onboardingAnswers, InsertOnboardingAnswer,
+  uploadedBrandAssets, InsertUploadedBrandAsset,
+  companyIntelligence, InsertCompanyIntelligence,
+  competitorProfiles, InsertCompetitorProfile,
+  targetPersonas, InsertTargetPersona,
+  strategyTasks, InsertStrategyTask,
+  contentCalendarItems, InsertContentCalendarItem,
+  contentFeedback, InsertContentFeedback,
+  aiMemories, InsertAiMemory,
+  auditLogs, InsertAuditLog,
+} from "../drizzle/schema";
+
+export async function getOnboardingSession(profileId: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(onboardingSessions)
+    .where(eq(onboardingSessions.profileId, profileId))
+    .orderBy(onboardingSessions.createdAt)
+    .limit(1);
+  return result[0] ?? null;
+}
+
+export async function upsertOnboardingSession(session: InsertOnboardingSession) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.insert(onboardingSessions).values(session).onDuplicateKeyUpdate({ set: { status: session.status, currentStep: session.currentStep, completedAt: session.completedAt } });
+  const result = await db.select().from(onboardingSessions).where(eq(onboardingSessions.id, session.id)).limit(1);
+  return result[0];
+}
+
+export async function saveOnboardingAnswers(answers: InsertOnboardingAnswer[]) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  for (const answer of answers) {
+    await db.insert(onboardingAnswers).values(answer).onDuplicateKeyUpdate({ set: { fieldValue: answer.fieldValue, userConfirmed: answer.userConfirmed } });
+  }
+  return true;
+}
+
+export async function getOnboardingAnswers(sessionId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(onboardingAnswers).where(eq(onboardingAnswers.sessionId, sessionId));
+}
+
+// ─── Brand Assets ─────────────────────────────────────────────────────────────
+
+export async function getBrandAssets(profileId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(uploadedBrandAssets).where(eq(uploadedBrandAssets.profileId, profileId));
+}
+
+export async function createBrandAsset(asset: InsertUploadedBrandAsset) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.insert(uploadedBrandAssets).values(asset);
+  const result = await db.select().from(uploadedBrandAssets).where(eq(uploadedBrandAssets.id, asset.id)).limit(1);
+  return result[0];
+}
+
+export async function updateBrandAssetParsed(id: string, parsedContent: string) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(uploadedBrandAssets).set({ parsedContent, parsedAt: new Date() }).where(eq(uploadedBrandAssets.id, id));
+}
+
+export async function deleteBrandAsset(id: string) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(uploadedBrandAssets).where(eq(uploadedBrandAssets.id, id));
+}
+
+// ─── Company Intelligence ─────────────────────────────────────────────────────
+
+export async function getCompanyIntelligence(profileId: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(companyIntelligence).where(eq(companyIntelligence.profileId, profileId)).limit(1);
+  return result[0] ?? null;
+}
+
+export async function upsertCompanyIntelligence(data: InsertCompanyIntelligence) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.insert(companyIntelligence).values(data).onDuplicateKeyUpdate({ set: { ...data, updatedAt: new Date() } });
+  return getCompanyIntelligence(data.profileId);
+}
+
+// ─── Competitor Profiles ──────────────────────────────────────────────────────
+
+export async function getCompetitors(profileId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(competitorProfiles).where(eq(competitorProfiles.profileId, profileId));
+}
+
+export async function upsertCompetitor(data: InsertCompetitorProfile) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.insert(competitorProfiles).values(data).onDuplicateKeyUpdate({ set: { ...data, updatedAt: new Date() } });
+  const result = await db.select().from(competitorProfiles).where(eq(competitorProfiles.id, data.id)).limit(1);
+  return result[0];
+}
+
+export async function deleteCompetitor(id: string) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(competitorProfiles).where(eq(competitorProfiles.id, id));
+}
+
+// ─── Target Personas ──────────────────────────────────────────────────────────
+
+export async function getPersonas(profileId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(targetPersonas).where(eq(targetPersonas.profileId, profileId));
+}
+
+export async function upsertPersona(data: InsertTargetPersona) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.insert(targetPersonas).values(data).onDuplicateKeyUpdate({ set: { ...data, updatedAt: new Date() } });
+  const result = await db.select().from(targetPersonas).where(eq(targetPersonas.id, data.id)).limit(1);
+  return result[0];
+}
+
+export async function deletePersona(id: string) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(targetPersonas).where(eq(targetPersonas.id, id));
+}
+
+// ─── Strategy Tasks ───────────────────────────────────────────────────────────
+
+export async function getStrategyTasks(profileId: string, strategyId?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  if (strategyId) {
+    return db.select().from(strategyTasks)
+      .where(eq(strategyTasks.strategyId, strategyId));
+  }
+  return db.select().from(strategyTasks).where(eq(strategyTasks.profileId, profileId));
+}
+
+export async function upsertStrategyTask(data: InsertStrategyTask) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.insert(strategyTasks).values(data).onDuplicateKeyUpdate({ set: { ...data, updatedAt: new Date() } });
+  const result = await db.select().from(strategyTasks).where(eq(strategyTasks.id, data.id)).limit(1);
+  return result[0];
+}
+
+// ─── AI Memories ──────────────────────────────────────────────────────────────
+
+export async function getAiMemories(profileId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(aiMemories).where(eq(aiMemories.profileId, profileId));
+}
+
+export async function createAiMemory(data: InsertAiMemory) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.insert(aiMemories).values(data);
+}
+
+// ─── Audit Logs ───────────────────────────────────────────────────────────────
+
+export async function createAuditLog(data: InsertAuditLog) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(auditLogs).values(data);
+}
+
+export async function getAuditLogs(profileId?: string, limit = 50) {
+  const db = await getDb();
+  if (!db) return [];
+  if (profileId) {
+    return db.select().from(auditLogs).where(eq(auditLogs.profileId, profileId))
+      .orderBy(auditLogs.createdAt)
+      .limit(limit);
+  }
+  return db.select().from(auditLogs).orderBy(auditLogs.createdAt).limit(limit);
+}

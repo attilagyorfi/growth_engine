@@ -179,3 +179,318 @@ export const emailIntegrations = mysqlTable("email_integrations", {
 
 export type EmailIntegration = typeof emailIntegrations.$inferSelect;
 export type InsertEmailIntegration = typeof emailIntegrations.$inferInsert;
+
+// ─── Onboarding Sessions ──────────────────────────────────────────────────────
+
+export const onboardingSessions = mysqlTable("onboarding_sessions", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  profileId: varchar("profileId", { length: 64 }).notNull(),
+  status: mysqlEnum("status", ["in_progress", "completed", "abandoned"]).default("in_progress").notNull(),
+  currentStep: int("currentStep").default(1).notNull(),
+  completedAt: timestamp("completedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type OnboardingSession = typeof onboardingSessions.$inferSelect;
+export type InsertOnboardingSession = typeof onboardingSessions.$inferInsert;
+
+// ─── Onboarding Answers ───────────────────────────────────────────────────────
+
+export const onboardingAnswers = mysqlTable("onboarding_answers", {
+  id: int("id").autoincrement().primaryKey(),
+  sessionId: varchar("sessionId", { length: 64 }).notNull(),
+  profileId: varchar("profileId", { length: 64 }).notNull(),
+  step: int("step").notNull(),
+  fieldKey: varchar("fieldKey", { length: 255 }).notNull(),
+  fieldValue: text("fieldValue"),
+  aiGenerated: boolean("aiGenerated").default(false).notNull(),
+  userConfirmed: boolean("userConfirmed").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type OnboardingAnswer = typeof onboardingAnswers.$inferSelect;
+export type InsertOnboardingAnswer = typeof onboardingAnswers.$inferInsert;
+
+// ─── Uploaded Brand Assets ────────────────────────────────────────────────────
+
+export const uploadedBrandAssets = mysqlTable("uploaded_brand_assets", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  profileId: varchar("profileId", { length: 64 }).notNull(),
+  fileName: varchar("fileName", { length: 500 }).notNull(),
+  fileType: varchar("fileType", { length: 100 }).notNull(),
+  fileUrl: varchar("fileUrl", { length: 1000 }).notNull(),
+  fileKey: varchar("fileKey", { length: 500 }).notNull(),
+  assetType: mysqlEnum("assetType", ["brand_guide", "visual_identity", "sales_material", "strategy", "buyer_persona", "faq", "other"]).default("other").notNull(),
+  parsedContent: text("parsedContent"),
+  parsedAt: timestamp("parsedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type UploadedBrandAsset = typeof uploadedBrandAssets.$inferSelect;
+export type InsertUploadedBrandAsset = typeof uploadedBrandAssets.$inferInsert;
+
+// ─── Company Intelligence ─────────────────────────────────────────────────────
+
+export const companyIntelligence = mysqlTable("company_intelligence", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  profileId: varchar("profileId", { length: 64 }).notNull().unique(),
+  companySummary: text("companySummary"),
+  brandDna: json("brandDna").$type<{
+    coreValues: string[];
+    personality: string[];
+    differentiators: string[];
+    brandPromise: string;
+  }>(),
+  offerMap: json("offerMap").$type<Array<{
+    name: string;
+    description: string;
+    targetAudience: string;
+    priceRange?: string;
+    usp: string;
+  }>>(),
+  audienceMap: json("audienceMap").$type<Array<{
+    segment: string;
+    description: string;
+    painPoints: string[];
+    goals: string[];
+    channels: string[];
+  }>>(),
+  competitorSnapshot: json("competitorSnapshot").$type<Array<{
+    name: string;
+    website?: string;
+    strengths: string[];
+    weaknesses: string[];
+    positioning: string;
+  }>>(),
+  platformPriorities: json("platformPriorities").$type<Array<{
+    platform: string;
+    priority: number;
+    rationale: string;
+  }>>(),
+  successGoals: json("successGoals").$type<{
+    thirtyDay: string[];
+    ninetyDay: string[];
+    oneYear: string[];
+  }>(),
+  complianceConstraints: json("complianceConstraints").$type<string[]>(),
+  aiWritingRules: json("aiWritingRules").$type<{
+    doList: string[];
+    dontList: string[];
+    toneGuidelines: string;
+    examplePhrases: string[];
+  }>(),
+  visualRules: json("visualRules").$type<{
+    colorUsage: string;
+    imageStyle: string;
+    avoidList: string[];
+  }>(),
+  websiteAnalysis: json("websiteAnalysis").$type<{
+    services: string[];
+    keyMessages: string[];
+    toneOfVoice: string;
+    targetAudience: string;
+    ctas: string[];
+    competitorCandidates: string[];
+  }>(),
+  generatedAt: timestamp("generatedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type CompanyIntelligence = typeof companyIntelligence.$inferSelect;
+export type InsertCompanyIntelligence = typeof companyIntelligence.$inferInsert;
+
+// ─── Competitor Profiles ──────────────────────────────────────────────────────
+
+export const competitorProfiles = mysqlTable("competitor_profiles", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  profileId: varchar("profileId", { length: 64 }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  website: varchar("website", { length: 500 }),
+  positioning: text("positioning"),
+  strengths: json("strengths").$type<string[]>(),
+  weaknesses: json("weaknesses").$type<string[]>(),
+  contentStrategy: text("contentStrategy"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type CompetitorProfile = typeof competitorProfiles.$inferSelect;
+export type InsertCompetitorProfile = typeof competitorProfiles.$inferInsert;
+
+// ─── Target Personas ──────────────────────────────────────────────────────────
+
+export const targetPersonas = mysqlTable("target_personas", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  profileId: varchar("profileId", { length: 64 }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  role: varchar("role", { length: 255 }),
+  age: varchar("age", { length: 50 }),
+  industry: varchar("industry", { length: 255 }),
+  painPoints: json("painPoints").$type<string[]>(),
+  goals: json("goals").$type<string[]>(),
+  preferredChannels: json("preferredChannels").$type<string[]>(),
+  buyingTriggers: json("buyingTriggers").$type<string[]>(),
+  objections: json("objections").$type<string[]>(),
+  messagingApproach: text("messagingApproach"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type TargetPersona = typeof targetPersonas.$inferSelect;
+export type InsertTargetPersona = typeof targetPersonas.$inferInsert;
+
+// ─── Strategy Tasks ───────────────────────────────────────────────────────────
+
+export const strategyTasks = mysqlTable("strategy_tasks", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  profileId: varchar("profileId", { length: 64 }).notNull(),
+  strategyId: varchar("strategyId", { length: 64 }).notNull(),
+  title: varchar("title", { length: 500 }).notNull(),
+  description: text("description"),
+  platform: varchar("platform", { length: 100 }),
+  format: varchar("format", { length: 100 }),
+  funnelStage: mysqlEnum("funnelStage", ["awareness", "consideration", "decision", "retention"]).default("awareness").notNull(),
+  weekNumber: int("weekNumber"),
+  dueDate: timestamp("dueDate"),
+  status: mysqlEnum("status", ["todo", "in_progress", "done", "skipped"]).default("todo").notNull(),
+  assignedTo: varchar("assignedTo", { length: 255 }),
+  contentPostId: varchar("contentPostId", { length: 64 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type StrategyTask = typeof strategyTasks.$inferSelect;
+export type InsertStrategyTask = typeof strategyTasks.$inferInsert;
+
+// ─── Content Calendar Items ───────────────────────────────────────────────────
+
+export const contentCalendarItems = mysqlTable("content_calendar_items", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  profileId: varchar("profileId", { length: 64 }).notNull(),
+  contentPostId: varchar("contentPostId", { length: 64 }),
+  strategyTaskId: varchar("strategyTaskId", { length: 64 }),
+  title: varchar("title", { length: 500 }).notNull(),
+  platform: varchar("platform", { length: 100 }).notNull(),
+  format: varchar("format", { length: 100 }),
+  funnelStage: varchar("funnelStage", { length: 50 }),
+  pillar: varchar("pillar", { length: 255 }),
+  campaignTag: varchar("campaignTag", { length: 255 }),
+  scheduledAt: timestamp("scheduledAt").notNull(),
+  status: mysqlEnum("status", ["planned", "draft", "approved", "scheduled", "published", "cancelled"]).default("planned").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ContentCalendarItem = typeof contentCalendarItems.$inferSelect;
+export type InsertContentCalendarItem = typeof contentCalendarItems.$inferInsert;
+
+// ─── Content Feedback ─────────────────────────────────────────────────────────
+
+export const contentFeedback = mysqlTable("content_feedback", {
+  id: int("id").autoincrement().primaryKey(),
+  profileId: varchar("profileId", { length: 64 }).notNull(),
+  contentPostId: varchar("contentPostId", { length: 64 }).notNull(),
+  action: mysqlEnum("action", ["approved", "rejected", "edited", "requested_changes"]).notNull(),
+  reason: text("reason"),
+  editedFields: json("editedFields").$type<string[]>(),
+  reviewerId: varchar("reviewerId", { length: 64 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ContentFeedback = typeof contentFeedback.$inferSelect;
+export type InsertContentFeedback = typeof contentFeedback.$inferInsert;
+
+// ─── Social Tokens ────────────────────────────────────────────────────────────
+
+export const socialTokens = mysqlTable("social_tokens", {
+  id: int("id").autoincrement().primaryKey(),
+  profileId: varchar("profileId", { length: 64 }).notNull(),
+  platform: mysqlEnum("platform", ["linkedin", "facebook", "instagram", "twitter", "tiktok"]).notNull(),
+  accessToken: text("accessToken"),
+  refreshToken: text("refreshToken"),
+  tokenExpiry: timestamp("tokenExpiry"),
+  platformUserId: varchar("platformUserId", { length: 255 }),
+  platformUsername: varchar("platformUsername", { length: 255 }),
+  pageId: varchar("pageId", { length: 255 }),
+  connected: boolean("connected").default(false).notNull(),
+  scopes: json("scopes").$type<string[]>(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SocialToken = typeof socialTokens.$inferSelect;
+export type InsertSocialToken = typeof socialTokens.$inferInsert;
+
+// ─── Publishing Logs ──────────────────────────────────────────────────────────
+
+export const publishingLogs = mysqlTable("publishing_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  profileId: varchar("profileId", { length: 64 }).notNull(),
+  contentPostId: varchar("contentPostId", { length: 64 }).notNull(),
+  platform: varchar("platform", { length: 100 }).notNull(),
+  status: mysqlEnum("status", ["success", "failed", "pending"]).default("pending").notNull(),
+  platformPostId: varchar("platformPostId", { length: 255 }),
+  platformPostUrl: varchar("platformPostUrl", { length: 1000 }),
+  errorMessage: text("errorMessage"),
+  publishedAt: timestamp("publishedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PublishingLog = typeof publishingLogs.$inferSelect;
+export type InsertPublishingLog = typeof publishingLogs.$inferInsert;
+
+// ─── Analytics Snapshots ──────────────────────────────────────────────────────
+
+export const analyticsSnapshots = mysqlTable("analytics_snapshots", {
+  id: int("id").autoincrement().primaryKey(),
+  profileId: varchar("profileId", { length: 64 }).notNull(),
+  contentPostId: varchar("contentPostId", { length: 64 }),
+  platform: varchar("platform", { length: 100 }),
+  metric: varchar("metric", { length: 255 }).notNull(),
+  value: int("value").notNull(),
+  recordedAt: timestamp("recordedAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AnalyticsSnapshot = typeof analyticsSnapshots.$inferSelect;
+export type InsertAnalyticsSnapshot = typeof analyticsSnapshots.$inferInsert;
+
+// ─── AI Memories ──────────────────────────────────────────────────────────────
+
+export const aiMemories = mysqlTable("ai_memories", {
+  id: int("id").autoincrement().primaryKey(),
+  profileId: varchar("profileId", { length: 64 }).notNull(),
+  memoryType: mysqlEnum("memoryType", ["approved_pattern", "rejected_pattern", "style_preference", "cta_preference", "content_preference", "client_correction"]).notNull(),
+  context: varchar("context", { length: 255 }),
+  content: text("content").notNull(),
+  platform: varchar("platform", { length: 100 }),
+  pillar: varchar("pillar", { length: 255 }),
+  weight: int("weight").default(1).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AiMemory = typeof aiMemories.$inferSelect;
+export type InsertAiMemory = typeof aiMemories.$inferInsert;
+
+// ─── Audit Logs ───────────────────────────────────────────────────────────────
+
+export const auditLogs = mysqlTable("audit_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  profileId: varchar("profileId", { length: 64 }),
+  userId: varchar("userId", { length: 64 }),
+  userName: varchar("userName", { length: 255 }),
+  action: varchar("action", { length: 255 }).notNull(),
+  objectType: varchar("objectType", { length: 100 }).notNull(),
+  objectId: varchar("objectId", { length: 64 }),
+  objectTitle: varchar("objectTitle", { length: 500 }),
+  changes: json("changes").$type<Record<string, { before: unknown; after: unknown }>>(),
+  ipAddress: varchar("ipAddress", { length: 45 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAuditLog = typeof auditLogs.$inferInsert;

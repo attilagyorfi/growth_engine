@@ -17,8 +17,11 @@ import SocialMedia from "./pages/SocialMedia";
 import Analytics from "./pages/Analytics";
 import ProfilePage from "./pages/ProfilePage";
 import Login from "./pages/Login";
+import OnboardingWizard from "./pages/OnboardingWizard";
+import Intelligence from "./pages/Intelligence";
+import AIWriter from "./pages/AIWriter";
 import { useAuth } from "./_core/hooks/useAuth";
-import { DashboardLayoutSkeleton } from "./components/DashboardLayoutSkeleton";
+import DashboardLayoutSkeleton from "./components/DashboardLayoutSkeleton";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { isAuthenticated, loading } = useAuth();
@@ -41,6 +44,9 @@ function Router() {
       <Route path="/social-media" component={() => <ProtectedRoute component={SocialMedia} />} />
       <Route path="/analytics" component={() => <ProtectedRoute component={Analytics} />} />
       <Route path="/profile" component={() => <ProtectedRoute component={ProfilePage} />} />
+      <Route path="/onboarding" component={() => <ProtectedRoute component={OnboardingWizard} />} />
+      <Route path="/intelligence" component={() => <ProtectedRoute component={Intelligence} />} />
+      <Route path="/ai-writer" component={() => <ProtectedRoute component={AIWriter} />} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

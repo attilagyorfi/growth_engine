@@ -10,6 +10,7 @@ import {
   LayoutDashboard, Users, Mail, FileText, BarChart3,
   Zap, ChevronRight, Bell, Share2, PenTool, Inbox, X,
   CheckCircle, AlertCircle, Info, TrendingUp, UserCircle, ChevronDown,
+  Brain, Wand2, Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useData } from "@/contexts/DataContext";
@@ -26,6 +27,9 @@ const navItems = [
   { href: "/social-media", label: "Social Media", icon: Share2 },
   { href: "/analytics", label: "Analitika", icon: TrendingUp },
   { href: "/profile", label: "Profilok", icon: UserCircle },
+  { href: "/intelligence", label: "Company Intelligence", icon: Brain },
+  { href: "/ai-writer", label: "AI Writing Engine", icon: Wand2 },
+  { href: "/onboarding", label: "Új Ügyfél", icon: Plus },
 ];
 
 const notifIcons: Record<string, React.ReactNode> = {

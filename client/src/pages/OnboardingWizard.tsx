@@ -1,0 +1,976 @@
+/**
+ * G2A Growth Engine – Onboarding Wizard
+ * 3-step wizard: Basic Data → Brand & Communication → Operations & WOW Moment
+ */
+
+import { useState, useRef } from "react";
+import { useLocation } from "wouter";
+import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
+import {
+  Globe, Upload, Zap, ChevronRight, ChevronLeft,
+  Check, Loader2, Building2, Users, Target,
+  Sparkles, TrendingUp, Star, AlertTriangle,
+  FileText, Image, BarChart3, X, Plus, Trash2,
+  MessageSquare, Palette, Settings
+} from "lucide-react";
+import { nanoid } from "nanoid";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface WizardData {
+  // Step 1 – Basic Data
+  profileId: string;
+  sessionId: string;
+  companyName: string;
+  website: string;
+  industry: string;
+  companySize: string;
+  description: string;
+  services: string[];
+  targetAudience: string;
+  competitors: string[];
+  // Step 2 – Brand & Communication
+  toneOfVoice: string;
+  communicationStyle: string;
+  brandKeywords: string[];
+  avoidWords: string[];
+  brandColors: string[];
+  uploadedAssets: UploadedAsset[];
+  // Step 3 – Operations
+  monthlyBudget: string;
+  teamSize: string;
+  currentChannels: string[];
+  mainGoal: string;
+  timeframe: string;
+  // WOW output
+  wowOutput: WowOutput | null;
+}
+
+interface UploadedAsset {
+  id: string;
+  name: string;
+  type: string;
+  assetType: string;
+  url?: string;
+  status: "uploading" | "done" | "error";
+}
+
+interface WowOutput {
+  companySummary: string;
+  topStrengths: string[];
+  topRisks: string[];
+  ninetyDayStrategyOutline: string;
+  contentPillars: { name: string; description: string; percentage: number }[];
+  contentIdeas: { title: string; platform: string; format: string; pillar: string }[];
+  quickWins: { title: string; description: string; impact: string; effort: string }[];
+}
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const INDUSTRIES = [
+  "Technológia / SaaS", "E-kereskedelem", "Pénzügyi szolgáltatások",
+  "Egészségügy", "Oktatás", "Ingatlan", "Jogi szolgáltatások",
+  "Marketing / Reklám", "Gyártás / Ipar", "Vendéglátás / Turizmus",
+  "Szépségipar / Wellness", "Nonprofit", "Egyéb"
+];
+
+const COMPANY_SIZES = ["1-5 fő", "6-20 fő", "21-50 fő", "51-200 fő", "200+ fő"];
+
+const TONE_OPTIONS = [
+  { value: "professional", label: "Professzionális", desc: "Formális, tekintélyes, megbízható" },
+  { value: "friendly", label: "Barátságos", desc: "Közvetlen, meleg, könnyen megközelíthető" },
+  { value: "bold", label: "Merész", desc: "Magabiztos, provokatív, kiemelkedő" },
+  { value: "educational", label: "Oktató", desc: "Informatív, hasznos, szakértői" },
+  { value: "inspirational", label: "Inspiráló", desc: "Motiváló, érzelmi, vízióorientált" },
+  { value: "humorous", label: "Humoros", desc: "Szórakoztató, könnyed, emlékezetes" },
+];
+
+const CHANNELS = [
+  "LinkedIn", "Facebook", "Instagram", "TikTok", "Twitter/X",
+  "Email marketing", "Google Ads", "SEO / Blog", "YouTube", "Podcast"
+];
+
+const GOALS = [
+  "Brand awareness növelése", "Lead generálás", "Értékesítés növelése",
+  "Ügyfélmegtartás", "Közösség építése", "Piaci pozíció erősítése"
+];
+
+// ─── Step Indicator ───────────────────────────────────────────────────────────
+
+function StepIndicator({ current, total }: { current: number; total: number }) {
+  const steps = [
+    { label: "Alapadatok", icon: Building2 },
+    { label: "Brand & Hang", icon: Palette },
+    { label: "Működés", icon: Settings },
+    { label: "WOW Kimenet", icon: Sparkles },
+  ];
+
+  return (
+    <div className="flex items-center justify-center gap-2 mb-8">
+      {steps.map((step, i) => {
+        const Icon = step.icon;
+        const stepNum = i + 1;
+        const isCompleted = stepNum < current;
+        const isCurrent = stepNum === current;
+        return (
+          <div key={i} className="flex items-center">
+            <div className="flex flex-col items-center">
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                  isCompleted
+                    ? "bg-green-500 text-white"
+                    : isCurrent
+                    ? "text-white"
+                    : "text-gray-500"
+                }`}
+                style={isCurrent ? { background: "linear-gradient(135deg, oklch(0.6 0.2 255), oklch(0.55 0.18 165))" } : isCompleted ? {} : { background: "oklch(0.22 0.02 255)" }}
+              >
+                {isCompleted ? <Check size={18} /> : <Icon size={18} />}
+              </div>
+              <span className={`text-xs mt-1 hidden sm:block ${isCurrent ? "text-white" : isCompleted ? "text-green-400" : "text-gray-500"}`}>
+                {step.label}
+              </span>
+            </div>
+            {i < steps.length - 1 && (
+              <div className={`w-8 sm:w-16 h-0.5 mx-1 mb-5 ${stepNum < current ? "bg-green-500" : "bg-gray-700"}`} />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Tag Input ────────────────────────────────────────────────────────────────
+
+function TagInput({ tags, onChange, placeholder, max = 10 }: {
+  tags: string[];
+  onChange: (tags: string[]) => void;
+  placeholder?: string;
+  max?: number;
+}) {
+  const [input, setInput] = useState("");
+
+  const addTag = () => {
+    const trimmed = input.trim();
+    if (trimmed && !tags.includes(trimmed) && tags.length < max) {
+      onChange([...tags, trimmed]);
+      setInput("");
+    }
+  };
+
+  return (
+    <div className="flex flex-wrap gap-2 p-3 rounded-xl border min-h-[52px]" style={{ background: "oklch(0.15 0.02 255)", borderColor: "oklch(0.28 0.03 255)" }}>
+      {tags.map((tag, i) => (
+        <span key={i} className="flex items-center gap-1 px-3 py-1 rounded-full text-sm text-white" style={{ background: "oklch(0.25 0.05 255)" }}>
+          {tag}
+          <button onClick={() => onChange(tags.filter((_, j) => j !== i))} className="text-gray-400 hover:text-white">
+            <X size={12} />
+          </button>
+        </span>
+      ))}
+      {tags.length < max && (
+        <input
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addTag(); } }}
+          onBlur={addTag}
+          placeholder={placeholder}
+          className="bg-transparent text-white text-sm outline-none flex-1 min-w-[120px] placeholder-gray-500"
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
+export default function OnboardingWizard() {
+  const [, navigate] = useLocation();
+  const [step, setStep] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isScraping, setIsScraping] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [data, setData] = useState<WizardData>({
+    profileId: nanoid(),
+    sessionId: nanoid(),
+    companyName: "",
+    website: "",
+    industry: "",
+    companySize: "",
+    description: "",
+    services: [],
+    targetAudience: "",
+    competitors: [],
+    toneOfVoice: "",
+    communicationStyle: "",
+    brandKeywords: [],
+    avoidWords: [],
+    brandColors: [],
+    uploadedAssets: [],
+    monthlyBudget: "",
+    teamSize: "",
+    currentChannels: [],
+    mainGoal: "",
+    timeframe: "",
+    wowOutput: null,
+  });
+
+  const update = (fields: Partial<WizardData>) => setData(prev => ({ ...prev, ...fields }));
+
+  // tRPC mutations
+  const scrapeWebsite = trpc.onboarding.scrapeWebsite.useMutation();
+  const saveAnswers = trpc.onboarding.saveAnswers.useMutation();
+  const upsertSession = trpc.onboarding.upsertSession.useMutation();
+  const uploadAsset = trpc.onboarding.uploadAsset.useMutation();
+  const upsertProfile = trpc.profiles.upsert.useMutation();
+  const generateIntelligence = trpc.intelligence.generate.useMutation();
+  const generateWow = trpc.intelligence.generateWowMoment.useMutation();
+
+  // ─── Step 1: Website Scraping ───────────────────────────────────────────────
+
+  const handleScrapeWebsite = async () => {
+    if (!data.website) return;
+    setIsScraping(true);
+    try {
+      let url = data.website;
+      if (!url.startsWith("http")) url = "https://" + url;
+      const result = await scrapeWebsite.mutateAsync({ url });
+      update({
+        services: result.services ?? [],
+        targetAudience: result.targetAudience ?? "",
+        competitors: result.competitorCandidates ?? [],
+        description: result.companySummary ?? "",
+      });
+      toast.success("Weboldal elemzés kész! Az adatok automatikusan kitöltve.");
+    } catch {
+      toast.error("Nem sikerült elemezni a weboldalt. Töltsd ki kézzel!");
+    } finally {
+      setIsScraping(false);
+    }
+  };
+
+  // ─── Step 2: File Upload ────────────────────────────────────────────────────
+
+  const handleFileUpload = async (files: FileList | null) => {
+    if (!files) return;
+    for (const file of Array.from(files)) {
+      const tempId = nanoid();
+      const newAsset: UploadedAsset = {
+        id: tempId,
+        name: file.name,
+        type: file.type,
+        assetType: "brand_guide",
+        status: "uploading",
+      };
+      update({ uploadedAssets: [...data.uploadedAssets, newAsset] });
+
+      try {
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve((reader.result as string).split(",")[1]);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+
+        const result = await uploadAsset.mutateAsync({
+          profileId: data.profileId,
+          fileName: file.name,
+          fileType: file.type,
+          fileBase64: base64,
+          assetType: "brand_guide",
+        });
+
+        setData(prev => ({
+          ...prev,
+          uploadedAssets: prev.uploadedAssets.map(a =>
+            a.id === tempId ? { ...a, id: result?.id ?? tempId, url: result?.fileUrl ?? "", status: "done" } : a
+          ),
+        }));
+        toast.success(`${file.name} feltöltve!`);
+      } catch {
+        setData(prev => ({
+          ...prev,
+          uploadedAssets: prev.uploadedAssets.map(a =>
+            a.id === tempId ? { ...a, status: "error" } : a
+          ),
+        }));
+        toast.error(`${file.name} feltöltése sikertelen.`);
+      }
+    }
+  };
+
+  // ─── Step Navigation ────────────────────────────────────────────────────────
+
+  const handleNext = async () => {
+    if (step === 1) {
+      if (!data.companyName || !data.industry) {
+        toast.error("Kérlek töltsd ki a kötelező mezőket (cég neve, iparág)!");
+        return;
+      }
+      setIsLoading(true);
+      try {
+        await upsertSession.mutateAsync({ id: data.sessionId, profileId: data.profileId, currentStep: 2 });
+        await saveAnswers.mutateAsync({
+          sessionId: data.sessionId,
+          profileId: data.profileId,
+          step: 1,
+          answers: [
+            { fieldKey: "companyName", fieldValue: data.companyName },
+            { fieldKey: "website", fieldValue: data.website },
+            { fieldKey: "industry", fieldValue: data.industry },
+            { fieldKey: "companySize", fieldValue: data.companySize },
+            { fieldKey: "description", fieldValue: data.description },
+            { fieldKey: "services", fieldValue: JSON.stringify(data.services) },
+            { fieldKey: "targetAudience", fieldValue: data.targetAudience },
+            { fieldKey: "competitors", fieldValue: JSON.stringify(data.competitors) },
+          ],
+        });
+        setStep(2);
+      } catch {
+        toast.error("Hiba a mentés során, próbáld újra!");
+      } finally {
+        setIsLoading(false);
+      }
+    } else if (step === 2) {
+      setIsLoading(true);
+      try {
+        await saveAnswers.mutateAsync({
+          sessionId: data.sessionId,
+          profileId: data.profileId,
+          step: 2,
+          answers: [
+            { fieldKey: "toneOfVoice", fieldValue: data.toneOfVoice },
+            { fieldKey: "communicationStyle", fieldValue: data.communicationStyle },
+            { fieldKey: "brandKeywords", fieldValue: JSON.stringify(data.brandKeywords) },
+            { fieldKey: "avoidWords", fieldValue: JSON.stringify(data.avoidWords) },
+          ],
+        });
+        setStep(3);
+      } catch {
+        toast.error("Hiba a mentés során, próbáld újra!");
+      } finally {
+        setIsLoading(false);
+      }
+    } else if (step === 3) {
+      if (!data.mainGoal) {
+        toast.error("Kérlek válassz fő célt!");
+        return;
+      }
+      setIsLoading(true);
+      setIsGenerating(true);
+      try {
+        // Save step 3 answers
+        await saveAnswers.mutateAsync({
+          sessionId: data.sessionId,
+          profileId: data.profileId,
+          step: 3,
+          answers: [
+            { fieldKey: "monthlyBudget", fieldValue: data.monthlyBudget },
+            { fieldKey: "teamSize", fieldValue: data.teamSize },
+            { fieldKey: "currentChannels", fieldValue: JSON.stringify(data.currentChannels) },
+            { fieldKey: "mainGoal", fieldValue: data.mainGoal },
+            { fieldKey: "timeframe", fieldValue: data.timeframe },
+          ],
+        });
+
+        // Create/update profile
+        await upsertProfile.mutateAsync({
+          id: data.profileId,
+          name: data.companyName,
+          initials: data.companyName.slice(0, 2).toUpperCase(),
+          website: data.website,
+          industry: data.industry,
+          description: data.description,
+          brandVoice: {
+            tone: data.toneOfVoice,
+            style: data.communicationStyle,
+            keywords: data.brandKeywords,
+            avoid: data.avoidWords.join(", "),
+          },
+          contentPillars: [],
+        });
+
+        // Generate company intelligence
+        const intelligence = await generateIntelligence.mutateAsync({
+          profileId: data.profileId,
+          profileData: {
+            name: data.companyName,
+            website: data.website,
+            industry: data.industry,
+            description: data.description,
+            brandVoice: {
+              tone: data.toneOfVoice,
+              style: data.communicationStyle,
+              keywords: data.brandKeywords,
+            },
+          },
+          onboardingAnswers: [
+            { fieldKey: "services", fieldValue: JSON.stringify(data.services) },
+            { fieldKey: "targetAudience", fieldValue: data.targetAudience },
+            { fieldKey: "competitors", fieldValue: JSON.stringify(data.competitors) },
+            { fieldKey: "mainGoal", fieldValue: data.mainGoal },
+            { fieldKey: "currentChannels", fieldValue: JSON.stringify(data.currentChannels) },
+          ],
+        });
+
+        // Generate WOW moment
+        const wow = await generateWow.mutateAsync({
+          profileId: data.profileId,
+          intelligenceData: intelligence,
+        });
+
+        // Complete session
+        await upsertSession.mutateAsync({
+          id: data.sessionId,
+          profileId: data.profileId,
+          status: "completed",
+          currentStep: 4,
+          completedAt: new Date(),
+        });
+
+        update({ wowOutput: wow });
+        setStep(4);
+        toast.success("🎉 Elemzés kész! Íme a Growth Engine eredménye.");
+      } catch (e) {
+        console.error(e);
+        toast.error("Hiba az elemzés során. Próbáld újra!");
+      } finally {
+        setIsLoading(false);
+        setIsGenerating(false);
+      }
+    }
+  };
+
+  const handleFinish = () => {
+    navigate("/");
+    toast.success(`${data.companyName} profil sikeresen létrehozva!`);
+  };
+
+  // ─── Render Steps ───────────────────────────────────────────────────────────
+
+  return (
+    <div className="min-h-screen" style={{ background: "oklch(0.11 0.02 255)" }}>
+      {/* Header */}
+      <div className="border-b px-6 py-4 flex items-center justify-between" style={{ borderColor: "oklch(0.22 0.03 255)", background: "oklch(0.13 0.02 255)" }}>
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, oklch(0.6 0.2 255), oklch(0.55 0.18 165))" }}>
+            <Zap size={16} className="text-white" />
+          </div>
+          <span className="font-bold text-white" style={{ fontFamily: "Sora, sans-serif" }}>G2A Growth Engine</span>
+        </div>
+        <span className="text-gray-400 text-sm">Új ügyfél beállítása</span>
+      </div>
+
+      <div className="max-w-3xl mx-auto px-4 py-8">
+        <StepIndicator current={step} total={4} />
+
+        {/* ─── Step 1: Basic Data ─────────────────────────────────────────── */}
+        {step === 1 && (
+          <div className="space-y-6">
+            <div className="text-center mb-6">
+              <h1 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: "Sora, sans-serif" }}>
+                Ismerjük meg a cégedet
+              </h1>
+              <p className="text-gray-400">Add meg az alapadatokat – a weboldal elemzéssel automatikusan kitöltjük a többit</p>
+            </div>
+
+            {/* Company Name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Cég neve *</label>
+              <input
+                value={data.companyName}
+                onChange={e => update({ companyName: e.target.value })}
+                placeholder="pl. G2A Marketing Kft."
+                className="w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 outline-none border focus:border-blue-500 transition-colors"
+                style={{ background: "oklch(0.15 0.02 255)", borderColor: "oklch(0.28 0.03 255)" }}
+              />
+            </div>
+
+            {/* Website with scrape */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Weboldal</label>
+              <div className="flex gap-2">
+                <input
+                  value={data.website}
+                  onChange={e => update({ website: e.target.value })}
+                  placeholder="https://pelda.hu"
+                  className="flex-1 px-4 py-3 rounded-xl text-white placeholder-gray-500 outline-none border focus:border-blue-500 transition-colors"
+                  style={{ background: "oklch(0.15 0.02 255)", borderColor: "oklch(0.28 0.03 255)" }}
+                />
+                <button
+                  onClick={handleScrapeWebsite}
+                  disabled={!data.website || isScraping}
+                  className="px-4 py-3 rounded-xl font-medium text-white flex items-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
+                  style={{ background: "linear-gradient(135deg, oklch(0.6 0.2 255), oklch(0.55 0.18 165))" }}
+                >
+                  {isScraping ? <Loader2 size={16} className="animate-spin" /> : <Globe size={16} />}
+                  {isScraping ? "Elemzés..." : "AI Elemzés"}
+                </button>
+              </div>
+              {isScraping && (
+                <p className="text-blue-400 text-sm mt-2 flex items-center gap-2">
+                  <Loader2 size={14} className="animate-spin" />
+                  Az AI elemzi a weboldalt és automatikusan kitölti az adatokat...
+                </p>
+              )}
+            </div>
+
+            {/* Industry & Size */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Iparág *</label>
+                <select
+                  value={data.industry}
+                  onChange={e => update({ industry: e.target.value })}
+                  className="w-full px-4 py-3 rounded-xl text-white outline-none border focus:border-blue-500 transition-colors"
+                  style={{ background: "oklch(0.15 0.02 255)", borderColor: "oklch(0.28 0.03 255)" }}
+                >
+                  <option value="">Válassz...</option>
+                  {INDUSTRIES.map(ind => <option key={ind} value={ind}>{ind}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Cégméret</label>
+                <select
+                  value={data.companySize}
+                  onChange={e => update({ companySize: e.target.value })}
+                  className="w-full px-4 py-3 rounded-xl text-white outline-none border focus:border-blue-500 transition-colors"
+                  style={{ background: "oklch(0.15 0.02 255)", borderColor: "oklch(0.28 0.03 255)" }}
+                >
+                  <option value="">Válassz...</option>
+                  {COMPANY_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Cég leírása</label>
+              <textarea
+                value={data.description}
+                onChange={e => update({ description: e.target.value })}
+                placeholder="Rövid leírás a cégről, fő tevékenységekről..."
+                rows={3}
+                className="w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 outline-none border focus:border-blue-500 transition-colors resize-none"
+                style={{ background: "oklch(0.15 0.02 255)", borderColor: "oklch(0.28 0.03 255)" }}
+              />
+            </div>
+
+            {/* Services */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Termékek / Szolgáltatások</label>
+              <TagInput
+                tags={data.services}
+                onChange={services => update({ services })}
+                placeholder="Adj hozzá szolgáltatást, Enter-rel..."
+              />
+            </div>
+
+            {/* Target Audience */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Célközönség</label>
+              <input
+                value={data.targetAudience}
+                onChange={e => update({ targetAudience: e.target.value })}
+                placeholder="pl. KKV-k, 30-50 éves döntéshozók, B2B..."
+                className="w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 outline-none border focus:border-blue-500 transition-colors"
+                style={{ background: "oklch(0.15 0.02 255)", borderColor: "oklch(0.28 0.03 255)" }}
+              />
+            </div>
+
+            {/* Competitors */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Versenytársak</label>
+              <TagInput
+                tags={data.competitors}
+                onChange={competitors => update({ competitors })}
+                placeholder="Versenytárs neve, Enter-rel..."
+                max={8}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* ─── Step 2: Brand & Communication ─────────────────────────────── */}
+        {step === 2 && (
+          <div className="space-y-6">
+            <div className="text-center mb-6">
+              <h1 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: "Sora, sans-serif" }}>
+                Brand & Kommunikáció
+              </h1>
+              <p className="text-gray-400">Határozd meg a márka hangját és töltsd fel a meglévő anyagokat</p>
+            </div>
+
+            {/* Tone of Voice */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-3">Márkahangg (Tone of Voice)</label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {TONE_OPTIONS.map(tone => (
+                  <button
+                    key={tone.value}
+                    onClick={() => update({ toneOfVoice: tone.value })}
+                    className={`p-3 rounded-xl border text-left transition-all ${
+                      data.toneOfVoice === tone.value
+                        ? "border-blue-500 text-white"
+                        : "text-gray-400 hover:border-gray-500"
+                    }`}
+                    style={{
+                      background: data.toneOfVoice === tone.value ? "oklch(0.2 0.05 255)" : "oklch(0.15 0.02 255)",
+                      borderColor: data.toneOfVoice === tone.value ? "oklch(0.6 0.2 255)" : "oklch(0.28 0.03 255)",
+                    }}
+                  >
+                    <div className="font-medium text-sm mb-1">{tone.label}</div>
+                    <div className="text-xs opacity-70">{tone.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Communication Style */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Kommunikációs stílus</label>
+              <textarea
+                value={data.communicationStyle}
+                onChange={e => update({ communicationStyle: e.target.value })}
+                placeholder="pl. Rövid, tömör mondatok. Kerüljük a szakzsargont. Mindig konkrét példákkal illusztrálunk..."
+                rows={3}
+                className="w-full px-4 py-3 rounded-xl text-white placeholder-gray-500 outline-none border focus:border-blue-500 transition-colors resize-none"
+                style={{ background: "oklch(0.15 0.02 255)", borderColor: "oklch(0.28 0.03 255)" }}
+              />
+            </div>
+
+            {/* Brand Keywords */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Kulcsszavak, amelyeket HASZNÁLJUNK</label>
+              <TagInput
+                tags={data.brandKeywords}
+                onChange={brandKeywords => update({ brandKeywords })}
+                placeholder="Kulcsszó, Enter-rel..."
+              />
+            </div>
+
+            {/* Avoid Words */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Szavak, amelyeket KERÜLJÜNK</label>
+              <TagInput
+                tags={data.avoidWords}
+                onChange={avoidWords => update({ avoidWords })}
+                placeholder="Kerülendő szó, Enter-rel..."
+              />
+            </div>
+
+            {/* File Upload */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-3">Márkaanyagok feltöltése (opcionális)</label>
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all hover:border-blue-500"
+                style={{ borderColor: "oklch(0.28 0.03 255)", background: "oklch(0.13 0.02 255)" }}
+              >
+                <Upload size={32} className="mx-auto mb-3 text-gray-500" />
+                <p className="text-gray-300 font-medium mb-1">Húzd ide a fájlokat, vagy kattints</p>
+                <p className="text-gray-500 text-sm">Arculati kézikönyv, brand guide, sales deck, persona leírás (PDF, DOCX, PNG)</p>
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept=".pdf,.docx,.doc,.png,.jpg,.jpeg,.pptx"
+                className="hidden"
+                onChange={e => handleFileUpload(e.target.files)}
+              />
+
+              {data.uploadedAssets.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {data.uploadedAssets.map(asset => (
+                    <div key={asset.id} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: "oklch(0.15 0.02 255)" }}>
+                      <FileText size={18} className="text-blue-400 flex-shrink-0" />
+                      <span className="text-gray-300 text-sm flex-1 truncate">{asset.name}</span>
+                      {asset.status === "uploading" && <Loader2 size={16} className="animate-spin text-blue-400" />}
+                      {asset.status === "done" && <Check size={16} className="text-green-400" />}
+                      {asset.status === "error" && <X size={16} className="text-red-400" />}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ─── Step 3: Operations ─────────────────────────────────────────── */}
+        {step === 3 && (
+          <div className="space-y-6">
+            <div className="text-center mb-6">
+              <h1 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: "Sora, sans-serif" }}>
+                Működés & Erőforrások
+              </h1>
+              <p className="text-gray-400">Az utolsó lépés – ezután az AI elkészíti a teljes Growth Engine elemzést</p>
+            </div>
+
+            {/* Main Goal */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-3">Fő marketing cél *</label>
+              <div className="grid grid-cols-2 gap-3">
+                {GOALS.map(goal => (
+                  <button
+                    key={goal}
+                    onClick={() => update({ mainGoal: goal })}
+                    className={`p-3 rounded-xl border text-left text-sm transition-all ${
+                      data.mainGoal === goal ? "text-white" : "text-gray-400 hover:border-gray-500"
+                    }`}
+                    style={{
+                      background: data.mainGoal === goal ? "oklch(0.2 0.05 255)" : "oklch(0.15 0.02 255)",
+                      borderColor: data.mainGoal === goal ? "oklch(0.6 0.2 255)" : "oklch(0.28 0.03 255)",
+                    }}
+                  >
+                    <Target size={14} className="inline mr-2 opacity-70" />
+                    {goal}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Current Channels */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-3">Jelenleg aktív csatornák</label>
+              <div className="flex flex-wrap gap-2">
+                {CHANNELS.map(channel => (
+                  <button
+                    key={channel}
+                    onClick={() => {
+                      const channels = data.currentChannels.includes(channel)
+                        ? data.currentChannels.filter(c => c !== channel)
+                        : [...data.currentChannels, channel];
+                      update({ currentChannels: channels });
+                    }}
+                    className={`px-4 py-2 rounded-full border text-sm transition-all ${
+                      data.currentChannels.includes(channel) ? "text-white" : "text-gray-400 hover:border-gray-500"
+                    }`}
+                    style={{
+                      background: data.currentChannels.includes(channel) ? "oklch(0.2 0.05 255)" : "oklch(0.15 0.02 255)",
+                      borderColor: data.currentChannels.includes(channel) ? "oklch(0.6 0.2 255)" : "oklch(0.28 0.03 255)",
+                    }}
+                  >
+                    {data.currentChannels.includes(channel) && <Check size={12} className="inline mr-1" />}
+                    {channel}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Budget & Team */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Havi marketing büdzsé</label>
+                <select
+                  value={data.monthlyBudget}
+                  onChange={e => update({ monthlyBudget: e.target.value })}
+                  className="w-full px-4 py-3 rounded-xl text-white outline-none border focus:border-blue-500 transition-colors"
+                  style={{ background: "oklch(0.15 0.02 255)", borderColor: "oklch(0.28 0.03 255)" }}
+                >
+                  <option value="">Válassz...</option>
+                  <option>0 – 100 000 Ft</option>
+                  <option>100 000 – 300 000 Ft</option>
+                  <option>300 000 – 500 000 Ft</option>
+                  <option>500 000 – 1 000 000 Ft</option>
+                  <option>1 000 000 Ft felett</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Időkeret</label>
+                <select
+                  value={data.timeframe}
+                  onChange={e => update({ timeframe: e.target.value })}
+                  className="w-full px-4 py-3 rounded-xl text-white outline-none border focus:border-blue-500 transition-colors"
+                  style={{ background: "oklch(0.15 0.02 255)", borderColor: "oklch(0.28 0.03 255)" }}
+                >
+                  <option value="">Válassz...</option>
+                  <option>30 nap</option>
+                  <option>90 nap</option>
+                  <option>6 hónap</option>
+                  <option>1 év</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Generating indicator */}
+            {isGenerating && (
+              <div className="rounded-xl p-6 border text-center" style={{ background: "oklch(0.15 0.05 255)", borderColor: "oklch(0.35 0.1 255)" }}>
+                <Loader2 size={32} className="animate-spin mx-auto mb-3 text-blue-400" />
+                <p className="text-white font-medium mb-1">Az AI elemzi a cégedet...</p>
+                <p className="text-gray-400 text-sm">Company Intelligence generálás, stratégia tervezés, tartalom ötletek – ez 20-30 másodpercet vesz igénybe</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ─── Step 4: WOW Moment ─────────────────────────────────────────── */}
+        {step === 4 && data.wowOutput && (
+          <div className="space-y-6">
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4" style={{ background: "linear-gradient(135deg, oklch(0.6 0.2 255), oklch(0.55 0.18 165))" }}>
+                <Sparkles size={28} className="text-white" />
+              </div>
+              <h1 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: "Sora, sans-serif" }}>
+                🎉 A Growth Engine készen áll!
+              </h1>
+              <p className="text-gray-400">Az AI elvégezte az elemzést. Íme a {data.companyName} Growth Engine profil:</p>
+            </div>
+
+            {/* Company Summary */}
+            <div className="rounded-xl p-5 border" style={{ background: "oklch(0.15 0.02 255)", borderColor: "oklch(0.28 0.03 255)" }}>
+              <h3 className="text-white font-semibold mb-2 flex items-center gap-2">
+                <Building2 size={18} className="text-blue-400" /> Cégprofil összefoglaló
+              </h3>
+              <p className="text-gray-300 text-sm leading-relaxed">{data.wowOutput.companySummary}</p>
+            </div>
+
+            {/* Strengths & Risks */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="rounded-xl p-5 border" style={{ background: "oklch(0.13 0.04 145)", borderColor: "oklch(0.35 0.1 145)" }}>
+                <h3 className="text-green-400 font-semibold mb-3 flex items-center gap-2">
+                  <Star size={16} /> Erősségek
+                </h3>
+                <ul className="space-y-2">
+                  {data.wowOutput.topStrengths.map((s, i) => (
+                    <li key={i} className="text-gray-300 text-sm flex items-start gap-2">
+                      <Check size={14} className="text-green-400 mt-0.5 flex-shrink-0" /> {s}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="rounded-xl p-5 border" style={{ background: "oklch(0.13 0.04 30)", borderColor: "oklch(0.35 0.1 30)" }}>
+                <h3 className="text-orange-400 font-semibold mb-3 flex items-center gap-2">
+                  <AlertTriangle size={16} /> Kockázatok
+                </h3>
+                <ul className="space-y-2">
+                  {data.wowOutput.topRisks.map((r, i) => (
+                    <li key={i} className="text-gray-300 text-sm flex items-start gap-2">
+                      <AlertTriangle size={14} className="text-orange-400 mt-0.5 flex-shrink-0" /> {r}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            {/* 90-day Strategy */}
+            <div className="rounded-xl p-5 border" style={{ background: "oklch(0.15 0.02 255)", borderColor: "oklch(0.28 0.03 255)" }}>
+              <h3 className="text-white font-semibold mb-2 flex items-center gap-2">
+                <TrendingUp size={18} className="text-blue-400" /> 90 napos stratégia vázlat
+              </h3>
+              <p className="text-gray-300 text-sm leading-relaxed">{data.wowOutput.ninetyDayStrategyOutline}</p>
+            </div>
+
+            {/* Content Pillars */}
+            <div className="rounded-xl p-5 border" style={{ background: "oklch(0.15 0.02 255)", borderColor: "oklch(0.28 0.03 255)" }}>
+              <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+                <BarChart3 size={18} className="text-purple-400" /> Tartalmi pillérek
+              </h3>
+              <div className="space-y-3">
+                {data.wowOutput.contentPillars.map((pillar, i) => (
+                  <div key={i}>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-gray-300 font-medium">{pillar.name}</span>
+                      <span className="text-gray-500">{pillar.percentage}%</span>
+                    </div>
+                    <div className="h-2 rounded-full overflow-hidden" style={{ background: "oklch(0.22 0.02 255)" }}>
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${pillar.percentage}%`,
+                          background: `hsl(${i * 60}, 70%, 60%)`,
+                        }}
+                      />
+                    </div>
+                    <p className="text-gray-500 text-xs mt-1">{pillar.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Quick Wins */}
+            <div className="rounded-xl p-5 border" style={{ background: "oklch(0.15 0.02 255)", borderColor: "oklch(0.28 0.03 255)" }}>
+              <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+                <Zap size={18} className="text-yellow-400" /> Gyors győzelmek (Quick Wins)
+              </h3>
+              <div className="space-y-3">
+                {data.wowOutput.quickWins.map((win, i) => (
+                  <div key={i} className="flex gap-3 p-3 rounded-lg" style={{ background: "oklch(0.18 0.02 255)" }}>
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "oklch(0.25 0.05 255)" }}>
+                      <span className="text-white text-sm font-bold">{i + 1}</span>
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-white text-sm font-medium">{win.title}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${win.impact === "high" ? "bg-green-900 text-green-400" : win.impact === "medium" ? "bg-yellow-900 text-yellow-400" : "bg-gray-800 text-gray-400"}`}>
+                          {win.impact === "high" ? "Nagy hatás" : win.impact === "medium" ? "Közepes" : "Kis hatás"}
+                        </span>
+                      </div>
+                      <p className="text-gray-400 text-xs">{win.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Content Ideas Preview */}
+            <div className="rounded-xl p-5 border" style={{ background: "oklch(0.15 0.02 255)", borderColor: "oklch(0.28 0.03 255)" }}>
+              <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+                <MessageSquare size={18} className="text-cyan-400" /> Tartalom ötletek (első 5)
+              </h3>
+              <div className="space-y-2">
+                {data.wowOutput.contentIdeas.slice(0, 5).map((idea, i) => (
+                  <div key={i} className="flex items-center gap-3 p-3 rounded-lg" style={{ background: "oklch(0.18 0.02 255)" }}>
+                    <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ background: "oklch(0.25 0.05 255)", color: "oklch(0.7 0.15 255)" }}>
+                      {idea.platform}
+                    </span>
+                    <span className="text-gray-300 text-sm flex-1">{idea.title}</span>
+                    <span className="text-gray-500 text-xs">{idea.format}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ─── Navigation Buttons ─────────────────────────────────────────── */}
+        <div className="flex justify-between mt-8 pt-6 border-t" style={{ borderColor: "oklch(0.22 0.03 255)" }}>
+          {step > 1 && step < 4 ? (
+            <button
+              onClick={() => setStep(s => s - 1)}
+              className="flex items-center gap-2 px-6 py-3 rounded-xl text-gray-400 hover:text-white border transition-all"
+              style={{ borderColor: "oklch(0.28 0.03 255)", background: "oklch(0.15 0.02 255)" }}
+            >
+              <ChevronLeft size={18} /> Vissza
+            </button>
+          ) : <div />}
+
+          {step < 4 ? (
+            <button
+              onClick={handleNext}
+              disabled={isLoading || isGenerating}
+              className="flex items-center gap-2 px-8 py-3 rounded-xl font-semibold text-white transition-all hover:opacity-90 disabled:opacity-50"
+              style={{ background: "linear-gradient(135deg, oklch(0.6 0.2 255), oklch(0.55 0.18 165))" }}
+            >
+              {isLoading ? <Loader2 size={18} className="animate-spin" /> : null}
+              {step === 3 ? (isGenerating ? "Elemzés folyamatban..." : "Growth Engine indítása") : "Következő"}
+              {!isLoading && !isGenerating && <ChevronRight size={18} />}
+            </button>
+          ) : (
+            <button
+              onClick={handleFinish}
+              className="flex items-center gap-2 px-8 py-3 rounded-xl font-semibold text-white transition-all hover:opacity-90"
+              style={{ background: "linear-gradient(135deg, oklch(0.55 0.18 145), oklch(0.5 0.15 165))" }}
+            >
+              <Check size={18} /> Belépés a vezérlőpultra
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
