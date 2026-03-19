@@ -37,3 +37,42 @@
 - [ ] AI Memory (jóváhagyott/elutasított minták)
 - [ ] Audit Log modul
 - [ ] Recommendation engine
+
+## MVP 3.0 – UX Átszervezés (AKTUÁLIS)
+
+### Navigáció és Routing
+- [x] DashboardLayout sidebar átírása: 7 fő menüpont (Dashboard, Clients, Strategy, Content Studio, Sales Ops, Analytics, Settings)
+- [x] App.tsx routing frissítése (régi route-ok törlése, új route-ok hozzáadása)
+- [x] AI Writer eltávolítása a főnavigációból (beágyazott marad)
+- [x] Social Media eltávolítása a főnavigációból (Settings/Integrations alá kerül)
+- [x] Profile eltávolítása a főnavigációból (Settings alá kerül)
+
+### Dashboard
+- [x] Dashboard operatív átírása: Needs Approval, This Week's Priorities, Scheduled Next 7 Days, Top Insight, At-risk Items
+- [x] Másodlagos blokk: KPI summary, activity stream, recent content, latest replies
+
+### Content Studio
+- [x] Content és ContentCreator összevonása egyetlen ContentStudio oldallá
+- [x] Tabok: Calendar, Drafts, Approval, Published, Assets
+- [x] AI quick generate drawer beágyazása a Content Studio-ba
+
+### Sales Ops
+- [x] Leads + Outbound + Inbound (Replies) összevonása SalesOps oldallá
+- [x] Tabok: Leads, Outbound, Replies
+- [x] Email szerkesztés drawer-be (nem modal)
+
+### Strategy
+- [x] Strategy aktív vezérlőfelületté alakítása
+- [x] Strategic summary, monthly priorities, weekly execution board, linked tasks, KPI tracking
+
+### Onboarding / Clients Flow
+- [ ] WOW screen CTA-k: Approve Intelligence, Generate 90-day Strategy, Create First Content Calendar
+- [x] Clients oldal: client list + onboarding + intelligence review aloldalak
+- [ ] User journey: Create Client → Onboarding → Intelligence Review → WOW → Strategy → Content Calendar
+
+### Settings
+- [x] Settings összevonás: Brand Center + Integrations + Team & Permissions + Audit Log tabok
+
+### UX Javítások
+- [x] Kliensváltás UX megerősítése (hangsúlyos aktív ügyfél, transition state, megerősítés kritikus műveleteknél)
+- [x] Modal-to-drawer refaktor: email szerkesztés, stratégia részletek, content review → right-side drawer

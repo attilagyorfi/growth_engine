@@ -1,35 +1,30 @@
 /*
- * G2A Growth Engine – DashboardLayout
+ * G2A Growth Engine – DashboardLayout v3.0
  * Design: "Dark Ops Dashboard"
- * Features: persistent sidebar, notification panel, profile switcher, all nav items
+ * Navigation: 7 primary items (Dashboard, Clients, Strategy, Content Studio, Sales Ops, Analytics, Settings)
+ * Features: persistent sidebar, notification panel, enhanced client switcher with confirmation
  */
 
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
-  LayoutDashboard, Users, Mail, FileText, BarChart3,
-  Zap, ChevronRight, Bell, Share2, PenTool, Inbox, X,
-  CheckCircle, AlertCircle, Info, TrendingUp, UserCircle, ChevronDown,
-  Brain, Wand2, Plus,
+  LayoutDashboard, Users, BarChart3, Layers, TrendingUp, Settings,
+  Zap, ChevronRight, Bell, X, CheckCircle, AlertCircle, Info, Mail,
+  ChevronDown, ShieldAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useData } from "@/contexts/DataContext";
 import { useProfile } from "@/contexts/ProfileContext";
+import { toast } from "sonner";
 
 const navItems = [
-  { href: "/", label: "Áttekintés", icon: LayoutDashboard },
-  { href: "/leads", label: "Lead Adatbázis", icon: Users },
-  { href: "/outbound", label: "Outbound Emailek", icon: Mail },
-  { href: "/inbound", label: "Inbound Emailek", icon: Inbox },
-  { href: "/content", label: "Tartalmak", icon: FileText },
-  { href: "/content-creator", label: "Tartalomgyártó", icon: PenTool },
-  { href: "/strategy", label: "Stratégia", icon: BarChart3 },
-  { href: "/social-media", label: "Social Media", icon: Share2 },
-  { href: "/analytics", label: "Analitika", icon: TrendingUp },
-  { href: "/profile", label: "Profilok", icon: UserCircle },
-  { href: "/intelligence", label: "Company Intelligence", icon: Brain },
-  { href: "/ai-writer", label: "AI Writing Engine", icon: Wand2 },
-  { href: "/onboarding", label: "Új Ügyfél", icon: Plus },
+  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/clients", label: "Clients", icon: Users },
+  { href: "/strategy", label: "Strategy", icon: BarChart3 },
+  { href: "/content-studio", label: "Content Studio", icon: Layers },
+  { href: "/sales-ops", label: "Sales Ops", icon: Mail },
+  { href: "/analytics", label: "Analytics", icon: TrendingUp },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 const notifIcons: Record<string, React.ReactNode> = {
@@ -56,6 +51,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
   const [location, navigate] = useLocation();
   const [showNotifs, setShowNotifs] = useState(false);
   const [showProfileSwitcher, setShowProfileSwitcher] = useState(false);
+  const [pendingProfileId, setPendingProfileId] = useState<string | null>(null);
   const { notifications, markNotificationRead, markAllNotificationsRead, unreadCount } = useData();
   const { profiles, activeProfile, setActiveProfileId } = useProfile();
 
@@ -64,15 +60,28 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
     if (link) { navigate(link); setShowNotifs(false); }
   };
 
-  const handleProfileSwitch = (id: string) => {
-    setActiveProfileId(id);
-    setShowProfileSwitcher(false);
+  const handleProfileSwitchRequest = (id: string) => {
+    if (id === activeProfile.id) { setShowProfileSwitcher(false); return; }
+    setPendingProfileId(id);
   };
+
+  const confirmProfileSwitch = () => {
+    if (!pendingProfileId) return;
+    setActiveProfileId(pendingProfileId);
+    setPendingProfileId(null);
+    setShowProfileSwitcher(false);
+    const newProfile = profiles.find(p => p.id === pendingProfileId);
+    toast.success(`Átváltva: ${newProfile?.name}`, { description: "Minden adat az új ügyfél kontextusában jelenik meg." });
+  };
+
+  const cancelProfileSwitch = () => setPendingProfileId(null);
+
+  const pendingProfile = pendingProfileId ? profiles.find(p => p.id === pendingProfileId) : null;
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "oklch(0.13 0.025 255)" }}>
       {/* Sidebar */}
-      <aside className="w-60 flex-shrink-0 flex flex-col border-r" style={{ background: "oklch(0.16 0.022 255)", borderColor: "oklch(1 0 0 / 8%)" }}>
+      <aside className="w-56 flex-shrink-0 flex flex-col border-r" style={{ background: "oklch(0.16 0.022 255)", borderColor: "oklch(1 0 0 / 8%)" }}>
         {/* Logo */}
         <div className="px-5 py-5 border-b" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
           <div className="flex items-center gap-2.5">
@@ -86,11 +95,21 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
           </div>
         </div>
 
+        {/* Active Client Badge */}
+        <div className="mx-3 mt-3 mb-1 px-3 py-2 rounded-lg border" style={{ background: "oklch(0.6 0.2 255 / 8%)", borderColor: "oklch(0.6 0.2 255 / 25%)" }}>
+          <p className="text-xs font-medium mb-0.5" style={{ color: "oklch(0.55 0.015 240)" }}>Aktív ügyfél</p>
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 rounded-md flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style={{ background: activeProfile.color }}>
+              {activeProfile.initials}
+            </div>
+            <p className="text-sm font-bold truncate" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>{activeProfile.name}</p>
+          </div>
+        </div>
+
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-          <p className="px-2 mb-2 text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.45 0.015 240)" }}>Modulok</p>
+        <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
           {navItems.map(({ href, label, icon: Icon }) => {
-            const isActive = location === href;
+            const isActive = location === href || (href !== "/" && location.startsWith(href));
             return (
               <Link key={href} href={href} className={cn("nav-item", isActive && "active")}>
                 <Icon size={15} />
@@ -124,12 +143,12 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
-        <header className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-b" style={{ background: "oklch(0.16 0.022 255)", borderColor: "oklch(1 0 0 / 8%)" }}>
+        <header className="flex-shrink-0 flex items-center justify-between px-6 py-3.5 border-b" style={{ background: "oklch(0.16 0.022 255)", borderColor: "oklch(1 0 0 / 8%)" }}>
           <div>
-            <h1 className="text-lg font-bold leading-none" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>{title}</h1>
-            {subtitle && <p className="text-sm mt-0.5" style={{ color: "oklch(0.55 0.015 240)" }}>{subtitle}</p>}
+            {title && <h1 className="text-base font-bold leading-none" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>{title}</h1>}
+            {subtitle && <p className="text-xs mt-0.5" style={{ color: "oklch(0.55 0.015 240)" }}>{subtitle}</p>}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {/* Notification Bell */}
             <div className="relative">
               <button
@@ -187,37 +206,64 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
               )}
             </div>
 
-            {/* Profile Switcher */}
+            {/* Client Switcher */}
             <div className="relative">
               <button
                 onClick={() => { setShowProfileSwitcher((v) => !v); setShowNotifs(false); }}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors"
-                style={{ background: showProfileSwitcher ? "oklch(0.6 0.2 255 / 20%)" : "oklch(0.22 0.02 255)" }}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all border"
+                style={{
+                  background: showProfileSwitcher ? "oklch(0.6 0.2 255 / 15%)" : "oklch(0.22 0.02 255)",
+                  borderColor: showProfileSwitcher ? "oklch(0.6 0.2 255 / 40%)" : "oklch(1 0 0 / 8%)"
+                }}
               >
                 <div className="w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold text-white" style={{ background: activeProfile.color }}>
                   {activeProfile.initials}
                 </div>
-                <span className="text-xs font-semibold max-w-24 truncate" style={{ color: "oklch(0.88 0.008 240)", fontFamily: "Sora, sans-serif" }}>
-                  {activeProfile.name}
-                </span>
+                <div className="text-left">
+                  <p className="text-xs font-bold leading-none max-w-28 truncate" style={{ color: "oklch(0.92 0.008 240)", fontFamily: "Sora, sans-serif" }}>
+                    {activeProfile.name}
+                  </p>
+                  <p className="text-xs leading-none mt-0.5" style={{ color: "oklch(0.5 0.015 240)" }}>Aktív ügyfél</p>
+                </div>
                 <ChevronDown size={12} style={{ color: "oklch(0.55 0.015 240)" }} />
               </button>
 
-              {/* Profile Dropdown */}
+              {/* Client Dropdown */}
               {showProfileSwitcher && (
-                <div className="absolute right-0 top-11 w-64 rounded-xl shadow-2xl z-50 overflow-hidden" style={{ background: "oklch(0.18 0.022 255)", border: "1px solid oklch(1 0 0 / 12%)" }}>
+                <div className="absolute right-0 top-12 w-72 rounded-xl shadow-2xl z-50 overflow-hidden" style={{ background: "oklch(0.18 0.022 255)", border: "1px solid oklch(1 0 0 / 12%)" }}>
                   <div className="px-4 py-3 border-b" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
                     <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.5 0.015 240)" }}>Ügyfél váltás</p>
                   </div>
-                  <div className="py-1 max-h-64 overflow-y-auto">
+
+                  {/* Pending confirmation */}
+                  {pendingProfile && (
+                    <div className="mx-3 my-2 p-3 rounded-lg border" style={{ background: "oklch(0.75 0.18 75 / 8%)", borderColor: "oklch(0.75 0.18 75 / 30%)" }}>
+                      <div className="flex items-start gap-2 mb-2">
+                        <ShieldAlert size={14} style={{ color: "oklch(0.75 0.18 75)", flexShrink: 0, marginTop: 1 }} />
+                        <p className="text-xs" style={{ color: "oklch(0.85 0.01 240)" }}>
+                          Biztosan átváltasz erre: <strong>{pendingProfile.name}</strong>? Minden következő művelet ennek az ügyfélnek a kontextusában fut.
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={confirmProfileSwitch} className="flex-1 py-1.5 rounded-lg text-xs font-semibold text-white" style={{ background: "oklch(0.6 0.2 255)" }}>
+                          Igen, váltás
+                        </button>
+                        <button onClick={cancelProfileSwitch} className="flex-1 py-1.5 rounded-lg text-xs font-semibold" style={{ background: "oklch(0.28 0.02 255)", color: "oklch(0.7 0.015 240)" }}>
+                          Mégse
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="py-1 max-h-60 overflow-y-auto">
                     {profiles.map((profile) => (
                       <button
                         key={profile.id}
-                        onClick={() => handleProfileSwitch(profile.id)}
+                        onClick={() => handleProfileSwitchRequest(profile.id)}
                         className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors"
-                        style={{ background: activeProfile.id === profile.id ? "oklch(0.6 0.2 255 / 10%)" : "transparent" }}
-                        onMouseEnter={(e) => { if (activeProfile.id !== profile.id) e.currentTarget.style.background = "oklch(1 0 0 / 4%)"; }}
-                        onMouseLeave={(e) => { if (activeProfile.id !== profile.id) e.currentTarget.style.background = "transparent"; }}
+                        style={{ background: activeProfile.id === profile.id ? "oklch(0.6 0.2 255 / 10%)" : pendingProfileId === profile.id ? "oklch(0.75 0.18 75 / 8%)" : "transparent" }}
+                        onMouseEnter={(e) => { if (activeProfile.id !== profile.id && pendingProfileId !== profile.id) e.currentTarget.style.background = "oklch(1 0 0 / 4%)"; }}
+                        onMouseLeave={(e) => { if (activeProfile.id !== profile.id && pendingProfileId !== profile.id) e.currentTarget.style.background = "transparent"; }}
                       >
                         <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style={{ background: profile.color }}>
                           {profile.initials}
@@ -233,11 +279,13 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
                     ))}
                   </div>
                   <div className="px-3 py-2 border-t" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
-                    <Link href="/profile" onClick={() => setShowProfileSwitcher(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors w-full" style={{ color: "oklch(0.6 0.2 255)" }}
+                    <Link href="/clients/new" onClick={() => setShowProfileSwitcher(false)}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors w-full"
+                      style={{ color: "oklch(0.6 0.2 255)" }}
                       onMouseEnter={(e: any) => (e.currentTarget.style.background = "oklch(0.6 0.2 255 / 10%)")}
                       onMouseLeave={(e: any) => (e.currentTarget.style.background = "transparent")}
                     >
-                      <UserCircle size={13} /> Profilok kezelése
+                      + Új ügyfél hozzáadása
                     </Link>
                   </div>
                 </div>
@@ -254,7 +302,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
 
       {/* Overlay for dropdowns */}
       {(showNotifs || showProfileSwitcher) && (
-        <div className="fixed inset-0 z-40" onClick={() => { setShowNotifs(false); setShowProfileSwitcher(false); }} />
+        <div className="fixed inset-0 z-40" onClick={() => { setShowNotifs(false); setShowProfileSwitcher(false); setPendingProfileId(null); }} />
       )}
     </div>
   );

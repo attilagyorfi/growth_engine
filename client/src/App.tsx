@@ -7,19 +7,24 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { DataProvider } from "./contexts/DataContext";
 import { ProfileProvider } from "./contexts/ProfileContext";
 import Dashboard from "./pages/Dashboard";
+import Clients from "./pages/Clients";
+import Strategy from "./pages/Strategy";
+import ContentStudio from "./pages/ContentStudio";
+import SalesOps from "./pages/SalesOps";
+import Analytics from "./pages/Analytics";
+import Settings from "./pages/Settings";
+import Login from "./pages/Login";
+import OnboardingWizard from "./pages/OnboardingWizard";
+import Intelligence from "./pages/Intelligence";
+import AIWriter from "./pages/AIWriter";
+import ProfilePage from "./pages/ProfilePage";
+// Legacy pages kept for backward compatibility
 import Leads from "./pages/Leads";
 import Outbound from "./pages/Outbound";
 import Inbound from "./pages/Inbound";
 import Content from "./pages/Content";
 import ContentCreator from "./pages/ContentCreator";
-import Strategy from "./pages/Strategy";
 import SocialMedia from "./pages/SocialMedia";
-import Analytics from "./pages/Analytics";
-import ProfilePage from "./pages/ProfilePage";
-import Login from "./pages/Login";
-import OnboardingWizard from "./pages/OnboardingWizard";
-import Intelligence from "./pages/Intelligence";
-import AIWriter from "./pages/AIWriter";
 import { useAuth } from "./_core/hooks/useAuth";
 import DashboardLayoutSkeleton from "./components/DashboardLayoutSkeleton";
 
@@ -34,19 +39,27 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
+      {/* Main 7-item navigation */}
       <Route path="/" component={() => <ProtectedRoute component={Dashboard} />} />
-      <Route path="/leads" component={() => <ProtectedRoute component={Leads} />} />
-      <Route path="/outbound" component={() => <ProtectedRoute component={Outbound} />} />
-      <Route path="/inbound" component={() => <ProtectedRoute component={Inbound} />} />
-      <Route path="/content" component={() => <ProtectedRoute component={Content} />} />
-      <Route path="/content-creator" component={() => <ProtectedRoute component={ContentCreator} />} />
+      <Route path="/clients" component={() => <ProtectedRoute component={Clients} />} />
+      <Route path="/clients/new" component={() => <ProtectedRoute component={Clients} />} />
       <Route path="/strategy" component={() => <ProtectedRoute component={Strategy} />} />
-      <Route path="/social-media" component={() => <ProtectedRoute component={SocialMedia} />} />
+      <Route path="/content-studio" component={() => <ProtectedRoute component={ContentStudio} />} />
+      <Route path="/sales-ops" component={() => <ProtectedRoute component={SalesOps} />} />
       <Route path="/analytics" component={() => <ProtectedRoute component={Analytics} />} />
-      <Route path="/profile" component={() => <ProtectedRoute component={ProfilePage} />} />
+      <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
+      {/* Sub-flows */}
       <Route path="/onboarding" component={() => <ProtectedRoute component={OnboardingWizard} />} />
       <Route path="/intelligence" component={() => <ProtectedRoute component={Intelligence} />} />
       <Route path="/ai-writer" component={() => <ProtectedRoute component={AIWriter} />} />
+      <Route path="/profile" component={() => <ProtectedRoute component={ProfilePage} />} />
+      {/* Legacy redirects */}
+      <Route path="/leads" component={() => <Redirect to="/sales-ops" />} />
+      <Route path="/outbound" component={() => <Redirect to="/sales-ops" />} />
+      <Route path="/inbound" component={() => <Redirect to="/sales-ops" />} />
+      <Route path="/content" component={() => <Redirect to="/content-studio" />} />
+      <Route path="/content-creator" component={() => <Redirect to="/content-studio" />} />
+      <Route path="/social-media" component={() => <Redirect to="/content-studio" />} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
