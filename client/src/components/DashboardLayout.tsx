@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { useData } from "@/contexts/DataContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useAppAuth } from "@/hooks/useAppAuth";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { toast } from "sonner";
 
 const navItems = [
@@ -158,6 +159,8 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
             {subtitle && <p className="text-xs mt-0.5" style={{ color: "oklch(0.55 0.015 240)" }}>{subtitle}</p>}
           </div>
           <div className="flex items-center gap-2">
+            {/* Language Switcher */}
+            <LanguageSwitcher variant="pill" />
             {/* Notification Bell */}
             <div className="relative">
               <button

@@ -129,3 +129,13 @@
 - [x] User route-ok (onboarding, dashboard, workspace)
 - [x] Admin route-ok (users panel, system settings)
 - [x] Unauthorized redirect logika
+
+## MVP 5.0 – Super Admin, i18n, Onboarding UX, Logo
+
+- [x] Super admin fiók létrehozása (g2amarketing / info@g2amarketing.hu / GY-az1993)
+- [x] Nyelvváltó (HU/EN) – i18n context + fordítási fájlok + UI kapcsoló
+- [x] Onboarding popup magyarázók minden lépésnél
+- [x] 3 logo variáció generálása (meglevő logo megtartva)
+- [x] Logo integrálása a platformba (meglevő logo megtartva)
+- [x] Fejlesztési összefoglaló dokumentum (szoftverfejlesztőnek)
+- [x] UI/UX részletek dokumentáció (házon belüli megbeszéléshez)

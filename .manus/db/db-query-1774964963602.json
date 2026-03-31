@@ -1,0 +1,9 @@
+{
+  "query": "INSERT INTO app_users (id, email, passwordHash, name, role, active, onboardingCompleted, createdAt, updatedAt)\nVALUES (\n  'superadmin-g2a-001',\n  'info@g2amarketing.hu',\n  '$2b$12$idH9XJh4Q53ERxMpHpdw0umy2LJ3RxgmGA.u/eXYU3mLS6xHx9eVC',\n  'g2amarketing',\n  'super_admin',\n  1,\n  1,\n  NOW(),\n  NOW()\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user umEGVX5xqZTdjsh.9ef83c7e825e --database WzYbMH2rdiW2pftdUmZaz8 --execute INSERT INTO app_users (id, email, passwordHash, name, role, active, onboardingCompleted, createdAt, updatedAt)\nVALUES (\n  'superadmin-g2a-001',\n  'info@g2amarketing.hu',\n  '$2b$12$idH9XJh4Q53ERxMpHpdw0umy2LJ3RxgmGA.u/eXYU3mLS6xHx9eVC',\n  'g2amarketing',\n  'super_admin',\n  1,\n  1,\n  NOW(),\n  NOW()\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 364
+}

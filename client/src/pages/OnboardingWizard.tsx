@@ -7,6 +7,8 @@ import { useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import { HelpBanner, HelpPopup, StepTour } from "@/components/OnboardingHelpPopup";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   Globe, Upload, Zap, ChevronRight, ChevronLeft,
   Check, Loader2, Building2, Users, Target,
@@ -192,7 +194,9 @@ export default function OnboardingWizard() {
   const [isLoading, setIsLoading] = useState(false);
   const [isScraping, setIsScraping] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showTour, setShowTour] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { lang } = useLanguage();
 
   const [data, setData] = useState<WizardData>({
     profileId: nanoid(),
@@ -470,25 +474,43 @@ export default function OnboardingWizard() {
           </div>
           <span className="font-bold text-white" style={{ fontFamily: "Sora, sans-serif" }}>G2A Growth Engine</span>
         </div>
-        <span className="text-gray-400 text-sm">Új ügyfél beállítása</span>
+        <div className="flex items-center gap-3">
+          <span className="text-gray-400 text-sm">{lang === "hu" ? "Új ügyfél beállítása" : "New client setup"}</span>
+          <button
+            onClick={() => setShowTour(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:opacity-80"
+            style={{ background: "oklch(0.6 0.2 255 / 15%)", color: "oklch(0.7 0.18 255)", border: "1px solid oklch(0.6 0.2 255 / 30%)" }}
+          >
+            <span>💡</span>
+            <span>{lang === "hu" ? "Lépés útmutatója" : "Step guide"}</span>
+          </button>
+        </div>
       </div>
 
       <div className="max-w-3xl mx-auto px-4 py-8">
         <StepIndicator current={step} total={4} />
+
+        {/* Step Tour Overlay */}
+        {showTour && <StepTour step={step} onClose={() => setShowTour(false)} />}
 
         {/* ─── Step 1: Basic Data ─────────────────────────────────────────── */}
         {step === 1 && (
           <div className="space-y-6">
             <div className="text-center mb-6">
               <h1 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: "Sora, sans-serif" }}>
-                Ismerjük meg a cégedet
+                {lang === "hu" ? "Ismerjük meg a cégedet" : "Tell us about your company"}
               </h1>
-              <p className="text-gray-400">Add meg az alapadatokat – a weboldal elemzéssel automatikusan kitöltjük a többit</p>
+              <p className="text-gray-400">{lang === "hu" ? "Add meg az alapadatokat – a weboldal elemzéssel automatikusan kitöltjük a többit" : "Enter basic data – website analysis will auto-fill the rest"}</p>
             </div>
+
+            <HelpBanner helpKey="help_company_name" title={lang === "hu" ? "Tipp az alapadatokhoz" : "Tip for basic data"} />
 
             {/* Company Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Cég neve *</label>
+              <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
+                {lang === "hu" ? "Cég neve *" : "Company name *"}
+                <HelpPopup helpKey="help_company_name" title={lang === "hu" ? "Cég neve" : "Company name"} />
+              </label>
               <input
                 value={data.companyName}
                 onChange={e => update({ companyName: e.target.value })}
