@@ -1,10 +1,11 @@
 /**
- * G2A Growth Engine – ProfileContext (tRPC-backed)
+ * G2A Growth Engine – ProfileContext (tRPC-backed, user-scoped)
  * Profiles are persisted in the database via tRPC.
- * Falls back to seed data on first load if DB is empty.
+ * Each user only sees their own profiles (enforced server-side).
+ * Super admins see all profiles.
  */
 
-import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, ReactNode } from "react";
 import { trpc } from "@/lib/trpc";
 import { nanoid } from "nanoid";
 
@@ -54,72 +55,6 @@ export type ClientProfile = {
   active: boolean;
 };
 
-// ─── Seed Data ────────────────────────────────────────────────────────────────
-
-const seedProfiles: Omit<ClientProfile, "createdAt">[] = [
-  {
-    id: "g2a",
-    name: "G2A Marketing",
-    initials: "G2",
-    color: "oklch(0.6 0.2 255)",
-    website: "https://g2amarketing.hu",
-    industry: "Marketing & Reklám",
-    description: "AI-alapú marketing és growth hacking ügynökség, B2B fókusszal.",
-    primaryColor: "#3B82F6",
-    secondaryColor: "#10B981",
-    fontHeading: "Sora",
-    fontBody: "Inter",
-    brandVoice: {
-      tone: "Szakmai, hiteles, közvetlen",
-      style: "B2B gondolatvezetői tartalom, adatvezérelt megközelítés",
-      avoid: "Túlzott szleng, clickbait, általánosságok",
-      keywords: ["AI", "marketing automatizálás", "B2B növekedés", "lead generálás", "ROI"],
-    },
-    contentPillars: [
-      { id: "cp1", name: "AI & Automatizálás", description: "AI eszközök és marketing automatizálás bemutatása", active: true, percentage: 35 },
-      { id: "cp2", name: "Esettanulmányok", description: "Ügyfélsiker történetek és mérhető eredmények", active: true, percentage: 25 },
-      { id: "cp3", name: "Iparági trendek", description: "B2B marketing és tech trendek elemzése", active: true, percentage: 25 },
-      { id: "cp4", name: "Tippek & Trükkök", description: "Gyakorlati marketing tippek döntéshozóknak", active: true, percentage: 15 },
-    ],
-    socialAccounts: [
-      { platform: "linkedin", handle: "g2a-marketing", connected: true, followers: 1240, lastSync: "2026-03-18" },
-      { platform: "facebook", handle: "g2amarketing", connected: false },
-      { platform: "instagram", handle: "g2a.marketing", connected: false },
-      { platform: "tiktok", handle: "g2amarketing", connected: false },
-    ],
-    active: true,
-  },
-  {
-    id: "techvision",
-    name: "TechVision Kft.",
-    initials: "TV",
-    color: "oklch(0.65 0.18 165)",
-    website: "https://techvision.hu",
-    industry: "IT Services",
-    description: "Vállalati IT megoldások és digitális transzformáció.",
-    primaryColor: "#10B981",
-    secondaryColor: "#6366F1",
-    fontHeading: "Sora",
-    fontBody: "Inter",
-    brandVoice: {
-      tone: "Megbízható, innovatív, szakértői",
-      style: "Technológiai tartalom, vállalati döntéshozóknak szóló kommunikáció",
-      avoid: "Túl technikai zsargon, értékesítési nyomás",
-      keywords: ["digitális transzformáció", "IT megoldások", "biztonság", "felhő", "hatékonyság"],
-    },
-    contentPillars: [
-      { id: "cp1", name: "Digitális transzformáció", description: "Vállalati digitalizáció folyamata és előnyei", active: true, percentage: 40 },
-      { id: "cp2", name: "IT biztonság", description: "Kiberbiztonsági trendek és megoldások", active: true, percentage: 30 },
-      { id: "cp3", name: "Felhő megoldások", description: "Cloud infrastruktúra és migráció", active: true, percentage: 30 },
-    ],
-    socialAccounts: [
-      { platform: "linkedin", handle: "techvision-kft", connected: false },
-      { platform: "facebook", handle: "techvisionkft", connected: false },
-    ],
-    active: true,
-  },
-];
-
 // ─── Helper: DB row → ClientProfile ──────────────────────────────────────────
 
 function dbToProfile(row: any): ClientProfile {
@@ -155,37 +90,50 @@ type ProfileContextType = {
   addProfile: (profile: Omit<ClientProfile, "createdAt">) => Promise<void>;
   updateProfile: (id: string, updates: Partial<ClientProfile>) => Promise<void>;
   deleteProfile: (id: string) => Promise<void>;
+  refetch: () => void;
 };
 
 const ProfileContext = createContext<ProfileContextType | null>(null);
 
+// A minimal empty profile used as a safe fallback when no profile exists yet
+const EMPTY_PROFILE: ClientProfile = {
+  id: "",
+  name: "",
+  initials: "?",
+  color: "oklch(0.6 0.2 255)",
+  website: "",
+  industry: "",
+  description: "",
+  primaryColor: "#3B82F6",
+  secondaryColor: "#10B981",
+  fontHeading: "Sora",
+  fontBody: "Inter",
+  brandVoice: { tone: "", style: "", avoid: "", keywords: [] },
+  contentPillars: [],
+  socialAccounts: [],
+  createdAt: new Date().toISOString().slice(0, 10),
+  active: false,
+};
+
 export function ProfileProvider({ children }: { children: ReactNode }) {
-  const [activeProfileId, setActiveProfileId] = useState<string>("g2a");
-  const [seeded, setSeeded] = useState(false);
+  const [activeProfileId, setActiveProfileId] = useState<string>("");
 
   const { data: dbProfiles, isLoading, refetch } = trpc.profiles.list.useQuery(undefined, {
     staleTime: 30_000,
+    retry: false,
   });
 
   const upsertMutation = trpc.profiles.upsert.useMutation({ onSuccess: () => refetch() });
   const deleteMutation = trpc.profiles.delete.useMutation({ onSuccess: () => refetch() });
 
-  // Seed the DB with initial profiles on first load if empty
-  useEffect(() => {
-    if (!isLoading && dbProfiles && dbProfiles.length === 0 && !seeded) {
-      setSeeded(true);
-      Promise.all(seedProfiles.map(p => upsertMutation.mutateAsync(p)));
-    }
-  }, [isLoading, dbProfiles, seeded]);
+  const profiles: ClientProfile[] = (dbProfiles ?? []).map(dbToProfile);
 
-  const profiles: ClientProfile[] = (dbProfiles && dbProfiles.length > 0)
-    ? dbProfiles.map(dbToProfile)
-    : seedProfiles.map(p => ({ ...p, createdAt: "2026-01-01" }));
-
-  const activeProfile = profiles.find((p) => p.id === activeProfileId) ?? profiles[0] ?? seedProfiles[0] as ClientProfile;
+  // Auto-select first profile when list loads
+  const resolvedActiveId = activeProfileId || profiles[0]?.id || "";
+  const activeProfile = profiles.find((p) => p.id === resolvedActiveId) ?? profiles[0] ?? EMPTY_PROFILE;
 
   const addProfile = useCallback(async (profile: Omit<ClientProfile, "createdAt">) => {
-    await upsertMutation.mutateAsync({ ...profile, id: profile.id ?? nanoid() });
+    await upsertMutation.mutateAsync({ ...profile, id: profile.id || nanoid() });
   }, [upsertMutation]);
 
   const updateProfile = useCallback(async (id: string, updates: Partial<ClientProfile>) => {
@@ -211,6 +159,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       addProfile,
       updateProfile,
       deleteProfile: deleteProfileFn,
+      refetch,
     }}>
       {children}
     </ProfileContext.Provider>

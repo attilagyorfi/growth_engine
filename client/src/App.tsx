@@ -22,6 +22,7 @@ import Strategy from "./pages/Strategy";
 import ContentStudio from "./pages/ContentStudio";
 import SalesOps from "./pages/SalesOps";
 import Analytics from "./pages/Analytics";
+import Campaigns from "./pages/Campaigns";
 import Settings from "./pages/Settings";
 import OnboardingWizard from "./pages/OnboardingWizard";
 import Intelligence from "./pages/Intelligence";
@@ -90,6 +91,7 @@ function Router() {
       <Route path="/tartalom-studio" component={() => <AppRoute component={ContentStudio} />} />
       <Route path="/ertekesites" component={() => <AppRoute component={SalesOps} />} />
       <Route path="/analitika" component={() => <AppRoute component={Analytics} />} />
+      <Route path="/kampanyok" component={() => <AppRoute component={Campaigns} />} />
       <Route path="/beallitasok" component={() => <AppRoute component={Settings} />} />
       <Route path="/intelligencia" component={() => <AppRoute component={Intelligence} />} />
       <Route path="/ai-iro" component={() => <AppRoute component={AIWriter} />} />
@@ -106,6 +108,7 @@ function Router() {
       <Route path="/content-studio" component={() => <Redirect to="/tartalom-studio" />} />
       <Route path="/sales-ops" component={() => <Redirect to="/ertekesites" />} />
       <Route path="/analytics" component={() => <Redirect to="/analitika" />} />
+      <Route path="/campaigns" component={() => <Redirect to="/kampanyok" />} />
       <Route path="/settings" component={() => <Redirect to="/beallitasok" />} />
       <Route path="/leads" component={() => <Redirect to="/ertekesites" />} />
       <Route path="/outbound" component={() => <Redirect to="/ertekesites" />} />

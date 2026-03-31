@@ -42,6 +42,7 @@ export const clientProfiles = mysqlTable("client_profiles", {
   socialAccounts: json("socialAccounts").$type<Array<{
     platform: string; handle: string; connected: boolean; followers?: number; lastSync?: string;
   }>>(),
+  appUserId: varchar("appUserId", { length: 64 }),
   active: boolean("active").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -523,3 +524,123 @@ export const passwordResetTokens = mysqlTable("password_reset_tokens", {
 });
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 export type InsertPasswordResetToken = typeof passwordResetTokens.$inferInsert;
+
+// ─── Strategy Versions ────────────────────────────────────────────────────────
+
+export const strategyVersions = mysqlTable("strategy_versions", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  profileId: varchar("profileId", { length: 64 }).notNull(),
+  versionNumber: int("versionNumber").notNull().default(1),
+  title: varchar("title", { length: 255 }).notNull(),
+  isActive: boolean("isActive").default(false).notNull(),
+  quarterlyGoals: json("quarterlyGoals").$type<{
+    q1?: string[]; q2?: string[]; q3?: string[]; q4?: string[];
+  }>(),
+  monthlyPriorities: json("monthlyPriorities").$type<Array<{
+    month: string;
+    priorities: string[];
+    kpis: Array<{ label: string; target: string; current?: string }>;
+  }>>(),
+  weeklySprints: json("weeklySprints").$type<Array<{
+    weekStart: string;
+    tasks: Array<{ id: string; title: string; channel: string; status: string; assignee?: string }>;
+  }>>(),
+  executiveSummary: text("executiveSummary"),
+  channelStrategy: json("channelStrategy").$type<Array<{
+    channel: string; priority: number; rationale: string; tactics: string[];
+  }>>(),
+  campaignPriorities: json("campaignPriorities").$type<string[]>(),
+  quickWins: json("quickWins").$type<Array<{
+    title: string; description: string; impact: string; effort: string;
+  }>>(),
+  nextActions: json("nextActions").$type<Array<{
+    title: string; description: string; urgency: "high" | "medium" | "low"; dueDate?: string;
+  }>>(),
+  archivedAt: timestamp("archivedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type StrategyVersion = typeof strategyVersions.$inferSelect;
+export type InsertStrategyVersion = typeof strategyVersions.$inferInsert;
+
+// ─── Campaigns ────────────────────────────────────────────────────────────────
+
+export const campaigns = mysqlTable("campaigns", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  profileId: varchar("profileId", { length: 64 }).notNull(),
+  strategyVersionId: varchar("strategyVersionId", { length: 64 }),
+  title: varchar("title", { length: 255 }).notNull(),
+  objective: text("objective"),
+  targetAudience: text("targetAudience"),
+  channels: json("channels").$type<string[]>(),
+  budget: varchar("budget", { length: 64 }),
+  startDate: varchar("startDate", { length: 20 }),
+  endDate: varchar("endDate", { length: 20 }),
+  status: mysqlEnum("status", ["draft", "active", "paused", "completed", "archived"]).default("draft").notNull(),
+  brief: json("brief").$type<{
+    hook: string;
+    mainMessage: string;
+    cta: string;
+    contentIdeas: Array<{ title: string; format: string; platform: string }>;
+    kpis: Array<{ label: string; target: string }>;
+  }>(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type Campaign = typeof campaigns.$inferSelect;
+export type InsertCampaign = typeof campaigns.$inferInsert;
+
+// ─── Campaign Assets ──────────────────────────────────────────────────────────
+
+export const campaignAssets = mysqlTable("campaign_assets", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  campaignId: varchar("campaignId", { length: 64 }).notNull(),
+  profileId: varchar("profileId", { length: 64 }).notNull(),
+  type: mysqlEnum("type", ["copy", "image", "video", "email", "ad", "other"]).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  content: text("content"),
+  fileUrl: text("fileUrl"),
+  platform: varchar("platform", { length: 64 }),
+  status: mysqlEnum("status", ["draft", "review", "approved", "published"]).default("draft").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type CampaignAsset = typeof campaignAssets.$inferSelect;
+export type InsertCampaignAsset = typeof campaignAssets.$inferInsert;
+
+// ─── AI Recommendations ───────────────────────────────────────────────────────
+
+export const recommendations = mysqlTable("recommendations", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  profileId: varchar("profileId", { length: 64 }).notNull(),
+  type: mysqlEnum("type", ["strategy", "content", "campaign", "lead", "analytics"]).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  urgency: mysqlEnum("urgency", ["high", "medium", "low"]).default("medium").notNull(),
+  actionUrl: varchar("actionUrl", { length: 512 }),
+  isRead: boolean("isRead").default(false).notNull(),
+  isDismissed: boolean("isDismissed").default(false).notNull(),
+  generatedAt: timestamp("generatedAt").defaultNow().notNull(),
+  expiresAt: timestamp("expiresAt"),
+});
+export type Recommendation = typeof recommendations.$inferSelect;
+export type InsertRecommendation = typeof recommendations.$inferInsert;
+
+// ─── In-App Notifications ─────────────────────────────────────────────────────
+
+export const appNotifications = mysqlTable("app_notifications", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  appUserId: varchar("appUserId", { length: 64 }).notNull(),
+  profileId: varchar("profileId", { length: 64 }),
+  type: mysqlEnum("type", [
+    "approval_ready", "new_lead", "reply_received",
+    "campaign_deadline", "strategy_update", "system"
+  ]).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  body: text("body"),
+  isRead: boolean("isRead").default(false).notNull(),
+  actionUrl: varchar("actionUrl", { length: 512 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type AppNotification = typeof appNotifications.$inferSelect;
+export type InsertAppNotification = typeof appNotifications.$inferInsert;

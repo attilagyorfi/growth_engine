@@ -2,13 +2,14 @@ import { z } from "zod";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router } from "./_core/trpc";
+import { publicProcedure, appUserProcedure, superAdminProcedure, router } from "./_core/trpc";
 import { appAuthRouter } from "./routers/appAuth";
 import { generateImage } from "./_core/imageGeneration";
 import { sendEmail, verifyEmailConfig, type EmailConfig } from "./emailSender";
 import { nanoid } from "nanoid";
+import { TRPCError } from "@trpc/server";
 import {
-  getAllProfiles, getProfileById, upsertProfile, deleteProfile,
+  getAllProfiles, getProfileById, getProfilesByAppUser, upsertProfile, deleteProfile,
   getLeadsByProfile, createLead, updateLead, deleteLead,
   getOutboundByProfile, createOutbound, updateOutbound, deleteOutbound,
   getInboundByProfile, createInbound, markInboundRead, updateInboundCategory,
@@ -23,9 +24,22 @@ import {
   getStrategyTasks, upsertStrategyTask,
   getAiMemories, createAiMemory,
   createAuditLog, getAuditLogs,
+  getStrategyVersionsByProfile, getActiveStrategyVersion, upsertStrategyVersion, setActiveStrategyVersion, archiveStrategyVersion,
+  getCampaignsByProfile, getCampaignById, upsertCampaign, deleteCampaign,
+  getCampaignAssets, upsertCampaignAsset,
+  getRecommendationsByProfile, createRecommendation, dismissRecommendation,
+  getNotificationsByUser, createNotification, markNotificationRead, markAllNotificationsRead,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { storagePut } from "./storage";
+
+// Helper: verify that the profileId belongs to the current appUser (or user is super_admin)
+function assertProfileOwnership(appUserId: string, role: string, profileId: string, userProfileId: string | null) {
+  if (role === "super_admin") return; // super admin can access any profile
+  if (!userProfileId || userProfileId !== profileId) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Nincs jogosultsága ehhez a profilhoz" });
+  }
+}
 
 export const appRouter = router({
   system: systemRouter,
@@ -42,13 +56,24 @@ export const appRouter = router({
 
   // ─── Profiles ───────────────────────────────────────────────────────────────
   profiles: router({
-    list: publicProcedure.query(() => getAllProfiles()),
+    // Super admin sees all profiles; regular user sees only their own
+    list: appUserProcedure.query(({ ctx }) => {
+      if (ctx.appUser.role === "super_admin") {
+        return getAllProfiles();
+      }
+      return getProfilesByAppUser(ctx.appUser.id);
+    }),
 
-    get: publicProcedure
+    get: appUserProcedure
       .input(z.object({ id: z.string() }))
-      .query(({ input }) => getProfileById(input.id)),
+      .query(async ({ input, ctx }) => {
+        const profile = await getProfileById(input.id);
+        if (!profile) return null;
+        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.id, ctx.appUser.profileId);
+        return profile;
+      }),
 
-    upsert: publicProcedure
+    upsert: appUserProcedure
       .input(z.object({
         id: z.string().optional(),
         name: z.string().min(1),
@@ -84,23 +109,30 @@ export const appRouter = router({
           lastSync: z.string().optional(),
         })).optional(),
       }))
-      .mutation(({ input }) => {
+      .mutation(({ input, ctx }) => {
         const id = input.id ?? nanoid();
-        return upsertProfile({ ...input, id });
+        // Attach appUserId for new profiles
+        return upsertProfile({ ...input, id, appUserId: ctx.appUser.id });
       }),
 
-    delete: publicProcedure
+    delete: appUserProcedure
       .input(z.object({ id: z.string() }))
-      .mutation(({ input }) => deleteProfile(input.id)),
+      .mutation(async ({ input, ctx }) => {
+        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.id, ctx.appUser.profileId);
+        return deleteProfile(input.id);
+      }),
   }),
 
   // ─── Leads ──────────────────────────────────────────────────────────────────
   leads: router({
-    list: publicProcedure
+    list: appUserProcedure
       .input(z.object({ profileId: z.string() }))
-      .query(({ input }) => getLeadsByProfile(input.profileId)),
+      .query(({ input, ctx }) => {
+        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        return getLeadsByProfile(input.profileId);
+      }),
 
-    create: publicProcedure
+    create: appUserProcedure
       .input(z.object({
         profileId: z.string(),
         company: z.string().min(1),
@@ -113,9 +145,12 @@ export const appRouter = router({
         source: z.string().optional(),
         notes: z.string().optional(),
       }))
-      .mutation(({ input }) => createLead({ ...input, id: nanoid(), status: "new" })),
+      .mutation(({ input, ctx }) => {
+        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        return createLead({ ...input, id: nanoid(), status: "new" });
+      }),
 
-    update: publicProcedure
+    update: appUserProcedure
       .input(z.object({
         id: z.string(),
         company: z.string().optional(),
@@ -135,18 +170,21 @@ export const appRouter = router({
         return updateLead(id, updates);
       }),
 
-    delete: publicProcedure
+    delete: appUserProcedure
       .input(z.object({ id: z.string() }))
       .mutation(({ input }) => deleteLead(input.id)),
   }),
 
   // ─── Outbound Emails ────────────────────────────────────────────────────────
   outbound: router({
-    list: publicProcedure
+    list: appUserProcedure
       .input(z.object({ profileId: z.string() }))
-      .query(({ input }) => getOutboundByProfile(input.profileId)),
+      .query(({ input, ctx }) => {
+        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        return getOutboundByProfile(input.profileId);
+      }),
 
-    create: publicProcedure
+    create: appUserProcedure
       .input(z.object({
         profileId: z.string(),
         leadId: z.string().optional(),
@@ -156,9 +194,12 @@ export const appRouter = router({
         subject: z.string().min(1),
         body: z.string().min(1),
       }))
-      .mutation(({ input }) => createOutbound({ ...input, id: nanoid(), status: "draft" })),
+      .mutation(({ input, ctx }) => {
+        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        return createOutbound({ ...input, id: nanoid(), status: "draft" });
+      }),
 
-    update: publicProcedure
+    update: appUserProcedure
       .input(z.object({
         id: z.string(),
         subject: z.string().optional(),
@@ -171,18 +212,21 @@ export const appRouter = router({
         return updateOutbound(id, updates);
       }),
 
-    delete: publicProcedure
+    delete: appUserProcedure
       .input(z.object({ id: z.string() }))
       .mutation(({ input }) => deleteOutbound(input.id)),
   }),
 
   // ─── Inbound Emails ─────────────────────────────────────────────────────────
   inbound: router({
-    list: publicProcedure
+    list: appUserProcedure
       .input(z.object({ profileId: z.string() }))
-      .query(({ input }) => getInboundByProfile(input.profileId)),
+      .query(({ input, ctx }) => {
+        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        return getInboundByProfile(input.profileId);
+      }),
 
-    create: publicProcedure
+    create: appUserProcedure
       .input(z.object({
         profileId: z.string(),
         from: z.string(),
@@ -193,13 +237,16 @@ export const appRouter = router({
         category: z.enum(["interested", "not_interested", "question", "meeting_request", "out_of_office", "unsubscribe", "other"]).optional(),
         relatedOutboundId: z.string().optional(),
       }))
-      .mutation(({ input }) => createInbound({ ...input, id: nanoid() })),
+      .mutation(({ input, ctx }) => {
+        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        return createInbound({ ...input, id: nanoid() });
+      }),
 
-    markRead: publicProcedure
+    markRead: appUserProcedure
       .input(z.object({ id: z.string() }))
       .mutation(({ input }) => markInboundRead(input.id)),
 
-    updateCategory: publicProcedure
+    updateCategory: appUserProcedure
       .input(z.object({
         id: z.string(),
         category: z.enum(["interested", "not_interested", "question", "meeting_request", "out_of_office", "unsubscribe", "other"]),
@@ -209,11 +256,14 @@ export const appRouter = router({
 
   // ─── Content Posts ──────────────────────────────────────────────────────────
   content: router({
-    list: publicProcedure
+    list: appUserProcedure
       .input(z.object({ profileId: z.string() }))
-      .query(({ input }) => getContentByProfile(input.profileId)),
+      .query(({ input, ctx }) => {
+        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        return getContentByProfile(input.profileId);
+      }),
 
-    create: publicProcedure
+    create: appUserProcedure
       .input(z.object({
         profileId: z.string(),
         title: z.string().min(1),
@@ -225,9 +275,12 @@ export const appRouter = router({
         pillar: z.string().optional(),
         weekNumber: z.number().optional(),
       }))
-      .mutation(({ input }) => createContent({ ...input, id: nanoid(), status: "draft" })),
+      .mutation(({ input, ctx }) => {
+        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        return createContent({ ...input, id: nanoid(), status: "draft" });
+      }),
 
-    update: publicProcedure
+    update: appUserProcedure
       .input(z.object({
         id: z.string(),
         title: z.string().optional(),
@@ -246,18 +299,21 @@ export const appRouter = router({
         return updateContent(id, updates);
       }),
 
-    delete: publicProcedure
+    delete: appUserProcedure
       .input(z.object({ id: z.string() }))
       .mutation(({ input }) => deleteContent(input.id)),
   }),
 
   // ─── Strategies ─────────────────────────────────────────────────────────────
   strategies: router({
-    list: publicProcedure
+    list: appUserProcedure
       .input(z.object({ profileId: z.string() }))
-      .query(({ input }) => getStrategiesByProfile(input.profileId)),
+      .query(({ input, ctx }) => {
+        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        return getStrategiesByProfile(input.profileId);
+      }),
 
-    create: publicProcedure
+    create: appUserProcedure
       .input(z.object({
         profileId: z.string(),
         title: z.string().min(1),
@@ -276,9 +332,12 @@ export const appRouter = router({
           current: z.string().optional(),
         })).optional(),
       }))
-      .mutation(({ input }) => createStrategy({ ...input, id: nanoid(), status: "draft" })),
+      .mutation(({ input, ctx }) => {
+        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        return createStrategy({ ...input, id: nanoid(), status: "draft" });
+      }),
 
-    update: publicProcedure
+    update: appUserProcedure
       .input(z.object({
         id: z.string(),
         title: z.string().optional(),
@@ -306,23 +365,29 @@ export const appRouter = router({
 
   // ─── Email Integrations ─────────────────────────────────────────────────────
   emailIntegration: router({
-    get: publicProcedure
+    get: appUserProcedure
       .input(z.object({ profileId: z.string() }))
-      .query(({ input }) => getEmailIntegration(input.profileId)),
+      .query(({ input, ctx }) => {
+        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        return getEmailIntegration(input.profileId);
+      }),
 
-    upsert: publicProcedure
+    upsert: appUserProcedure
       .input(z.object({
         profileId: z.string(),
         provider: z.enum(["gmail", "outlook"]),
         email: z.string().email(),
         connected: z.boolean().optional(),
       }))
-      .mutation(({ input }) => upsertEmailIntegration({ ...input, connected: input.connected ?? false })),
+      .mutation(({ input, ctx }) => {
+        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        return upsertEmailIntegration({ ...input, connected: input.connected ?? false });
+      }),
   }),
 
   // ─── Email Sending ────────────────────────────────────────────────────────────
   emailSend: router({
-    send: publicProcedure
+    send: appUserProcedure
       .input(z.object({
         emailId: z.string(),
         to: z.string().email(),
@@ -353,7 +418,7 @@ export const appRouter = router({
         return result;
       }),
 
-    verify: publicProcedure
+    verify: appUserProcedure
       .input(z.object({
         provider: z.enum(["gmail", "outlook", "smtp"]),
         host: z.string().optional(),
@@ -370,11 +435,11 @@ export const appRouter = router({
 
   // ─── Onboarding ──────────────────────────────────────────────────────────────
   onboarding: router({
-    getSession: publicProcedure
+    getSession: appUserProcedure
       .input(z.object({ profileId: z.string() }))
       .query(({ input }) => getOnboardingSession(input.profileId)),
 
-    upsertSession: publicProcedure
+    upsertSession: appUserProcedure
       .input(z.object({
         id: z.string().optional(),
         profileId: z.string(),
@@ -387,7 +452,7 @@ export const appRouter = router({
         return upsertOnboardingSession({ id, profileId: input.profileId, status: input.status ?? "in_progress", currentStep: input.currentStep ?? 1, completedAt: input.completedAt ?? null });
       }),
 
-    saveAnswers: publicProcedure
+    saveAnswers: appUserProcedure
       .input(z.object({
         sessionId: z.string(),
         profileId: z.string(),
@@ -412,11 +477,11 @@ export const appRouter = router({
         return saveOnboardingAnswers(rows);
       }),
 
-    getAnswers: publicProcedure
+    getAnswers: appUserProcedure
       .input(z.object({ sessionId: z.string() }))
       .query(({ input }) => getOnboardingAnswers(input.sessionId)),
 
-    scrapeWebsite: publicProcedure
+    scrapeWebsite: appUserProcedure
       .input(z.object({ url: z.string().url() }))
       .mutation(async ({ input }) => {
         const prompt = `You are a marketing analyst. Analyze the website at ${input.url} and extract the following information in JSON format:
@@ -441,7 +506,7 @@ Based on the URL and domain name, make educated inferences about the business. R
         return JSON.parse(typeof content === "string" ? content : JSON.stringify(content));
       }),
 
-    uploadAsset: publicProcedure
+    uploadAsset: appUserProcedure
       .input(z.object({
         profileId: z.string(),
         fileName: z.string(),
@@ -462,7 +527,6 @@ Based on the URL and domain name, make educated inferences about the business. R
           fileKey,
           assetType: input.assetType,
         });
-        // Parse content with LLM asynchronously
         invokeLLM({
           messages: [
             { role: "system", content: "You are a brand analyst. Extract key brand information from the uploaded document and return a structured summary." },
@@ -477,22 +541,25 @@ Based on the URL and domain name, make educated inferences about the business. R
         return asset;
       }),
 
-    getBrandAssets: publicProcedure
+    getBrandAssets: appUserProcedure
       .input(z.object({ profileId: z.string() }))
       .query(({ input }) => getBrandAssets(input.profileId)),
 
-    deleteBrandAsset: publicProcedure
+    deleteBrandAsset: appUserProcedure
       .input(z.object({ id: z.string() }))
       .mutation(({ input }) => deleteBrandAsset(input.id)),
   }),
 
   // ─── Company Intelligence ────────────────────────────────────────────────────
   intelligence: router({
-    get: publicProcedure
+    get: appUserProcedure
       .input(z.object({ profileId: z.string() }))
-      .query(({ input }) => getCompanyIntelligence(input.profileId)),
+      .query(({ input, ctx }) => {
+        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        return getCompanyIntelligence(input.profileId);
+      }),
 
-    generate: publicProcedure
+    generate: appUserProcedure
       .input(z.object({
         profileId: z.string(),
         profileData: z.object({
@@ -506,7 +573,8 @@ Based on the URL and domain name, make educated inferences about the business. R
         websiteAnalysis: z.any().optional(),
         onboardingAnswers: z.array(z.object({ fieldKey: z.string(), fieldValue: z.string().nullable() })).optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
         const context = JSON.stringify({
           company: input.profileData,
           websiteAnalysis: input.websiteAnalysis,
@@ -514,7 +582,7 @@ Based on the URL and domain name, make educated inferences about the business. R
         });
         const response = await invokeLLM({
           messages: [
-            { role: "system", content: "You are a senior marketing strategist. Generate a comprehensive company intelligence profile based on the provided data. Return valid JSON only." },
+            { role: "system", content: "You are a senior marketing strategist. Generate a comprehensive company intelligence profile based on the provided data. Return valid JSON only. Always respond in Hungarian." },
             { role: "user", content: `Generate a complete company intelligence profile for this business:\n${context}\n\nReturn JSON with: companySummary, brandDna (coreValues[], personality[], differentiators[], brandPromise), offerMap (array of {name, description, targetAudience, usp}), audienceMap (array of {segment, description, painPoints[], goals[], channels[]}), competitorSnapshot (array of {name, strengths[], weaknesses[], positioning}), platformPriorities (array of {platform, priority 1-5, rationale}), successGoals ({thirtyDay[], ninetyDay[], oneYear[]}), aiWritingRules ({doList[], dontList[], toneGuidelines, examplePhrases[]})` },
           ],
           response_format: { type: "json_schema", json_schema: { name: "company_intelligence", strict: true, schema: { type: "object", properties: { companySummary: { type: "string" }, brandDna: { type: "object", properties: { coreValues: { type: "array", items: { type: "string" } }, personality: { type: "array", items: { type: "string" } }, differentiators: { type: "array", items: { type: "string" } }, brandPromise: { type: "string" } }, required: ["coreValues", "personality", "differentiators", "brandPromise"], additionalProperties: false }, offerMap: { type: "array", items: { type: "object", properties: { name: { type: "string" }, description: { type: "string" }, targetAudience: { type: "string" }, usp: { type: "string" } }, required: ["name", "description", "targetAudience", "usp"], additionalProperties: false } }, audienceMap: { type: "array", items: { type: "object", properties: { segment: { type: "string" }, description: { type: "string" }, painPoints: { type: "array", items: { type: "string" } }, goals: { type: "array", items: { type: "string" } }, channels: { type: "array", items: { type: "string" } } }, required: ["segment", "description", "painPoints", "goals", "channels"], additionalProperties: false } }, competitorSnapshot: { type: "array", items: { type: "object", properties: { name: { type: "string" }, strengths: { type: "array", items: { type: "string" } }, weaknesses: { type: "array", items: { type: "string" } }, positioning: { type: "string" } }, required: ["name", "strengths", "weaknesses", "positioning"], additionalProperties: false } }, platformPriorities: { type: "array", items: { type: "object", properties: { platform: { type: "string" }, priority: { type: "number" }, rationale: { type: "string" } }, required: ["platform", "priority", "rationale"], additionalProperties: false } }, successGoals: { type: "object", properties: { thirtyDay: { type: "array", items: { type: "string" } }, ninetyDay: { type: "array", items: { type: "string" } }, oneYear: { type: "array", items: { type: "string" } } }, required: ["thirtyDay", "ninetyDay", "oneYear"], additionalProperties: false }, aiWritingRules: { type: "object", properties: { doList: { type: "array", items: { type: "string" } }, dontList: { type: "array", items: { type: "string" } }, toneGuidelines: { type: "string" }, examplePhrases: { type: "array", items: { type: "string" } } }, required: ["doList", "dontList", "toneGuidelines", "examplePhrases"], additionalProperties: false } }, required: ["companySummary", "brandDna", "offerMap", "audienceMap", "competitorSnapshot", "platformPriorities", "successGoals", "aiWritingRules"], additionalProperties: false } } },
@@ -529,15 +597,16 @@ Based on the URL and domain name, make educated inferences about the business. R
         });
       }),
 
-    generateWowMoment: publicProcedure
+    generateWowMoment: appUserProcedure
       .input(z.object({
         profileId: z.string(),
         intelligenceData: z.any(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
         const response = await invokeLLM({
           messages: [
-            { role: "system", content: "You are a senior marketing strategist. Generate actionable insights and quick wins for a business. Return valid JSON only." },
+            { role: "system", content: "You are a senior marketing strategist. Generate actionable insights and quick wins for a business. Return valid JSON only. Always respond in Hungarian." },
             { role: "user", content: `Based on this company intelligence data:\n${JSON.stringify(input.intelligenceData)}\n\nGenerate the WOW moment output with: companySummary (2-3 sentences), topStrengths (exactly 3 strings), topRisks (exactly 3 strings), ninetyDayStrategyOutline (3-4 sentences), contentPillars (exactly 5 objects with {name, description, percentage}), contentIdeas (exactly 10 objects with {title, platform, format, pillar}), quickWins (exactly 3 objects with {title, description, impact: high/medium/low, effort: high/medium/low})` },
           ],
           response_format: { type: "json_schema", json_schema: { name: "wow_moment", strict: true, schema: { type: "object", properties: { companySummary: { type: "string" }, topStrengths: { type: "array", items: { type: "string" } }, topRisks: { type: "array", items: { type: "string" } }, ninetyDayStrategyOutline: { type: "string" }, contentPillars: { type: "array", items: { type: "object", properties: { name: { type: "string" }, description: { type: "string" }, percentage: { type: "number" } }, required: ["name", "description", "percentage"], additionalProperties: false } }, contentIdeas: { type: "array", items: { type: "object", properties: { title: { type: "string" }, platform: { type: "string" }, format: { type: "string" }, pillar: { type: "string" } }, required: ["title", "platform", "format", "pillar"], additionalProperties: false } }, quickWins: { type: "array", items: { type: "object", properties: { title: { type: "string" }, description: { type: "string" }, impact: { type: "string" }, effort: { type: "string" } }, required: ["title", "description", "impact", "effort"], additionalProperties: false } } }, required: ["companySummary", "topStrengths", "topRisks", "ninetyDayStrategyOutline", "contentPillars", "contentIdeas", "quickWins"], additionalProperties: false } } },
@@ -546,22 +615,31 @@ Based on the URL and domain name, make educated inferences about the business. R
         return JSON.parse(typeof content === "string" ? content : JSON.stringify(content));
       }),
 
-    upsert: publicProcedure
+    upsert: appUserProcedure
       .input(z.object({ profileId: z.string(), data: z.any() }))
-      .mutation(({ input }) => upsertCompanyIntelligence({ id: nanoid(), profileId: input.profileId, ...input.data })),
+      .mutation(({ input, ctx }) => {
+        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        return upsertCompanyIntelligence({ id: nanoid(), profileId: input.profileId, ...input.data });
+      }),
 
-    getCompetitors: publicProcedure
+    getCompetitors: appUserProcedure
       .input(z.object({ profileId: z.string() }))
-      .query(({ input }) => getCompetitors(input.profileId)),
+      .query(({ input, ctx }) => {
+        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        return getCompetitors(input.profileId);
+      }),
 
-    getPersonas: publicProcedure
+    getPersonas: appUserProcedure
       .input(z.object({ profileId: z.string() }))
-      .query(({ input }) => getPersonas(input.profileId)),
+      .query(({ input, ctx }) => {
+        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        return getPersonas(input.profileId);
+      }),
   }),
 
   // ─── AI Writing Engine ───────────────────────────────────────────────────────
   aiWrite: router({
-    generateEmailDraft: publicProcedure
+    generateEmailDraft: appUserProcedure
       .input(z.object({
         profileId: z.string(),
         leadData: z.object({
@@ -585,8 +663,8 @@ Based on the URL and domain name, make educated inferences about the business. R
           : "Use a professional, direct tone.";
         const response = await invokeLLM({
           messages: [
-            { role: "system", content: `You are an expert B2B sales email copywriter. Write personalized, concise outbound emails that get responses. ${brandContext}` },
-            { role: "user", content: `Write a cold outreach email to ${input.leadData.contact} at ${input.leadData.company} (industry: ${input.leadData.industry ?? "unknown"}).\nGoal: ${input.emailGoal ?? "introduce our services and get a meeting"}.\n${input.previousContext ? `Context: ${input.previousContext}` : ""}\n\nReturn JSON with: subject (string), body (string, 3-4 paragraphs max), previewText (string, 1 sentence)` },
+            { role: "system", content: `You are an expert B2B sales email copywriter. Write personalized, concise outbound emails that get responses. Always write in Hungarian. ${brandContext}` },
+            { role: "user", content: `Írj hideg megkeresési emailt ${input.leadData.contact} részére, ${input.leadData.company} cégnél (iparág: ${input.leadData.industry ?? "ismeretlen"}).\nCél: ${input.emailGoal ?? "bemutatni a szolgáltatásainkat és megbeszélést kérni"}.\n${input.previousContext ? `Kontextus: ${input.previousContext}` : ""}\n\nReturn JSON with: subject (string), body (string, 3-4 paragraphs max), previewText (string, 1 sentence)` },
           ],
           response_format: { type: "json_schema", json_schema: { name: "email_draft", strict: true, schema: { type: "object", properties: { subject: { type: "string" }, body: { type: "string" }, previewText: { type: "string" } }, required: ["subject", "body", "previewText"], additionalProperties: false } } },
         });
@@ -594,7 +672,7 @@ Based on the URL and domain name, make educated inferences about the business. R
         return JSON.parse(typeof content === "string" ? content : JSON.stringify(content));
       }),
 
-    generateSocialPost: publicProcedure
+    generateSocialPost: appUserProcedure
       .input(z.object({
         profileId: z.string(),
         platform: z.enum(["linkedin", "facebook", "instagram", "twitter", "tiktok"]),
@@ -612,19 +690,19 @@ Based on the URL and domain name, make educated inferences about the business. R
       }))
       .mutation(async ({ input }) => {
         const platformGuide: Record<string, string> = {
-          linkedin: "Professional tone, 150-300 words, include 3-5 relevant hashtags, end with a question or CTA",
-          facebook: "Conversational, 100-200 words, engaging hook, 2-3 hashtags",
-          instagram: "Visual-first, 80-150 words, 5-10 hashtags, emoji use encouraged",
-          twitter: "Concise, max 280 characters, 1-2 hashtags, punchy",
-          tiktok: "Trendy, casual, 50-100 words caption, 3-5 trending hashtags",
+          linkedin: "Szakmai hangnem, 150-300 szó, 3-5 releváns hashtag, kérdéssel vagy CTA-val zárul",
+          facebook: "Közvetlen, 100-200 szó, figyelemfelkeltő kezdés, 2-3 hashtag",
+          instagram: "Vizuális fókusz, 80-150 szó, 5-10 hashtag, emoji használat ajánlott",
+          twitter: "Tömör, max 280 karakter, 1-2 hashtag, ütős",
+          tiktok: "Trendi, laza, 50-100 szó felirat, 3-5 trending hashtag",
         };
         const brandContext = input.brandVoice
-          ? `Brand voice: ${input.brandVoice.tone ?? "professional"}, Style: ${input.brandVoice.style ?? "direct"}`
+          ? `Márka hangnem: ${input.brandVoice.tone ?? "professzionális"}, Stílus: ${input.brandVoice.style ?? "közvetlen"}`
           : "";
         const response = await invokeLLM({
           messages: [
-            { role: "system", content: `You are a social media content expert. Create engaging posts optimized for each platform. ${brandContext}` },
-            { role: "user", content: `Create a ${input.platform} post about: "${input.topic}" for the content pillar: "${input.pillar}".\nTarget audience: ${input.targetAudience ?? "business professionals"}.\nFormat: ${input.format ?? "standard post"}.\nCTA: ${input.cta ?? "engage with the content"}.\nPlatform guidelines: ${platformGuide[input.platform]}.\n\nReturn JSON with: caption (string), hashtags (array of strings), visualBrief (string describing ideal image/video), ctaText (string)` },
+            { role: "system", content: `Te egy közösségi média tartalomszakértő vagy. Hozz létre minden platformra optimalizált, vonzó bejegyzéseket. Mindig magyarul válaszolj. ${brandContext}` },
+            { role: "user", content: `Hozz létre egy ${input.platform} bejegyzést a következő témában: "${input.topic}" a "${input.pillar}" tartalmi pillérhez.\nCélközönség: ${input.targetAudience ?? "üzleti szakemberek"}.\nFormátum: ${input.format ?? "standard bejegyzés"}.\nCTA: ${input.cta ?? "interakció a tartalommal"}.\nPlatform irányelvek: ${platformGuide[input.platform]}.\n\nReturn JSON with: caption (string), hashtags (array of strings), visualBrief (string describing ideal image/video), ctaText (string)` },
           ],
           response_format: { type: "json_schema", json_schema: { name: "social_post", strict: true, schema: { type: "object", properties: { caption: { type: "string" }, hashtags: { type: "array", items: { type: "string" } }, visualBrief: { type: "string" }, ctaText: { type: "string" } }, required: ["caption", "hashtags", "visualBrief", "ctaText"], additionalProperties: false } } },
         });
@@ -635,11 +713,15 @@ Based on the URL and domain name, make educated inferences about the business. R
 
   // ─── Audit Logs ──────────────────────────────────────────────────────────────
   auditLog: router({
-    list: publicProcedure
+    list: appUserProcedure
       .input(z.object({ profileId: z.string().optional(), limit: z.number().optional() }))
-      .query(({ input }) => getAuditLogs(input.profileId, input.limit ?? 50)),
+      .query(({ input, ctx }) => {
+        // Non-admin users can only see their own profile's logs
+        const profileId = ctx.appUser.role === "super_admin" ? input.profileId : (ctx.appUser.profileId ?? undefined);
+        return getAuditLogs(profileId, input.limit ?? 50);
+      }),
 
-    create: publicProcedure
+    create: appUserProcedure
       .input(z.object({
         profileId: z.string().optional(),
         userId: z.string().optional(),
@@ -653,9 +735,215 @@ Based on the URL and domain name, make educated inferences about the business. R
       .mutation(({ input }) => createAuditLog(input)),
   }),
 
+  // ─── Strategy Versions ──────────────────────────────────────────────────────
+  strategyVersions: router({
+    list: appUserProcedure
+      .input(z.object({ profileId: z.string() }))
+      .query(({ input, ctx }) => {
+        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        return getStrategyVersionsByProfile(input.profileId);
+      }),
+
+    getActive: appUserProcedure
+      .input(z.object({ profileId: z.string() }))
+      .query(({ input, ctx }) => {
+        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        return getActiveStrategyVersion(input.profileId);
+      }),
+
+    upsert: appUserProcedure
+      .input(z.object({
+        id: z.string().optional(),
+        profileId: z.string(),
+        title: z.string().min(1),
+        versionNumber: z.number().optional(),
+        isActive: z.boolean().optional(),
+        quarterlyGoals: z.any().optional(),
+        monthlyPriorities: z.any().optional(),
+        weeklySprints: z.any().optional(),
+        executiveSummary: z.string().optional(),
+        channelStrategy: z.any().optional(),
+        campaignPriorities: z.any().optional(),
+        quickWins: z.any().optional(),
+        nextActions: z.any().optional(),
+      }))
+      .mutation(({ input, ctx }) => {
+        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        return upsertStrategyVersion({ ...input, id: input.id ?? nanoid() });
+      }),
+
+    setActive: appUserProcedure
+      .input(z.object({ profileId: z.string(), versionId: z.string() }))
+      .mutation(({ input, ctx }) => {
+        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        return setActiveStrategyVersion(input.profileId, input.versionId);
+      }),
+
+    archive: appUserProcedure
+      .input(z.object({ id: z.string() }))
+      .mutation(({ input }) => archiveStrategyVersion(input.id)),
+
+    generate: appUserProcedure
+      .input(z.object({
+        profileId: z.string(),
+        intelligenceData: z.any(),
+        strategyContext: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        const response = await invokeLLM({
+          messages: [
+            { role: "system", content: "You are a senior marketing strategist. Generate a comprehensive multi-level marketing strategy. Return valid JSON only. Always respond in Hungarian." },
+            { role: "user", content: `Based on this company intelligence:\n${JSON.stringify(input.intelligenceData)}\n\n${input.strategyContext ? `Additional context: ${input.strategyContext}` : ""}\n\nGenerate a complete strategy with: executiveSummary, channelStrategy (array of {channel, priority 1-5, rationale, tactics[]}), campaignPriorities (string[]), quickWins (array of {title, description, impact, effort}), nextActions (array of {title, description, urgency: high/medium/low, dueDate?}), quarterlyGoals ({q1?, q2?, q3?, q4?} each as string[]), monthlyPriorities (array of {month: YYYY-MM, priorities: string[], kpis: [{label, target}]})` },
+          ],
+          response_format: { type: "json_schema", json_schema: { name: "strategy_output", strict: true, schema: { type: "object", properties: { executiveSummary: { type: "string" }, channelStrategy: { type: "array", items: { type: "object", properties: { channel: { type: "string" }, priority: { type: "number" }, rationale: { type: "string" }, tactics: { type: "array", items: { type: "string" } } }, required: ["channel", "priority", "rationale", "tactics"], additionalProperties: false } }, campaignPriorities: { type: "array", items: { type: "string" } }, quickWins: { type: "array", items: { type: "object", properties: { title: { type: "string" }, description: { type: "string" }, impact: { type: "string" }, effort: { type: "string" } }, required: ["title", "description", "impact", "effort"], additionalProperties: false } }, nextActions: { type: "array", items: { type: "object", properties: { title: { type: "string" }, description: { type: "string" }, urgency: { type: "string" }, dueDate: { type: "string" } }, required: ["title", "description", "urgency"], additionalProperties: false } }, quarterlyGoals: { type: "object", properties: { q1: { type: "array", items: { type: "string" } }, q2: { type: "array", items: { type: "string" } }, q3: { type: "array", items: { type: "string" } }, q4: { type: "array", items: { type: "string" } } }, required: [], additionalProperties: false }, monthlyPriorities: { type: "array", items: { type: "object", properties: { month: { type: "string" }, priorities: { type: "array", items: { type: "string" } }, kpis: { type: "array", items: { type: "object", properties: { label: { type: "string" }, target: { type: "string" } }, required: ["label", "target"], additionalProperties: false } } }, required: ["month", "priorities", "kpis"], additionalProperties: false } } }, required: ["executiveSummary", "channelStrategy", "campaignPriorities", "quickWins", "nextActions", "quarterlyGoals", "monthlyPriorities"], additionalProperties: false } } },
+        });
+        const content = response.choices[0]?.message?.content ?? "{}";
+        const parsed = JSON.parse(typeof content === "string" ? content : JSON.stringify(content));
+        const existing = await getStrategyVersionsByProfile(input.profileId);
+        const versionNumber = existing.length + 1;
+        return upsertStrategyVersion({
+          id: nanoid(),
+          profileId: input.profileId,
+          title: `Stratégia v${versionNumber} – ${new Date().toLocaleDateString("hu-HU")}`,
+          versionNumber,
+          isActive: true,
+          ...parsed,
+        });
+      }),
+  }),
+
+  // ─── Campaigns ──────────────────────────────────────────────────────────────
+  campaigns: router({
+    list: appUserProcedure
+      .input(z.object({ profileId: z.string() }))
+      .query(({ input, ctx }) => {
+        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        return getCampaignsByProfile(input.profileId);
+      }),
+
+    get: appUserProcedure
+      .input(z.object({ id: z.string() }))
+      .query(({ input }) => getCampaignById(input.id)),
+
+    upsert: appUserProcedure
+      .input(z.object({
+        id: z.string().optional(),
+        profileId: z.string(),
+        strategyVersionId: z.string().optional(),
+        title: z.string().min(1),
+        objective: z.string().optional(),
+        targetAudience: z.string().optional(),
+        channels: z.array(z.string()).optional(),
+        budget: z.string().optional(),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+        status: z.enum(["draft", "active", "paused", "completed", "archived"]).optional(),
+        brief: z.any().optional(),
+      }))
+      .mutation(({ input, ctx }) => {
+        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        return upsertCampaign({ ...input, id: input.id ?? nanoid(), status: input.status ?? "draft" });
+      }),
+
+    delete: appUserProcedure
+      .input(z.object({ id: z.string() }))
+      .mutation(({ input }) => deleteCampaign(input.id)),
+
+    generateBrief: appUserProcedure
+      .input(z.object({
+        profileId: z.string(),
+        campaignTitle: z.string(),
+        objective: z.string().optional(),
+        targetAudience: z.string().optional(),
+        channels: z.array(z.string()).optional(),
+        intelligenceData: z.any().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        const response = await invokeLLM({
+          messages: [
+            { role: "system", content: "You are a campaign strategist. Generate a detailed campaign brief. Return valid JSON only. Always respond in Hungarian." },
+            { role: "user", content: `Generate a campaign brief for: "${input.campaignTitle}"\nObjective: ${input.objective ?? "brand awareness"}\nTarget audience: ${input.targetAudience ?? "general"}\nChannels: ${(input.channels ?? []).join(", ") || "all relevant"}\nCompany context: ${JSON.stringify(input.intelligenceData ?? {})}\n\nReturn JSON with: hook (string), mainMessage (string), cta (string), contentIdeas (array of {title, format, platform}), kpis (array of {label, target})` },
+          ],
+          response_format: { type: "json_schema", json_schema: { name: "campaign_brief", strict: true, schema: { type: "object", properties: { hook: { type: "string" }, mainMessage: { type: "string" }, cta: { type: "string" }, contentIdeas: { type: "array", items: { type: "object", properties: { title: { type: "string" }, format: { type: "string" }, platform: { type: "string" } }, required: ["title", "format", "platform"], additionalProperties: false } }, kpis: { type: "array", items: { type: "object", properties: { label: { type: "string" }, target: { type: "string" } }, required: ["label", "target"], additionalProperties: false } } }, required: ["hook", "mainMessage", "cta", "contentIdeas", "kpis"], additionalProperties: false } } },
+        });
+        const content = response.choices[0]?.message?.content ?? "{}";
+        return JSON.parse(typeof content === "string" ? content : JSON.stringify(content));
+      }),
+
+    getAssets: appUserProcedure
+      .input(z.object({ campaignId: z.string() }))
+      .query(({ input }) => getCampaignAssets(input.campaignId)),
+
+    upsertAsset: appUserProcedure
+      .input(z.object({
+        id: z.string().optional(),
+        campaignId: z.string(),
+        profileId: z.string(),
+        type: z.enum(["copy", "image", "video", "email", "ad", "other"]),
+        title: z.string().min(1),
+        content: z.string().optional(),
+        fileUrl: z.string().optional(),
+        platform: z.string().optional(),
+        status: z.enum(["draft", "review", "approved", "published"]).optional(),
+      }))
+      .mutation(({ input }) => upsertCampaignAsset({ ...input, id: input.id ?? nanoid(), status: input.status ?? "draft" })),
+  }),
+
+  // ─── Recommendations ────────────────────────────────────────────────────────
+  recommendations: router({
+    list: appUserProcedure
+      .input(z.object({ profileId: z.string() }))
+      .query(({ input, ctx }) => {
+        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        return getRecommendationsByProfile(input.profileId);
+      }),
+
+    dismiss: appUserProcedure
+      .input(z.object({ id: z.string() }))
+      .mutation(({ input }) => dismissRecommendation(input.id)),
+
+    generate: appUserProcedure
+      .input(z.object({
+        profileId: z.string(),
+        recentContent: z.any().optional(),
+        recentLeads: z.any().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        const response = await invokeLLM({
+          messages: [
+            { role: "system", content: "You are a marketing AI advisor. Generate actionable recommendations. Return valid JSON only. Always respond in Hungarian." },
+            { role: "user", content: `Generate 5 actionable marketing recommendations based on:\nRecent content: ${JSON.stringify(input.recentContent ?? [])}\nRecent leads: ${JSON.stringify(input.recentLeads ?? [])}\n\nReturn JSON with items array of {type: strategy|content|campaign|lead|analytics, title, description, urgency: high|medium|low}` },
+          ],
+          response_format: { type: "json_schema", json_schema: { name: "recommendations", strict: true, schema: { type: "object", properties: { items: { type: "array", items: { type: "object", properties: { type: { type: "string" }, title: { type: "string" }, description: { type: "string" }, urgency: { type: "string" } }, required: ["type", "title", "description", "urgency"], additionalProperties: false } } }, required: ["items"], additionalProperties: false } } },
+        });
+        const content = response.choices[0]?.message?.content ?? "{}";
+        const parsed = JSON.parse(typeof content === "string" ? content : JSON.stringify(content));
+        for (const item of (parsed.items ?? [])) {
+          await createRecommendation({ id: nanoid(), profileId: input.profileId, type: item.type, title: item.title, description: item.description, urgency: item.urgency });
+        }
+        return parsed.items ?? [];
+      }),
+  }),
+
+  // ─── Notifications ───────────────────────────────────────────────────────────
+  notifications: router({
+    list: appUserProcedure
+      .query(({ ctx }) => getNotificationsByUser(ctx.appUser.id)),
+
+    markRead: appUserProcedure
+      .input(z.object({ id: z.string() }))
+      .mutation(({ input }) => markNotificationRead(input.id)),
+
+    markAllRead: appUserProcedure
+      .mutation(({ ctx }) => markAllNotificationsRead(ctx.appUser.id)),
+  }),
+
   // ─── AI ─────────────────────────────────────────────────────────────────────
   ai: router({
-    generateImage: publicProcedure
+    generateImage: appUserProcedure
       .input(z.object({
         prompt: z.string().min(3).max(500),
         originalImageUrl: z.string().optional(),

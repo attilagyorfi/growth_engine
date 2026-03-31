@@ -139,3 +139,64 @@
 - [x] Logo integrálása a platformba (meglevő logo megtartva)
 - [x] Fejlesztési összefoglaló dokumentum (szoftverfejlesztőnek)
 - [x] UI/UX részletek dokumentáció (házon belüli megbeszéléshez)
+
+## Sprint 1 – Kritikus technikai stabilizáció
+
+- [x] userId alapú adatizoláció: profiles router
+- [x] userId alapú adatizoláció: leads router
+- [x] userId alapú adatizoláció: content router
+- [x] userId alapú adatizoláció: strategies router
+- [x] userId alapú adatizoláció: outbound/inbound email routerek
+- [x] Super admin vs. normál user jogosultság szétválasztása minden routerben
+- [ ] SMTP / SendGrid integráció (email infrastruktúra)
+- [ ] Password reset email tényleges kiküldése
+- [ ] Outbound email tényleges kiküldése
+- [ ] Email státuszok: draft / queued / sent / failed
+- [ ] Auth rate limiting: register / login / forgot-password endpointok
+- [ ] Brute-force védelem + hibák auditálása
+- [ ] Auth flow tesztek (Vitest)
+- [ ] Adatizolációs tesztek (Vitest)
+- [ ] Onboarding completion logika tesztje (Vitest)
+- [ ] Strategy/content/sales alap tesztek (Vitest)
+
+## Sprint 2 – Company Intelligence + Strategy core
+
+- [ ] company_intelligence DB tábla létrehozása (20+ mező)
+- [ ] Company Intelligence szerkeszthető profiloldal UI
+- [ ] Onboarding adatok átmigrálása Company Intelligence-be
+- [ ] Minden AI-generálás Company Intelligence kontextusból indul
+- [ ] Strategy modul többszintűsítése: negyedéves / havi / heti / napi szintek
+- [x] strategy_versions tábla + verziókövetés UI
+- [x] AI next-action blokkok a Strategy oldalon
+- [ ] KPI-adatok alapján módosítási javaslatok
+
+## Sprint 3 – Campaign Builder + Naptár
+
+- [x] campaigns DB tábla + campaign_assets tábla
+- [x] Campaign Builder UI: brief form (cél, offer, célcsoport, csatorna, időtáv, CTA, tone)
+- [x] AI kampány output: headline, messaging angles, platform posztók, email sorozat, landing page outline
+- [ ] Kampány elemek automatikus naptárba kerülése
+- [ ] Havi/heti calendar view (valódi naptár nézet)
+- [ ] Drag-and-drop tartalom ütemezés
+- [ ] Approval workflow finomítás + bulk approve funkció
+- [ ] Kampánycsoportosítás és platformszűrés a naptárban
+
+## Sprint 4 – Analytics + Ajánlások + Értesítések
+
+- [ ] Analytics performance layer: lead count, email sent/open/reply, content volume
+- [ ] Analytics insight layer: AI-alapú értelmezés (mi teljesít jól/rosszul)
+- [ ] Analytics action layer: konkrét következő lépés javaslatok
+- [ ] recommendations DB tábla + AI recommendation engine
+- [ ] In-app értesítési rendszer (approval ready, new lead, reply received, campaign deadline)
+- [ ] Email értesítések (opcionális, SMTP alapon)
+- [ ] Dashboard AI prioritás blokkok frissítése
+
+## Sprint 5 – Agency Readiness + Monetizáció előkészítés
+
+- [ ] Client switcher áthelyezése top barba (kereshető, legutóbbi kliensek)
+- [ ] Workspace context vizuális jelzése
+- [ ] Team permissions bővítése (csapatjogosultságok)
+- [ ] Monetization-ready feature gating (Free / Pro / Agency szintek)
+- [ ] Free tier limitek: 1 profil, limitált AI generálás, alap strategy
+- [ ] Pro tier előkészítés: korlátlan AI, campaign builder, advanced analytics
+- [ ] Agency tier előkészítés: multi-workspace, export, white-label előkészítés

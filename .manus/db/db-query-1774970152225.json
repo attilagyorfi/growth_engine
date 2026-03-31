@@ -1,0 +1,162 @@
+{
+  "query": "DESCRIBE client_profiles;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user umEGVX5xqZTdjsh.9ef83c7e825e --database WzYbMH2rdiW2pftdUmZaz8 --execute DESCRIBE client_profiles;",
+  "rows": [
+    {
+      "Field": "id",
+      "Type": "varchar(64)",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "name",
+      "Type": "varchar(255)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "initials",
+      "Type": "varchar(4)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "color",
+      "Type": "varchar(100)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "oklch(0.6 0.2 255)",
+      "Extra": ""
+    },
+    {
+      "Field": "website",
+      "Type": "varchar(500)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "",
+      "Extra": ""
+    },
+    {
+      "Field": "industry",
+      "Type": "varchar(255)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "",
+      "Extra": ""
+    },
+    {
+      "Field": "description",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "logoUrl",
+      "Type": "varchar(500)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "primaryColor",
+      "Type": "varchar(20)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "#3B82F6",
+      "Extra": ""
+    },
+    {
+      "Field": "secondaryColor",
+      "Type": "varchar(20)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "#10B981",
+      "Extra": ""
+    },
+    {
+      "Field": "fontHeading",
+      "Type": "varchar(100)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "Sora",
+      "Extra": ""
+    },
+    {
+      "Field": "fontBody",
+      "Type": "varchar(100)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "Inter",
+      "Extra": ""
+    },
+    {
+      "Field": "brandGuidelineUrl",
+      "Type": "varchar(500)",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "brandVoice",
+      "Type": "json",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "contentPillars",
+      "Type": "json",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "socialAccounts",
+      "Type": "json",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "active",
+      "Type": "tinyint(1)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "1",
+      "Extra": ""
+    },
+    {
+      "Field": "createdAt",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": ""
+    },
+    {
+      "Field": "updatedAt",
+      "Type": "timestamp",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": "DEFAULT_GENERATED on update CURRENT_TIMESTAMP"
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\nid\tvarchar(64)\tNO\tPRI\tNULL\t\nname\tvarchar(255)\tNO\t\tNULL\t\ninitials\tvarchar(4)\tNO\t\tNULL\t\ncolor\tvarchar(100)\tNO\t\toklch(0.6 0.2 255)\t\nwebsite\tvarchar(500)\tYES\t\t\t\nindustry\tvarchar(255)\tYES\t\t\t\ndescription\ttext\tYES\t\tNULL\t\nlogoUrl\tvarchar(500)\tYES\t\tNULL\t\nprimaryColor\tvarchar(20)\tYES\t\t#3B82F6\t\nsecondaryColor\tvarchar(20)\tYES\t\t#10B981\t\nfontHeading\tvarchar(100)\tYES\t\tSora\t\nfontBody\tvarchar(100)\tYES\t\tInter\t\nbrandGuidelineUrl\tvarchar(500)\tYES\t\tNULL\t\nbrandVoice\tjson\tYES\t\tNULL\t\ncontentPillars\tjson\tYES\t\tNULL\t\nsocialAccounts\tjson\tYES\t\tNULL\t\nactive\ttinyint(1)\tNO\t\t1\t\ncreatedAt\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\t\nupdatedAt\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\tDEFAULT_GENERATED on update CURRENT_TIMESTAMP\n",
+  "stderr": "",
+  "execution_time_ms": 359
+}

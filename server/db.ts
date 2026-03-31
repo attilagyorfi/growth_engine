@@ -1,4 +1,4 @@
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   users, InsertUser,
@@ -105,6 +105,12 @@ export async function getAllProfiles() {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(clientProfiles).orderBy(clientProfiles.createdAt);
+}
+
+export async function getProfilesByAppUser(appUserId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(clientProfiles).where(eq(clientProfiles.appUserId, appUserId)).orderBy(clientProfiles.createdAt);
 }
 
 export async function getProfileById(id: string) {
@@ -491,4 +497,151 @@ export async function getAuditLogs(profileId?: string, limit = 50) {
       .limit(limit);
   }
   return db.select().from(auditLogs).orderBy(auditLogs.createdAt).limit(limit);
+}
+
+// ─── Strategy Versions ────────────────────────────────────────────────────────
+import {
+  strategyVersions, InsertStrategyVersion,
+  campaigns, InsertCampaign,
+  campaignAssets, InsertCampaignAsset,
+  recommendations, InsertRecommendation,
+  appNotifications, InsertAppNotification,
+} from "../drizzle/schema";
+
+export async function getStrategyVersionsByProfile(profileId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(strategyVersions)
+    .where(eq(strategyVersions.profileId, profileId))
+    .orderBy(desc(strategyVersions.versionNumber));
+}
+
+export async function getActiveStrategyVersion(profileId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(strategyVersions)
+    .where(and(eq(strategyVersions.profileId, profileId), eq(strategyVersions.isActive, true)))
+    .limit(1);
+  return result[0];
+}
+
+export async function upsertStrategyVersion(data: InsertStrategyVersion) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.insert(strategyVersions).values(data).onDuplicateKeyUpdate({ set: data });
+  const result = await db.select().from(strategyVersions).where(eq(strategyVersions.id, data.id)).limit(1);
+  return result[0];
+}
+
+export async function setActiveStrategyVersion(profileId: string, versionId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  // Deactivate all versions for this profile
+  await db.update(strategyVersions).set({ isActive: false }).where(eq(strategyVersions.profileId, profileId));
+  // Activate the selected version
+  await db.update(strategyVersions).set({ isActive: true }).where(eq(strategyVersions.id, versionId));
+}
+
+export async function archiveStrategyVersion(id: string) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(strategyVersions).set({ archivedAt: new Date(), isActive: false }).where(eq(strategyVersions.id, id));
+}
+
+// ─── Campaigns ────────────────────────────────────────────────────────────────
+
+export async function getCampaignsByProfile(profileId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(campaigns)
+    .where(eq(campaigns.profileId, profileId))
+    .orderBy(desc(campaigns.createdAt));
+}
+
+export async function getCampaignById(id: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(campaigns).where(eq(campaigns.id, id)).limit(1);
+  return result[0];
+}
+
+export async function upsertCampaign(data: InsertCampaign) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.insert(campaigns).values(data).onDuplicateKeyUpdate({ set: data });
+  return getCampaignById(data.id);
+}
+
+export async function deleteCampaign(id: string) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(campaigns).where(eq(campaigns.id, id));
+}
+
+// ─── Campaign Assets ──────────────────────────────────────────────────────────
+
+export async function getCampaignAssets(campaignId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(campaignAssets).where(eq(campaignAssets.campaignId, campaignId));
+}
+
+export async function upsertCampaignAsset(data: InsertCampaignAsset) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.insert(campaignAssets).values(data).onDuplicateKeyUpdate({ set: data });
+  const result = await db.select().from(campaignAssets).where(eq(campaignAssets.id, data.id)).limit(1);
+  return result[0];
+}
+
+// ─── Recommendations ──────────────────────────────────────────────────────────
+
+export async function getRecommendationsByProfile(profileId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(recommendations)
+    .where(and(eq(recommendations.profileId, profileId), eq(recommendations.isDismissed, false)))
+    .orderBy(desc(recommendations.generatedAt))
+    .limit(20);
+}
+
+export async function createRecommendation(data: InsertRecommendation) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.insert(recommendations).values(data);
+}
+
+export async function dismissRecommendation(id: string) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(recommendations).set({ isDismissed: true }).where(eq(recommendations.id, id));
+}
+
+// ─── App Notifications ────────────────────────────────────────────────────────
+
+export async function getNotificationsByUser(appUserId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(appNotifications)
+    .where(eq(appNotifications.appUserId, appUserId))
+    .orderBy(desc(appNotifications.createdAt))
+    .limit(50);
+}
+
+export async function createNotification(data: InsertAppNotification) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(appNotifications).values(data);
+}
+
+export async function markNotificationRead(id: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(appNotifications).set({ isRead: true }).where(eq(appNotifications.id, id));
+}
+
+export async function markAllNotificationsRead(appUserId: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(appNotifications).set({ isRead: true }).where(eq(appNotifications.appUserId, appUserId));
 }

@@ -10,7 +10,7 @@ import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, Users, BarChart3, Layers, TrendingUp, Settings,
   Zap, ChevronRight, Bell, X, CheckCircle, AlertCircle, Info, Mail,
-  ChevronDown, ShieldAlert, LogOut, Shield,
+  ChevronDown, ShieldAlert, LogOut, Shield, Megaphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useData } from "@/contexts/DataContext";
@@ -25,6 +25,7 @@ const navItems = [
   { href: "/strategia", label: "Stratégia", icon: BarChart3 },
   { href: "/tartalom-studio", label: "Tartalom Studio", icon: Layers },
   { href: "/ertekesites", label: "Értékesítés", icon: Mail },
+  { href: "/kampanyok", label: "Kampányok", icon: Megaphone },
   { href: "/analitika", label: "Analitika", icon: TrendingUp },
   { href: "/beallitasok", label: "Beállítások", icon: Settings },
 ];

@@ -17,6 +17,7 @@ import {
   MessageSquare, Palette, Settings
 } from "lucide-react";
 import { nanoid } from "nanoid";
+import { useAppAuth } from "@/hooks/useAppAuth";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -197,9 +198,11 @@ export default function OnboardingWizard() {
   const [showTour, setShowTour] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { lang } = useLanguage();
+  const { user: appUser } = useAppAuth();
 
-  const [data, setData] = useState<WizardData>({
-    profileId: nanoid(),
+  const [data, setData] = useState<WizardData>(() => ({
+    // Use appUser's existing profileId if available, otherwise generate a new one
+    profileId: appUser?.profileId || nanoid(),
     sessionId: nanoid(),
     companyName: "",
     website: "",
@@ -221,7 +224,7 @@ export default function OnboardingWizard() {
     mainGoal: "",
     timeframe: "",
     wowOutput: null,
-  });
+  }));
 
   const update = (fields: Partial<WizardData>) => setData(prev => ({ ...prev, ...fields }));
 

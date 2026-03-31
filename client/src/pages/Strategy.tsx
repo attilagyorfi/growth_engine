@@ -1,312 +1,490 @@
-/*
- * G2A Growth Engine – Strategy Page
- * Design: "Dark Ops Dashboard"
- * Features: Clickable weekly plan items (detail modal), Active strategy detail modal
- */
-
 import { useState } from "react";
+import { trpc } from "@/lib/trpc";
+import { useProfile } from "@/contexts/ProfileContext";
 import DashboardLayout from "@/components/DashboardLayout";
-import DetailModal from "@/components/DetailModal";
-import { BarChart3, Target, Calendar, TrendingUp, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import {
+  Target, Zap, Calendar, TrendingUp, Loader2, CheckCircle2,
+  Clock, AlertCircle, ChevronRight, BarChart2, Lightbulb, Archive,
+  Star
+} from "lucide-react";
 
-type WeeklyItem = {
-  week: string;
-  focus: string;
-  message: string;
-  type: string;
-  details: string;
-  cta: string;
-  format: string;
+const URGENCY_CONFIG = {
+  high: { label: "Sürgős", color: "text-red-600 bg-red-50", icon: AlertCircle },
+  medium: { label: "Közepes", color: "text-yellow-600 bg-yellow-50", icon: Clock },
+  low: { label: "Alacsony", color: "text-green-600 bg-green-50", icon: CheckCircle2 },
 };
 
-const weeklyPlan: WeeklyItem[] = [
-  {
-    week: "1. Hét",
-    focus: "AI eszközök a napi marketing munkában",
-    message: "Mutasd meg, hogyan spórol időt az AI a tartalomgyártásban",
-    type: "Edukációs poszt",
-    details: `Az első hét célja az edukáció: megmutatni a célközönségnek (cégvezetők, marketing döntéshozók), hogy az AI nem egy futurisztikus fogalom, hanem ma már napi szinten alkalmazható eszköz.
-
-**Javasolt tartalom:**
-- Konkrét példák: "5 feladat, amit az AI elvégez helyetted 10 perc alatt"
-- Vizuális: infografika az AI marketing workflow-ról
-- Hangnem: informatív, szakmai, de könnyen érthető
-
-**Célzott platform:** LinkedIn (elsődleges), Facebook (másodlagos)
-
-**Elvárt eredmény:** 200+ megtekintés, 15+ reakció, 3-5 komment`,
-    cta: "Kérdezd meg a követőidet: 'Milyen marketing feladatot automatizálnál először?'",
-    format: "Szöveges poszt + infografika",
-  },
-  {
-    week: "2. Hét",
-    focus: "Stratégiai marketing vs. taktikai marketing",
-    message: "A legtöbb cég taktikázik, miközben stratégiára lenne szüksége",
-    type: "Gondolatvezető poszt",
-    details: `A második hét célja a gondolatvezetés: pozicionálni a G2A Marketinget mint stratégiai partnert, nem csupán kivitelezőt.
-
-**Javasolt tartalom:**
-- Szembeállítás: "Taktika = posztolás. Stratégia = rendszer."
-- Konkrét példa: egy cég, amely taktikázott vs. egy, amely stratégiát épített
-- Hangnem: határozott, véleményvezér, provokatív (de konstruktív)
-
-**Célzott platform:** LinkedIn (elsődleges)
-
-**Elvárt eredmény:** 300+ megtekintés, 20+ reakció, 5-10 komment`,
-    cta: "Kérd meg a követőket: 'Ti stratégiát vagy taktikát alkalmaztok?'",
-    format: "Hosszú LinkedIn szöveges poszt (thought leadership)",
-  },
-  {
-    week: "3. Hét",
-    focus: "Social media audit – 5 hiba, amit a legtöbb cég elkövet",
-    message: "Konkrét hibák bemutatása és a megoldás",
-    type: "Audit/Hibák poszt",
-    details: `A harmadik hét célja a fájdalompontok azonosítása: megmutatni a célközönségnek, hogy ők is elkövetik ezeket a hibákat, és van rá megoldás.
-
-**Javasolt tartalom:**
-1. Hiba: Nincs következetes posztolási ritmus
-2. Hiba: Csak termékposztok, nincs értékteremtő tartalom
-3. Hiba: Nem mérik az eredményeket
-4. Hiba: Minden platformon ugyanazt posztolják
-5. Hiba: Nincs CTA (cselekvésre ösztönzés)
-
-**Célzott platform:** LinkedIn + Facebook + Instagram (carousel)
-
-**Elvárt eredmény:** 400+ megtekintés, 30+ reakció, 10+ komment, 5+ megosztás`,
-    cta: "Ajánld fel az ingyenes auditot: 'Szeretnéd tudni, te melyik hibát követed el?'",
-    format: "Carousel poszt (5 dia) + szöveges összefoglaló",
-  },
-  {
-    week: "4. Hét",
-    focus: "CTA hét – Ingyenes marketing audit ajánlat",
-    message: "Foglalj időpontot egy ingyenes 30 perces marketing auditre",
-    type: "Konverziós poszt",
-    details: `A negyedik hét célja a konverzió: az eddig felépített bizalom és ismertség alapján konkrét cselekvésre ösztönözni.
-
-**Javasolt tartalom:**
-- Direkt ajánlat: "Ingyenes 30 perces marketing audit – korlátozott helyek"
-- Szociális bizonyíték: eddigi ügyfelek eredményei (ha van)
-- Sürgősség: "Ezen a héten 3 időpont elérhető"
-
-**Célzott platform:** LinkedIn (elsődleges), Facebook (másodlagos)
-
-**Elvárt eredmény:** 2-5 időpontfoglalás, 10+ üzenet/megkeresés`,
-    cta: "Direkt CTA: 'Írj üzenetet vagy foglalj időpontot a bio linkjén keresztül'",
-    format: "Rövid, ütős szöveges poszt + közvetlen CTA",
-  },
-];
-
-const pillars = [
-  { name: "AI a marketingben", color: "oklch(0.6 0.2 255)", active: true },
-  { name: "Stratégiai gondolkodás", color: "oklch(0.65 0.18 165)", active: true },
-  { name: "Social media üzleti szerepe", color: "oklch(0.6 0.2 290)", active: false },
-  { name: "Audit és hibák", color: "oklch(0.75 0.18 75)", active: false },
-  { name: "Cégvezetői edukáció", color: "oklch(0.65 0.22 25)", active: false },
-];
-
 export default function Strategy() {
-  const [selectedWeek, setSelectedWeek] = useState<WeeklyItem | null>(null);
-  const [showStrategyDetail, setShowStrategyDetail] = useState(false);
+  const { activeProfile } = useProfile();
+  const utils = trpc.useUtils();
+
+  const [showGenerate, setShowGenerate] = useState(false);
+  const [strategyContext, setStrategyContext] = useState("");
+  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
+
+  const { data: versions = [], isLoading } = trpc.strategyVersions.list.useQuery(
+    { profileId: activeProfile.id },
+    { enabled: !!activeProfile.id }
+  );
+
+  const { data: activeVersion } = trpc.strategyVersions.getActive.useQuery(
+    { profileId: activeProfile.id },
+    { enabled: !!activeProfile.id }
+  );
+
+  const { data: intelligence } = trpc.intelligence.get.useQuery(
+    { profileId: activeProfile.id },
+    { enabled: !!activeProfile.id }
+  );
+
+  const generateMutation = trpc.strategyVersions.generate.useMutation({
+    onSuccess: () => {
+      utils.strategyVersions.list.invalidate({ profileId: activeProfile.id });
+      utils.strategyVersions.getActive.invalidate({ profileId: activeProfile.id });
+      setShowGenerate(false);
+      setStrategyContext("");
+      toast.success("Stratégia sikeresen generálva!");
+    },
+    onError: () => toast.error("Nem sikerült a stratégia generálása."),
+  });
+
+  const setActiveMutation = trpc.strategyVersions.setActive.useMutation({
+    onSuccess: () => {
+      utils.strategyVersions.list.invalidate({ profileId: activeProfile.id });
+      utils.strategyVersions.getActive.invalidate({ profileId: activeProfile.id });
+      toast.success("Aktív stratégia frissítve.");
+    },
+  });
+
+  const archiveMutation = trpc.strategyVersions.archive.useMutation({
+    onSuccess: () => {
+      utils.strategyVersions.list.invalidate({ profileId: activeProfile.id });
+      toast.success("Stratégia archiválva.");
+    },
+  });
+
+  const current = selectedVersionId
+    ? versions.find(v => v.id === selectedVersionId)
+    : activeVersion;
+
+  const activeVersions = versions;
+  const archivedVersions: typeof versions = [];
 
   return (
-    <DashboardLayout title="Stratégia" subtitle="Aktuális havi marketingstratégia és heti bontás">
-      {/* Strategy Header – clickable */}
-      <button
-        onClick={() => setShowStrategyDetail(true)}
-        className="w-full text-left g2a-stat-card p-5 mb-5 transition-all hover:opacity-90 group"
-        style={{ cursor: "pointer" }}
-      >
-        <div className="flex items-start justify-between">
+    <DashboardLayout>
+      <div className="p-6 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
           <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Target size={16} style={{ color: "oklch(0.6 0.2 255)" }} />
-              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.6 0.2 255)" }}>
-                Aktív Stratégia – Kattints a részletekért
-              </p>
-            </div>
-            <h2 className="text-xl font-bold mb-1" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>
-              2026. Április – AI és Stratégiai Marketing a B2B Szektorban
-            </h2>
-            <p className="text-sm" style={{ color: "oklch(0.6 0.015 240)" }}>
-              Cégvezetők edukálása az AI marketing lehetőségeiről, konverzió: ingyenes audit foglalása
+            <h1 className="text-2xl font-bold text-foreground">Stratégia</h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              {activeVersion
+                ? `Aktív: ${activeVersion.title}`
+                : "Még nincs aktív stratégia – generálj egyet az AI segítségével"}
             </p>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <div className="px-3 py-1.5 rounded-lg text-xs font-semibold" style={{ background: "oklch(0.65 0.18 165 / 15%)", color: "oklch(0.75 0.15 165)", fontFamily: "Sora, sans-serif" }}>
-              Aktív
-            </div>
-            <ChevronRight size={16} style={{ color: "oklch(0.5 0.015 240)" }} className="group-hover:translate-x-0.5 transition-transform" />
+          <div className="flex gap-2">
+            {versions.length > 0 && (
+              <Button variant="outline" onClick={() => setSelectedVersionId(null)} className="gap-2">
+                <Star className="w-4 h-4" />
+                Aktív verzió
+              </Button>
+            )}
+            <Button onClick={() => setShowGenerate(true)} className="gap-2">
+              <Zap className="w-4 h-4" />
+              AI Stratégia generálása
+            </Button>
           </div>
         </div>
-      </button>
 
-      <div className="grid grid-cols-3 gap-4">
-        {/* Weekly Breakdown – each item clickable */}
-        <div className="col-span-2 g2a-card p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Calendar size={15} style={{ color: "oklch(0.6 0.2 255)" }} />
-            <h3 className="text-sm font-semibold" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>
-              Heti Bontás – Kattints a részletekért
-            </h3>
-          </div>
-          <div className="space-y-3">
-            {weeklyPlan.map((w, i) => (
+        {/* Version Selector */}
+        {activeVersions.length > 1 && (
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {activeVersions.map(v => (
               <button
-                key={i}
-                onClick={() => setSelectedWeek(w)}
-                className="w-full text-left rounded-lg p-4 transition-all group"
-                style={{
-                  background: "oklch(0.22 0.02 255)",
-                  border: "1px solid oklch(1 0 0 / 6%)",
-                }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.border = "1px solid oklch(0.6 0.2 255 / 30%)"; (e.currentTarget as HTMLElement).style.background = "oklch(0.23 0.025 255)"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.border = "1px solid oklch(1 0 0 / 6%)"; (e.currentTarget as HTMLElement).style.background = "oklch(0.22 0.02 255)"; }}
+                key={v.id}
+                onClick={() => setSelectedVersionId(v.id)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm border whitespace-nowrap transition-colors ${
+                  (selectedVersionId === v.id || (!selectedVersionId && v.isActive))
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "border-border hover:border-primary"
+                }`}
               >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold px-2 py-0.5 rounded" style={{ background: "oklch(0.6 0.2 255 / 15%)", color: "oklch(0.75 0.18 255)", fontFamily: "Sora, sans-serif" }}>
-                    {w.week}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs" style={{ color: "oklch(0.5 0.015 240)" }}>{w.type}</span>
-                    <ChevronRight size={13} style={{ color: "oklch(0.45 0.015 240)" }} className="group-hover:translate-x-0.5 transition-transform" />
-                  </div>
-                </div>
-                <p className="text-sm font-semibold mb-1 text-left" style={{ color: "oklch(0.88 0.008 240)", fontFamily: "Sora, sans-serif" }}>
-                  {w.focus}
-                </p>
-                <p className="text-xs text-left" style={{ color: "oklch(0.55 0.015 240)" }}>
-                  {w.message}
-                </p>
+                {v.isActive && <Star className="w-3 h-3" />}
+                {v.title}
               </button>
             ))}
           </div>
-        </div>
+        )}
 
-        {/* Pillars + CTA */}
-        <div className="space-y-4">
-          <div className="g2a-card p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <BarChart3 size={15} style={{ color: "oklch(0.65 0.18 165)" }} />
-              <h3 className="text-sm font-semibold" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>
-                Tartalmi Pillérek
-              </h3>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : !current ? (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <Target className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Még nincs stratégia</h3>
+              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                Az AI elemzi a céged profilját és az Intelligence adatokat, majd elkészít egy teljes körű marketing stratégiát negyed-, havi és heti bontásban.
+              </p>
+              <Button onClick={() => setShowGenerate(true)} className="gap-2">
+                <Zap className="w-4 h-4" />
+                Stratégia generálása
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <Tabs defaultValue="summary">
+            <div className="flex items-center justify-between mb-4">
+              <TabsList>
+                <TabsTrigger value="summary">Összefoglaló</TabsTrigger>
+                <TabsTrigger value="quarterly">Negyedéves</TabsTrigger>
+                <TabsTrigger value="monthly">Havi</TabsTrigger>
+                <TabsTrigger value="actions">Következő lépések</TabsTrigger>
+                <TabsTrigger value="channels">Csatornák</TabsTrigger>
+              </TabsList>
+              <div className="flex gap-2">
+                {!current.isActive && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => setActiveMutation.mutate({ profileId: activeProfile.id, versionId: current.id })}
+                  >
+                    <Star className="w-3 h-3" />
+                    Aktívvá tétel
+                  </Button>
+                )}
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-2 text-muted-foreground"
+                    onClick={() => archiveMutation.mutate({ id: current.id })}
+                  >
+                    <Archive className="w-3 h-3" />
+                    Archiválás
+                  </Button>
+              </div>
             </div>
-            <div className="space-y-2">
-              {pillars.map((p) => (
-                <div
-                  key={p.name}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg"
-                  style={{
-                    background: p.active ? `${p.color.replace(")", " / 12%)")}` : "oklch(0.22 0.02 255)",
-                    border: `1px solid ${p.active ? p.color.replace(")", " / 25%)") : "oklch(1 0 0 / 6%)"}`,
-                  }}
-                >
-                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: p.active ? p.color : "oklch(0.4 0.015 240)" }} />
-                  <span className="text-xs font-medium" style={{ color: p.active ? p.color : "oklch(0.5 0.015 240)" }}>
-                    {p.name}
-                  </span>
-                  {p.active && <span className="ml-auto text-xs" style={{ color: p.color }}>Aktív</span>}
+
+            {/* Summary Tab */}
+            <TabsContent value="summary" className="space-y-4">
+              {current.executiveSummary && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Lightbulb className="w-4 h-4 text-yellow-500" />
+                      Stratégiai összefoglaló
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground leading-relaxed">{current.executiveSummary as string}</p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {current.quickWins && Array.isArray(current.quickWins) && (current.quickWins as any[]).length > 0 && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-green-500" />
+                      Gyors győzelmek
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {(current.quickWins as any[]).map((win: any, i: number) => (
+                        <div key={i} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                          <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-sm">{win.title}</div>
+                            <div className="text-xs text-muted-foreground mt-0.5">{win.description}</div>
+                          </div>
+                          <div className="flex gap-1 shrink-0">
+                            <Badge variant="outline" className="text-xs">Hatás: {win.impact}</Badge>
+                            <Badge variant="outline" className="text-xs">Erőfeszítés: {win.effort}</Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {current.campaignPriorities && Array.isArray(current.campaignPriorities) && (current.campaignPriorities as string[]).length > 0 && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Target className="w-4 h-4 text-blue-500" />
+                      Kampány prioritások
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {(current.campaignPriorities as string[]).map((priority: string, i: number) => (
+                        <div key={i} className="flex items-center gap-3 p-2 border rounded">
+                          <span className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-bold shrink-0">
+                            {i + 1}
+                          </span>
+                          <span className="text-sm">{priority}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
+            {/* Quarterly Tab */}
+            <TabsContent value="quarterly" className="space-y-4">
+              {current.quarterlyGoals && typeof current.quarterlyGoals === "object" ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {(["q1", "q2", "q3", "q4"] as const).map(q => {
+                    const goals = (current.quarterlyGoals as any)?.[q] as string[] | undefined;
+                    if (!goals?.length) return null;
+                    return (
+                      <Card key={q}>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm font-semibold uppercase text-muted-foreground">
+                            {q.toUpperCase()} Negyedév
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <ul className="space-y-2">
+                            {goals.map((goal: string, i: number) => (
+                              <li key={i} className="flex items-start gap-2 text-sm">
+                                <ChevronRight className="w-3 h-3 text-primary mt-0.5 shrink-0" />
+                                {goal}
+                              </li>
+                            ))}
+                          </ul>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
-              ))}
-            </div>
-          </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Calendar className="w-8 h-8 mx-auto mb-2" />
+                  <p>Negyedéves célok nem állnak rendelkezésre ebben a verzióban.</p>
+                </div>
+              )}
+            </TabsContent>
 
-          <div className="g2a-card p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <TrendingUp size={15} style={{ color: "oklch(0.75 0.18 75)" }} />
-              <h3 className="text-sm font-semibold" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>
-                CTA Stratégia
-              </h3>
-            </div>
-            <div className="rounded-lg p-3" style={{ background: "oklch(0.75 0.18 75 / 8%)", border: "1px solid oklch(0.75 0.18 75 / 20%)" }}>
-              <p className="text-xs font-semibold mb-1" style={{ color: "oklch(0.8 0.15 75)", fontFamily: "Sora, sans-serif" }}>
-                Ingyenes Marketing Audit
-              </p>
-              <p className="text-xs" style={{ color: "oklch(0.6 0.012 240)" }}>
-                Foglalj időpontot egy ingyenes 30 perces marketing auditre – minden héten 1-2 hellyel.
-              </p>
-            </div>
-          </div>
-        </div>
+            {/* Monthly Tab */}
+            <TabsContent value="monthly" className="space-y-4">
+              {current.monthlyPriorities && Array.isArray(current.monthlyPriorities) && (current.monthlyPriorities as any[]).length > 0 ? (
+                <div className="space-y-4">
+                  {(current.monthlyPriorities as any[]).map((month: any, i: number) => (
+                    <Card key={i}>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-primary" />
+                          {month.month}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div>
+                            <div className="text-xs font-medium text-muted-foreground uppercase mb-2">Prioritások</div>
+                            <ul className="space-y-1">
+                              {(month.priorities ?? []).map((p: string, j: number) => (
+                                <li key={j} className="flex items-start gap-2 text-sm">
+                                  <ChevronRight className="w-3 h-3 text-primary mt-0.5 shrink-0" />
+                                  {p}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                          {month.kpis?.length > 0 && (
+                            <div>
+                              <div className="text-xs font-medium text-muted-foreground uppercase mb-2">KPI-k</div>
+                              <div className="space-y-1">
+                                {month.kpis.map((kpi: any, j: number) => (
+                                  <div key={j} className="flex items-center justify-between text-sm p-1.5 bg-muted/50 rounded">
+                                    <span className="text-muted-foreground">{kpi.label}</span>
+                                    <span className="font-medium">{kpi.target}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <BarChart2 className="w-8 h-8 mx-auto mb-2" />
+                  <p>Havi prioritások nem állnak rendelkezésre.</p>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Next Actions Tab */}
+            <TabsContent value="actions" className="space-y-3">
+              {current.nextActions && Array.isArray(current.nextActions) && (current.nextActions as any[]).length > 0 ? (
+                (current.nextActions as any[]).map((action: any, i: number) => {
+                  const urgency = URGENCY_CONFIG[action.urgency as keyof typeof URGENCY_CONFIG] ?? URGENCY_CONFIG.medium;
+                  const UrgencyIcon = urgency.icon;
+                  return (
+                    <div key={i} className="flex items-start gap-3 p-4 border rounded-lg hover:bg-muted/30 transition-colors">
+                      <UrgencyIcon className={`w-4 h-4 mt-0.5 shrink-0 ${urgency.color.split(" ")[0]}`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm">{action.title}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">{action.description}</div>
+                        {action.dueDate && (
+                          <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            Határidő: {action.dueDate}
+                          </div>
+                        )}
+                      </div>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${urgency.color}`}>
+                        {urgency.label}
+                      </span>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <CheckCircle2 className="w-8 h-8 mx-auto mb-2" />
+                  <p>Nincsenek következő lépések ebben a verzióban.</p>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Channels Tab */}
+            <TabsContent value="channels" className="space-y-4">
+              {current.channelStrategy && Array.isArray(current.channelStrategy) && (current.channelStrategy as any[]).length > 0 ? (
+                <div className="grid gap-4">
+                  {(current.channelStrategy as any[])
+                    .sort((a: any, b: any) => b.priority - a.priority)
+                    .map((ch: any, i: number) => (
+                      <Card key={i}>
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="font-semibold">{ch.channel}</div>
+                            <div className="flex items-center gap-1">
+                              {Array.from({ length: 5 }).map((_, j) => (
+                                <div
+                                  key={j}
+                                  className={`w-2 h-2 rounded-full ${j < ch.priority ? "bg-primary" : "bg-muted"}`}
+                                />
+                              ))}
+                              <span className="text-xs text-muted-foreground ml-1">{ch.priority}/5</span>
+                            </div>
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-3">{ch.rationale}</p>
+                          {ch.tactics?.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {ch.tactics.map((t: string, j: number) => (
+                                <Badge key={j} variant="secondary" className="text-xs">{t}</Badge>
+                              ))}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <TrendingUp className="w-8 h-8 mx-auto mb-2" />
+                  <p>Csatorna stratégia nem áll rendelkezésre.</p>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        )}
+
+        {/* Version History */}
+        {archivedVersions.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2 text-muted-foreground">
+                <Archive className="w-4 h-4" />
+                Archivált verziók ({archivedVersions.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {archivedVersions.map(v => (
+                  <div key={v.id} className="flex items-center justify-between p-2 rounded border text-sm">
+                    <span className="text-muted-foreground">{v.title}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setActiveMutation.mutate({ profileId: activeProfile.id, versionId: v.id })}
+                    >
+                      Visszaállítás
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
-      {/* Weekly Detail Modal */}
-      {selectedWeek && (
-        <DetailModal
-          isOpen={!!selectedWeek}
-          onClose={() => setSelectedWeek(null)}
-          title={`${selectedWeek.week} – ${selectedWeek.focus}`}
-          subtitle={`Típus: ${selectedWeek.type} · Formátum: ${selectedWeek.format}`}
-          footer={
-            <button onClick={() => setSelectedWeek(null)} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.75 0.015 240)" }}>
-              Bezárás
-            </button>
-          }
-        >
-          <div className="space-y-4">
-            <div className="rounded-lg p-4" style={{ background: "oklch(0.22 0.02 255)" }}>
-              <p className="text-xs font-semibold mb-2 uppercase tracking-wider" style={{ color: "oklch(0.55 0.015 240)", fontFamily: "Sora, sans-serif" }}>Fő Üzenet</p>
-              <p className="text-sm font-medium" style={{ color: "oklch(0.85 0.008 240)" }}>{selectedWeek.message}</p>
+      {/* Generate Dialog */}
+      <Dialog open={showGenerate} onOpenChange={setShowGenerate}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Zap className="w-5 h-5 text-primary" />
+              AI Stratégia generálása
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Az AI felhasználja a céged Intelligence profilját és az alábbi kontextust egy teljes marketing stratégia elkészítéséhez.
+            </p>
+            {!intelligence && (
+              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
+                ⚠️ Még nincs Company Intelligence profil. Az AI általánosabb stratégiát fog generálni. Ajánlott előbb az Intelligence oldalt kitölteni.
+              </div>
+            )}
+            <div>
+              <Label>Kiegészítő kontextus (opcionális)</Label>
+              <Textarea
+                placeholder="pl. Fókuszálj a Q2-re, prioritás a LinkedIn és az email marketing, 3 hónapos lead generation kampány..."
+                value={strategyContext}
+                onChange={e => setStrategyContext(e.target.value)}
+                rows={4}
+              />
             </div>
-            <div className="rounded-lg p-4" style={{ background: "oklch(0.22 0.02 255)" }}>
-              <p className="text-xs font-semibold mb-3 uppercase tracking-wider" style={{ color: "oklch(0.55 0.015 240)", fontFamily: "Sora, sans-serif" }}>Részletes Terv</p>
-              {selectedWeek.details.split("\n").map((line, i) => {
-                if (line.startsWith("**") && line.endsWith("**")) {
-                  return <p key={i} className="font-bold mt-3 mb-1 text-sm" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.88 0.008 240)" }}>{line.replace(/\*\*/g, "")}</p>;
-                }
-                if (line.match(/^\d\./)) {
-                  return <p key={i} className="text-sm pl-2 mb-1" style={{ color: "oklch(0.72 0.01 240)" }}>{line}</p>;
-                }
-                if (line === "") return <div key={i} className="h-2" />;
-                return <p key={i} className="text-sm mb-1" style={{ color: "oklch(0.72 0.01 240)" }}>{line}</p>;
+          </div>
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => setShowGenerate(false)}>Mégse</Button>
+            <Button
+              onClick={() => generateMutation.mutate({
+                profileId: activeProfile.id,
+                intelligenceData: intelligence ?? {},
+                strategyContext: strategyContext || undefined,
               })}
-            </div>
-            <div className="rounded-lg p-4" style={{ background: "oklch(0.75 0.18 75 / 8%)", border: "1px solid oklch(0.75 0.18 75 / 20%)" }}>
-              <p className="text-xs font-semibold mb-1 uppercase tracking-wider" style={{ color: "oklch(0.8 0.15 75)", fontFamily: "Sora, sans-serif" }}>CTA Javaslat</p>
-              <p className="text-sm" style={{ color: "oklch(0.72 0.01 240)" }}>{selectedWeek.cta}</p>
-            </div>
+              disabled={generateMutation.isPending}
+              className="gap-2"
+            >
+              {generateMutation.isPending ? (
+                <><Loader2 className="w-4 h-4 animate-spin" />Generálás...</>
+              ) : (
+                <><Zap className="w-4 h-4" />Stratégia generálása</>
+              )}
+            </Button>
           </div>
-        </DetailModal>
-      )}
-
-      {/* Active Strategy Detail Modal */}
-      <DetailModal
-        isOpen={showStrategyDetail}
-        onClose={() => setShowStrategyDetail(false)}
-        title="2026. Április – Teljes Stratégia"
-        subtitle="AI és Stratégiai Marketing a B2B Szektorban"
-        footer={
-          <button onClick={() => setShowStrategyDetail(false)} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.75 0.015 240)" }}>
-            Bezárás
-          </button>
-        }
-      >
-        <div className="space-y-4">
-          {[
-            { label: "Havi Téma", value: "AI és stratégiai marketing a B2B szektorban" },
-            { label: "Célközönség", value: "Cégvezetők, marketing döntéshozók, 50-1000 fős vállalatok" },
-            { label: "Fő CTA", value: "Ingyenes 30 perces marketing audit foglalása" },
-            { label: "Elsődleges Platform", value: "LinkedIn" },
-            { label: "Másodlagos Platformok", value: "Facebook, Instagram" },
-            { label: "Elvárt Eredmény", value: "5-10 audit foglalás, 50+ új LinkedIn kapcsolat" },
-          ].map((f) => (
-            <div key={f.label} className="rounded-lg p-3" style={{ background: "oklch(0.22 0.02 255)" }}>
-              <p className="text-xs mb-1" style={{ color: "oklch(0.5 0.015 240)" }}>{f.label}</p>
-              <p className="text-sm font-medium" style={{ color: "oklch(0.88 0.008 240)" }}>{f.value}</p>
-            </div>
-          ))}
-          <div className="rounded-lg p-4" style={{ background: "oklch(0.6 0.2 255 / 8%)", border: "1px solid oklch(0.6 0.2 255 / 20%)" }}>
-            <p className="text-xs font-semibold mb-2" style={{ color: "oklch(0.75 0.18 255)", fontFamily: "Sora, sans-serif" }}>Tartalmi Pillérek (Aktív)</p>
-            <div className="flex flex-wrap gap-2">
-              {pillars.filter((p) => p.active).map((p) => (
-                <span key={p.name} className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ background: `${p.color.replace(")", " / 15%)")}`, color: p.color }}>
-                  {p.name}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-      </DetailModal>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
