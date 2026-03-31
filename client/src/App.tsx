@@ -6,6 +6,16 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { DataProvider } from "./contexts/DataContext";
 import { ProfileProvider } from "./contexts/ProfileContext";
+import DashboardLayoutSkeleton from "./components/DashboardLayoutSkeleton";
+import { useAppAuth } from "./hooks/useAppAuth";
+
+// Public pages
+import Landing from "./pages/Landing";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+
+// App pages (protected)
 import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import Strategy from "./pages/Strategy";
@@ -13,58 +23,107 @@ import ContentStudio from "./pages/ContentStudio";
 import SalesOps from "./pages/SalesOps";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
-import Login from "./pages/Login";
 import OnboardingWizard from "./pages/OnboardingWizard";
 import Intelligence from "./pages/Intelligence";
 import AIWriter from "./pages/AIWriter";
 import ProfilePage from "./pages/ProfilePage";
-// Legacy pages kept for backward compatibility
-import Leads from "./pages/Leads";
-import Outbound from "./pages/Outbound";
-import Inbound from "./pages/Inbound";
-import Content from "./pages/Content";
-import ContentCreator from "./pages/ContentCreator";
-import SocialMedia from "./pages/SocialMedia";
-import { useAuth } from "./_core/hooks/useAuth";
-import DashboardLayoutSkeleton from "./components/DashboardLayoutSkeleton";
 
-function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
-  const { isAuthenticated, loading } = useAuth();
+// Admin pages
+import AdminUsers from "./pages/AdminUsers";
+
+// ─── Route Guards ─────────────────────────────────────────────────────────────
+
+function AppRoute({ component: Component }: { component: React.ComponentType }) {
+  const { user, loading } = useAppAuth();
   if (loading) return <DashboardLayoutSkeleton />;
-  if (!isAuthenticated) return <Redirect to="/login" />;
+  if (!user) return <Redirect to="/bejelentkezes" />;
+  // If onboarding not done, redirect to onboarding (except if already there)
+  if (!user.onboardingCompleted) return <Redirect to="/onboarding" />;
   return <Component />;
 }
+
+function OnboardingRoute({ component: Component }: { component: React.ComponentType }) {
+  const { user, loading } = useAppAuth();
+  if (loading) return <DashboardLayoutSkeleton />;
+  if (!user) return <Redirect to="/bejelentkezes" />;
+  if (user.onboardingCompleted) return <Redirect to="/iranyitopult" />;
+  return <Component />;
+}
+
+function AdminRoute({ component: Component }: { component: React.ComponentType }) {
+  const { user, loading } = useAppAuth();
+  if (loading) return <DashboardLayoutSkeleton />;
+  if (!user) return <Redirect to="/bejelentkezes" />;
+  if (user.role !== "super_admin") return <Redirect to="/iranyitopult" />;
+  return <Component />;
+}
+
+function PublicOnlyRoute({ component: Component }: { component: React.ComponentType }) {
+  const { user, loading } = useAppAuth();
+  if (loading) return <DashboardLayoutSkeleton />;
+  if (user) {
+    if (!user.onboardingCompleted) return <Redirect to="/onboarding" />;
+    return <Redirect to="/iranyitopult" />;
+  }
+  return <Component />;
+}
+
+// ─── Router ───────────────────────────────────────────────────────────────────
 
 function Router() {
   return (
     <Switch>
-      <Route path="/login" component={Login} />
-      {/* Main 7-item navigation */}
-      <Route path="/" component={() => <ProtectedRoute component={Dashboard} />} />
-      <Route path="/clients" component={() => <ProtectedRoute component={Clients} />} />
-      <Route path="/clients/new" component={() => <ProtectedRoute component={Clients} />} />
-      <Route path="/strategy" component={() => <ProtectedRoute component={Strategy} />} />
-      <Route path="/content-studio" component={() => <ProtectedRoute component={ContentStudio} />} />
-      <Route path="/sales-ops" component={() => <ProtectedRoute component={SalesOps} />} />
-      <Route path="/analytics" component={() => <ProtectedRoute component={Analytics} />} />
-      <Route path="/settings" component={() => <ProtectedRoute component={Settings} />} />
-      {/* Sub-flows */}
-      <Route path="/onboarding" component={() => <ProtectedRoute component={OnboardingWizard} />} />
-      <Route path="/intelligence" component={() => <ProtectedRoute component={Intelligence} />} />
-      <Route path="/ai-writer" component={() => <ProtectedRoute component={AIWriter} />} />
-      <Route path="/profile" component={() => <ProtectedRoute component={ProfilePage} />} />
-      {/* Legacy redirects */}
-      <Route path="/leads" component={() => <Redirect to="/sales-ops" />} />
-      <Route path="/outbound" component={() => <Redirect to="/sales-ops" />} />
-      <Route path="/inbound" component={() => <Redirect to="/sales-ops" />} />
-      <Route path="/content" component={() => <Redirect to="/content-studio" />} />
-      <Route path="/content-creator" component={() => <Redirect to="/content-studio" />} />
-      <Route path="/social-media" component={() => <Redirect to="/content-studio" />} />
+      {/* Public routes */}
+      <Route path="/" component={Landing} />
+      <Route path="/bejelentkezes" component={() => <PublicOnlyRoute component={Login} />} />
+      <Route path="/regisztracio" component={() => <PublicOnlyRoute component={Register} />} />
+      <Route path="/elfelejtett-jelszo" component={ForgotPassword} />
+
+      {/* Onboarding */}
+      <Route path="/onboarding" component={() => <OnboardingRoute component={OnboardingWizard} />} />
+
+      {/* App routes (require login + onboarding) */}
+      <Route path="/iranyitopult" component={() => <AppRoute component={Dashboard} />} />
+      <Route path="/ugyfelek" component={() => <AppRoute component={Clients} />} />
+      <Route path="/ugyfelek/uj" component={() => <AppRoute component={Clients} />} />
+      <Route path="/strategia" component={() => <AppRoute component={Strategy} />} />
+      <Route path="/tartalom-studio" component={() => <AppRoute component={ContentStudio} />} />
+      <Route path="/ertekesites" component={() => <AppRoute component={SalesOps} />} />
+      <Route path="/analitika" component={() => <AppRoute component={Analytics} />} />
+      <Route path="/beallitasok" component={() => <AppRoute component={Settings} />} />
+      <Route path="/intelligencia" component={() => <AppRoute component={Intelligence} />} />
+      <Route path="/ai-iro" component={() => <AppRoute component={AIWriter} />} />
+      <Route path="/profil" component={() => <AppRoute component={ProfilePage} />} />
+
+      {/* Admin routes */}
+      <Route path="/admin/felhasznalok" component={() => <AdminRoute component={AdminUsers} />} />
+
+      {/* Legacy English URL redirects */}
+      <Route path="/login" component={() => <Redirect to="/bejelentkezes" />} />
+      <Route path="/dashboard" component={() => <Redirect to="/iranyitopult" />} />
+      <Route path="/clients" component={() => <Redirect to="/ugyfelek" />} />
+      <Route path="/strategy" component={() => <Redirect to="/strategia" />} />
+      <Route path="/content-studio" component={() => <Redirect to="/tartalom-studio" />} />
+      <Route path="/sales-ops" component={() => <Redirect to="/ertekesites" />} />
+      <Route path="/analytics" component={() => <Redirect to="/analitika" />} />
+      <Route path="/settings" component={() => <Redirect to="/beallitasok" />} />
+      <Route path="/leads" component={() => <Redirect to="/ertekesites" />} />
+      <Route path="/outbound" component={() => <Redirect to="/ertekesites" />} />
+      <Route path="/inbound" component={() => <Redirect to="/ertekesites" />} />
+      <Route path="/content" component={() => <Redirect to="/tartalom-studio" />} />
+      <Route path="/content-creator" component={() => <Redirect to="/tartalom-studio" />} />
+      <Route path="/social-media" component={() => <Redirect to="/tartalom-studio" />} />
+      <Route path="/intelligence" component={() => <Redirect to="/intelligencia" />} />
+      <Route path="/ai-writer" component={() => <Redirect to="/ai-iro" />} />
+      <Route path="/profile" component={() => <Redirect to="/profil" />} />
+
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
   );
 }
+
+// ─── App ──────────────────────────────────────────────────────────────────────
 
 function App() {
   return (

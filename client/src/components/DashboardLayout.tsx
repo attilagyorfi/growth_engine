@@ -10,21 +10,22 @@ import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, Users, BarChart3, Layers, TrendingUp, Settings,
   Zap, ChevronRight, Bell, X, CheckCircle, AlertCircle, Info, Mail,
-  ChevronDown, ShieldAlert,
+  ChevronDown, ShieldAlert, LogOut, Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useData } from "@/contexts/DataContext";
 import { useProfile } from "@/contexts/ProfileContext";
+import { useAppAuth } from "@/hooks/useAppAuth";
 import { toast } from "sonner";
 
 const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/clients", label: "Clients", icon: Users },
-  { href: "/strategy", label: "Strategy", icon: BarChart3 },
-  { href: "/content-studio", label: "Content Studio", icon: Layers },
-  { href: "/sales-ops", label: "Sales Ops", icon: Mail },
-  { href: "/analytics", label: "Analytics", icon: TrendingUp },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/iranyitopult", label: "Irányítópult", icon: LayoutDashboard },
+  { href: "/ugyfelek", label: "Ügyfelek", icon: Users },
+  { href: "/strategia", label: "Stratégia", icon: BarChart3 },
+  { href: "/tartalom-studio", label: "Tartalom Studio", icon: Layers },
+  { href: "/ertekesites", label: "Értékesítés", icon: Mail },
+  { href: "/analitika", label: "Analitika", icon: TrendingUp },
+  { href: "/beallitasok", label: "Beállítások", icon: Settings },
 ];
 
 const notifIcons: Record<string, React.ReactNode> = {
@@ -54,6 +55,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
   const [pendingProfileId, setPendingProfileId] = useState<string | null>(null);
   const { notifications, markNotificationRead, markAllNotificationsRead, unreadCount } = useData();
   const { profiles, activeProfile, setActiveProfileId } = useProfile();
+  const { user, logout, isSuperAdmin } = useAppAuth();
 
   const handleNotifClick = (id: string, link?: string) => {
     markNotificationRead(id);
@@ -109,7 +111,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
         {/* Navigation */}
         <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
           {navItems.map(({ href, label, icon: Icon }) => {
-            const isActive = location === href || (href !== "/" && location.startsWith(href));
+            const isActive = location === href || (href !== "/iranyitopult" && location.startsWith(href));
             return (
               <Link key={href} href={href} className={cn("nav-item", isActive && "active")}>
                 <Icon size={15} />
@@ -120,23 +122,30 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
           })}
         </nav>
 
-        {/* System Status */}
-        <div className="px-4 py-4 border-t" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
-          <div className="rounded-lg p-3" style={{ background: "oklch(0.22 0.02 255)" }}>
-            <p className="text-xs font-semibold mb-2" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.75 0.015 240)" }}>Rendszer Státusz</p>
-            {[
-              { label: "Napi Outbound", active: true },
-              { label: "Heti Tartalom", active: true },
-              { label: "Havi Stratégia", active: true },
-            ].map((s) => (
-              <div key={s.label} className="flex items-center justify-between mb-1 last:mb-0">
-                <span className="text-xs" style={{ color: "oklch(0.55 0.015 240)" }}>{s.label}</span>
-                <span className="flex items-center gap-1 text-xs" style={{ color: "oklch(0.75 0.15 165)" }}>
-                  <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />Aktív
-                </span>
-              </div>
-            ))}
+        {/* Bottom: user info + logout + admin */}
+        <div className="px-3 py-3 border-t space-y-1" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
+          {isSuperAdmin && (
+            <Link href="/admin/felhasznalok" className={cn("nav-item", location.startsWith("/admin") && "active")}>
+              <Shield size={15} />
+              <span>Felhasználók</span>
+              {location.startsWith("/admin") && <ChevronRight size={13} className="ml-auto opacity-60" />}
+            </Link>
+          )}
+          <div className="px-3 py-2 rounded-lg" style={{ background: "oklch(0.22 0.02 255)" }}>
+            <p className="text-xs font-semibold truncate" style={{ color: "oklch(0.88 0.008 240)" }}>
+              {user?.name ?? user?.email ?? "Felhasználó"}
+            </p>
+            {user?.name && (
+              <p className="text-xs truncate" style={{ color: "oklch(0.5 0.015 240)" }}>{user.email}</p>
+            )}
           </div>
+          <button
+            onClick={logout}
+            className="nav-item w-full text-left"
+          >
+            <LogOut size={15} />
+            <span>Kijelentkezés</span>
+          </button>
         </div>
       </aside>
 

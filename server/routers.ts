@@ -3,6 +3,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
+import { appAuthRouter } from "./routers/appAuth";
 import { generateImage } from "./_core/imageGeneration";
 import { sendEmail, verifyEmailConfig, type EmailConfig } from "./emailSender";
 import { nanoid } from "nanoid";
@@ -28,6 +29,7 @@ import { storagePut } from "./storage";
 
 export const appRouter = router({
   system: systemRouter,
+  appAuth: appAuthRouter,
 
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),

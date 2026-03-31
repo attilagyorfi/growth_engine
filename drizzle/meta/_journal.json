@@ -29,6 +29,13 @@
       "when": 1773935188799,
       "tag": "0003_redundant_bedlam",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1774947750397,
+      "tag": "0004_brief_shotgun",
+      "breakpoints": true
     }
   ]
 }

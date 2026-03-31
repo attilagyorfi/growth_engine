@@ -76,3 +76,56 @@
 ### UX Javítások
 - [x] Kliensváltás UX megerősítése (hangsúlyos aktív ügyfél, transition state, megerősítés kritikus műveleteknél)
 - [x] Modal-to-drawer refaktor: email szerkesztés, stratégia részletek, content review → right-side drawer
+
+## MVP 4.0 – SaaS Kétszintű Rendszer (AKTUÁLIS)
+
+### Onboarding Javítás
+- [x] Onboarding befejezés mentési hibájának diagnosztizálása
+- [x] onboarding_completed flag perzisztálása user profilhoz
+- [x] Visszalépés után ne induljon újra az onboarding
+
+### Adatbázis
+- [x] users tábla: email, passwordHash, role (super_admin/user), onboardingCompleted
+- [x] user_profiles kapcsolótábla (userId → profileId)
+- [x] Migrációk futtatása (pnpm db:push)
+
+### Auth Backend
+- [x] Regisztráció tRPC procedure (email + jelszó, bcrypt hash)
+- [x] Bejelentkezés procedure (email + jelszó, JWT session)
+- [x] Elfelejtett jelszó flow (email token, reset)
+- [x] Me procedure (session validáció)
+- [x] Logout procedure
+
+### Landing Oldal
+- [x] Publikus landing oldal (hero, features, pricing, CTA)
+- [x] Ingyenes verzió árazási kártya
+- [x] Navigáció: Logo, Funkciók, Árazás, Bejelentkezés, Regisztráció
+
+### Auth UI
+- [x] Regisztrációs oldal (email, jelszó, megerősítés)
+- [x] Bejelentkezési oldal
+- [x] Elfelejtett jelszó oldal
+
+### Super Admin Panel
+- [x] Users lista oldal (email, regisztráció dátuma, státusz, role)
+- [x] Felhasználói profil megtekintése/szerkesztése adminként
+- [x] Jelszó reset admin által
+- [x] Felhasználó aktiválás/deaktiválás
+
+### Felhasználói Workspace
+- [x] Bejelentkezés után onboarding flow (ha nem teljesített)
+- [x] Onboarding után dashboard megjelenítése
+- [x] Adatok izolálása: user csak saját profilát látja
+- [x] Más felhasználók nem láthatók
+
+### Magyar Nyelvűség
+- [x] Minden menüpont magyarul
+- [x] Összes UI szöveg magyarul
+- [x] AI prompt-ok magyar outputra hangolva
+- [x] Form labelek, hibaüzenetek, toast-ok magyarul
+
+### Routing & Jogosultság
+- [x] Publikus route-ok (landing, login, register)
+- [x] User route-ok (onboarding, dashboard, workspace)
+- [x] Admin route-ok (users panel, system settings)
+- [x] Unauthorized redirect logika

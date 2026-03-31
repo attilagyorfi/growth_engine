@@ -229,6 +229,7 @@ export default function OnboardingWizard() {
   const upsertProfile = trpc.profiles.upsert.useMutation();
   const generateIntelligence = trpc.intelligence.generate.useMutation();
   const generateWow = trpc.intelligence.generateWowMoment.useMutation();
+  const completeOnboarding = trpc.appAuth.completeOnboarding.useMutation();
 
   // ─── Step 1: Website Scraping ───────────────────────────────────────────────
 
@@ -445,8 +446,15 @@ export default function OnboardingWizard() {
     }
   };
 
-  const handleFinish = () => {
-    navigate("/");
+  const handleFinish = async () => {
+    if (data.profileId) {
+      try {
+        await completeOnboarding.mutateAsync({ profileId: data.profileId });
+      } catch (e) {
+        console.error("Onboarding complete error:", e);
+      }
+    }
+    navigate("/iranyitopult");
     toast.success(`${data.companyName} profil sikeresen létrehozva!`);
   };
 
