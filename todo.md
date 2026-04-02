@@ -200,3 +200,10 @@
 - [ ] Free tier limitek: 1 profil, limitált AI generálás, alap strategy
 - [ ] Pro tier előkészítés: korlátlan AI, campaign builder, advanced analytics
 - [ ] Agency tier előkészítés: multi-workspace, export, white-label előkészítés
+
+## Hibajavítás – Auth session ütközés
+
+- [x] appUserProcedure felismerje a Manus OAuth session-t (ctx.user) is
+- [x] context.ts: ha app_token nincs de ctx.user megvan, auto-create/lookup appUser
+- [x] Manus OAuth user és appUser tábla összekapcsolása (email alapján)
+- [x] Super admin (g2amarketing) automatikusan super_admin role-t kapjon
