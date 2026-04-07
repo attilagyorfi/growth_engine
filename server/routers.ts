@@ -484,20 +484,19 @@ export const appRouter = router({
     scrapeWebsite: appUserProcedure
       .input(z.object({ url: z.string().url() }))
       .mutation(async ({ input }) => {
-        const prompt = `You are a marketing analyst. Analyze the website at ${input.url} and extract the following information in JSON format:
+        const prompt = `Te egy marketing elemző vagy. Elemezd a következő weboldalt: ${input.url}. Az URL és domain név alapján következtetj el a vállalkozásra. MINDEN szöveges választ KIZÁRÓLAG MAGYARUL adj meg. Adj vissza kizárólag érvényes JSON-t:
 {
-  "services": ["list of main services/products"],
-  "keyMessages": ["list of key marketing messages"],
-  "toneOfVoice": "description of the tone of voice",
-  "targetAudience": "description of the target audience",
-  "ctas": ["list of calls to action found"],
-  "competitorCandidates": ["list of likely competitor types or names if mentioned"],
-  "companySummary": "2-3 sentence summary of the company"
-}
-Based on the URL and domain name, make educated inferences about the business. Return only valid JSON.`;
+  "services": ["fő szolgáltatások/termékek listája magyarul"],
+  "keyMessages": ["fő marketing üzenetek listája magyarul"],
+  "toneOfVoice": "a kommunikációs stílus leírása magyarul",
+  "targetAudience": "a célcsoport leírása magyarul",
+  "ctas": ["cselekvésre szólítások listája magyarul"],
+  "competitorCandidates": ["valószínű versenytársak típusai vagy nevei magyarul"],
+  "companySummary": "2-3 mondatos összefoglaló a cégről magyarul"
+}`;
         const response = await invokeLLM({
           messages: [
-            { role: "system", content: "You are a marketing analyst that extracts structured data from website descriptions. Always return valid JSON." },
+            { role: "system", content: "Te egy marketing elemző vagy, aki strukturált adatokat nyér ki weboldal leírásokból. MINDIG érvényes JSON-t adj vissza. MINDEN szöveges értéket KIZÁRÓLAG MAGYARUL írj meg." },
             { role: "user", content: prompt },
           ],
           response_format: { type: "json_schema", json_schema: { name: "website_analysis", strict: true, schema: { type: "object", properties: { services: { type: "array", items: { type: "string" } }, keyMessages: { type: "array", items: { type: "string" } }, toneOfVoice: { type: "string" }, targetAudience: { type: "string" }, ctas: { type: "array", items: { type: "string" } }, competitorCandidates: { type: "array", items: { type: "string" } }, companySummary: { type: "string" } }, required: ["services", "keyMessages", "toneOfVoice", "targetAudience", "ctas", "competitorCandidates", "companySummary"], additionalProperties: false } } },
@@ -529,8 +528,8 @@ Based on the URL and domain name, make educated inferences about the business. R
         });
         invokeLLM({
           messages: [
-            { role: "system", content: "You are a brand analyst. Extract key brand information from the uploaded document and return a structured summary." },
-            { role: "user", content: `Parse this ${input.assetType} document (${input.fileName}) and extract: brand values, tone of voice, key messages, target audience, visual guidelines, and any other relevant marketing information. Return as a structured text summary.` },
+            { role: "system", content: "Te egy márkaelemző vagy. Kulcs márkainformációkat nyérsz ki feltöltött dokumentumokból. MINDEN szöveget KIZÁRÓLAG MAGYARUL adj meg." },
+            { role: "user", content: `Elemezd ezt a ${input.assetType} dokumentumot (${input.fileName}) és nyérd ki: márkaértékek, kommunikációs stílus, fő üzenetek, célcsoport, vizuális irányelvek és minden egyéb releváns marketing információ. Adj vissza strukturált szöveges összefoglalót MAGYARUL.` },
           ],
         }).then(async (res) => {
           const parsed = res.choices[0]?.message?.content;
@@ -663,8 +662,8 @@ Based on the URL and domain name, make educated inferences about the business. R
           : "Use a professional, direct tone.";
         const response = await invokeLLM({
           messages: [
-            { role: "system", content: `You are an expert B2B sales email copywriter. Write personalized, concise outbound emails that get responses. Always write in Hungarian. ${brandContext}` },
-            { role: "user", content: `Írj hideg megkeresési emailt ${input.leadData.contact} részére, ${input.leadData.company} cégnél (iparág: ${input.leadData.industry ?? "ismeretlen"}).\nCél: ${input.emailGoal ?? "bemutatni a szolgáltatásainkat és megbeszélést kérni"}.\n${input.previousContext ? `Kontextus: ${input.previousContext}` : ""}\n\nReturn JSON with: subject (string), body (string, 3-4 paragraphs max), previewText (string, 1 sentence)` },
+           { role: "system", content: `Te egy tapasztalt B2B értékesítési email szakítő vagy. Személyre szabott, tömör hideg megkeresési emaileket írász, amelyek választ kapnak. MINDEN szöveget KIZÁRÓLAG MAGYARUL írj meg. ${brandContext}` },
+            { role: "user", content: `Íráj hideg megkeresési emailt ${input.leadData.contact} részére, ${input.leadData.company} cégnél (iparág: ${input.leadData.industry ?? "ismeretlen"}).\nCél: ${input.emailGoal ?? "bemutatni a szolgáltatásainkat és megbeszélést kérni"}.\n${input.previousContext ? `Kontextus: ${input.previousContext}` : ""}\n\nAdj vissza JSON-t: subject (tárgysor magyarul), body (email törzs magyarul, max 3-4 bek.), previewText (előnézeti szöveg magyarul, 1 mondat)` },
           ],
           response_format: { type: "json_schema", json_schema: { name: "email_draft", strict: true, schema: { type: "object", properties: { subject: { type: "string" }, body: { type: "string" }, previewText: { type: "string" } }, required: ["subject", "body", "previewText"], additionalProperties: false } } },
         });
@@ -702,7 +701,7 @@ Based on the URL and domain name, make educated inferences about the business. R
         const response = await invokeLLM({
           messages: [
             { role: "system", content: `Te egy közösségi média tartalomszakértő vagy. Hozz létre minden platformra optimalizált, vonzó bejegyzéseket. Mindig magyarul válaszolj. ${brandContext}` },
-            { role: "user", content: `Hozz létre egy ${input.platform} bejegyzést a következő témában: "${input.topic}" a "${input.pillar}" tartalmi pillérhez.\nCélközönség: ${input.targetAudience ?? "üzleti szakemberek"}.\nFormátum: ${input.format ?? "standard bejegyzés"}.\nCTA: ${input.cta ?? "interakció a tartalommal"}.\nPlatform irányelvek: ${platformGuide[input.platform]}.\n\nReturn JSON with: caption (string), hashtags (array of strings), visualBrief (string describing ideal image/video), ctaText (string)` },
+            { role: "user", content: `Hozz létre egy ${input.platform} bejegyzést a következő témában: "${input.topic}" a "${input.pillar}" tartalmi pillérhez.\nCélközönség: ${input.targetAudience ?? "üzleti szakemberek"}.\nFormátum: ${input.format ?? "standard bejegyzés"}.\nCTA: ${input.cta ?? "interakció a tartalommal"}.\nPlatform irányelvek: ${platformGuide[input.platform]}.\n\nAdj vissza JSON-t (MINDEN szöveg magyarul): caption (bejegyzés szövege magyarul), hashtags (hashtagek tömbje), visualBrief (vizuális brief leírása magyarul), ctaText (cselekvésre szólítás magyarul)` },
           ],
           response_format: { type: "json_schema", json_schema: { name: "social_post", strict: true, schema: { type: "object", properties: { caption: { type: "string" }, hashtags: { type: "array", items: { type: "string" } }, visualBrief: { type: "string" }, ctaText: { type: "string" } }, required: ["caption", "hashtags", "visualBrief", "ctaText"], additionalProperties: false } } },
         });
