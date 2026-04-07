@@ -217,3 +217,8 @@
 
 - [x] Diagnosztizálni a hibát a "Működés" lépés befejezésekor
 - [x] Javítani: completeOnboarding publicProcedure-ről appUserProcedure-re váltva (OAuth bridge támogatás)
+
+## Hibajavítás – AI elemzés magyar nyelv
+
+- [x] Onboarding AI elemzés prompt-ok átírása magyarra (brand DNA, stratégia, content pillérek)
+- [x] Minden AI-generált tartalom magyar nyelven jelenjen meg
