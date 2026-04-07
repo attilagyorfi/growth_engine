@@ -212,3 +212,8 @@
 
 - [x] "Ingyenes próba" és "Kezdj el ingyen" gombok mindig /regisztracio-ra mutassanak
 - [x] App.tsx: PublicOnlyRoute ne irányítsa át a /regisztracio oldalt (allowAuthenticated=true)
+
+## Hibajavítás – Onboarding "Growth Engine indítása" gomb
+
+- [x] Diagnosztizálni a hibát a "Működés" lépés befejezésekor
+- [x] Javítani: completeOnboarding publicProcedure-ről appUserProcedure-re váltva (OAuth bridge támogatás)

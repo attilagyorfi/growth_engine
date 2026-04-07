@@ -6,7 +6,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
-import { router, publicProcedure, protectedProcedure } from "../_core/trpc";
+import { router, publicProcedure, protectedProcedure, appUserProcedure } from "../_core/trpc";
 import {
   createAppUser, getAppUserByEmail, getAppUserById,
   updateAppUser, updateLastSignedIn, updateAppUserOnboarding,
@@ -111,15 +111,11 @@ export const appAuthRouter = router({
     }),
 
   // ─── Onboarding befejezése ───────────────────────────────────────────────────
-  completeOnboarding: publicProcedure
+  completeOnboarding: appUserProcedure
     .input(z.object({ profileId: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      const cookieHeader = ctx.req.headers.cookie ?? "";
-      const match = cookieHeader.match(/app_token=([^;]+)/);
-      if (!match) throw new TRPCError({ code: "UNAUTHORIZED", message: "Nincs bejelentkezve" });
-      const payload = await verifyAppToken(match[1]);
-      if (!payload) throw new TRPCError({ code: "UNAUTHORIZED", message: "Érvénytelen session" });
-      await updateAppUserOnboarding(payload.userId, input.profileId);
+      // ctx.appUser is guaranteed by appUserProcedure (works for both app_token and OAuth bridge)
+      await updateAppUserOnboarding(ctx.appUser.id, input.profileId);
       return { success: true };
     }),
 
