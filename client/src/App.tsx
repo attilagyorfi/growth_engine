@@ -59,10 +59,12 @@ function AdminRoute({ component: Component }: { component: React.ComponentType }
   return <Component />;
 }
 
-function PublicOnlyRoute({ component: Component }: { component: React.ComponentType }) {
+// PublicOnlyRoute: only redirects /bejelentkezes away if already logged in.
+// /regisztracio is always accessible so landing CTAs work correctly.
+function PublicOnlyRoute({ component: Component, allowAuthenticated }: { component: React.ComponentType; allowAuthenticated?: boolean }) {
   const { user, loading } = useAppAuth();
   if (loading) return <DashboardLayoutSkeleton />;
-  if (user) {
+  if (user && !allowAuthenticated) {
     if (!user.onboardingCompleted) return <Redirect to="/onboarding" />;
     return <Redirect to="/iranyitopult" />;
   }
@@ -77,7 +79,7 @@ function Router() {
       {/* Public routes */}
       <Route path="/" component={Landing} />
       <Route path="/bejelentkezes" component={() => <PublicOnlyRoute component={Login} />} />
-      <Route path="/regisztracio" component={() => <PublicOnlyRoute component={Register} />} />
+      <Route path="/regisztracio" component={() => <PublicOnlyRoute component={Register} allowAuthenticated={true} />} />
       <Route path="/elfelejtett-jelszo" component={ForgotPassword} />
 
       {/* Onboarding */}

@@ -207,3 +207,8 @@
 - [x] context.ts: ha app_token nincs de ctx.user megvan, auto-create/lookup appUser
 - [x] Manus OAuth user és appUser tábla összekapcsolása (email alapján)
 - [x] Super admin (g2amarketing) automatikusan super_admin role-t kapjon
+
+## Hibajavítás – Landing CTA gombok
+
+- [x] "Ingyenes próba" és "Kezdj el ingyen" gombok mindig /regisztracio-ra mutassanak
+- [x] App.tsx: PublicOnlyRoute ne irányítsa át a /regisztracio oldalt (allowAuthenticated=true)
