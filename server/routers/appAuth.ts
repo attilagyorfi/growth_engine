@@ -13,6 +13,7 @@ import {
   createPasswordResetToken, getValidResetToken, markResetTokenUsed,
   getAllAppUsers,
 } from "../authDb";
+import { getProfilesByAppUser } from "../db";
 import { SignJWT, jwtVerify } from "jose";
 import { ENV } from "../_core/env";
 
@@ -205,25 +206,39 @@ export const appAuthRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Csak adminok férhetnek hozzá" });
       }
       const users = await getAllAppUsers();
-      // Return only CRM-relevant, non-sensitive fields
-      return users
-        .filter(u => u.role !== "super_admin")
-        .map(u => ({
-          id: u.id,
-          email: u.email,
-          name: u.name,
-          companyName: u.companyName ?? null,
-          contactPerson: u.contactPerson ?? null,
-          phone: u.phone ?? null,
-          website: null as string | null, // populated from profile below
-          subscriptionPlan: u.subscriptionPlan,
-          active: u.active,
-          onboardingCompleted: u.onboardingCompleted,
-          profileId: u.profileId ?? null,
-          notes: u.notes ?? null,
-          createdAt: u.createdAt,
-          lastSignedIn: u.lastSignedIn ?? null,
-        }));
+      // Fetch profile data (website) for each user
+      const usersWithProfiles = await Promise.all(
+        users
+          .filter(u => u.role !== "super_admin")
+          .map(async (u) => {
+            let website: string | null = null;
+            let companyNameFromProfile: string | null = null;
+            if (u.id) {
+              const profiles = await getProfilesByAppUser(u.id);
+              if (profiles.length > 0) {
+                website = profiles[0].website ?? null;
+                companyNameFromProfile = profiles[0].name ?? null;
+              }
+            }
+            return {
+              id: u.id,
+              email: u.email,
+              name: u.name,
+              companyName: u.companyName ?? companyNameFromProfile ?? null,
+              contactPerson: u.contactPerson ?? null,
+              phone: u.phone ?? null,
+              website,
+              subscriptionPlan: u.subscriptionPlan,
+              active: u.active,
+              onboardingCompleted: u.onboardingCompleted,
+              profileId: u.profileId ?? null,
+              notes: u.notes ?? null,
+              createdAt: u.createdAt,
+              lastSignedIn: u.lastSignedIn ?? null,
+            };
+          })
+      );
+      return usersWithProfiles;
     }),
 
   // ─── Admin: CRM – Ügyfél frissítése (csak CRM mezők) ────────────────────────

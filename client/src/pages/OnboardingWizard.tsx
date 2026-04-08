@@ -456,15 +456,32 @@ export default function OnboardingWizard() {
     }
   };
 
-  const handleFinish = async () => {
+  const handleFinish = async (destination?: string) => {
     if (data.profileId) {
       try {
+        // Save content pillars from WOW output to clientProfiles
+        if (data.wowOutput?.contentPillars?.length) {
+          const pillarsToSave = data.wowOutput.contentPillars.map((p, i) => ({
+            id: nanoid(),
+            name: p.name,
+            description: p.description,
+            active: true,
+            percentage: p.percentage,
+          }));
+          await upsertProfile.mutateAsync({
+            id: data.profileId,
+            name: data.companyName,
+            initials: data.companyName.slice(0, 2).toUpperCase(),
+            contentPillars: pillarsToSave,
+          });
+        }
         await completeOnboarding.mutateAsync({ profileId: data.profileId });
       } catch (e) {
         console.error("Onboarding complete error:", e);
       }
     }
-    navigate("/iranyitopult");
+    const target = destination ?? "/iranyitopult";
+    navigate(target);
     toast.success(`${data.companyName} profil sikeresen létrehozva!`);
   };
 
@@ -997,13 +1014,45 @@ export default function OnboardingWizard() {
               {!isLoading && !isGenerating && <ChevronRight size={18} />}
             </button>
           ) : (
-            <button
-              onClick={handleFinish}
-              className="flex items-center gap-2 px-8 py-3 rounded-xl font-semibold text-white transition-all hover:opacity-90"
-              style={{ background: "linear-gradient(135deg, oklch(0.55 0.18 145), oklch(0.5 0.15 165))" }}
-            >
-              <Check size={18} /> Belépés a vezérlőpultra
-            </button>
+            <div className="flex flex-col gap-3 w-full">
+              <p className="text-gray-400 text-sm text-center mb-1">Mivel szeretnéd kezdeni?</p>
+              <div className="grid grid-cols-3 gap-3">
+                <button
+                  onClick={() => handleFinish("/strategia")}
+                  className="flex flex-col items-center gap-2 px-4 py-4 rounded-xl font-medium text-white transition-all hover:opacity-90 text-sm"
+                  style={{ background: "linear-gradient(135deg, oklch(0.5 0.18 255), oklch(0.45 0.16 255))" }}
+                >
+                  <TrendingUp size={20} />
+                  Stratégia
+                  <span className="text-xs opacity-70">90 napos terv</span>
+                </button>
+                <button
+                  onClick={() => handleFinish("/tartalom-studio")}
+                  className="flex flex-col items-center gap-2 px-4 py-4 rounded-xl font-medium text-white transition-all hover:opacity-90 text-sm"
+                  style={{ background: "linear-gradient(135deg, oklch(0.5 0.18 165), oklch(0.45 0.16 165))" }}
+                >
+                  <MessageSquare size={20} />
+                  Tartalom
+                  <span className="text-xs opacity-70">Content calendar</span>
+                </button>
+                <button
+                  onClick={() => handleFinish("/ertekesites")}
+                  className="flex flex-col items-center gap-2 px-4 py-4 rounded-xl font-medium text-white transition-all hover:opacity-90 text-sm"
+                  style={{ background: "linear-gradient(135deg, oklch(0.5 0.18 30), oklch(0.45 0.16 30))" }}
+                >
+                  <Zap size={20} />
+                  Email kampány
+                  <span className="text-xs opacity-70">Első outbound</span>
+                </button>
+              </div>
+              <button
+                onClick={() => handleFinish("/iranyitopult")}
+                className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-gray-400 hover:text-white border transition-all text-sm"
+                style={{ borderColor: "oklch(0.28 0.03 255)", background: "oklch(0.15 0.02 255)" }}
+              >
+                <Check size={16} /> Belépés a vezérlőpultra
+              </button>
+            </div>
           )}
         </div>
       </div>

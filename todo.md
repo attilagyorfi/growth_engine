@@ -258,3 +258,18 @@
 - [x] AI tartalom generálás szövegezéssel (tRPC procedure)
 - [x] Szabad tartalom létrehozás segítséggel (témajavaslat, formátum, platform)
 - [x] Tartalom Stúdió UX: "Stratégiából" és "Saját ötlet" fül szétválasztása
+
+## Sprint 7 – WOW CTA-k, Content Pillérek, Admin CRM weboldal
+
+### WOW screen CTA-k
+- [x] "Stratégia generálása" gomb → /strategia route + stratégia generálás megnyítása
+- [x] "Content Calendar feltöltése" gomb → /tartalom-studio route + Calendar tab
+- [x] "Első email kampány indítása" gomb → /ertekesites route + Outbound tab
+
+### Content pillérek mentése
+- [x] OnboardingWizard: WOW screen content pillérek mentése clientProfiles.contentPillars-ba
+- [x] profiles.upsert procedure: contentPillars mező frissítése a WOW adatokból
+
+### Admin CRM weboldal mező
+- [x] Admin CRM: weboldal mező a clientProfiles.website mezőből (nem appUsers-ből)
+- [x] getClientsCRM procedure: JOIN clientProfiles-szal a weboldal adatért
