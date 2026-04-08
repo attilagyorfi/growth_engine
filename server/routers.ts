@@ -484,22 +484,24 @@ export const appRouter = router({
     scrapeWebsite: appUserProcedure
       .input(z.object({ url: z.string().url() }))
       .mutation(async ({ input }) => {
-        const prompt = `Te egy marketing elemző vagy. Elemezd a következő weboldalt: ${input.url}. Az URL és domain név alapján következtetj el a vállalkozásra. MINDEN szöveges választ KIZÁRÓLAG MAGYARUL adj meg. Adj vissza kizárólag érvényes JSON-t:
+        const prompt = `Te egy marketing elemő vagy. Elemezd a következő weboldalt: ${input.url}. Az URL és domain név alapján határozott, tényközlő stílusban írj le mindent a vállalkozásról. TILOS feltételes megfogalmazást használni (pl. "valószínűleg", "feltehetőleg", "lehet", "talán", "közelíthetőleg"). Írj leíró tényeket, ne feltételezéseket. MINDEN szöveges választ KIZÁRÓLAG MAGYARUL adj meg. Adj vissza kizárólag érvényes JSON-t:
 {
-  "services": ["fő szolgáltatások/termékek listája magyarul"],
+  "companyName": "a cég neve a domain alapján (pl. 'MM Ernöki Kft.' ha a domain mmernoki.hu)",
+  "industry": "az iparág neve magyarul (pl. 'Mérnöki szolgáltatások', 'IT és szoftverfejlesztés', 'Marketing és reklm', stb.)",
+  "services": ["fő szolgáltatások/termékek listája magyarul, határozott tényközlő stílusban"],
   "keyMessages": ["fő marketing üzenetek listája magyarul"],
   "toneOfVoice": "a kommunikációs stílus leírása magyarul",
-  "targetAudience": "a célcsoport leírása magyarul",
+  "targetAudience": "a célcsoport leírása magyarul, határozott tényközlő stílusban",
   "ctas": ["cselekvésre szólítások listája magyarul"],
-  "competitorCandidates": ["valószínű versenytársak típusai vagy nevei magyarul"],
-  "companySummary": "2-3 mondatos összefoglaló a cégről magyarul"
+  "competitorCandidates": ["versenytársak típusai vagy nevei magyarul"],
+  "companySummary": "2-3 mondatos összefoglaló a cégről magyarul, határozott, tényközlő stílusban - soha ne használj feltételes szófordulátokat"
 }`;
         const response = await invokeLLM({
           messages: [
             { role: "system", content: "Te egy marketing elemző vagy, aki strukturált adatokat nyér ki weboldal leírásokból. MINDIG érvényes JSON-t adj vissza. MINDEN szöveges értéket KIZÁRÓLAG MAGYARUL írj meg." },
             { role: "user", content: prompt },
           ],
-          response_format: { type: "json_schema", json_schema: { name: "website_analysis", strict: true, schema: { type: "object", properties: { services: { type: "array", items: { type: "string" } }, keyMessages: { type: "array", items: { type: "string" } }, toneOfVoice: { type: "string" }, targetAudience: { type: "string" }, ctas: { type: "array", items: { type: "string" } }, competitorCandidates: { type: "array", items: { type: "string" } }, companySummary: { type: "string" } }, required: ["services", "keyMessages", "toneOfVoice", "targetAudience", "ctas", "competitorCandidates", "companySummary"], additionalProperties: false } } },
+          response_format: { type: "json_schema", json_schema: { name: "website_analysis", strict: true, schema: { type: "object", properties: { companyName: { type: "string" }, industry: { type: "string" }, services: { type: "array", items: { type: "string" } }, keyMessages: { type: "array", items: { type: "string" } }, toneOfVoice: { type: "string" }, targetAudience: { type: "string" }, ctas: { type: "array", items: { type: "string" } }, competitorCandidates: { type: "array", items: { type: "string" } }, companySummary: { type: "string" } }, required: ["companyName", "industry", "services", "keyMessages", "toneOfVoice", "targetAudience", "ctas", "competitorCandidates", "companySummary"], additionalProperties: false } } },
         });
         const content = response.choices[0]?.message?.content ?? "{}";
         return JSON.parse(typeof content === "string" ? content : JSON.stringify(content));

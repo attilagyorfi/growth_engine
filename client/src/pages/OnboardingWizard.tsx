@@ -248,6 +248,9 @@ export default function OnboardingWizard() {
       if (!url.startsWith("http")) url = "https://" + url;
       const result = await scrapeWebsite.mutateAsync({ url });
       update({
+        // Fill companyName and industry from AI so validation passes
+        ...(result.companyName && !data.companyName ? { companyName: result.companyName } : {}),
+        ...(result.industry && !data.industry ? { industry: result.industry } : {}),
         services: result.services ?? [],
         targetAudience: result.targetAudience ?? "",
         competitors: result.competitorCandidates ?? [],

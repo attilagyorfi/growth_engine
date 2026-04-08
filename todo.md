@@ -222,3 +222,8 @@
 
 - [x] Onboarding AI elemzés prompt-ok átírása magyarra (brand DNA, stratégia, content pillérek)
 - [x] Minden AI-generált tartalom magyar nyelven jelenjen meg
+
+## Hibajavítás – AI elemzés stílus és form state szinkron
+
+- [x] AI prompt: határozott, tényközlő stílus (nincs "valószínűleg", "lehet", "feltehetőleg")
+- [x] OnboardingWizard: AI által kitöltött mezők (iparág, cég neve) frissítsék a form state-et
