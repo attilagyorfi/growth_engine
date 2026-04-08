@@ -227,3 +227,8 @@
 
 - [x] AI prompt: határozott, tényközlő stílus (nincs "valószínűleg", "lehet", "feltehetőleg")
 - [x] OnboardingWizard: AI által kitöltött mezők (iparág, cég neve) frissítsék a form state-et
+
+## Hibajavítás – "Growth Engine indítása" gomb hiba
+
+- [x] Diagnosztizálni a generateIntelligence / generateWowMoment hiba okát
+- [x] Javítani az onboarding utolsó lépésének hibáját

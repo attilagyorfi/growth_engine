@@ -34,11 +34,14 @@ import { invokeLLM } from "./_core/llm";
 import { storagePut } from "./storage";
 
 // Helper: verify that the profileId belongs to the current appUser (or user is super_admin)
-function assertProfileOwnership(appUserId: string, role: string, profileId: string, userProfileId: string | null) {
+// If userProfileId is null (onboarding in progress), falls back to DB check via appUserId on the profile row
+async function assertProfileOwnership(appUserId: string, role: string, profileId: string, userProfileId: string | null) {
   if (role === "super_admin") return; // super admin can access any profile
-  if (!userProfileId || userProfileId !== profileId) {
-    throw new TRPCError({ code: "FORBIDDEN", message: "Nincs jogosultsága ehhez a profilhoz" });
-  }
+  if (userProfileId && userProfileId === profileId) return; // fast path: cached profileId matches
+  // Slow path: check DB – the profile row stores appUserId so we can verify ownership during onboarding
+  const profile = await getProfileById(profileId);
+  if (profile && profile.appUserId === appUserId) return;
+  throw new TRPCError({ code: "FORBIDDEN", message: "Nincs jogosultsága ehhez a profilhoz" });
 }
 
 export const appRouter = router({
@@ -69,7 +72,7 @@ export const appRouter = router({
       .query(async ({ input, ctx }) => {
         const profile = await getProfileById(input.id);
         if (!profile) return null;
-        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.id, ctx.appUser.profileId);
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.id, ctx.appUser.profileId);
         return profile;
       }),
 
@@ -109,7 +112,7 @@ export const appRouter = router({
           lastSync: z.string().optional(),
         })).optional(),
       }))
-      .mutation(({ input, ctx }) => {
+      .mutation(async ({ input, ctx }) => {
         const id = input.id ?? nanoid();
         // Attach appUserId for new profiles
         return upsertProfile({ ...input, id, appUserId: ctx.appUser.id });
@@ -118,7 +121,7 @@ export const appRouter = router({
     delete: appUserProcedure
       .input(z.object({ id: z.string() }))
       .mutation(async ({ input, ctx }) => {
-        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.id, ctx.appUser.profileId);
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.id, ctx.appUser.profileId);
         return deleteProfile(input.id);
       }),
   }),
@@ -127,8 +130,8 @@ export const appRouter = router({
   leads: router({
     list: appUserProcedure
       .input(z.object({ profileId: z.string() }))
-      .query(({ input, ctx }) => {
-        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      .query(async ({ input, ctx }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
         return getLeadsByProfile(input.profileId);
       }),
 
@@ -145,8 +148,8 @@ export const appRouter = router({
         source: z.string().optional(),
         notes: z.string().optional(),
       }))
-      .mutation(({ input, ctx }) => {
-        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      .mutation(async ({ input, ctx }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
         return createLead({ ...input, id: nanoid(), status: "new" });
       }),
 
@@ -179,8 +182,8 @@ export const appRouter = router({
   outbound: router({
     list: appUserProcedure
       .input(z.object({ profileId: z.string() }))
-      .query(({ input, ctx }) => {
-        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      .query(async ({ input, ctx }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
         return getOutboundByProfile(input.profileId);
       }),
 
@@ -194,8 +197,8 @@ export const appRouter = router({
         subject: z.string().min(1),
         body: z.string().min(1),
       }))
-      .mutation(({ input, ctx }) => {
-        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      .mutation(async ({ input, ctx }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
         return createOutbound({ ...input, id: nanoid(), status: "draft" });
       }),
 
@@ -221,8 +224,8 @@ export const appRouter = router({
   inbound: router({
     list: appUserProcedure
       .input(z.object({ profileId: z.string() }))
-      .query(({ input, ctx }) => {
-        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      .query(async ({ input, ctx }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
         return getInboundByProfile(input.profileId);
       }),
 
@@ -237,8 +240,8 @@ export const appRouter = router({
         category: z.enum(["interested", "not_interested", "question", "meeting_request", "out_of_office", "unsubscribe", "other"]).optional(),
         relatedOutboundId: z.string().optional(),
       }))
-      .mutation(({ input, ctx }) => {
-        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      .mutation(async ({ input, ctx }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
         return createInbound({ ...input, id: nanoid() });
       }),
 
@@ -258,8 +261,8 @@ export const appRouter = router({
   content: router({
     list: appUserProcedure
       .input(z.object({ profileId: z.string() }))
-      .query(({ input, ctx }) => {
-        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      .query(async ({ input, ctx }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
         return getContentByProfile(input.profileId);
       }),
 
@@ -275,8 +278,8 @@ export const appRouter = router({
         pillar: z.string().optional(),
         weekNumber: z.number().optional(),
       }))
-      .mutation(({ input, ctx }) => {
-        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      .mutation(async ({ input, ctx }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
         return createContent({ ...input, id: nanoid(), status: "draft" });
       }),
 
@@ -308,8 +311,8 @@ export const appRouter = router({
   strategies: router({
     list: appUserProcedure
       .input(z.object({ profileId: z.string() }))
-      .query(({ input, ctx }) => {
-        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      .query(async ({ input, ctx }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
         return getStrategiesByProfile(input.profileId);
       }),
 
@@ -332,8 +335,8 @@ export const appRouter = router({
           current: z.string().optional(),
         })).optional(),
       }))
-      .mutation(({ input, ctx }) => {
-        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      .mutation(async ({ input, ctx }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
         return createStrategy({ ...input, id: nanoid(), status: "draft" });
       }),
 
@@ -367,8 +370,8 @@ export const appRouter = router({
   emailIntegration: router({
     get: appUserProcedure
       .input(z.object({ profileId: z.string() }))
-      .query(({ input, ctx }) => {
-        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      .query(async ({ input, ctx }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
         return getEmailIntegration(input.profileId);
       }),
 
@@ -379,8 +382,8 @@ export const appRouter = router({
         email: z.string().email(),
         connected: z.boolean().optional(),
       }))
-      .mutation(({ input, ctx }) => {
-        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      .mutation(async ({ input, ctx }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
         return upsertEmailIntegration({ ...input, connected: input.connected ?? false });
       }),
   }),
@@ -555,8 +558,8 @@ export const appRouter = router({
   intelligence: router({
     get: appUserProcedure
       .input(z.object({ profileId: z.string() }))
-      .query(({ input, ctx }) => {
-        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      .query(async ({ input, ctx }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
         return getCompanyIntelligence(input.profileId);
       }),
 
@@ -575,7 +578,7 @@ export const appRouter = router({
         onboardingAnswers: z.array(z.object({ fieldKey: z.string(), fieldValue: z.string().nullable() })).optional(),
       }))
       .mutation(async ({ input, ctx }) => {
-        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
         const context = JSON.stringify({
           company: input.profileData,
           websiteAnalysis: input.websiteAnalysis,
@@ -604,7 +607,7 @@ export const appRouter = router({
         intelligenceData: z.any(),
       }))
       .mutation(async ({ input, ctx }) => {
-        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
         const response = await invokeLLM({
           messages: [
             { role: "system", content: "Te egy tapasztalt marketing stratéga vagy. Cselekvhető átlelátásokat és gyors győzelmeket generálsz vállalkozásoknak. Kizárólag érvényes JSON-t adj vissza. MINDEN szöveges értéket KIZÁRÓLAG MAGYARUL írj meg – ez kötelező." },
@@ -618,22 +621,22 @@ export const appRouter = router({
 
     upsert: appUserProcedure
       .input(z.object({ profileId: z.string(), data: z.any() }))
-      .mutation(({ input, ctx }) => {
-        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      .mutation(async ({ input, ctx }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
         return upsertCompanyIntelligence({ id: nanoid(), profileId: input.profileId, ...input.data });
       }),
 
     getCompetitors: appUserProcedure
       .input(z.object({ profileId: z.string() }))
-      .query(({ input, ctx }) => {
-        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      .query(async ({ input, ctx }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
         return getCompetitors(input.profileId);
       }),
 
     getPersonas: appUserProcedure
       .input(z.object({ profileId: z.string() }))
-      .query(({ input, ctx }) => {
-        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      .query(async ({ input, ctx }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
         return getPersonas(input.profileId);
       }),
   }),
@@ -716,7 +719,7 @@ export const appRouter = router({
   auditLog: router({
     list: appUserProcedure
       .input(z.object({ profileId: z.string().optional(), limit: z.number().optional() }))
-      .query(({ input, ctx }) => {
+      .query(async ({ input, ctx }) => {
         // Non-admin users can only see their own profile's logs
         const profileId = ctx.appUser.role === "super_admin" ? input.profileId : (ctx.appUser.profileId ?? undefined);
         return getAuditLogs(profileId, input.limit ?? 50);
@@ -740,15 +743,15 @@ export const appRouter = router({
   strategyVersions: router({
     list: appUserProcedure
       .input(z.object({ profileId: z.string() }))
-      .query(({ input, ctx }) => {
-        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      .query(async ({ input, ctx }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
         return getStrategyVersionsByProfile(input.profileId);
       }),
 
     getActive: appUserProcedure
       .input(z.object({ profileId: z.string() }))
-      .query(({ input, ctx }) => {
-        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      .query(async ({ input, ctx }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
         return getActiveStrategyVersion(input.profileId);
       }),
 
@@ -768,15 +771,15 @@ export const appRouter = router({
         quickWins: z.any().optional(),
         nextActions: z.any().optional(),
       }))
-      .mutation(({ input, ctx }) => {
-        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      .mutation(async ({ input, ctx }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
         return upsertStrategyVersion({ ...input, id: input.id ?? nanoid() });
       }),
 
     setActive: appUserProcedure
       .input(z.object({ profileId: z.string(), versionId: z.string() }))
-      .mutation(({ input, ctx }) => {
-        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      .mutation(async ({ input, ctx }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
         return setActiveStrategyVersion(input.profileId, input.versionId);
       }),
 
@@ -791,7 +794,7 @@ export const appRouter = router({
         strategyContext: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
-        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
         const response = await invokeLLM({
           messages: [
             { role: "system", content: "Te egy tapasztalt marketing stratéga vagy. Átfogó többszintű marketing stratégiát készítesz. Kizárólag érvényes JSON-t adj vissza. MINDEN szöveges értéket KIZÁRÓLAG MAGYARUL írj meg." },
@@ -818,8 +821,8 @@ export const appRouter = router({
   campaigns: router({
     list: appUserProcedure
       .input(z.object({ profileId: z.string() }))
-      .query(({ input, ctx }) => {
-        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      .query(async ({ input, ctx }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
         return getCampaignsByProfile(input.profileId);
       }),
 
@@ -842,8 +845,8 @@ export const appRouter = router({
         status: z.enum(["draft", "active", "paused", "completed", "archived"]).optional(),
         brief: z.any().optional(),
       }))
-      .mutation(({ input, ctx }) => {
-        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      .mutation(async ({ input, ctx }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
         return upsertCampaign({ ...input, id: input.id ?? nanoid(), status: input.status ?? "draft" });
       }),
 
@@ -861,7 +864,7 @@ export const appRouter = router({
         intelligenceData: z.any().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
-        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
         const response = await invokeLLM({
           messages: [
             { role: "system", content: "Te egy kampánystratéga vagy. Részletes kampány briefet készítesz. Kizárólag érvényes JSON-t adj vissza. MINDEN szöveges értéket KIZÁRÓLAG MAGYARUL írj meg." },
@@ -896,8 +899,8 @@ export const appRouter = router({
   recommendations: router({
     list: appUserProcedure
       .input(z.object({ profileId: z.string() }))
-      .query(({ input, ctx }) => {
-        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      .query(async ({ input, ctx }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
         return getRecommendationsByProfile(input.profileId);
       }),
 
@@ -912,7 +915,7 @@ export const appRouter = router({
         recentLeads: z.any().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
-        assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
         const response = await invokeLLM({
           messages: [
             { role: "system", content: "Te egy marketing AI tanácsadó vagy. Cselekvhető javaslatokat generálsz. Kizárólag érvényes JSON-t adj vissza. MINDEN szöveges értéket KIZÁRÓLAG MAGYARUL írj meg." },
