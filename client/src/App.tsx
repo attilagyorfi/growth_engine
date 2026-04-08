@@ -87,11 +87,11 @@ function Router() {
 
       {/* App routes (require login + onboarding) */}
       <Route path="/iranyitopult" component={() => <AppRoute component={Dashboard} />} />
-      <Route path="/ugyfelek" component={() => <AppRoute component={Clients} />} />
-      <Route path="/ugyfelek/uj" component={() => <AppRoute component={Clients} />} />
+      <Route path="/ugyfelek" component={() => <AdminRoute component={Clients} />} />
+      <Route path="/ugyfelek/uj" component={() => <AdminRoute component={Clients} />} />
       <Route path="/strategia" component={() => <AppRoute component={Strategy} />} />
       <Route path="/tartalom-studio" component={() => <AppRoute component={ContentStudio} />} />
-      <Route path="/ertekesites" component={() => <AppRoute component={SalesOps} />} />
+      <Route path="/ertekesites" component={() => <AdminRoute component={SalesOps} />} />
       <Route path="/analitika" component={() => <AppRoute component={Analytics} />} />
       <Route path="/kampanyok" component={() => <AppRoute component={Campaigns} />} />
       <Route path="/beallitasok" component={() => <AppRoute component={Settings} />} />

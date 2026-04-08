@@ -232,3 +232,29 @@
 
 - [x] Diagnosztizálni a generateIntelligence / generateWowMoment hiba okát
 - [x] Javítani az onboarding utolsó lépésének hibáját
+
+## Sprint 6 – Szerepkör alapú navigáció + Admin CRM + Tartalom Stúdió fejlesztés
+
+### Navigáció jogosultság
+- [x] "Új ügyfél" gomb a jobb felső sarokban csak super_admin-nak látható
+- [x] "Ügyfelek" menüpont csak super_admin-nak látható
+- [x] "Értékesítés" menüpont csak super_admin-nak látható
+- [x] 404 hiba javítása az "Új ügyfél" gomb URL-jén
+
+### Admin CRM panel
+- [x] Admin CRM tábla: ügyfél neve, csomag, kontakt személy, weboldal, regisztráció dátuma, státusz
+- [x] Szenzitív adatok (brand DNA, stratégia, tartalmak) nem láthatók admin nézetből
+- [x] Admin CRM backend: getClientsCRM procedure (csak super_admin)
+- [x] DB séma: subscription_plan, contactPerson, notes mezők az appUsers táblán
+
+### Stratégia javítások
+- [x] Company Intelligence ellenőrzés a stratégia generálás előtt
+- [x] Ha nincs CI profil, irányítás az onboardingra / CI kitöltésére
+- [x] Aktuális dátumok a stratégia generálásban (mai dátum alapján)
+
+### Tartalom Stúdió fejlesztés
+- [x] Stratégia-alapú tartalomjavaslatok (aktív stratégiából generálva)
+- [x] Tartalomtípus ajánlók: poszt, email, blog, hirdetés – stratégia csatornák alapján
+- [x] AI tartalom generálás szövegezéssel (tRPC procedure)
+- [x] Szabad tartalom létrehozás segítséggel (témajavaslat, formátum, platform)
+- [x] Tartalom Stúdió UX: "Stratégiából" és "Saját ötlet" fül szétválasztása

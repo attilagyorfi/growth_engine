@@ -1,20 +1,20 @@
-/*
- * G2A Growth Engine – Content Studio v3.0
- * Összevont tartalom kezelő: Calendar, Drafts, Approval Queue, Published
+/**
+ * G2A Growth Engine – Content Studio v4.0
+ * Stratégia-alapú tartalomjavaslatok + szabad tartalom létrehozás AI segítséggel
  */
 
 import { useState, useMemo } from "react";
 import {
-  Calendar, FileText, Clock, CheckCircle2, Eye, ThumbsUp, ThumbsDown,
+  Calendar, FileText, Clock, CheckCircle2, ThumbsUp, ThumbsDown,
   Plus, Pencil, Trash2, X, ChevronLeft, ChevronRight, Loader2,
   Instagram, Linkedin, Facebook, Twitter, Sparkles, Image as ImageIcon,
-  Hash, AlignLeft, Send, CalendarDays,
+  CalendarDays, Send, Lightbulb, Wand2, Target, Layers, ArrowRight,
+  BookOpen, TrendingUp, MessageSquare, Video, BarChart2, Zap,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { trpc } from "@/lib/trpc";
 import { useProfile } from "@/contexts/ProfileContext";
 import { toast } from "sonner";
-import { nanoid } from "nanoid";
 
 type PostStatus = "draft" | "approved" | "scheduled" | "published" | "rejected";
 type Platform = "linkedin" | "facebook" | "instagram" | "twitter" | "tiktok";
@@ -32,7 +32,6 @@ type Post = {
   status: PostStatus;
   scheduledAt?: Date | string | null;
   publishedAt?: Date | string | null;
-  weekNumber?: number;
   createdAt?: Date | string;
 };
 
@@ -41,7 +40,7 @@ const PLATFORM_ICONS: Record<Platform, React.ReactNode> = {
   facebook: <Facebook size={14} />,
   instagram: <Instagram size={14} />,
   twitter: <Twitter size={14} />,
-  tiktok: <span style={{ fontSize: 13, fontWeight: 700 }}>TT</span>,
+  tiktok: <span style={{ fontSize: 12, fontWeight: 700 }}>TT</span>,
 };
 
 const PLATFORM_COLORS: Record<Platform, string> = {
@@ -68,9 +67,10 @@ const STATUS_COLORS: Record<PostStatus, string> = {
   rejected: "oklch(0.65 0.22 25)",
 };
 
-type Tab = "calendar" | "drafts" | "approval" | "published";
+type Tab = "javasolt" | "calendar" | "drafts" | "approval" | "published";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
+  { id: "javasolt", label: "Javasolt", icon: <Lightbulb size={14} /> },
   { id: "calendar", label: "Naptár", icon: <Calendar size={14} /> },
   { id: "drafts", label: "Piszkozatok", icon: <FileText size={14} /> },
   { id: "approval", label: "Jóváhagyás", icon: <Clock size={14} /> },
@@ -80,9 +80,31 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
 const MONTHS_HU = ["Január", "Február", "Március", "Április", "Május", "Június", "Július", "Augusztus", "Szeptember", "Október", "November", "December"];
 const DAYS_HU = ["H", "K", "Sze", "Cs", "P", "Szo", "V"];
 
+// Content type templates for strategy-based suggestions
+type ContentTemplate = {
+  id: string;
+  icon: React.ReactNode;
+  label: string;
+  description: string;
+  platform: Platform;
+  contentType: string;
+  color: string;
+};
+
+const CONTENT_TEMPLATES: ContentTemplate[] = [
+  { id: "linkedin-thought", icon: <BookOpen size={16} />, label: "Thought Leadership", description: "Szakmai vélemény, iparági insight", platform: "linkedin", contentType: "Thought Leadership poszt", color: "oklch(0.55 0.18 255)" },
+  { id: "linkedin-case", icon: <TrendingUp size={16} />, label: "Sikertörténet", description: "Ügyfél eredmény, esettanulmány", platform: "linkedin", contentType: "Sikertörténet / Case Study", color: "oklch(0.55 0.18 255)" },
+  { id: "instagram-visual", icon: <ImageIcon size={16} />, label: "Vizuális tartalom", description: "Képes poszt, infografika", platform: "instagram", contentType: "Vizuális / Infografika poszt", color: "oklch(0.65 0.22 20)" },
+  { id: "instagram-reel", icon: <Video size={16} />, label: "Reel/Videó script", description: "Rövid videó szöveg, hook", platform: "instagram", contentType: "Reel / Videó script", color: "oklch(0.65 0.22 20)" },
+  { id: "facebook-community", icon: <MessageSquare size={16} />, label: "Közösségi kérdés", description: "Engagement, szavazás, kérdés", platform: "facebook", contentType: "Közösségi kérdés / Poll", color: "oklch(0.55 0.2 250)" },
+  { id: "linkedin-tips", icon: <Zap size={16} />, label: "Tippek & Trükkök", description: "Praktikus tanácsok, listicle", platform: "linkedin", contentType: "Tippek & Trükkök poszt", color: "oklch(0.55 0.18 255)" },
+  { id: "twitter-news", icon: <BarChart2 size={16} />, label: "Iparági hírek", description: "Trend kommentár, adat megosztás", platform: "twitter", contentType: "Iparági hír / Kommentár", color: "oklch(0.6 0.18 220)" },
+  { id: "facebook-promo", icon: <Target size={16} />, label: "Promóció", description: "Ajánlat, akció, CTA", platform: "facebook", contentType: "Promóciós / Ajánlat poszt", color: "oklch(0.55 0.2 250)" },
+];
+
 export default function ContentStudio() {
   const { activeProfile } = useProfile();
-  const [activeTab, setActiveTab] = useState<Tab>("drafts");
+  const [activeTab, setActiveTab] = useState<Tab>("javasolt");
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [editModal, setEditModal] = useState(false);
@@ -91,24 +113,83 @@ export default function ContentStudio() {
   const [scheduleTime, setScheduleTime] = useState("09:00");
   const [editForm, setEditForm] = useState<Partial<Post>>({});
   const [generatingImage, setGeneratingImage] = useState(false);
-  const [newPostModal, setNewPostModal] = useState(false);
+
+  // New post / AI generation modal
+  const [createModal, setCreateModal] = useState(false);
+  const [createMode, setCreateMode] = useState<"template" | "free">("template");
+  const [selectedTemplate, setSelectedTemplate] = useState<ContentTemplate | null>(null);
   const [newPost, setNewPost] = useState<Partial<Post>>({ platform: "linkedin", status: "draft", hashtags: [] });
+  const [additionalContext, setAdditionalContext] = useState("");
+  const [generatingContent, setGeneratingContent] = useState(false);
 
   const utils = trpc.useUtils();
   const { data: posts = [], isLoading } = trpc.content.list.useQuery(
     { profileId: activeProfile.id },
     { enabled: !!activeProfile.id }
   );
+
+  const { data: intelligence } = trpc.intelligence.get.useQuery(
+    { profileId: activeProfile.id },
+    { enabled: !!activeProfile.id }
+  );
+
+  const { data: activeStrategy } = trpc.strategyVersions.getActive.useQuery(
+    { profileId: activeProfile.id },
+    { enabled: !!activeProfile.id }
+  );
+
   const updateMutation = trpc.content.update.useMutation({
     onSuccess: () => utils.content.list.invalidate({ profileId: activeProfile.id }),
   });
   const createMutation = trpc.content.create.useMutation({
-    onSuccess: () => { utils.content.list.invalidate({ profileId: activeProfile.id }); setNewPostModal(false); setNewPost({ platform: "linkedin", status: "draft", hashtags: [] }); },
+    onSuccess: () => {
+      utils.content.list.invalidate({ profileId: activeProfile.id });
+      setCreateModal(false);
+      setNewPost({ platform: "linkedin", status: "draft", hashtags: [] });
+      setAdditionalContext("");
+      setSelectedTemplate(null);
+    },
   });
   const deleteMutation = trpc.content.delete.useMutation({
     onSuccess: () => utils.content.list.invalidate({ profileId: activeProfile.id }),
   });
   const generateImageMutation = trpc.ai.generateImage.useMutation();
+  const generateContentMutation = trpc.ai.generatePostContent.useMutation();
+
+  // Strategy-based content pillars for suggestions
+  const contentPillars: string[] = useMemo(() => {
+    // Read from activeProfile.contentPillars (clientProfiles table)
+    const pillars = (activeProfile as any).contentPillars;
+    if (pillars && Array.isArray(pillars)) {
+      return pillars.filter((p: any) => p.active !== false).map((p: any) => p.name ?? p).filter(Boolean).slice(0, 4);
+    }
+    // Fallback: read from intelligence.platformPriorities channel names
+    if (intelligence?.platformPriorities && Array.isArray(intelligence.platformPriorities)) {
+      return intelligence.platformPriorities
+        .sort((a: any, b: any) => (b.priority ?? 0) - (a.priority ?? 0))
+        .slice(0, 4)
+        .map((p: any) => p.platform);
+    }
+    return [];
+  }, [activeProfile, intelligence]);
+
+  const strategyChannels: string[] = useMemo(() => {
+    if (activeStrategy?.channelStrategy && Array.isArray(activeStrategy.channelStrategy)) {
+      return (activeStrategy.channelStrategy as any[])
+        .sort((a: any, b: any) => (b.priority ?? 0) - (a.priority ?? 0))
+        .slice(0, 3)
+        .map((c: any) => c.channel?.toLowerCase() ?? "");
+    }
+    return [];
+  }, [activeStrategy]);
+
+  // Filter templates based on strategy channels if available
+  const suggestedTemplates = useMemo(() => {
+    if (strategyChannels.length === 0) return CONTENT_TEMPLATES;
+    return CONTENT_TEMPLATES.filter(t =>
+      strategyChannels.some(ch => ch.includes(t.platform) || t.platform.includes(ch.split(" ")[0]?.toLowerCase() ?? ""))
+    ).slice(0, 6).concat(CONTENT_TEMPLATES.filter(t => !strategyChannels.some(ch => ch.includes(t.platform))).slice(0, 2));
+  }, [strategyChannels]);
 
   const handleApprove = async (post: Post) => {
     await updateMutation.mutateAsync({ id: post.id, status: "approved" });
@@ -148,6 +229,53 @@ export default function ContentStudio() {
     } catch { toast.error("Képgenerálás sikertelen"); }
     finally { setGeneratingImage(false); }
   };
+
+  const handleGenerateNewImage = async () => {
+    const prompt = newPost.imagePrompt || newPost.title || "marketing post visual";
+    setGeneratingImage(true);
+    try {
+      const result = await generateImageMutation.mutateAsync({ prompt });
+      setNewPost(p => ({ ...p, imageUrl: result.url ?? undefined }));
+      toast.success("Kép generálva");
+    } catch { toast.error("Képgenerálás sikertelen"); }
+    finally { setGeneratingImage(false); }
+  };
+
+  const handleGenerateContent = async () => {
+    const template = selectedTemplate;
+    setGeneratingContent(true);
+    try {
+      const intelligenceSummary = intelligence
+        ? `${(intelligence as any).companyOverview ?? ""} UVP: ${(intelligence as any).uniqueValueProposition ?? ""}`.trim()
+        : undefined;
+      const strategyContext = activeStrategy
+        ? `Kampány prioritások: ${((activeStrategy as any).campaignPriorities ?? []).slice(0, 3).join(", ")}`
+        : undefined;
+
+      const result = await generateContentMutation.mutateAsync({
+        platform: template?.platform ?? (newPost.platform as string) ?? "linkedin",
+        contentType: template?.contentType ?? "általános poszt",
+        pillar: newPost.pillar ?? contentPillars[0],
+        tone: (intelligence as any)?.brandVoice?.tone ?? "professzionális, barátságos",
+        companyName: activeProfile.name,
+        industry: activeProfile.industry ?? undefined,
+        intelligenceSummary,
+        strategyContext,
+        additionalContext: additionalContext || undefined,
+      });
+      setNewPost(p => ({
+        ...p,
+        title: result.title ?? p.title,
+        content: result.content ?? p.content,
+        hashtags: result.hashtags ?? p.hashtags,
+        imagePrompt: result.imagePrompt ?? p.imagePrompt,
+        platform: template?.platform ?? p.platform,
+      }));
+      toast.success("Tartalom generálva! Szerkesztheted és mentheted.");
+    } catch { toast.error("Generálás sikertelen. Próbáld újra!"); }
+    finally { setGeneratingContent(false); }
+  };
+
   const handleCreatePost = async () => {
     if (!newPost.title || !newPost.content || !newPost.platform) { toast.error("Töltsd ki a kötelező mezőket"); return; }
     await createMutation.mutateAsync({
@@ -163,12 +291,28 @@ export default function ContentStudio() {
     toast.success("Tartalom létrehozva");
   };
 
+  const openTemplate = (template: ContentTemplate) => {
+    setSelectedTemplate(template);
+    setNewPost({ platform: template.platform, status: "draft", hashtags: [], pillar: contentPillars[0] ?? "" });
+    setAdditionalContext("");
+    setCreateMode("template");
+    setCreateModal(true);
+  };
+
+  const openFreeCreate = () => {
+    setSelectedTemplate(null);
+    setNewPost({ platform: "linkedin", status: "draft", hashtags: [] });
+    setAdditionalContext("");
+    setCreateMode("free");
+    setCreateModal(true);
+  };
+
   // Calendar logic
   const calendarYear = calendarDate.getFullYear();
   const calendarMonth = calendarDate.getMonth();
   const firstDay = new Date(calendarYear, calendarMonth, 1);
   const lastDay = new Date(calendarYear, calendarMonth + 1, 0);
-  const startDow = (firstDay.getDay() + 6) % 7; // Monday-first
+  const startDow = (firstDay.getDay() + 6) % 7;
   const daysInMonth = lastDay.getDate();
   const calendarCells: (number | null)[] = [
     ...Array(startDow).fill(null),
@@ -219,27 +363,16 @@ export default function ContentStudio() {
         {showActions && (
           <div className="flex gap-1 flex-shrink-0">
             <button onClick={() => { setSelectedPost(post); setEditForm({ title: post.title, content: post.content, imageUrl: post.imageUrl, imagePrompt: post.imagePrompt, hashtags: post.hashtags }); setEditModal(true); }}
-              className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
-              style={{ background: "oklch(0.6 0.2 255 / 10%)" }}
-              onMouseEnter={(e: any) => (e.currentTarget.style.background = "oklch(0.6 0.2 255 / 20%)")}
-              onMouseLeave={(e: any) => (e.currentTarget.style.background = "oklch(0.6 0.2 255 / 10%)")}
-            >
+              className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "oklch(0.6 0.2 255 / 10%)" }}>
               <Pencil size={12} style={{ color: "oklch(0.6 0.2 255)" }} />
             </button>
-            <button onClick={() => handleDelete(post.id)}
-              className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
-              style={{ background: "oklch(0.65 0.22 25 / 10%)" }}
-              onMouseEnter={(e: any) => (e.currentTarget.style.background = "oklch(0.65 0.22 25 / 20%)")}
-              onMouseLeave={(e: any) => (e.currentTarget.style.background = "oklch(0.65 0.22 25 / 10%)")}
-            >
+            <button onClick={() => handleDelete(post.id)} className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "oklch(0.65 0.22 25 / 10%)" }}>
               <Trash2 size={12} style={{ color: "oklch(0.65 0.22 25)" }} />
             </button>
           </div>
         )}
       </div>
-      {post.imageUrl && (
-        <img src={post.imageUrl} alt={post.title} className="w-full h-32 object-cover rounded-lg mb-3" />
-      )}
+      {post.imageUrl && <img src={post.imageUrl} alt={post.title} className="w-full h-32 object-cover rounded-lg mb-3" />}
       <p className="text-xs leading-relaxed mb-3 line-clamp-3" style={{ color: "oklch(0.62 0.015 240)" }}>{post.content}</p>
       {post.hashtags && post.hashtags.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-3">
@@ -256,28 +389,19 @@ export default function ContentStudio() {
       )}
       {showActions && post.status === "draft" && (
         <div className="flex gap-2">
-          <button onClick={() => handleApprove(post)} className="flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
-            style={{ background: "oklch(0.65 0.18 165 / 15%)", color: "oklch(0.65 0.18 165)" }}
-            onMouseEnter={(e: any) => (e.currentTarget.style.background = "oklch(0.65 0.18 165 / 25%)")}
-            onMouseLeave={(e: any) => (e.currentTarget.style.background = "oklch(0.65 0.18 165 / 15%)")}
-          >
+          <button onClick={() => handleApprove(post)} className="flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
+            style={{ background: "oklch(0.65 0.18 165 / 15%)", color: "oklch(0.65 0.18 165)" }}>
             <ThumbsUp size={12} /> Jóváhagyás
           </button>
-          <button onClick={() => handleReject(post)} className="flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
-            style={{ background: "oklch(0.65 0.22 25 / 15%)", color: "oklch(0.65 0.22 25)" }}
-            onMouseEnter={(e: any) => (e.currentTarget.style.background = "oklch(0.65 0.22 25 / 25%)")}
-            onMouseLeave={(e: any) => (e.currentTarget.style.background = "oklch(0.65 0.22 25 / 15%)")}
-          >
+          <button onClick={() => handleReject(post)} className="flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
+            style={{ background: "oklch(0.65 0.22 25 / 15%)", color: "oklch(0.65 0.22 25)" }}>
             <ThumbsDown size={12} /> Elutasítás
           </button>
         </div>
       )}
       {showActions && post.status === "approved" && (
-        <button onClick={() => setScheduleModal(post)} className="w-full py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
-          style={{ background: "oklch(0.6 0.2 255 / 15%)", color: "oklch(0.6 0.2 255)" }}
-          onMouseEnter={(e: any) => (e.currentTarget.style.background = "oklch(0.6 0.2 255 / 25%)")}
-          onMouseLeave={(e: any) => (e.currentTarget.style.background = "oklch(0.6 0.2 255 / 15%)")}
-        >
+        <button onClick={() => setScheduleModal(post)} className="w-full py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
+          style={{ background: "oklch(0.6 0.2 255 / 15%)", color: "oklch(0.6 0.2 255)" }}>
           <CalendarDays size={12} /> Időzítés
         </button>
       )}
@@ -294,26 +418,31 @@ export default function ContentStudio() {
             {activeProfile.name} · {(posts as Post[]).length} tartalom
           </p>
         </div>
-        <button onClick={() => setNewPostModal(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all hover:opacity-90"
-          style={{ background: "linear-gradient(135deg, oklch(0.6 0.2 255), oklch(0.55 0.18 165))" }}
-        >
-          <Plus size={14} /> Új Tartalom
-        </button>
+        <div className="flex gap-2">
+          <button onClick={openFreeCreate}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all hover:opacity-80"
+            style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.65 0.015 240)" }}>
+            <Plus size={14} /> Szabad tartalom
+          </button>
+          <button onClick={() => { setActiveTab("javasolt"); }}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all hover:opacity-90"
+            style={{ background: "linear-gradient(135deg, oklch(0.6 0.2 255), oklch(0.55 0.18 165))" }}>
+            <Sparkles size={14} /> AI Tartalom
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 p-1 rounded-xl" style={{ background: "oklch(0.17 0.022 255)" }}>
+      <div className="flex gap-1 mb-6 p-1 rounded-xl overflow-x-auto" style={{ background: "oklch(0.17 0.022 255)" }}>
         {TABS.map(tab => {
           const count = tab.id === "drafts" ? draftPosts.length : tab.id === "approval" ? approvalPosts.length : tab.id === "published" ? publishedPosts.length : null;
           return (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-sm font-medium transition-all"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-sm font-medium transition-all whitespace-nowrap"
               style={{
                 background: activeTab === tab.id ? "oklch(0.6 0.2 255)" : "transparent",
                 color: activeTab === tab.id ? "white" : "oklch(0.55 0.015 240)",
-              }}
-            >
+              }}>
               {tab.icon} {tab.label}
               {count !== null && count > 0 && (
                 <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: activeTab === tab.id ? "oklch(1 0 0 / 20%)" : "oklch(0.6 0.2 255 / 20%)", color: activeTab === tab.id ? "white" : "oklch(0.6 0.2 255)" }}>
@@ -331,6 +460,110 @@ export default function ContentStudio() {
         </div>
       )}
 
+      {/* Javasolt Tab – Strategy-based content guidance */}
+      {!isLoading && activeTab === "javasolt" && (
+        <div className="space-y-6">
+          {/* Strategy context banner */}
+          {activeStrategy ? (
+            <div className="rounded-xl border p-4 flex items-start gap-3" style={{ background: "oklch(0.6 0.2 255 / 8%)", borderColor: "oklch(0.6 0.2 255 / 25%)" }}>
+              <Target size={18} style={{ color: "oklch(0.6 0.2 255)", flexShrink: 0, marginTop: 2 }} />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold mb-0.5" style={{ color: "oklch(0.88 0.008 240)" }}>
+                  Aktív stratégia: {(activeStrategy as any).title}
+                </p>
+                <p className="text-xs leading-relaxed line-clamp-2" style={{ color: "oklch(0.6 0.015 240)" }}>
+                  {(activeStrategy as any).executiveSummary ?? "Stratégia betöltve – az alábbi javaslatok erre épülnek."}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-xl border p-4 flex items-start gap-3" style={{ background: "oklch(0.75 0.18 75 / 8%)", borderColor: "oklch(0.75 0.18 75 / 25%)" }}>
+              <Lightbulb size={18} style={{ color: "oklch(0.75 0.18 75)", flexShrink: 0, marginTop: 2 }} />
+              <div>
+                <p className="text-sm font-semibold mb-0.5" style={{ color: "oklch(0.88 0.008 240)" }}>Nincs aktív stratégia</p>
+                <p className="text-xs" style={{ color: "oklch(0.6 0.015 240)" }}>
+                  A tartalmak pontosabbak lesznek, ha előbb generálsz egy{" "}
+                  <a href="/strategia" className="underline" style={{ color: "oklch(0.75 0.18 75)" }}>marketing stratégiát</a>.
+                  Addig is az alábbi sablonok segítenek.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Content pillars from intelligence */}
+          {contentPillars.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <Layers size={14} style={{ color: "oklch(0.65 0.18 165)" }} />
+                <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.65 0.015 240)" }}>Tartalmi pillérek</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {contentPillars.map(pillar => (
+                  <button key={pillar}
+                    onClick={() => { setNewPost(p => ({ ...p, pillar })); openFreeCreate(); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all hover:opacity-80"
+                    style={{ background: "oklch(0.65 0.18 165 / 15%)", color: "oklch(0.65 0.18 165)", border: "1px solid oklch(0.65 0.18 165 / 30%)" }}>
+                    <Layers size={11} /> {pillar}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Suggested content templates */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Sparkles size={14} style={{ color: "oklch(0.75 0.18 75)" }} />
+                <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.65 0.015 240)" }}>
+                  {activeStrategy ? "Stratégiára épülő tartalomtípusok" : "Javasolt tartalomtípusok"}
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {suggestedTemplates.map(template => (
+                <button key={template.id} onClick={() => openTemplate(template)}
+                  className="rounded-xl border p-4 text-left transition-all hover:scale-[1.02] group"
+                  style={{ background: cardBg, borderColor: border }}
+                  onMouseEnter={(e: any) => (e.currentTarget.style.borderColor = `${template.color} / 40%`)}
+                  onMouseLeave={(e: any) => (e.currentTarget.style.borderColor = border)}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ background: `${template.color} / 15%`, color: template.color }}>
+                      {template.icon}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-5 h-5 rounded flex items-center justify-center" style={{ background: `${PLATFORM_COLORS[template.platform]} / 15%`, color: PLATFORM_COLORS[template.platform] }}>
+                        {PLATFORM_ICONS[template.platform]}
+                      </div>
+                      <span className="text-xs capitalize" style={{ color: "oklch(0.5 0.015 240)" }}>{template.platform}</span>
+                    </div>
+                  </div>
+                  <p className="text-sm font-semibold mb-1" style={{ color: "oklch(0.88 0.008 240)", fontFamily: "Sora, sans-serif" }}>{template.label}</p>
+                  <p className="text-xs mb-3" style={{ color: "oklch(0.55 0.015 240)" }}>{template.description}</p>
+                  <div className="flex items-center gap-1 text-xs font-semibold" style={{ color: template.color }}>
+                    <Wand2 size={11} /> AI generálás <ArrowRight size={11} className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Free create CTA */}
+          <div className="rounded-xl border p-4 flex items-center justify-between" style={{ background: cardBg, borderColor: border }}>
+            <div>
+              <p className="text-sm font-semibold mb-0.5" style={{ color: "oklch(0.88 0.008 240)" }}>Saját ötleted van?</p>
+              <p className="text-xs" style={{ color: "oklch(0.55 0.015 240)" }}>Hozz létre teljesen szabad tartalmat – AI segítséggel vagy anélkül</p>
+            </div>
+            <button onClick={openFreeCreate}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold flex-shrink-0 ml-4"
+              style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.75 0.015 240)" }}>
+              <Plus size={14} /> Szabad tartalom
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Calendar Tab */}
       {!isLoading && activeTab === "calendar" && (
         <div className="rounded-xl border p-5" style={{ background: cardBg, borderColor: border }}>
@@ -340,15 +573,11 @@ export default function ContentStudio() {
             </h2>
             <div className="flex gap-1">
               <button onClick={() => setCalendarDate(new Date(calendarYear, calendarMonth - 1, 1))}
-                className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
-                style={{ background: "oklch(0.22 0.02 255)" }}
-              >
+                className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "oklch(0.22 0.02 255)" }}>
                 <ChevronLeft size={14} style={{ color: "oklch(0.7 0.015 240)" }} />
               </button>
               <button onClick={() => setCalendarDate(new Date(calendarYear, calendarMonth + 1, 1))}
-                className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
-                style={{ background: "oklch(0.22 0.02 255)" }}
-              >
+                className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "oklch(0.22 0.02 255)" }}>
                 <ChevronRight size={14} style={{ color: "oklch(0.7 0.015 240)" }} />
               </button>
             </div>
@@ -369,8 +598,7 @@ export default function ContentStudio() {
                       <p className="text-xs font-semibold mb-1" style={{ color: isToday ? "oklch(0.6 0.2 255)" : "oklch(0.65 0.015 240)" }}>{day}</p>
                       {dayPosts.slice(0, 2).map(p => (
                         <div key={p.id} className="text-xs px-1 py-0.5 rounded mb-0.5 truncate cursor-pointer" style={{ background: `${PLATFORM_COLORS[p.platform]} / 20%`, color: PLATFORM_COLORS[p.platform] }}
-                          onClick={() => setSelectedPost(p)}
-                        >
+                          onClick={() => setSelectedPost(p)}>
                           {p.title}
                         </div>
                       ))}
@@ -391,7 +619,9 @@ export default function ContentStudio() {
             <div className="text-center py-16">
               <FileText size={32} className="mx-auto mb-3" style={{ color: "oklch(0.35 0.015 240)" }} />
               <p className="text-sm font-semibold mb-1" style={{ color: "oklch(0.65 0.015 240)" }}>Nincsenek piszkozatok</p>
-              <button onClick={() => setNewPostModal(true)} className="mt-2 text-sm" style={{ color: "oklch(0.6 0.2 255)" }}>Új tartalom létrehozása →</button>
+              <button onClick={() => setActiveTab("javasolt")} className="mt-2 text-sm" style={{ color: "oklch(0.6 0.2 255)" }}>
+                Nézd meg a javasolt tartalmakat →
+              </button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -455,11 +685,8 @@ export default function ContentStudio() {
               </div>
               <div>
                 <label className="text-xs font-semibold mb-1 block" style={{ color: "oklch(0.65 0.015 240)" }}>Kép URL</label>
-                <div className="flex gap-2">
-                  <input value={editForm.imageUrl ?? ""} onChange={e => setEditForm(f => ({ ...f, imageUrl: e.target.value }))}
-                    className="flex-1 px-3 py-2 rounded-lg text-sm border" style={{ background: "oklch(0.22 0.02 255)", borderColor: "oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }}
-                    placeholder="https://..." />
-                </div>
+                <input value={editForm.imageUrl ?? ""} onChange={e => setEditForm(f => ({ ...f, imageUrl: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg text-sm border" style={{ background: "oklch(0.22 0.02 255)", borderColor: "oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }} placeholder="https://..." />
                 {editForm.imageUrl && <img src={editForm.imageUrl} alt="preview" className="mt-2 w-full h-32 object-cover rounded-lg" />}
               </div>
               <div>
@@ -469,16 +696,14 @@ export default function ContentStudio() {
                     className="flex-1 px-3 py-2 rounded-lg text-sm border" style={{ background: "oklch(0.22 0.02 255)", borderColor: "oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }}
                     placeholder="Pl. modern office, professional team..." />
                   <button onClick={handleGenerateImage} disabled={generatingImage}
-                    className="px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-colors"
-                    style={{ background: "oklch(0.7 0.18 300 / 20%)", color: "oklch(0.7 0.18 300)" }}
-                  >
-                    {generatingImage ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
-                    Generálás
+                    className="px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-1.5"
+                    style={{ background: "oklch(0.7 0.18 300 / 20%)", color: "oklch(0.7 0.18 300)" }}>
+                    {generatingImage ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />} Kép
                   </button>
                 </div>
               </div>
               <div>
-                <label className="text-xs font-semibold mb-1 block" style={{ color: "oklch(0.65 0.015 240)" }}>Hashtagek (vesszővel elválasztva)</label>
+                <label className="text-xs font-semibold mb-1 block" style={{ color: "oklch(0.65 0.015 240)" }}>Hashtagek (vesszővel)</label>
                 <input value={(editForm.hashtags ?? []).join(", ")} onChange={e => setEditForm(f => ({ ...f, hashtags: e.target.value.split(",").map(h => h.trim()).filter(Boolean) }))}
                   className="w-full px-3 py-2 rounded-lg text-sm border" style={{ background: "oklch(0.22 0.02 255)", borderColor: "oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }}
                   placeholder="marketing, b2b, growth" />
@@ -523,70 +748,170 @@ export default function ContentStudio() {
         </div>
       )}
 
-      {/* New Post Modal */}
-      {newPostModal && (
+      {/* Create / AI Content Modal */}
+      {createModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "oklch(0 0 0 / 70%)" }}>
           <div className="w-full max-w-2xl rounded-2xl border p-6 max-h-[90vh] overflow-y-auto" style={{ background: "oklch(0.15 0.022 255)", borderColor: "oklch(1 0 0 / 12%)" }}>
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-base font-bold" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>Új Tartalom Létrehozása</h3>
-              <button onClick={() => setNewPostModal(false)} style={{ color: "oklch(0.5 0.015 240)" }}><X size={18} /></button>
+              <div>
+                <h3 className="text-base font-bold" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>
+                  {selectedTemplate ? `${selectedTemplate.label} – AI Generálás` : "Új Tartalom Létrehozása"}
+                </h3>
+                {selectedTemplate && (
+                  <p className="text-xs mt-0.5" style={{ color: "oklch(0.55 0.015 240)" }}>
+                    {selectedTemplate.description} · {selectedTemplate.platform}
+                  </p>
+                )}
+              </div>
+              <button onClick={() => { setCreateModal(false); setSelectedTemplate(null); }} style={{ color: "oklch(0.5 0.015 240)" }}><X size={18} /></button>
             </div>
-            <div className="space-y-4">
-              <div>
-                <label className="text-xs font-semibold mb-1 block" style={{ color: "oklch(0.65 0.015 240)" }}>Cím *</label>
-                <input value={newPost.title ?? ""} onChange={e => setNewPost(p => ({ ...p, title: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-lg text-sm border" style={{ background: "oklch(0.22 0.02 255)", borderColor: "oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }} />
-              </div>
-              <div>
-                <label className="text-xs font-semibold mb-1 block" style={{ color: "oklch(0.65 0.015 240)" }}>Platform *</label>
-                <div className="flex gap-2 flex-wrap">
-                  {(["linkedin", "facebook", "instagram", "twitter", "tiktok"] as Platform[]).map(pl => (
-                    <button key={pl} onClick={() => setNewPost(p => ({ ...p, platform: pl }))}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-                      style={{
-                        background: newPost.platform === pl ? `${PLATFORM_COLORS[pl]} / 20%` : "oklch(0.22 0.02 255)",
-                        color: newPost.platform === pl ? PLATFORM_COLORS[pl] : "oklch(0.55 0.015 240)",
-                        border: `1px solid ${newPost.platform === pl ? PLATFORM_COLORS[pl] : "transparent"}`,
-                      }}
-                    >
-                      {PLATFORM_ICONS[pl]} {pl}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="text-xs font-semibold mb-1 block" style={{ color: "oklch(0.65 0.015 240)" }}>Szöveg *</label>
-                <textarea value={newPost.content ?? ""} onChange={e => setNewPost(p => ({ ...p, content: e.target.value }))} rows={5}
-                  className="w-full px-3 py-2 rounded-lg text-sm border resize-none" style={{ background: "oklch(0.22 0.02 255)", borderColor: "oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }} />
-              </div>
-              <div>
-                <label className="text-xs font-semibold mb-1 block" style={{ color: "oklch(0.65 0.015 240)" }}>Kép URL</label>
-                <input value={newPost.imageUrl ?? ""} onChange={e => setNewPost(p => ({ ...p, imageUrl: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-lg text-sm border" style={{ background: "oklch(0.22 0.02 255)", borderColor: "oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }} placeholder="https://..." />
-              </div>
-              <div>
-                <label className="text-xs font-semibold mb-1 block" style={{ color: "oklch(0.65 0.015 240)" }}>Tartalmi pillér</label>
-                <input value={newPost.pillar ?? ""} onChange={e => setNewPost(p => ({ ...p, pillar: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-lg text-sm border" style={{ background: "oklch(0.22 0.02 255)", borderColor: "oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }} placeholder="Pl. Thought Leadership" />
-              </div>
-              <div>
-                <label className="text-xs font-semibold mb-1 block" style={{ color: "oklch(0.65 0.015 240)" }}>Hashtagek (vesszővel elválasztva)</label>
-                <input value={(newPost.hashtags ?? []).join(", ")} onChange={e => setNewPost(p => ({ ...p, hashtags: e.target.value.split(",").map(h => h.trim()).filter(Boolean) }))}
-                  className="w-full px-3 py-2 rounded-lg text-sm border" style={{ background: "oklch(0.22 0.02 255)", borderColor: "oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }} placeholder="marketing, b2b, growth" />
-              </div>
-            </div>
-            <div className="flex gap-3 mt-6">
-              <button onClick={() => setNewPostModal(false)} className="flex-1 py-2.5 rounded-lg text-sm font-semibold" style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.65 0.015 240)" }}>Mégse</button>
-              <button onClick={handleCreatePost} disabled={createMutation.isPending} className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white flex items-center justify-center gap-1.5" style={{ background: "oklch(0.6 0.2 255)" }}>
-                {createMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
-                Létrehozás
+
+            {/* Mode toggle */}
+            <div className="flex gap-1 mb-5 p-1 rounded-lg" style={{ background: "oklch(0.22 0.02 255)" }}>
+              <button onClick={() => setCreateMode("template")}
+                className="flex-1 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center justify-center gap-1.5"
+                style={{ background: createMode === "template" ? "oklch(0.6 0.2 255)" : "transparent", color: createMode === "template" ? "white" : "oklch(0.55 0.015 240)" }}>
+                <Wand2 size={12} /> AI segítséggel
+              </button>
+              <button onClick={() => setCreateMode("free")}
+                className="flex-1 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center justify-center gap-1.5"
+                style={{ background: createMode === "free" ? "oklch(0.22 0.02 255 / 0%)" : "transparent", color: createMode === "free" ? "oklch(0.88 0.008 240)" : "oklch(0.55 0.015 240)", border: createMode === "free" ? "1px solid oklch(1 0 0 / 15%)" : "1px solid transparent" }}>
+                <Plus size={12} /> Saját szöveg
               </button>
             </div>
+
+            {createMode === "template" && (
+              <div className="space-y-4 mb-4">
+                {/* Platform selector */}
+                <div>
+                  <label className="text-xs font-semibold mb-2 block" style={{ color: "oklch(0.65 0.015 240)" }}>Platform</label>
+                  <div className="flex gap-2 flex-wrap">
+                    {(["linkedin", "facebook", "instagram", "twitter", "tiktok"] as Platform[]).map(pl => (
+                      <button key={pl} onClick={() => setNewPost(p => ({ ...p, platform: pl }))}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                        style={{
+                          background: newPost.platform === pl ? `${PLATFORM_COLORS[pl]} / 20%` : "oklch(0.22 0.02 255)",
+                          color: newPost.platform === pl ? PLATFORM_COLORS[pl] : "oklch(0.55 0.015 240)",
+                          border: `1px solid ${newPost.platform === pl ? PLATFORM_COLORS[pl] : "transparent"}`,
+                        }}>
+                        {PLATFORM_ICONS[pl]} {pl}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Pillar selector */}
+                {contentPillars.length > 0 && (
+                  <div>
+                    <label className="text-xs font-semibold mb-2 block" style={{ color: "oklch(0.65 0.015 240)" }}>Tartalmi pillér</label>
+                    <div className="flex gap-2 flex-wrap">
+                      {contentPillars.map(pillar => (
+                        <button key={pillar} onClick={() => setNewPost(p => ({ ...p, pillar }))}
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                          style={{
+                            background: newPost.pillar === pillar ? "oklch(0.65 0.18 165 / 20%)" : "oklch(0.22 0.02 255)",
+                            color: newPost.pillar === pillar ? "oklch(0.65 0.18 165)" : "oklch(0.55 0.015 240)",
+                            border: `1px solid ${newPost.pillar === pillar ? "oklch(0.65 0.18 165)" : "transparent"}`,
+                          }}>
+                          {pillar}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Additional context */}
+                <div>
+                  <label className="text-xs font-semibold mb-1 block" style={{ color: "oklch(0.65 0.015 240)" }}>Kiegészítő instrukciók (opcionális)</label>
+                  <textarea value={additionalContext} onChange={e => setAdditionalContext(e.target.value)} rows={2}
+                    className="w-full px-3 py-2 rounded-lg text-sm border resize-none" style={{ background: "oklch(0.22 0.02 255)", borderColor: "oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }}
+                    placeholder="Pl. fókuszálj a Q2-es kampányra, emeld ki az ár-érték arányt..." />
+                </div>
+
+                {/* Generate button */}
+                <button onClick={handleGenerateContent} disabled={generatingContent}
+                  className="w-full py-3 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 transition-all hover:opacity-90"
+                  style={{ background: "linear-gradient(135deg, oklch(0.6 0.2 255), oklch(0.55 0.18 165))" }}>
+                  {generatingContent ? <><Loader2 size={15} className="animate-spin" /> Generálás...</> : <><Wand2 size={15} /> AI Tartalom Generálása</>}
+                </button>
+              </div>
+            )}
+
+            {/* Generated / manual content fields */}
+            {(newPost.title || newPost.content || createMode === "free") && (
+              <div className="space-y-4">
+                {createMode === "template" && newPost.title && (
+                  <div className="p-3 rounded-lg flex items-center gap-2" style={{ background: "oklch(0.65 0.18 165 / 10%)", borderColor: "oklch(0.65 0.18 165 / 20%)", border: "1px solid" }}>
+                    <CheckCircle2 size={14} style={{ color: "oklch(0.65 0.18 165)" }} />
+                    <p className="text-xs font-semibold" style={{ color: "oklch(0.65 0.18 165)" }}>Tartalom generálva – szerkeszd és mentsd el!</p>
+                  </div>
+                )}
+                <div>
+                  <label className="text-xs font-semibold mb-1 block" style={{ color: "oklch(0.65 0.015 240)" }}>Cím *</label>
+                  <input value={newPost.title ?? ""} onChange={e => setNewPost(p => ({ ...p, title: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-lg text-sm border" style={{ background: "oklch(0.22 0.02 255)", borderColor: "oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }} />
+                </div>
+                {createMode === "free" && (
+                  <div>
+                    <label className="text-xs font-semibold mb-2 block" style={{ color: "oklch(0.65 0.015 240)" }}>Platform *</label>
+                    <div className="flex gap-2 flex-wrap">
+                      {(["linkedin", "facebook", "instagram", "twitter", "tiktok"] as Platform[]).map(pl => (
+                        <button key={pl} onClick={() => setNewPost(p => ({ ...p, platform: pl }))}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                          style={{
+                            background: newPost.platform === pl ? `${PLATFORM_COLORS[pl]} / 20%` : "oklch(0.22 0.02 255)",
+                            color: newPost.platform === pl ? PLATFORM_COLORS[pl] : "oklch(0.55 0.015 240)",
+                            border: `1px solid ${newPost.platform === pl ? PLATFORM_COLORS[pl] : "transparent"}`,
+                          }}>
+                          {PLATFORM_ICONS[pl]} {pl}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <label className="text-xs font-semibold mb-1 block" style={{ color: "oklch(0.65 0.015 240)" }}>Szöveg *</label>
+                  <textarea value={newPost.content ?? ""} onChange={e => setNewPost(p => ({ ...p, content: e.target.value }))} rows={5}
+                    className="w-full px-3 py-2 rounded-lg text-sm border resize-none" style={{ background: "oklch(0.22 0.02 255)", borderColor: "oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }} />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold mb-1 block" style={{ color: "oklch(0.65 0.015 240)" }}>AI Kép Prompt</label>
+                  <div className="flex gap-2">
+                    <input value={newPost.imagePrompt ?? ""} onChange={e => setNewPost(p => ({ ...p, imagePrompt: e.target.value }))}
+                      className="flex-1 px-3 py-2 rounded-lg text-sm border" style={{ background: "oklch(0.22 0.02 255)", borderColor: "oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }}
+                      placeholder="Pl. modern office, professional team..." />
+                    <button onClick={handleGenerateNewImage} disabled={generatingImage}
+                      className="px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-1.5"
+                      style={{ background: "oklch(0.7 0.18 300 / 20%)", color: "oklch(0.7 0.18 300)" }}>
+                      {generatingImage ? <Loader2 size={13} className="animate-spin" /> : <ImageIcon size={13} />} Kép
+                    </button>
+                  </div>
+                  {newPost.imageUrl && <img src={newPost.imageUrl} alt="preview" className="mt-2 w-full h-32 object-cover rounded-lg" />}
+                </div>
+                <div>
+                  <label className="text-xs font-semibold mb-1 block" style={{ color: "oklch(0.65 0.015 240)" }}>Hashtagek (vesszővel)</label>
+                  <input value={(newPost.hashtags ?? []).join(", ")} onChange={e => setNewPost(p => ({ ...p, hashtags: e.target.value.split(",").map(h => h.trim()).filter(Boolean) }))}
+                    className="w-full px-3 py-2 rounded-lg text-sm border" style={{ background: "oklch(0.22 0.02 255)", borderColor: "oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }}
+                    placeholder="marketing, b2b, growth" />
+                </div>
+              </div>
+            )}
+
+            {(newPost.title || newPost.content || createMode === "free") && (
+              <div className="flex gap-3 mt-6">
+                <button onClick={() => { setCreateModal(false); setSelectedTemplate(null); }} className="flex-1 py-2.5 rounded-lg text-sm font-semibold" style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.65 0.015 240)" }}>Mégse</button>
+                <button onClick={handleCreatePost} disabled={createMutation.isPending}
+                  className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white flex items-center justify-center gap-1.5"
+                  style={{ background: "oklch(0.6 0.2 255)" }}>
+                  {createMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />} Mentés piszkozatként
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* Post Detail Drawer (calendar click) */}
+      {/* Post Detail Drawer */}
       {selectedPost && !editModal && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" style={{ background: "oklch(0 0 0 / 60%)" }} onClick={() => setSelectedPost(null)}>
           <div className="w-full max-w-lg rounded-2xl border p-6" style={{ background: "oklch(0.15 0.022 255)", borderColor: "oklch(1 0 0 / 12%)" }} onClick={e => e.stopPropagation()}>
@@ -610,14 +935,12 @@ export default function ContentStudio() {
             <div className="flex gap-2">
               <button onClick={() => { setEditForm({ title: selectedPost.title, content: selectedPost.content, imageUrl: selectedPost.imageUrl, imagePrompt: selectedPost.imagePrompt, hashtags: selectedPost.hashtags }); setEditModal(true); }}
                 className="flex-1 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5"
-                style={{ background: "oklch(0.6 0.2 255 / 15%)", color: "oklch(0.6 0.2 255)" }}
-              >
+                style={{ background: "oklch(0.6 0.2 255 / 15%)", color: "oklch(0.6 0.2 255)" }}>
                 <Pencil size={13} /> Szerkesztés
               </button>
               <button onClick={() => handleDelete(selectedPost.id)}
                 className="flex-1 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5"
-                style={{ background: "oklch(0.65 0.22 25 / 15%)", color: "oklch(0.65 0.22 25)" }}
-              >
+                style={{ background: "oklch(0.65 0.22 25 / 15%)", color: "oklch(0.65 0.22 25)" }}>
                 <Trash2 size={13} /> Törlés
               </button>
             </div>

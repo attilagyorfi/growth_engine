@@ -509,6 +509,11 @@ export const appUsers = mysqlTable("app_users", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn"),
+  subscriptionPlan: mysqlEnum("subscriptionPlan", ["free", "starter", "pro", "agency"]).default("free").notNull(),
+  contactPerson: varchar("contactPerson", { length: 255 }),
+  phone: varchar("phone", { length: 50 }),
+  companyName: varchar("companyName", { length: 255 }),
+  notes: text("notes"),
 });
 export type AppUser = typeof appUsers.$inferSelect;
 export type InsertAppUser = typeof appUsers.$inferInsert;

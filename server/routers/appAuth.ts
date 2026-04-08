@@ -194,6 +194,61 @@ export const appAuthRouter = router({
       return updateAppUser(userId, data);
     }),
 
+  // ─── Admin: CRM – Ügyfelek listája (csak nem-szenzitív adatok) ────────────────
+  adminGetCRMClients: publicProcedure
+    .query(async ({ ctx }) => {
+      const cookieHeader = ctx.req.headers.cookie ?? "";
+      const match = cookieHeader.match(/app_token=([^;]+)/);
+      if (!match) throw new TRPCError({ code: "UNAUTHORIZED" });
+      const payload = await verifyAppToken(match[1]);
+      if (!payload || payload.role !== "super_admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Csak adminok férhetnek hozzá" });
+      }
+      const users = await getAllAppUsers();
+      // Return only CRM-relevant, non-sensitive fields
+      return users
+        .filter(u => u.role !== "super_admin")
+        .map(u => ({
+          id: u.id,
+          email: u.email,
+          name: u.name,
+          companyName: u.companyName ?? null,
+          contactPerson: u.contactPerson ?? null,
+          phone: u.phone ?? null,
+          website: null as string | null, // populated from profile below
+          subscriptionPlan: u.subscriptionPlan,
+          active: u.active,
+          onboardingCompleted: u.onboardingCompleted,
+          profileId: u.profileId ?? null,
+          notes: u.notes ?? null,
+          createdAt: u.createdAt,
+          lastSignedIn: u.lastSignedIn ?? null,
+        }));
+    }),
+
+  // ─── Admin: CRM – Ügyfél frissítése (csak CRM mezők) ────────────────────────
+  adminUpdateCRMClient: publicProcedure
+    .input(z.object({
+      userId: z.string(),
+      companyName: z.string().optional(),
+      contactPerson: z.string().optional(),
+      phone: z.string().optional(),
+      subscriptionPlan: z.enum(["free", "starter", "pro", "agency"]).optional(),
+      notes: z.string().optional(),
+      active: z.boolean().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const cookieHeader = ctx.req.headers.cookie ?? "";
+      const match = cookieHeader.match(/app_token=([^;]+)/);
+      if (!match) throw new TRPCError({ code: "UNAUTHORIZED" });
+      const payload = await verifyAppToken(match[1]);
+      if (!payload || payload.role !== "super_admin") {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+      const { userId, ...data } = input;
+      return updateAppUser(userId, data);
+    }),
+
   // ─── Admin: Jelszó reset ─────────────────────────────────────────────────────
   adminResetPassword: publicProcedure
     .input(z.object({

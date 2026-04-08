@@ -19,7 +19,16 @@ import { useAppAuth } from "@/hooks/useAppAuth";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { toast } from "sonner";
 
-const navItems = [
+const publicNavItems = [
+  { href: "/iranyitopult", label: "Irányítópult", icon: LayoutDashboard },
+  { href: "/strategia", label: "Stratégia", icon: BarChart3 },
+  { href: "/tartalom-studio", label: "Tartalom Studio", icon: Layers },
+  { href: "/kampanyok", label: "Kampányok", icon: Megaphone },
+  { href: "/analitika", label: "Analitika", icon: TrendingUp },
+  { href: "/beallitasok", label: "Beállítások", icon: Settings },
+];
+
+const adminNavItems = [
   { href: "/iranyitopult", label: "Irányítópult", icon: LayoutDashboard },
   { href: "/ugyfelek", label: "Ügyfelek", icon: Users },
   { href: "/strategia", label: "Stratégia", icon: BarChart3 },
@@ -58,6 +67,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
   const { notifications, markNotificationRead, markAllNotificationsRead, unreadCount } = useData();
   const { profiles, activeProfile, setActiveProfileId } = useProfile();
   const { user, logout, isSuperAdmin } = useAppAuth();
+  const navItems = isSuperAdmin ? adminNavItems : publicNavItems;
 
   const handleNotifClick = (id: string, link?: string) => {
     markNotificationRead(id);
@@ -291,16 +301,18 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
                       </button>
                     ))}
                   </div>
-                  <div className="px-3 py-2 border-t" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
-                    <Link href="/clients/new" onClick={() => setShowProfileSwitcher(false)}
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors w-full"
-                      style={{ color: "oklch(0.6 0.2 255)" }}
-                      onMouseEnter={(e: any) => (e.currentTarget.style.background = "oklch(0.6 0.2 255 / 10%)")}
-                      onMouseLeave={(e: any) => (e.currentTarget.style.background = "transparent")}
-                    >
-                      + Új ügyfél hozzáadása
-                    </Link>
-                  </div>
+                  {isSuperAdmin && (
+                    <div className="px-3 py-2 border-t" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
+                      <Link href="/ugyfelek/uj" onClick={() => setShowProfileSwitcher(false)}
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors w-full"
+                        style={{ color: "oklch(0.6 0.2 255)" }}
+                        onMouseEnter={(e: any) => (e.currentTarget.style.background = "oklch(0.6 0.2 255 / 10%)")}
+                        onMouseLeave={(e: any) => (e.currentTarget.style.background = "transparent")}
+                      >
+                        + Új ügyfél hozzáadása
+                      </Link>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

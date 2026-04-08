@@ -795,9 +795,12 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        const now = new Date();
+        const currentDateStr = now.toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric" });
+        const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
         const response = await invokeLLM({
           messages: [
-            { role: "system", content: "Te egy tapasztalt marketing stratéga vagy. Átfogó többszintű marketing stratégiát készítesz. Kizárólag érvényes JSON-t adj vissza. MINDEN szöveges értéket KIZÁRÓLAG MAGYARUL írj meg." },
+            { role: "system", content: `Te egy tapasztalt marketing stratéga vagy. Átfogó többszintű marketing stratégiát készísz. Kizárólag érvényes JSON-t adj vissza. MINDEN szöveges értéket KIZÁRÓLAG MAGYARUL írj meg. A mai dátum: ${currentDateStr}. A monthlyPriorities tömbnél a hónapokat a mai dátumhoz képest állítsd be (${currentYearMonth}-tól kezdve), ne használj régebbi dátumokat.` },
             { role: "user", content: `A következő vállalati intelligencia alapján (MINDEN szöveg magyarul):\n${JSON.stringify(input.intelligenceData)}\n\n${input.strategyContext ? `További kontextus: ${input.strategyContext}` : ""}\n\nGeneralj teljes stratégiát: executiveSummary (vezetői összefoglaló magyarul), channelStrategy (tömb: {channel, priority 1-5, rationale, tactics[]} - mind magyarul), campaignPriorities (string[] magyarul), quickWins (tömb: {title, description, impact, effort} - mind magyarul), nextActions (tömb: {title, description, urgency: magas/közepes/alacsony, dueDate?} - mind magyarul), quarterlyGoals ({q1?, q2?, q3?, q4?} - string[] magyarul), monthlyPriorities (tömb: {month: YYYY-MM, priorities: string[], kpis: [{label, target}]} - mind magyarul)` },
           ],
           response_format: { type: "json_schema", json_schema: { name: "strategy_output", strict: true, schema: { type: "object", properties: { executiveSummary: { type: "string" }, channelStrategy: { type: "array", items: { type: "object", properties: { channel: { type: "string" }, priority: { type: "number" }, rationale: { type: "string" }, tactics: { type: "array", items: { type: "string" } } }, required: ["channel", "priority", "rationale", "tactics"], additionalProperties: false } }, campaignPriorities: { type: "array", items: { type: "string" } }, quickWins: { type: "array", items: { type: "object", properties: { title: { type: "string" }, description: { type: "string" }, impact: { type: "string" }, effort: { type: "string" } }, required: ["title", "description", "impact", "effort"], additionalProperties: false } }, nextActions: { type: "array", items: { type: "object", properties: { title: { type: "string" }, description: { type: "string" }, urgency: { type: "string" }, dueDate: { type: "string" } }, required: ["title", "description", "urgency"], additionalProperties: false } }, quarterlyGoals: { type: "object", properties: { q1: { type: "array", items: { type: "string" } }, q2: { type: "array", items: { type: "string" } }, q3: { type: "array", items: { type: "string" } }, q4: { type: "array", items: { type: "string" } } }, required: [], additionalProperties: false }, monthlyPriorities: { type: "array", items: { type: "object", properties: { month: { type: "string" }, priorities: { type: "array", items: { type: "string" } }, kpis: { type: "array", items: { type: "object", properties: { label: { type: "string" }, target: { type: "string" } }, required: ["label", "target"], additionalProperties: false } } }, required: ["month", "priorities", "kpis"], additionalProperties: false } } }, required: ["executiveSummary", "channelStrategy", "campaignPriorities", "quickWins", "nextActions", "quarterlyGoals", "monthlyPriorities"], additionalProperties: false } } },
@@ -960,6 +963,32 @@ export const appRouter = router({
           } : {}),
         });
         return { url: result.url ?? null };
+      }),
+
+    generatePostContent: appUserProcedure
+      .input(z.object({
+        platform: z.string(),
+        contentType: z.string(),
+        pillar: z.string().optional(),
+        tone: z.string().optional(),
+        companyName: z.string().optional(),
+        industry: z.string().optional(),
+        intelligenceSummary: z.string().optional(),
+        strategyContext: z.string().optional(),
+        additionalContext: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const now = new Date();
+        const currentDateStr = now.toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric" });
+        const response = await invokeLLM({
+          messages: [
+            { role: "system", content: `Te egy tapasztalt közösségi média tartalomkészítő vagy. KIZÁRÓLAG MAGYARUL írj. A mai dátum: ${currentDateStr}. Adj vissza JSON-t a következő mezőkkel: title (rövid, figyelemfelkeltő cím), content (teljes poszt szöveg a platformnak megfelelő stílusban, max 280 karakter Twitter/TikTok esetén, max 3000 LinkedIn esetén), hashtags (string tömb, max 8 hashtag), imagePrompt (angol nyelvű képgenerálási prompt, részletes, vizuálisan leíró).` },
+            { role: "user", content: `Cég: ${input.companyName ?? "ismeretlen"}\nIparág: ${input.industry ?? "általános"}\nPlatform: ${input.platform}\nTartalom típusa: ${input.contentType}\nTartalmi pillér: ${input.pillar ?? "általános"}\nHang/Tone: ${input.tone ?? "professzionális, barátságos"}\n${input.intelligenceSummary ? `Cég összefoglaló: ${input.intelligenceSummary}` : ""}\n${input.strategyContext ? `Stratégiai kontextus: ${input.strategyContext}` : ""}\n${input.additionalContext ? `Kiegészítő instrukciók: ${input.additionalContext}` : ""}\n\nGenerálj egy ${input.platform} posztot.` },
+          ],
+          response_format: { type: "json_schema", json_schema: { name: "post_content", strict: true, schema: { type: "object", properties: { title: { type: "string" }, content: { type: "string" }, hashtags: { type: "array", items: { type: "string" } }, imagePrompt: { type: "string" } }, required: ["title", "content", "hashtags", "imagePrompt"], additionalProperties: false } } },
+        });
+        const raw = response.choices[0]?.message?.content ?? "{}";
+        return JSON.parse(typeof raw === "string" ? raw : JSON.stringify(raw));
       }),
   }),
 });

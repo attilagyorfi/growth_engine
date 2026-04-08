@@ -451,8 +451,14 @@ export default function Strategy() {
               Az AI felhasználja a céged Intelligence profilját és az alábbi kontextust egy teljes marketing stratégia elkészítéséhez.
             </p>
             {!intelligence && (
-              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
-                ⚠️ Még nincs Company Intelligence profil. Az AI általánosabb stratégiát fog generálni. Ajánlott előbb az Intelligence oldalt kitölteni.
+              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm text-yellow-800 font-semibold mb-1">⚠️ Nincs Company Intelligence profil</p>
+                <p className="text-xs text-yellow-700 mb-2">
+                  A stratégia mindig pontosabb, ha előbb elkészül a Company Intelligence profil. Az AI most általánosabb stratégiát fog generálni.
+                </p>
+                <a href="/intelligence" className="text-xs font-semibold text-yellow-800 underline hover:text-yellow-900">
+                  → Menj az Intelligence oldalra és genéráld el előbb
+                </a>
               </div>
             )}
             <div>
