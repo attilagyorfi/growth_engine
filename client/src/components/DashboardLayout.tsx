@@ -71,6 +71,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
   const { profiles, activeProfile, setActiveProfileId } = useProfile();
   const { user, logout, isSuperAdmin, refetch } = useAppAuth();
   const { theme, toggleTheme } = useTheme();
+  const handleToggleTheme = () => toggleTheme?.();
   const navItems = isSuperAdmin ? adminNavItems : publicNavItems;
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [editingName, setEditingName] = useState(false);
@@ -118,15 +119,17 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
       <aside className="w-56 flex-shrink-0 flex flex-col border-r" style={{ background: "oklch(0.16 0.022 255)", borderColor: "oklch(1 0 0 / 8%)" }}>
         {/* Logo */}
         <div className="px-5 py-5 border-b" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, oklch(0.6 0.2 255), oklch(0.55 0.22 280))", boxShadow: "0 0 16px oklch(0.6 0.2 255 / 40%)" }}>
-              <Zap size={16} className="text-white" />
+          <Link href="/">
+            <div className="flex items-center gap-2.5 cursor-pointer group">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform" style={{ background: "linear-gradient(135deg, oklch(0.6 0.2 255), oklch(0.55 0.22 280))", boxShadow: "0 0 16px oklch(0.6 0.2 255 / 40%)" }}>
+                <Zap size={16} className="text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-bold leading-none" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>G2A</p>
+                <p className="text-xs leading-none mt-0.5" style={{ color: "oklch(0.55 0.015 240)" }}>Growth Engine</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-bold leading-none" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>G2A</p>
-              <p className="text-xs leading-none mt-0.5" style={{ color: "oklch(0.55 0.015 240)" }}>Growth Engine</p>
-            </div>
-          </div>
+          </Link>
         </div>
 
         {/* Active Client Badge – only for super_admin */}
@@ -208,7 +211,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
             <LanguageSwitcher variant="pill" />
             {/* Theme Toggle */}
             <button
-              onClick={toggleTheme}
+              onClick={handleToggleTheme}
               className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors"
               style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.65 0.015 240)" }}
               title={theme === "dark" ? "Váltás világos módra" : "Váltás sötét módra"}

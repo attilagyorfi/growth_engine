@@ -310,3 +310,33 @@
 - [x] Onboarding visszatöltés banner: "Folytatod a korábbi kitöltést?" + törlés gomb
 - [x] Content Stúdió pillér szűrés: pillérenként szűrés a kártyákon
 - [x] Stratégia verzió összehasonlítás: két verzió egymás melletti nézete
+
+## Sprint 10 – i18n, Dark/Light, Admin CRM, Üres állapotok, Képek, Animációk
+
+### Nyelvi rendszer
+- [x] i18n teljes körű implementálás: HU/EN fordítások főoldalon és regisztrációnál
+- [x] Nyelvválasztó csak főoldalon és regisztrációnál látható
+- [x] Regisztrációkor mentett nyelv alapján jelenik meg minden tartalom a dashboardban
+- [x] Menüsor mindig látható (sticky/fixed)
+- [x] Logo és "G2A Growth Engine" felirat kattintható, főoldalra navigál
+- [x] Dark/light mode gomb a menüsorban (dashboard és főoldal)
+
+### Admin CRM
+- [x] Ügyfélváltáskor csak CRM adatok láthatók (nem a workspace)
+- [x] CRM nézet: felhasználónév, cég, weboldal, kontakt, aktivitás, csomag
+
+### Üres állapotok
+- [x] Friss regisztrációnál üres dashboard (nincs fiktív adat)
+- [x] Üres stratégia oldal (nincs fiktív adat)
+- [x] Üres értékesítés oldal (nincs fiktív adat)
+- [x] Üres analitika oldal (nincs fiktív adat)
+- [x] Growth Engine főoldal: valid adatok (nincs fiktív kimutatás)
+
+### Főoldal fejlesztés
+- [x] Csomagajánlatok a főoldalon (azonos a regisztrációs oldallal)
+- [x] Animációk: scroll-triggered, fade-in, slide-in effektek (framer-motion)
+- [x] Hero szekció animáció
+
+### Aloldalak képekkel
+- [x] Releváns képek az aloldalakra (Analytics, ContentStudio)
+- [x] Animációk az aloldalak UI elemeire (Dashboard, Strategy, Analytics, ContentStudio)

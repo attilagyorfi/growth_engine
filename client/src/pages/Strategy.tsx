@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearch } from "wouter";
+import { motion } from "framer-motion";
 import { trpc } from "@/lib/trpc";
 import { useProfile } from "@/contexts/ProfileContext";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -100,7 +101,12 @@ export default function Strategy() {
     <DashboardLayout>
       <div className="p-6 space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="flex items-center justify-between"
+        >
           <div>
             <h1 className="text-2xl font-bold text-foreground">Stratégia</h1>
             <p className="text-muted-foreground text-sm mt-1">
@@ -127,7 +133,7 @@ export default function Strategy() {
               AI Stratégia generálása
             </Button>
           </div>
-        </div>
+        </motion.div>
 
         {/* Version Selector */}
         {activeVersions.length > 1 && (

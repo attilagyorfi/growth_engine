@@ -4,6 +4,7 @@
  */
 
 import { useState, useMemo } from "react";
+import { motion } from "framer-motion";
 import {
   Calendar, FileText, Clock, CheckCircle2, ThumbsUp, ThumbsDown,
   Plus, Pencil, Trash2, X, ChevronLeft, ChevronRight, Loader2,
@@ -575,6 +576,17 @@ export default function ContentStudio() {
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Content Studio hero image – shown when no strategy yet */}
+          {!activeStrategy && suggestedTemplates.length === 0 && (
+            <div className="rounded-xl overflow-hidden border" style={{ borderColor: border }}>
+              <img
+                src="https://d2xsxph8kpxj0f.cloudfront.net/109169450/WzYbMH2rdiW2pftdUmZaz8/content-studio-hero_cdb2a587.png"
+                alt="Content Studio preview"
+                className="w-full object-cover opacity-70"
+              />
             </div>
           )}
 

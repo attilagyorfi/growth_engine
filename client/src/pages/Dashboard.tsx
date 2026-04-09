@@ -15,6 +15,7 @@ import { useData } from "@/contexts/DataContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import { motion } from "framer-motion";
 
 export default function Dashboard() {
   const [, navigate] = useLocation();
@@ -99,13 +100,7 @@ export default function Dashboard() {
             <span style={{ color: "oklch(0.45 0.015 240)" }}>{new Date().toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric" })}</span>
           </p>
         </div>
-        <button
-          onClick={() => navigate("/clients/new")}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all hover:opacity-90"
-          style={{ background: "linear-gradient(135deg, oklch(0.6 0.2 255), oklch(0.55 0.18 165))" }}
-        >
-          <Zap size={14} /> Új Ügyfél
-        </button>
+
       </div>
 
       {/* PRIMARY BLOCKS */}
@@ -246,7 +241,9 @@ export default function Dashboard() {
                   {activeProfile.name} – Heti AI Insight
                 </p>
                 <p className="text-xs leading-relaxed" style={{ color: "oklch(0.62 0.015 240)" }}>
-                  A legmagasabb megnyitási arányú emailek személyre szabott tárgysorral rendelkeznek. Javasolt: a következő outbound kampányban a lead iparágát és pozícióját is szerepeltesd a tárgysorban. A LinkedIn posztok hétköznap reggel 8–10 óra között érik el a legjobb organikus elérést.
+                  {contentItems.length > 0 || leads.length > 0
+                    ? `${leads.length} aktív lead és ${contentItems.length} tartalom alapján: fókuszálj a legjobb teljesítményű csatornára és ütemezd a következő hét tartalmait előre.`
+                    : "Töltsd ki az onboardingot és generálj stratégiát, hogy személyre szabott AI insight-okat kapj a vállalkozásodról."}
                 </p>
                 <div className="flex gap-2 mt-2">
                   <button onClick={() => navigate("/strategy")} className="text-xs flex items-center gap-1" style={{ color: "oklch(0.6 0.2 255)" }}>
@@ -309,15 +306,22 @@ export default function Dashboard() {
 
       {/* KPI Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        {kpis.map(k => (
-          <div key={k.label} className="rounded-xl border p-4" style={{ background: "oklch(0.17 0.022 255)", borderColor: "oklch(1 0 0 / 8%)" }}>
+        {kpis.map((k, i) => (
+          <motion.div
+            key={k.label}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: i * 0.08 }}
+            className="rounded-xl border p-4"
+            style={{ background: "oklch(0.17 0.022 255)", borderColor: "oklch(1 0 0 / 8%)" }}
+          >
             <div className="flex items-center justify-between mb-2">
               <k.icon size={16} style={{ color: k.color }} />
               <TrendingUp size={12} style={{ color: "oklch(0.45 0.015 240)" }} />
             </div>
             <p className="text-2xl font-bold" style={{ color: "oklch(0.92 0.008 240)", fontFamily: "Sora, sans-serif" }}>{k.value}</p>
             <p className="text-xs mt-0.5" style={{ color: "oklch(0.5 0.015 240)" }}>{k.label}</p>
-          </div>
+          </motion.div>
         ))}
       </div>
 
