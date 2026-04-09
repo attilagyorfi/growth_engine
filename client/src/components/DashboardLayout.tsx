@@ -10,14 +10,17 @@ import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, Users, BarChart3, Layers, TrendingUp, Settings,
   Zap, ChevronRight, Bell, X, CheckCircle, AlertCircle, Info, Mail,
-  ChevronDown, ShieldAlert, LogOut, Shield, Megaphone,
+  ChevronDown, ShieldAlert, LogOut, Shield, Megaphone, Sun, Moon,
+  User, KeyRound, UserCog,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useData } from "@/contexts/DataContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useAppAuth } from "@/hooks/useAppAuth";
+import { useTheme } from "@/contexts/ThemeContext";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
 
 const publicNavItems = [
   { href: "/iranyitopult", label: "Irányítópult", icon: LayoutDashboard },
@@ -66,8 +69,20 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
   const [pendingProfileId, setPendingProfileId] = useState<string | null>(null);
   const { notifications, markNotificationRead, markAllNotificationsRead, unreadCount } = useData();
   const { profiles, activeProfile, setActiveProfileId } = useProfile();
-  const { user, logout, isSuperAdmin } = useAppAuth();
+  const { user, logout, isSuperAdmin, refetch } = useAppAuth();
+  const { theme, toggleTheme } = useTheme();
   const navItems = isSuperAdmin ? adminNavItems : publicNavItems;
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [newName, setNewName] = useState("");
+  const updateSelf = trpc.appAuth.updateSelf.useMutation({
+    onSuccess: () => {
+      toast.success("Név frissítve!");
+      setEditingName(false);
+      refetch?.();
+    },
+    onError: (e) => toast.error(e.message),
+  });
 
   const handleNotifClick = (id: string, link?: string) => {
     markNotificationRead(id);
@@ -92,6 +107,11 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
 
   const pendingProfile = pendingProfileId ? profiles.find(p => p.id === pendingProfileId) : null;
 
+  const handleSaveName = () => {
+    if (!newName.trim()) return;
+    updateSelf.mutate({ name: newName.trim() });
+  };
+
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "oklch(0.13 0.025 255)" }}>
       {/* Sidebar */}
@@ -109,16 +129,30 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
           </div>
         </div>
 
-        {/* Active Client Badge */}
-        <div className="mx-3 mt-3 mb-1 px-3 py-2 rounded-lg border" style={{ background: "oklch(0.6 0.2 255 / 8%)", borderColor: "oklch(0.6 0.2 255 / 25%)" }}>
-          <p className="text-xs font-medium mb-0.5" style={{ color: "oklch(0.55 0.015 240)" }}>Aktív ügyfél</p>
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded-md flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style={{ background: activeProfile.color }}>
-              {activeProfile.initials}
+        {/* Active Client Badge – only for super_admin */}
+        {isSuperAdmin && (
+          <div className="mx-3 mt-3 mb-1 px-3 py-2 rounded-lg border" style={{ background: "oklch(0.6 0.2 255 / 8%)", borderColor: "oklch(0.6 0.2 255 / 25%)" }}>
+            <p className="text-xs font-medium mb-0.5" style={{ color: "oklch(0.55 0.015 240)" }}>Aktív ügyfél</p>
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded-md flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style={{ background: activeProfile.color }}>
+                {activeProfile.initials}
+              </div>
+              <p className="text-sm font-bold truncate" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>{activeProfile.name}</p>
             </div>
-            <p className="text-sm font-bold truncate" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>{activeProfile.name}</p>
           </div>
-        </div>
+        )}
+        {/* My Profile Badge – for regular users */}
+        {!isSuperAdmin && (
+          <div className="mx-3 mt-3 mb-1 px-3 py-2 rounded-lg border" style={{ background: "oklch(0.6 0.2 255 / 8%)", borderColor: "oklch(0.6 0.2 255 / 25%)" }}>
+            <p className="text-xs font-medium mb-0.5" style={{ color: "oklch(0.55 0.015 240)" }}>Saját profil</p>
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style={{ background: "oklch(0.6 0.2 255)" }}>
+                {(user?.name ?? user?.email ?? "?")[0].toUpperCase()}
+              </div>
+              <p className="text-sm font-bold truncate" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>{user?.name ?? user?.email ?? "Felhasználó"}</p>
+            </div>
+          </div>
+        )}
 
         {/* Navigation */}
         <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
@@ -172,6 +206,17 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
           <div className="flex items-center gap-2">
             {/* Language Switcher */}
             <LanguageSwitcher variant="pill" />
+            {/* Theme Toggle */}
+            <button
+              onClick={toggleTheme}
+              className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors"
+              style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.65 0.015 240)" }}
+              title={theme === "dark" ? "Váltás világos módra" : "Váltás sötét módra"}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "oklch(0.28 0.03 255)")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "oklch(0.22 0.02 255)")}
+            >
+              {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
             {/* Notification Bell */}
             <div className="relative">
               <button
@@ -229,79 +274,79 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
               )}
             </div>
 
-            {/* Client Switcher */}
-            <div className="relative">
-              <button
-                onClick={() => { setShowProfileSwitcher((v) => !v); setShowNotifs(false); }}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all border"
-                style={{
-                  background: showProfileSwitcher ? "oklch(0.6 0.2 255 / 15%)" : "oklch(0.22 0.02 255)",
-                  borderColor: showProfileSwitcher ? "oklch(0.6 0.2 255 / 40%)" : "oklch(1 0 0 / 8%)"
-                }}
-              >
-                <div className="w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold text-white" style={{ background: activeProfile.color }}>
-                  {activeProfile.initials}
-                </div>
-                <div className="text-left">
-                  <p className="text-xs font-bold leading-none max-w-28 truncate" style={{ color: "oklch(0.92 0.008 240)", fontFamily: "Sora, sans-serif" }}>
-                    {activeProfile.name}
-                  </p>
-                  <p className="text-xs leading-none mt-0.5" style={{ color: "oklch(0.5 0.015 240)" }}>Aktív ügyfél</p>
-                </div>
-                <ChevronDown size={12} style={{ color: "oklch(0.55 0.015 240)" }} />
-              </button>
-
-              {/* Client Dropdown */}
-              {showProfileSwitcher && (
-                <div className="absolute right-0 top-12 w-72 rounded-xl shadow-2xl z-50 overflow-hidden" style={{ background: "oklch(0.18 0.022 255)", border: "1px solid oklch(1 0 0 / 12%)" }}>
-                  <div className="px-4 py-3 border-b" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
-                    <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.5 0.015 240)" }}>Ügyfél váltás</p>
+            {/* Client Switcher – only for super_admin */}
+            {isSuperAdmin && (
+              <div className="relative">
+                <button
+                  onClick={() => { setShowProfileSwitcher((v) => !v); setShowNotifs(false); setShowUserMenu(false); }}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all border"
+                  style={{
+                    background: showProfileSwitcher ? "oklch(0.6 0.2 255 / 15%)" : "oklch(0.22 0.02 255)",
+                    borderColor: showProfileSwitcher ? "oklch(0.6 0.2 255 / 40%)" : "oklch(1 0 0 / 8%)"
+                  }}
+                >
+                  <div className="w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold text-white" style={{ background: activeProfile.color }}>
+                    {activeProfile.initials}
                   </div>
+                  <div className="text-left">
+                    <p className="text-xs font-bold leading-none max-w-28 truncate" style={{ color: "oklch(0.92 0.008 240)", fontFamily: "Sora, sans-serif" }}>
+                      {activeProfile.name}
+                    </p>
+                    <p className="text-xs leading-none mt-0.5" style={{ color: "oklch(0.5 0.015 240)" }}>Aktív ügyfél</p>
+                  </div>
+                  <ChevronDown size={12} style={{ color: "oklch(0.55 0.015 240)" }} />
+                </button>
 
-                  {/* Pending confirmation */}
-                  {pendingProfile && (
-                    <div className="mx-3 my-2 p-3 rounded-lg border" style={{ background: "oklch(0.75 0.18 75 / 8%)", borderColor: "oklch(0.75 0.18 75 / 30%)" }}>
-                      <div className="flex items-start gap-2 mb-2">
-                        <ShieldAlert size={14} style={{ color: "oklch(0.75 0.18 75)", flexShrink: 0, marginTop: 1 }} />
-                        <p className="text-xs" style={{ color: "oklch(0.85 0.01 240)" }}>
-                          Biztosan átváltasz erre: <strong>{pendingProfile.name}</strong>? Minden következő művelet ennek az ügyfélnek a kontextusában fut.
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        <button onClick={confirmProfileSwitch} className="flex-1 py-1.5 rounded-lg text-xs font-semibold text-white" style={{ background: "oklch(0.6 0.2 255)" }}>
-                          Igen, váltás
-                        </button>
-                        <button onClick={cancelProfileSwitch} className="flex-1 py-1.5 rounded-lg text-xs font-semibold" style={{ background: "oklch(0.28 0.02 255)", color: "oklch(0.7 0.015 240)" }}>
-                          Mégse
-                        </button>
-                      </div>
+                {/* Client Dropdown */}
+                {showProfileSwitcher && (
+                  <div className="absolute right-0 top-12 w-72 rounded-xl shadow-2xl z-50 overflow-hidden" style={{ background: "oklch(0.18 0.022 255)", border: "1px solid oklch(1 0 0 / 12%)" }}>
+                    <div className="px-4 py-3 border-b" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
+                      <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.5 0.015 240)" }}>Ügyfél váltás</p>
                     </div>
-                  )}
 
-                  <div className="py-1 max-h-60 overflow-y-auto">
-                    {profiles.map((profile) => (
-                      <button
-                        key={profile.id}
-                        onClick={() => handleProfileSwitchRequest(profile.id)}
-                        className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors"
-                        style={{ background: activeProfile.id === profile.id ? "oklch(0.6 0.2 255 / 10%)" : pendingProfileId === profile.id ? "oklch(0.75 0.18 75 / 8%)" : "transparent" }}
-                        onMouseEnter={(e) => { if (activeProfile.id !== profile.id && pendingProfileId !== profile.id) e.currentTarget.style.background = "oklch(1 0 0 / 4%)"; }}
-                        onMouseLeave={(e) => { if (activeProfile.id !== profile.id && pendingProfileId !== profile.id) e.currentTarget.style.background = "transparent"; }}
-                      >
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style={{ background: profile.color }}>
-                          {profile.initials}
+                    {/* Pending confirmation */}
+                    {pendingProfile && (
+                      <div className="mx-3 my-2 p-3 rounded-lg border" style={{ background: "oklch(0.75 0.18 75 / 8%)", borderColor: "oklch(0.75 0.18 75 / 30%)" }}>
+                        <div className="flex items-start gap-2 mb-2">
+                          <ShieldAlert size={14} style={{ color: "oklch(0.75 0.18 75)", flexShrink: 0, marginTop: 1 }} />
+                          <p className="text-xs" style={{ color: "oklch(0.85 0.01 240)" }}>
+                            Biztosan átváltasz erre: <strong>{pendingProfile.name}</strong>? Minden következő művelet ennek az ügyfélnek a kontextusában fut.
+                          </p>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold truncate" style={{ color: "oklch(0.92 0.008 240)" }}>{profile.name}</p>
-                          <p className="text-xs truncate" style={{ color: "oklch(0.55 0.015 240)" }}>{profile.industry}</p>
+                        <div className="flex gap-2">
+                          <button onClick={confirmProfileSwitch} className="flex-1 py-1.5 rounded-lg text-xs font-semibold text-white" style={{ background: "oklch(0.6 0.2 255)" }}>
+                            Igen, váltás
+                          </button>
+                          <button onClick={cancelProfileSwitch} className="flex-1 py-1.5 rounded-lg text-xs font-semibold" style={{ background: "oklch(0.28 0.02 255)", color: "oklch(0.7 0.015 240)" }}>
+                            Mégse
+                          </button>
                         </div>
-                        {activeProfile.id === profile.id && (
-                          <CheckCircle size={14} style={{ color: "oklch(0.65 0.18 165)", flexShrink: 0 }} />
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                  {isSuperAdmin && (
+                      </div>
+                    )}
+
+                    <div className="py-1 max-h-60 overflow-y-auto">
+                      {profiles.map((profile) => (
+                        <button
+                          key={profile.id}
+                          onClick={() => handleProfileSwitchRequest(profile.id)}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors"
+                          style={{ background: activeProfile.id === profile.id ? "oklch(0.6 0.2 255 / 10%)" : pendingProfileId === profile.id ? "oklch(0.75 0.18 75 / 8%)" : "transparent" }}
+                          onMouseEnter={(e) => { if (activeProfile.id !== profile.id && pendingProfileId !== profile.id) e.currentTarget.style.background = "oklch(1 0 0 / 4%)"; }}
+                          onMouseLeave={(e) => { if (activeProfile.id !== profile.id && pendingProfileId !== profile.id) e.currentTarget.style.background = "transparent"; }}
+                        >
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style={{ background: profile.color }}>
+                            {profile.initials}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold truncate" style={{ color: "oklch(0.92 0.008 240)" }}>{profile.name}</p>
+                            <p className="text-xs truncate" style={{ color: "oklch(0.55 0.015 240)" }}>{profile.industry}</p>
+                          </div>
+                          {activeProfile.id === profile.id && (
+                            <CheckCircle size={14} style={{ color: "oklch(0.65 0.18 165)", flexShrink: 0 }} />
+                          )}
+                        </button>
+                      ))}
+                    </div>
                     <div className="px-3 py-2 border-t" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
                       <Link href="/ugyfelek/uj" onClick={() => setShowProfileSwitcher(false)}
                         className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors w-full"
@@ -312,10 +357,118 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
                         + Új ügyfél hozzáadása
                       </Link>
                     </div>
-                  )}
-                </div>
-              )}
-            </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* User Profile Menu – for regular users */}
+            {!isSuperAdmin && (
+              <div className="relative">
+                <button
+                  onClick={() => { setShowUserMenu((v) => !v); setShowNotifs(false); }}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all border"
+                  style={{
+                    background: showUserMenu ? "oklch(0.6 0.2 255 / 15%)" : "oklch(0.22 0.02 255)",
+                    borderColor: showUserMenu ? "oklch(0.6 0.2 255 / 40%)" : "oklch(1 0 0 / 8%)"
+                  }}
+                >
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{ background: "oklch(0.6 0.2 255)" }}>
+                    {(user?.name ?? user?.email ?? "?")[0].toUpperCase()}
+                  </div>
+                  <div className="text-left">
+                    <p className="text-xs font-bold leading-none max-w-28 truncate" style={{ color: "oklch(0.92 0.008 240)", fontFamily: "Sora, sans-serif" }}>
+                      {user?.name ?? "Felhasználó"}
+                    </p>
+                    <p className="text-xs leading-none mt-0.5" style={{ color: "oklch(0.5 0.015 240)" }}>Saját fiók</p>
+                  </div>
+                  <ChevronDown size={12} style={{ color: "oklch(0.55 0.015 240)" }} />
+                </button>
+
+                {/* User Profile Dropdown */}
+                {showUserMenu && (
+                  <div className="absolute right-0 top-12 w-72 rounded-xl shadow-2xl z-50 overflow-hidden" style={{ background: "oklch(0.18 0.022 255)", border: "1px solid oklch(1 0 0 / 12%)" }}>
+                    {/* Header */}
+                    <div className="px-4 py-3 border-b" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white" style={{ background: "linear-gradient(135deg, oklch(0.6 0.2 255), oklch(0.55 0.22 280))" }}>
+                          {(user?.name ?? user?.email ?? "?")[0].toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold" style={{ color: "oklch(0.92 0.008 240)", fontFamily: "Sora, sans-serif" }}>{user?.name ?? "Felhasználó"}</p>
+                          <p className="text-xs" style={{ color: "oklch(0.5 0.015 240)" }}>{user?.email}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Name edit */}
+                    <div className="px-4 py-3 border-b" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
+                      <p className="text-xs font-semibold mb-2 flex items-center gap-1.5" style={{ color: "oklch(0.55 0.015 240)" }}>
+                        <User size={11} /> Megjelenítési név
+                      </p>
+                      {editingName ? (
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={newName}
+                            onChange={(e) => setNewName(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && handleSaveName()}
+                            className="flex-1 px-2 py-1.5 rounded-lg text-xs outline-none"
+                            style={{ background: "oklch(0.25 0.02 255)", border: "1px solid oklch(0.6 0.2 255 / 40%)", color: "oklch(0.92 0.008 240)" }}
+                            placeholder="Teljes neved"
+                            autoFocus
+                          />
+                          <button onClick={handleSaveName} disabled={updateSelf.isPending} className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-white" style={{ background: "oklch(0.6 0.2 255)" }}>
+                            {updateSelf.isPending ? "..." : "Ment"}
+                          </button>
+                          <button onClick={() => setEditingName(false)} className="px-2.5 py-1.5 rounded-lg text-xs" style={{ background: "oklch(0.28 0.02 255)", color: "oklch(0.7 0.015 240)" }}>X</button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => { setNewName(user?.name ?? ""); setEditingName(true); }}
+                          className="flex items-center gap-2 w-full px-2.5 py-1.5 rounded-lg text-xs transition-colors"
+                          style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.75 0.015 240)" }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = "oklch(0.28 0.03 255)")}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = "oklch(0.22 0.02 255)")}
+                        >
+                          <UserCog size={12} />
+                          {user?.name ? "Név szerkesztése" : "Név hozzáadása"}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Password reminder */}
+                    <div className="px-3 py-2 border-b" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
+                      <Link
+                        href="/elfelejtett-jelszo"
+                        onClick={() => setShowUserMenu(false)}
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors w-full"
+                        style={{ color: "oklch(0.65 0.015 240)" }}
+                        onMouseEnter={(e: any) => (e.currentTarget.style.background = "oklch(0.28 0.03 255)")}
+                        onMouseLeave={(e: any) => (e.currentTarget.style.background = "transparent")}
+                      >
+                        <KeyRound size={12} />
+                        Jelszó visszaállítása
+                      </Link>
+                    </div>
+
+                    {/* Logout */}
+                    <div className="px-3 py-2">
+                      <button
+                        onClick={() => { logout(); setShowUserMenu(false); }}
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors w-full"
+                        style={{ color: "oklch(0.65 0.18 25)" }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = "oklch(0.65 0.18 25 / 10%)")}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                      >
+                        <LogOut size={12} />
+                        Kijelentkezés
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </header>
 

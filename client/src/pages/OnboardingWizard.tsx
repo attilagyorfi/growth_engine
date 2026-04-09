@@ -230,6 +230,49 @@ export default function OnboardingWizard() {
   const { lang } = useLanguage();
   const { user: appUser } = useAppAuth();
 
+  // Draft restore banner
+  const [showDraftBanner, setShowDraftBanner] = useState<boolean>(() => {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (!raw) return false;
+      const draft = JSON.parse(raw) as Partial<WizardData>;
+      // Only show banner if there's meaningful data (not just empty fields)
+      return !!(draft.companyName || draft.website || draft.industry);
+    } catch {
+      return false;
+    }
+  });
+
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setShowDraftBanner(false);
+    setStep(1);
+    setData({
+      profileId: appUser?.profileId || nanoid(),
+      sessionId: nanoid(),
+      companyName: "",
+      website: "",
+      industry: "",
+      companySize: "",
+      description: "",
+      services: [],
+      targetAudience: "",
+      competitors: [],
+      toneOfVoice: "",
+      communicationStyle: "",
+      brandKeywords: [],
+      avoidWords: [],
+      brandColors: [],
+      uploadedAssets: [],
+      monthlyBudget: "",
+      teamSize: "",
+      currentChannels: [],
+      mainGoal: "",
+      timeframe: "",
+      wowOutput: null,
+    });
+  };
+
   // Restore step from localStorage
   const [step, setStep] = useState<number>(() => {
     try {
@@ -573,6 +616,31 @@ export default function OnboardingWizard() {
 
       <div className="max-w-3xl mx-auto px-4 py-8">
         <StepIndicator current={step} total={4} />
+
+        {/* Draft Restore Banner */}
+        {showDraftBanner && (
+          <div className="mb-6 flex items-center gap-3 px-4 py-3 rounded-xl border" style={{ background: "oklch(0.75 0.18 75 / 8%)", borderColor: "oklch(0.75 0.18 75 / 30%)" }}>
+            <span className="text-lg">&#128221;</span>
+            <div className="flex-1">
+              <p className="text-sm font-semibold" style={{ color: "oklch(0.85 0.01 240)" }}>Folytatod a korábbi kitöltést?</p>
+              <p className="text-xs" style={{ color: "oklch(0.6 0.015 240)" }}>Találtunk egy korábban megkezdett űrlapot. Folytathatod onnan, ahol abbahagytad.</p>
+            </div>
+            <button
+              onClick={() => setShowDraftBanner(false)}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
+              style={{ background: "oklch(0.6 0.2 255)" }}
+            >
+              Folytatás
+            </button>
+            <button
+              onClick={handleDiscardDraft}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium"
+              style={{ background: "oklch(0.28 0.02 255)", color: "oklch(0.65 0.015 240)" }}
+            >
+              Újrakezdjünk
+            </button>
+          </div>
+        )}
 
         {/* Step Tour Overlay */}
         {showTour && <StepTour step={step} onClose={() => setShowTour(false)} />}

@@ -32,6 +32,8 @@ export default function Strategy() {
   const [strategyContext, setStrategyContext] = useState("");
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
   const [autoGenerateTriggered, setAutoGenerateTriggered] = useState(false);
+  const [showCompare, setShowCompare] = useState(false);
+  const [compareVersionId, setCompareVersionId] = useState<string | null>(null);
 
   const { data: versions = [], isLoading } = trpc.strategyVersions.list.useQuery(
     { profileId: activeProfile.id },
@@ -112,6 +114,12 @@ export default function Strategy() {
               <Button variant="outline" onClick={() => setSelectedVersionId(null)} className="gap-2">
                 <Star className="w-4 h-4" />
                 Aktív verzió
+              </Button>
+            )}
+            {versions.length >= 2 && (
+              <Button variant="outline" onClick={() => setShowCompare(true)} className="gap-2">
+                <BarChart2 className="w-4 h-4" />
+                Összehasonlítás
               </Button>
             )}
             <Button onClick={() => setShowGenerate(true)} className="gap-2">
@@ -452,6 +460,145 @@ export default function Strategy() {
           </Card>
         )}
       </div>
+
+      {/* Compare Dialog */}
+      <Dialog open={showCompare} onOpenChange={setShowCompare}>
+        <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BarChart2 className="w-5 h-5 text-primary" />
+              Stratégia verziók összehasonlítása
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {/* Version selector for comparison */}
+            <div className="flex items-center gap-4">
+              <div className="flex-1">
+                <p className="text-xs font-medium text-muted-foreground mb-1">Bal oldal (A verzió)</p>
+                <select
+                  className="w-full border rounded-lg px-3 py-2 text-sm bg-background"
+                  value={selectedVersionId ?? activeVersion?.id ?? ""}
+                  onChange={e => setSelectedVersionId(e.target.value)}
+                >
+                  {versions.map(v => (
+                    <option key={v.id} value={v.id}>{v.title}{v.isActive ? " (★ Aktív)" : ""}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="text-muted-foreground font-bold">vs</div>
+              <div className="flex-1">
+                <p className="text-xs font-medium text-muted-foreground mb-1">Jobb oldal (B verzió)</p>
+                <select
+                  className="w-full border rounded-lg px-3 py-2 text-sm bg-background"
+                  value={compareVersionId ?? ""}
+                  onChange={e => setCompareVersionId(e.target.value)}
+                >
+                  <option value="">Válassz verziót...</option>
+                  {versions.filter(v => v.id !== (selectedVersionId ?? activeVersion?.id)).map(v => (
+                    <option key={v.id} value={v.id}>{v.title}{v.isActive ? " (★ Aktív)" : ""}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Side by side comparison */}
+            {compareVersionId && (() => {
+              const vA = versions.find(v => v.id === (selectedVersionId ?? activeVersion?.id));
+              const vB = versions.find(v => v.id === compareVersionId);
+              if (!vA || !vB) return null;
+
+              const sections = [
+                { label: "Stratégiai összefoglaló", keyA: vA.executiveSummary as string, keyB: vB.executiveSummary as string },
+                {
+                  label: "Gyors győzelmek",
+                  keyA: Array.isArray(vA.quickWins) ? (vA.quickWins as any[]).map((w: any) => w.title).join("\n") : "",
+                  keyB: Array.isArray(vB.quickWins) ? (vB.quickWins as any[]).map((w: any) => w.title).join("\n") : "",
+                },
+                {
+                  label: "Kampány prioritások",
+                  keyA: Array.isArray(vA.campaignPriorities) ? (vA.campaignPriorities as string[]).join("\n") : "",
+                  keyB: Array.isArray(vB.campaignPriorities) ? (vB.campaignPriorities as string[]).join("\n") : "",
+                },
+                {
+                  label: "Csatorna stratégia",
+                  keyA: Array.isArray(vA.channelStrategy) ? (vA.channelStrategy as any[]).map((c: any) => `${c.channel} (${c.priority}/5)`).join("\n") : "",
+                  keyB: Array.isArray(vB.channelStrategy) ? (vB.channelStrategy as any[]).map((c: any) => `${c.channel} (${c.priority}/5)`).join("\n") : "",
+                },
+              ];
+
+              return (
+                <div className="space-y-4">
+                  {/* Header row */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-3 rounded-lg border bg-primary/5 border-primary/20">
+                      <p className="text-sm font-bold text-primary">{vA.title}</p>
+                      {vA.isActive && <Badge variant="default" className="text-xs mt-1">Aktív</Badge>}
+                    </div>
+                    <div className="p-3 rounded-lg border bg-muted/50">
+                      <p className="text-sm font-bold">{vB.title}</p>
+                      {vB.isActive && <Badge variant="default" className="text-xs mt-1">Aktív</Badge>}
+                    </div>
+                  </div>
+
+                  {/* Comparison sections */}
+                  {sections.map((section, i) => (
+                    <div key={i}>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">{section.label}</p>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-3 rounded-lg border bg-primary/5 border-primary/10 text-sm whitespace-pre-line">
+                          {section.keyA || <span className="text-muted-foreground italic">Nincs adat</span>}
+                        </div>
+                        <div className="p-3 rounded-lg border bg-muted/30 text-sm whitespace-pre-line">
+                          {section.keyB || <span className="text-muted-foreground italic">Nincs adat</span>}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Action buttons */}
+                  <div className="flex gap-2 pt-2 border-t">
+                    {!vB.isActive && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-2"
+                        onClick={() => {
+                          setActiveMutation.mutate({ profileId: activeProfile.id, versionId: vB.id });
+                          setShowCompare(false);
+                        }}
+                      >
+                        <Star className="w-3 h-3" />
+                        B verzió aktíválása
+                      </Button>
+                    )}
+                    {!vA.isActive && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-2"
+                        onClick={() => {
+                          setActiveMutation.mutate({ profileId: activeProfile.id, versionId: vA.id });
+                          setShowCompare(false);
+                        }}
+                      >
+                        <Star className="w-3 h-3" />
+                        A verzió aktíválása
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {!compareVersionId && (
+              <div className="text-center py-8 text-muted-foreground">
+                <BarChart2 className="w-8 h-8 mx-auto mb-2" />
+                <p className="text-sm">Válassz egy B verziót az összehasonlításhoz</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Generate Dialog */}
       <Dialog open={showGenerate} onOpenChange={setShowGenerate}>

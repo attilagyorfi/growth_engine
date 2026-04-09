@@ -89,6 +89,7 @@ type ContentTemplate = {
   platform: Platform;
   contentType: string;
   color: string;
+  pillar?: string; // optional: which content pillar this template belongs to
 };
 
 const CONTENT_TEMPLATES: ContentTemplate[] = [
@@ -121,6 +122,7 @@ export default function ContentStudio() {
   const [newPost, setNewPost] = useState<Partial<Post>>({ platform: "linkedin", status: "draft", hashtags: [] });
   const [additionalContext, setAdditionalContext] = useState("");
   const [generatingContent, setGeneratingContent] = useState(false);
+  const [activePillarFilter, setActivePillarFilter] = useState<string | null>(null);
 
   const utils = trpc.useUtils();
   const { data: posts = [], isLoading } = trpc.content.list.useQuery(
@@ -542,19 +544,33 @@ export default function ContentStudio() {
             </div>
           )}
 
-          {/* Content pillars from intelligence */}
+          {/* Content pillars filter */}
           {contentPillars.length > 0 && (
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <Layers size={14} style={{ color: "oklch(0.65 0.18 165)" }} />
-                <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.65 0.015 240)" }}>Tartalmi pillérek</p>
+                <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.65 0.015 240)" }}>Szűrés pillér szerint</p>
               </div>
               <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setActivePillarFilter(null)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
+                  style={{
+                    background: activePillarFilter === null ? "oklch(0.6 0.2 255 / 20%)" : "oklch(0.22 0.02 255)",
+                    color: activePillarFilter === null ? "oklch(0.7 0.18 255)" : "oklch(0.55 0.015 240)",
+                    border: activePillarFilter === null ? "1px solid oklch(0.6 0.2 255 / 40%)" : "1px solid oklch(0.3 0.02 255)"
+                  }}>
+                  Összes
+                </button>
                 {contentPillars.map(pillar => (
                   <button key={pillar}
-                    onClick={() => { setNewPost(p => ({ ...p, pillar })); openFreeCreate(); }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all hover:opacity-80"
-                    style={{ background: "oklch(0.65 0.18 165 / 15%)", color: "oklch(0.65 0.18 165)", border: "1px solid oklch(0.65 0.18 165 / 30%)" }}>
+                    onClick={() => setActivePillarFilter(activePillarFilter === pillar ? null : pillar)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
+                    style={{
+                      background: activePillarFilter === pillar ? "oklch(0.65 0.18 165 / 20%)" : "oklch(0.22 0.02 255)",
+                      color: activePillarFilter === pillar ? "oklch(0.65 0.18 165)" : "oklch(0.55 0.015 240)",
+                      border: activePillarFilter === pillar ? "1px solid oklch(0.65 0.18 165 / 40%)" : "1px solid oklch(0.3 0.02 255)"
+                    }}>
                     <Layers size={11} /> {pillar}
                   </button>
                 ))}
@@ -568,12 +584,18 @@ export default function ContentStudio() {
               <div className="flex items-center gap-2">
                 <Sparkles size={14} style={{ color: "oklch(0.75 0.18 75)" }} />
                 <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.65 0.015 240)" }}>
-                  {activeStrategy ? "Stratégiára épülő tartalomtípusok" : "Javasolt tartalomtípusok"}
+                  {activePillarFilter ? `„${activePillarFilter}” pillér tartalmai` : activeStrategy ? "Stratégiára épülő tartalomtípusok" : "Javasolt tartalomtípusok"}
                 </p>
               </div>
+              {activePillarFilter && (
+                <button onClick={() => setActivePillarFilter(null)} className="text-xs" style={{ color: "oklch(0.55 0.015 240)" }}>Szűrő törlése ×</button>
+              )}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {suggestedTemplates.map(template => (
+              {(activePillarFilter
+                ? suggestedTemplates.filter(t => t.pillar === activePillarFilter)
+                : suggestedTemplates
+              ).map(template => (
                 <button key={template.id} onClick={() => openTemplate(template)}
                   className="rounded-xl border p-4 text-left transition-all hover:scale-[1.02] group"
                   style={{ background: cardBg, borderColor: border }}

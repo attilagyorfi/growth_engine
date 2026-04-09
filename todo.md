@@ -290,3 +290,23 @@
 - [x] WizardData mentése localStorage-ba minden lépés után
 - [x] Oldal betöltéskor localStorage-ból visszatöltés
 - [x] Onboarding befejezésekor localStorage törlése
+
+## Sprint 9 – Profil, Téma, Nyelv, Regisztráció, Pillérek, Összehasonlítás
+
+### Profil dropdown
+- [x] "Aktív ügyfél" váltó eltávolítása nem-admin felhasználóknál
+- [x] Saját profil beállítások: felhasználónév szerkesztés, jelszó emlékeztető
+- [x] Profil beállítások modal létrehozása a DashboardLayout-ban
+
+### Téma és nyelv
+- [x] Dark/light mode kapcsoló működővé tétele (ThemeProvider switchable=true)
+- [x] Nyelvválasztó (HU/EN) vizualizáció javítása (az állapot váltódik, szövegek hardcoded)
+
+### Regisztráció
+- [x] Előfizetési opciók választó a regisztrációs folyamatban (Free, Starter, Pro)
+- [x] register procedure: subscriptionPlan mező mentése
+
+### Sprint 8 javaslatok
+- [x] Onboarding visszatöltés banner: "Folytatod a korábbi kitöltést?" + törlés gomb
+- [x] Content Stúdió pillér szűrés: pillérenként szűrés a kártyákon
+- [x] Stratégia verzió összehasonlítás: két verzió egymás melletti nézete

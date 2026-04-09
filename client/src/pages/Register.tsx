@@ -3,13 +3,56 @@ import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Zap, Loader2, Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { Zap, Loader2, Eye, EyeOff, CheckCircle2, ArrowLeft, Sparkles, Rocket, Building2, Check } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { cn } from "@/lib/utils";
+
+const PLANS = [
+  {
+    id: "free",
+    name: "Ingyenes",
+    price: "0 Ft",
+    period: "/hó",
+    icon: Sparkles,
+    color: "oklch(0.65 0.15 240)",
+    description: "Ismerkedj meg a platformmal",
+    features: ["1 vállalkozás profil", "AI stratégia (1x/hó)", "5 tartalom/hó", "Alapanalitika"],
+    cta: "Ingyenes próba",
+    popular: false,
+  },
+  {
+    id: "starter",
+    name: "Starter",
+    price: "29 900 Ft",
+    period: "/hó",
+    icon: Rocket,
+    color: "oklch(0.6 0.2 255)",
+    description: "Kis vállalkozásoknak",
+    features: ["1 vállalkozás profil", "Korlátlan AI stratégia", "50 tartalom/hó", "Email kampányok", "Lead kezelés"],
+    cta: "Starter indítása",
+    popular: true,
+  },
+  {
+    id: "pro",
+    name: "Pro",
+    price: "59 900 Ft",
+    period: "/hó",
+    icon: Building2,
+    color: "oklch(0.7 0.18 165)",
+    description: "Növekvő vállalkozásoknak",
+    features: ["3 vállalkozás profil", "Korlátlan minden", "AI képgenerálás", "Prioritásos támogatás", "White-label lehetőség"],
+    cta: "Pro indítása",
+    popular: false,
+  },
+] as const;
+
+type PlanId = typeof PLANS[number]["id"];
 
 export default function Register() {
   const [, navigate] = useLocation();
+  const [step, setStep] = useState<"plan" | "form">("plan");
+  const [selectedPlan, setSelectedPlan] = useState<PlanId>("starter");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,17 +75,19 @@ export default function Register() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    register.mutate({ email, password, name: name || undefined });
+    register.mutate({ email, password, name: name || undefined, subscriptionPlan: selectedPlan });
   };
 
   const passwordStrength = password.length >= 8 ? (
     password.match(/[A-Z]/) && password.match(/[0-9]/) ? "erős" : "közepes"
   ) : password.length > 0 ? "gyenge" : "";
 
+  const activePlan = PLANS.find(p => p.id === selectedPlan)!;
+
   return (
     <div className="min-h-screen bg-[#0A0A0F] flex">
       {/* Left panel */}
-      <div className="hidden lg:flex flex-col justify-between w-1/2 p-12 bg-gradient-to-br from-violet-900/30 to-indigo-900/20 border-r border-white/5">
+      <div className="hidden lg:flex flex-col justify-between w-5/12 p-12 bg-gradient-to-br from-violet-900/30 to-indigo-900/20 border-r border-white/5">
         <Link href="/">
           <div className="flex items-center gap-2 cursor-pointer">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
@@ -52,11 +97,11 @@ export default function Register() {
           </div>
         </Link>
         <div>
-          <h2 className="text-4xl font-bold text-white mb-6 leading-tight">
+          <h2 className="text-3xl font-bold text-white mb-6 leading-tight">
             Indítsd el a marketing<br />
             <span className="text-violet-400">növekedésedet</span> ma
           </h2>
-          <div className="space-y-4">
+          <div className="space-y-3">
             {[
               "AI-alapú marketing stratégia 5 perc alatt",
               "Tartalom gyártás és ütemezés egy helyen",
@@ -65,7 +110,7 @@ export default function Register() {
             ].map((item) => (
               <div key={item} className="flex items-center gap-3 text-white/70">
                 <CheckCircle2 className="w-5 h-5 text-violet-400 shrink-0" />
-                <span>{item}</span>
+                <span className="text-sm">{item}</span>
               </div>
             ))}
           </div>
@@ -74,8 +119,8 @@ export default function Register() {
       </div>
 
       {/* Right panel */}
-      <div className="flex-1 flex items-center justify-center p-6">
-        <div className="w-full max-w-md">
+      <div className="flex-1 flex items-center justify-center p-6 overflow-y-auto">
+        <div className="w-full max-w-2xl py-8">
           {/* Mobile logo */}
           <Link href="/">
             <div className="flex items-center gap-2 mb-8 lg:hidden cursor-pointer">
@@ -86,14 +131,119 @@ export default function Register() {
             </div>
           </Link>
 
-          <Card className="bg-white/[0.03] border-white/[0.08]">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-2xl text-white">Ingyenes fiók létrehozása</CardTitle>
-              <CardDescription className="text-white/50">
-                Regisztrálj és 5 perc alatt készen áll a stratégiád
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+          {/* Step indicator */}
+          <div className="flex items-center gap-3 mb-8">
+            <div className={cn("flex items-center gap-2 text-sm font-medium", step === "plan" ? "text-violet-400" : "text-white/40")}>
+              <div className={cn("w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold", step === "plan" ? "bg-violet-600 text-white" : "bg-white/10 text-white/40")}>
+                {step === "form" ? <Check className="w-3 h-3" /> : "1"}
+              </div>
+              Csomag választás
+            </div>
+            <div className="flex-1 h-px bg-white/10" />
+            <div className={cn("flex items-center gap-2 text-sm font-medium", step === "form" ? "text-violet-400" : "text-white/40")}>
+              <div className={cn("w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold", step === "form" ? "bg-violet-600 text-white" : "bg-white/10 text-white/40")}>
+                2
+              </div>
+              Fiók adatok
+            </div>
+          </div>
+
+          {/* Step 1: Plan selection */}
+          {step === "plan" && (
+            <div>
+              <h1 className="text-2xl font-bold text-white mb-2">Válassz csomagot</h1>
+              <p className="text-white/50 mb-6 text-sm">Bármikor válthat csomagot. Az ingyenes csomaggal is elindulhat.</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                {PLANS.map((plan) => {
+                  const Icon = plan.icon;
+                  const isSelected = selectedPlan === plan.id;
+                  return (
+                    <button
+                      key={plan.id}
+                      onClick={() => setSelectedPlan(plan.id)}
+                      className={cn(
+                        "relative text-left p-5 rounded-xl border transition-all",
+                        isSelected
+                          ? "border-violet-500/60 bg-violet-500/10"
+                          : "border-white/[0.08] bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.04]"
+                      )}
+                    >
+                      {plan.popular && (
+                        <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-xs font-bold text-white bg-gradient-to-r from-violet-600 to-indigo-600">
+                          Legnépszerűbb
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${plan.color}22` }}>
+                          <Icon className="w-4 h-4" style={{ color: plan.color }} />
+                        </div>
+                        {isSelected && (
+                          <div className="w-5 h-5 rounded-full bg-violet-600 flex items-center justify-center">
+                            <Check className="w-3 h-3 text-white" />
+                          </div>
+                        )}
+                      </div>
+                      <p className="font-bold text-white text-base mb-0.5">{plan.name}</p>
+                      <p className="text-white/40 text-xs mb-3">{plan.description}</p>
+                      <div className="flex items-baseline gap-1 mb-4">
+                        <span className="text-xl font-bold text-white">{plan.price}</span>
+                        <span className="text-white/40 text-xs">{plan.period}</span>
+                      </div>
+                      <ul className="space-y-1.5">
+                        {plan.features.map((f) => (
+                          <li key={f} className="flex items-center gap-2 text-xs text-white/60">
+                            <Check className="w-3 h-3 text-violet-400 shrink-0" />
+                            {f}
+                          </li>
+                        ))}
+                      </ul>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <Button
+                onClick={() => setStep("form")}
+                className="w-full bg-violet-600 hover:bg-violet-500 text-white border-0 h-11"
+              >
+                Folytatás: {activePlan.name} csomag →
+              </Button>
+
+              <p className="text-center text-sm text-white/40 mt-4">
+                Már van fiókod?{" "}
+                <Link href="/bejelentkezes" className="text-violet-400 hover:text-violet-300 transition-colors">
+                  Jelentkezz be
+                </Link>
+              </p>
+            </div>
+          )}
+
+          {/* Step 2: Registration form */}
+          {step === "form" && (
+            <div>
+              <button
+                onClick={() => setStep("plan")}
+                className="flex items-center gap-2 text-white/50 hover:text-white/80 text-sm mb-6 transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" /> Vissza a csomag választáshoz
+              </button>
+
+              {/* Selected plan summary */}
+              <div className="flex items-center gap-3 p-4 rounded-xl border border-violet-500/30 bg-violet-500/8 mb-6">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${activePlan.color}22` }}>
+                  {(() => { const Icon = activePlan.icon; return <Icon className="w-4 h-4" style={{ color: activePlan.color }} />; })()}
+                </div>
+                <div>
+                  <p className="text-white font-semibold text-sm">{activePlan.name} csomag kiválasztva</p>
+                  <p className="text-white/50 text-xs">{activePlan.price}{activePlan.period} · {activePlan.description}</p>
+                </div>
+                <button onClick={() => setStep("plan")} className="ml-auto text-xs text-violet-400 hover:text-violet-300">Módosít</button>
+              </div>
+
+              <h1 className="text-2xl font-bold text-white mb-2">Fiók létrehozása</h1>
+              <p className="text-white/50 mb-6 text-sm">Regisztrálj és 5 perc alatt készen áll a stratégiád</p>
+
               <form onSubmit={handleSubmit} className="space-y-4">
                 {error && (
                   <Alert className="bg-red-500/10 border-red-500/20 text-red-400">
@@ -161,7 +311,7 @@ export default function Register() {
                   {register.isPending ? (
                     <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Regisztráció...</>
                   ) : (
-                    "Fiók létrehozása"
+                    `${activePlan.name} fiók létrehozása`
                   )}
                 </Button>
 
@@ -172,8 +322,8 @@ export default function Register() {
                   </Link>
                 </p>
               </form>
-            </CardContent>
-          </Card>
+            </div>
+          )}
 
           <p className="text-center text-xs text-white/20 mt-6">
             A regisztrációval elfogadod az{" "}

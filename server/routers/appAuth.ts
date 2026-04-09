@@ -45,6 +45,7 @@ export const appAuthRouter = router({
       email: z.string().email("Érvénytelen email cím"),
       password: z.string().min(8, "A jelszó legalább 8 karakter legyen"),
       name: z.string().min(1, "Add meg a neved").optional(),
+      subscriptionPlan: z.enum(["free", "starter", "pro"]).optional().default("free"),
     }))
     .mutation(async ({ input, ctx }) => {
       const existing = await getAppUserByEmail(input.email);
@@ -63,6 +64,7 @@ export const appAuthRouter = router({
         onboardingCompleted: false,
         profileId: null,
         active: true,
+        subscriptionPlan: input.subscriptionPlan ?? "free",
       });
       if (!user) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Regisztráció sikertelen" });
       const token = await signToken(user.id, user.role);
@@ -109,6 +111,22 @@ export const appAuthRouter = router({
       const user = await getAppUserById(payload.userId);
       if (!user || !user.active) return null;
       return { id: user.id, email: user.email, name: user.name, role: user.role, onboardingCompleted: user.onboardingCompleted, profileId: user.profileId };
+    }),
+
+  // ─── Saját profil frissítése (normál felhasználó) ─────────────────────────
+  updateSelf: publicProcedure
+    .input(z.object({
+      name: z.string().min(1, "A név nem lehet üres").max(100).optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const cookieHeader = ctx.req.headers.cookie ?? "";
+      const match = cookieHeader.match(/app_token=([^;]+)/);
+      if (!match) throw new TRPCError({ code: "UNAUTHORIZED" });
+      const payload = await verifyAppToken(match[1]);
+      if (!payload) throw new TRPCError({ code: "UNAUTHORIZED" });
+      const updated = await updateAppUser(payload.userId, { name: input.name ?? null });
+      if (!updated) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Frissítés sikertelen" });
+      return { success: true, name: updated.name };
     }),
 
   // ─── Onboarding befejezése ───────────────────────────────────────────────────
