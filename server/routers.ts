@@ -32,6 +32,7 @@ import {
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { storagePut } from "./storage";
+import { checkAiUsageLimit, recordAiUsage } from "./authDb";
 
 // Helper: verify that the profileId belongs to the current appUser (or user is super_admin)
 // If userProfileId is null (onboarding in progress), falls back to DB check via appUserId on the profile row
@@ -579,6 +580,11 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        // Feature gating: check AI usage limit
+        const usageCheck = await checkAiUsageLimit(ctx.appUser.id, ctx.appUser.subscriptionPlan ?? "free");
+        if (!usageCheck.allowed) {
+          throw new TRPCError({ code: "FORBIDDEN", message: `AI generálási limit elérve (${usageCheck.used}/${usageCheck.limit} ebben a hónapban). Frissítsd az előfizetésed a folytatáshoz.`, cause: { code: "AI_LIMIT_REACHED", used: usageCheck.used, limit: usageCheck.limit, plan: usageCheck.plan } });
+        }
         const context = JSON.stringify({
           company: input.profileData,
           websiteAnalysis: input.websiteAnalysis,
@@ -593,6 +599,8 @@ export const appRouter = router({
         });
         const content = response.choices[0]?.message?.content ?? "{}";
         const parsed = JSON.parse(typeof content === "string" ? content : JSON.stringify(content));
+        // Record AI usage
+        await recordAiUsage(ctx.appUser.id, "intelligence");
         return upsertCompanyIntelligence({
           id: nanoid(),
           profileId: input.profileId,
@@ -795,6 +803,11 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        // Feature gating: check AI usage limit
+        const usageCheck = await checkAiUsageLimit(ctx.appUser.id, ctx.appUser.subscriptionPlan ?? "free");
+        if (!usageCheck.allowed) {
+          throw new TRPCError({ code: "FORBIDDEN", message: `AI generálási limit elérve (${usageCheck.used}/${usageCheck.limit} ebben a hónapban). Frítsítsd az előfizetésed a folytatáshoz.`, cause: { code: "AI_LIMIT_REACHED", used: usageCheck.used, limit: usageCheck.limit, plan: usageCheck.plan } });
+        }
         const now = new Date();
         const currentDateStr = now.toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric" });
         const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -807,6 +820,8 @@ export const appRouter = router({
         });
         const content = response.choices[0]?.message?.content ?? "{}";
         const parsed = JSON.parse(typeof content === "string" ? content : JSON.stringify(content));
+        // Record AI usage
+        await recordAiUsage(ctx.appUser.id, "strategy");
         const existing = await getStrategyVersionsByProfile(input.profileId);
         const versionNumber = existing.length + 1;
         return upsertStrategyVersion({
@@ -977,7 +992,12 @@ export const appRouter = router({
         strategyContext: z.string().optional(),
         additionalContext: z.string().optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        // Feature gating: check AI usage limit
+        const usageCheck = await checkAiUsageLimit(ctx.appUser.id, ctx.appUser.subscriptionPlan ?? "free");
+        if (!usageCheck.allowed) {
+          throw new TRPCError({ code: "FORBIDDEN", message: `AI generálási limit elérve (${usageCheck.used}/${usageCheck.limit} ebben a hónapban). Frítsítsd az előfizetésed a folytatáshoz.`, cause: { code: "AI_LIMIT_REACHED", used: usageCheck.used, limit: usageCheck.limit, plan: usageCheck.plan } });
+        }
         const now = new Date();
         const currentDateStr = now.toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric" });
         const response = await invokeLLM({
@@ -988,7 +1008,27 @@ export const appRouter = router({
           response_format: { type: "json_schema", json_schema: { name: "post_content", strict: true, schema: { type: "object", properties: { title: { type: "string" }, content: { type: "string" }, hashtags: { type: "array", items: { type: "string" } }, imagePrompt: { type: "string" } }, required: ["title", "content", "hashtags", "imagePrompt"], additionalProperties: false } } },
         });
         const raw = response.choices[0]?.message?.content ?? "{}";
+        // Record AI usage
+        await recordAiUsage(ctx.appUser.id, "content");
         return JSON.parse(typeof raw === "string" ? raw : JSON.stringify(raw));
+      }),
+  }),
+
+  // ─── AI Usage Status ─────────────────────────────────────────────────────────
+  aiUsage: router({
+    status: appUserProcedure
+      .query(async ({ ctx }) => {
+        const plan = ctx.appUser.subscriptionPlan ?? "free";
+        const { AI_PLAN_LIMITS, getMonthlyAiUsageCount, getCurrentMonth } = await import("./authDb");
+        const limit = AI_PLAN_LIMITS[plan] ?? 3;
+        const used = limit === -1 ? 0 : await getMonthlyAiUsageCount(ctx.appUser.id, getCurrentMonth());
+        return {
+          plan,
+          used,
+          limit,
+          unlimited: limit === -1,
+          remaining: limit === -1 ? Infinity : Math.max(0, limit - used),
+        };
       }),
   }),
 });

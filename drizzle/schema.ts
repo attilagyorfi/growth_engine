@@ -631,6 +631,17 @@ export const recommendations = mysqlTable("recommendations", {
 export type Recommendation = typeof recommendations.$inferSelect;
 export type InsertRecommendation = typeof recommendations.$inferInsert;
 
+// ─── AI Usage Tracking ───────────────────────────────────────────────────────
+export const aiUsage = mysqlTable("ai_usage", {
+  id: int("id").autoincrement().primaryKey(),
+  appUserId: varchar("appUserId", { length: 64 }).notNull(),
+  action: varchar("action", { length: 64 }).notNull(), // 'intelligence' | 'strategy' | 'content' | 'image'
+  month: varchar("month", { length: 7 }).notNull(), // 'YYYY-MM'
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type AiUsage = typeof aiUsage.$inferSelect;
+export type InsertAiUsage = typeof aiUsage.$inferInsert;
+
 // ─── In-App Notifications ─────────────────────────────────────────────────────
 
 export const appNotifications = mysqlTable("app_notifications", {

@@ -11,7 +11,7 @@ import {
   LayoutDashboard, Users, BarChart3, Layers, TrendingUp, Settings,
   Zap, ChevronRight, Bell, X, CheckCircle, AlertCircle, Info, Mail,
   ChevronDown, ShieldAlert, LogOut, Shield, Megaphone, Sun, Moon,
-  User, KeyRound, UserCog,
+  User, KeyRound, UserCog, Crown, Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useData } from "@/contexts/DataContext";
@@ -112,6 +112,24 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
     if (!newName.trim()) return;
     updateSelf.mutate({ name: newName.trim() });
   };
+
+  const { data: aiUsageStatus } = trpc.aiUsage.status.useQuery(undefined, { staleTime: 60_000 });
+
+  const PLAN_LABELS: Record<string, string> = {
+    free: "Free",
+    starter: "Starter",
+    pro: "Pro",
+    agency: "Agency",
+  };
+  const PLAN_COLORS: Record<string, string> = {
+    free: "oklch(0.55 0.015 240)",
+    starter: "oklch(0.6 0.2 255)",
+    pro: "oklch(0.75 0.18 75)",
+    agency: "oklch(0.65 0.18 165)",
+  };
+  const planKey = user?.subscriptionPlan ?? "free";
+  const planLabel = PLAN_LABELS[planKey] ?? planKey;
+  const planColor = PLAN_COLORS[planKey] ?? PLAN_COLORS.free;
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "oklch(0.13 0.025 255)" }}>
@@ -397,12 +415,58 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
                         <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white" style={{ background: "linear-gradient(135deg, oklch(0.6 0.2 255), oklch(0.55 0.22 280))" }}>
                           {(user?.name ?? user?.email ?? "?")[0].toUpperCase()}
                         </div>
-                        <div>
+                        <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold" style={{ color: "oklch(0.92 0.008 240)", fontFamily: "Sora, sans-serif" }}>{user?.name ?? "Felhasználó"}</p>
                           <p className="text-xs" style={{ color: "oklch(0.5 0.015 240)" }}>{user?.email}</p>
+                          {/* Plan badge */}
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-semibold" style={{ background: `${planColor}20`, color: planColor, border: `1px solid ${planColor}40` }}>
+                              {planKey === "pro" || planKey === "agency" ? <Crown size={9} /> : <Sparkles size={9} />}
+                              {planLabel}
+                            </span>
+                            {aiUsageStatus && !aiUsageStatus.unlimited && (
+                              <span className="text-xs" style={{ color: "oklch(0.5 0.015 240)" }}>
+                                {aiUsageStatus.used}/{aiUsageStatus.limit} AI
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
+
+                    {/* AI Usage bar (for free/starter plans) */}
+                    {aiUsageStatus && !aiUsageStatus.unlimited && (
+                      <div className="px-4 py-2.5 border-b" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-xs font-medium" style={{ color: "oklch(0.65 0.015 240)" }}>AI generálások ebben a hónapban</span>
+                          <span className="text-xs font-bold" style={{ color: aiUsageStatus.remaining === 0 ? "oklch(0.65 0.18 25)" : "oklch(0.75 0.015 240)" }}>
+                            {aiUsageStatus.used}/{aiUsageStatus.limit}
+                          </span>
+                        </div>
+                        <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: "oklch(0.25 0.02 255)" }}>
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{
+                              width: `${Math.min(100, (aiUsageStatus.used / aiUsageStatus.limit) * 100)}%`,
+                              background: aiUsageStatus.remaining === 0
+                                ? "linear-gradient(90deg, oklch(0.65 0.18 25), oklch(0.7 0.2 30))"
+                                : "linear-gradient(90deg, oklch(0.6 0.2 255), oklch(0.55 0.22 280))"
+                            }}
+                          />
+                        </div>
+                        {aiUsageStatus.remaining === 0 && (
+                          <Link
+                            href="/regisztracio"
+                            onClick={() => setShowUserMenu(false)}
+                            className="flex items-center justify-center gap-1.5 mt-2 px-3 py-1.5 rounded-lg text-xs font-semibold w-full transition-all"
+                            style={{ background: "linear-gradient(135deg, oklch(0.6 0.2 255), oklch(0.55 0.22 280))", color: "white" }}
+                          >
+                            <Crown size={11} />
+                            Csomag frissítése
+                          </Link>
+                        )}
+                      </div>
+                    )}
 
                     {/* Name edit */}
                     <div className="px-4 py-3 border-b" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>

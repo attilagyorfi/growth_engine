@@ -2,9 +2,9 @@
  * G2A Growth Engine – Auth DB Helpers
  * Saját email+jelszó alapú autentikáció adatbázis segédfüggvényei
  */
-import { eq, and, gt } from "drizzle-orm";
+import { eq, and, gt, count } from "drizzle-orm";
 import { getDb } from "./db";
-import { appUsers, passwordResetTokens } from "../drizzle/schema";
+import { appUsers, passwordResetTokens, aiUsage } from "../drizzle/schema";
 import type { AppUser, InsertAppUser } from "../drizzle/schema";
 
 async function requireDb() {
@@ -122,4 +122,61 @@ export async function getOrCreateAppUserFromOAuth(oauthUser: {
 export async function markResetTokenUsed(id: string): Promise<void> {
   const db = await requireDb();
   await db.update(passwordResetTokens).set({ usedAt: new Date() }).where(eq(passwordResetTokens.id, id));
+}
+
+// ─── AI Usage Tracking ────────────────────────────────────────────────────────
+
+/** Plan limits (monthly AI generation counts). -1 = unlimited */
+export const AI_PLAN_LIMITS: Record<string, number> = {
+  free: 3,
+  starter: 20,
+  pro: -1,
+  agency: -1,
+};
+
+/** Returns the current month as 'YYYY-MM' */
+export function getCurrentMonth(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+/** Count AI usages for a user in the current month */
+export async function getMonthlyAiUsageCount(appUserId: string, month?: string): Promise<number> {
+  const db = await requireDb();
+  const m = month ?? getCurrentMonth();
+  const rows = await db
+    .select({ count: count() })
+    .from(aiUsage)
+    .where(and(eq(aiUsage.appUserId, appUserId), eq(aiUsage.month, m)));
+  return rows[0]?.count ?? 0;
+}
+
+/** Record an AI usage event */
+export async function recordAiUsage(appUserId: string, action: string): Promise<void> {
+  const db = await requireDb();
+  await db.insert(aiUsage).values({
+    appUserId,
+    action,
+    month: getCurrentMonth(),
+  });
+}
+
+/** Check if a user can perform an AI action (within plan limits) */
+export async function checkAiUsageLimit(appUserId: string, plan: string): Promise<{
+  allowed: boolean;
+  used: number;
+  limit: number;
+  plan: string;
+}> {
+  const limit = AI_PLAN_LIMITS[plan] ?? 3;
+  if (limit === -1) {
+    return { allowed: true, used: 0, limit: -1, plan };
+  }
+  const used = await getMonthlyAiUsageCount(appUserId);
+  return {
+    allowed: used < limit,
+    used,
+    limit,
+    plan,
+  };
 }

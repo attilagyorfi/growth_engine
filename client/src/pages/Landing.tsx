@@ -496,6 +496,128 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ─── Testimonials ──────────────────────────────────────────────────── */}
+      <section className={`py-24 px-6 ${isDark ? "" : "bg-gray-50"}`}>
+        <FadeIn>
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-14">
+              <Badge variant="outline" className="mb-4 text-violet-400 border-violet-400/30">
+                {lang === "hu" ? "Ügyfélvélemények" : "Testimonials"}
+              </Badge>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                {lang === "hu" ? "Amit ügyfeleink mondanak" : "What our clients say"}
+              </h2>
+              <p className={`text-lg max-w-2xl mx-auto ${subtext}`}>
+                {lang === "hu"
+                  ? "Valódi vállalkozók, valódi eredmények – lássuk, hogyan segített a G2A Growth Engine."
+                  : "Real businesses, real results – see how G2A Growth Engine made a difference."}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[
+                {
+                  name: "Kovács Péter",
+                  company: "TechStart Kft.",
+                  role: { hu: "Ügyvezető igazgató", en: "Managing Director" },
+                  avatar: "K",
+                  color: "oklch(0.6 0.2 255)",
+                  plan: "Pro",
+                  stars: 5,
+                  quote: {
+                    hu: "A G2A Growth Engine teljesen átalakította a marketing folyamatainkat. 3 hónap alatt 40%-kal nőtt az organikus forgalmunk, és az AI-generált stratégiák pontosan azt adták, amire szükségünk volt.",
+                    en: "G2A Growth Engine completely transformed our marketing processes. Our organic traffic grew by 40% in 3 months, and the AI-generated strategies gave us exactly what we needed."
+                  }
+                },
+                {
+                  name: "Nagy Eszter",
+                  company: "Bloom Design Studio",
+                  role: { hu: "Alapító & Kreatív vezető", en: "Founder & Creative Director" },
+                  avatar: "N",
+                  color: "oklch(0.65 0.18 165)",
+                  plan: "Starter",
+                  stars: 5,
+                  quote: {
+                    hu: "Egyedüli vállalkozóként nem volt időm és erőforrásaim profi marketing stratégiára. A G2A 5 perc alatt elkészítette a teljes brand stratégiámat – mintha egy egész marketing csapatom lenne.",
+                    en: "As a solo entrepreneur, I didn't have time or resources for professional marketing strategy. G2A created my entire brand strategy in 5 minutes – it's like having a whole marketing team."
+                  }
+                },
+                {
+                  name: "Horváth Gábor",
+                  company: "Meridian Solutions",
+                  role: { hu: "Marketing igazgató", en: "Marketing Director" },
+                  avatar: "H",
+                  color: "oklch(0.75 0.18 75)",
+                  plan: "Agency",
+                  stars: 5,
+                  quote: {
+                    hu: "Az ügyfélkezelés és a kampánytervezés soha nem volt ilyen hatékony. Az AI-alapú tartalom generálás hetente órákat spórol meg a csapatomnak, és az eredmények magukért beszélnek.",
+                    en: "Client management and campaign planning have never been this efficient. AI-based content generation saves my team hours every week, and the results speak for themselves."
+                  }
+                },
+              ].map((t, i) => (
+                <FadeIn key={i} delay={i * 0.1}>
+                  <div
+                    className={`rounded-2xl p-6 h-full flex flex-col ${
+                      isDark ? "bg-white/[0.04] border border-white/[0.08]" : "bg-white border border-gray-200 shadow-sm"
+                    }`}
+                  >
+                    {/* Stars */}
+                    <div className="flex gap-0.5 mb-4">
+                      {Array.from({ length: t.stars }).map((_, si) => (
+                        <svg key={si} className="w-4 h-4" fill="oklch(0.75 0.18 75)" viewBox="0 0 20 20">
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                      ))}
+                    </div>
+
+                    {/* Quote */}
+                    <blockquote className={`text-sm leading-relaxed flex-1 mb-5 ${isDark ? "text-white/70" : "text-gray-600"}`}>
+                      &ldquo;{t.quote[lang]}&rdquo;
+                    </blockquote>
+
+                    {/* Author */}
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
+                        style={{ background: `linear-gradient(135deg, ${t.color}, ${t.color}bb)` }}
+                      >
+                        {t.avatar}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-semibold ${isDark ? "text-white" : "text-gray-900"}`}>{t.name}</p>
+                        <p className={`text-xs truncate ${isDark ? "text-white/50" : "text-gray-500"}`}>{t.company} &middot; {t.role[lang]}</p>
+                      </div>
+                      <span
+                        className="text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
+                        style={{ background: `${t.color}20`, color: t.color }}
+                      >
+                        {t.plan}
+                      </span>
+                    </div>
+                  </div>
+                </FadeIn>
+              ))}
+            </div>
+
+            {/* Trust indicators */}
+            <div className="mt-12 flex flex-wrap justify-center gap-8">
+              {[
+                { value: "200+", label: { hu: "aktív vállalkozás", en: "active businesses" } },
+                { value: "4.9/5", label: { hu: "átlagos értékelés", en: "average rating" } },
+                { value: "98%", label: { hu: "elégedettségi arány", en: "satisfaction rate" } },
+                { value: "5 perc", label: { hu: "átlagos beállítási idő", en: "avg. setup time" } },
+              ].map((stat, i) => (
+                <div key={i} className="text-center">
+                  <p className="text-2xl font-bold text-violet-400">{stat.value}</p>
+                  <p className={`text-sm ${subtext}`}>{stat.label[lang]}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </FadeIn>
+      </section>
+
       {/* ─── CTA ─────────────────────────────────────────────────────────────── */}
       <section className="py-24 px-6">
         <FadeIn>

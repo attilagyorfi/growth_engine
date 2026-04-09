@@ -340,3 +340,24 @@
 ### Aloldalak képekkel
 - [x] Releváns képek az aloldalakra (Analytics, ContentStudio)
 - [x] Animációk az aloldalak UI elemeire (Dashboard, Strategy, Analytics, ContentStudio)
+
+## Sprint 11 – Email, Feature Gating, Testimonials
+
+### SMTP email integráció
+- [x] Resend API integráció a szerveren
+- [x] Jelszó-visszaállítás token generálás és DB mentés
+- [x] Email küldés jelszó-visszaállítási linkkel (Resend API)
+- [x] Jelszó-visszaállítás oldal (token validálás + új jelszó beállítás)
+- [x] "Jelszó emlékeztető" gomb a profil dropdownban valódi emailt küld
+
+### Feature gating
+- [x] AI generálás számláló DB-ben (ai_usage tábla)
+- [x] Free: 3 AI generálás/hó, Starter: 20/hó, Pro: korlátlan
+- [x] Limit eléréskor upgrade prompt megjelenítése (profil dropdown + CTA)
+- [x] Backend: checkAiUsageLimit + recordAiUsage helpers
+- [x] Frontend: csomag badge + AI usage progress bar a profil dropdownban
+
+### Főoldal testimonials
+- [x] Testimonials szekció a pricing szekció alá
+- [x] 3 ügyfélvélemény placeholder adatokkal (Kovács Péter, Nagy Eszter, Horváth Gábor)
+- [x] Animált megjelenés (framer-motion FadeIn)

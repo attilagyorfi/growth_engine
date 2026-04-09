@@ -7,6 +7,7 @@ import { TRPCError } from "@trpc/server";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 import { router, publicProcedure, protectedProcedure, appUserProcedure } from "../_core/trpc";
+import { sendPasswordResetEmail } from "../email";
 import {
   createAppUser, getAppUserByEmail, getAppUserById,
   updateAppUser, updateLastSignedIn, updateAppUserOnboarding,
@@ -110,7 +111,7 @@ export const appAuthRouter = router({
       if (!payload) return null;
       const user = await getAppUserById(payload.userId);
       if (!user || !user.active) return null;
-      return { id: user.id, email: user.email, name: user.name, role: user.role, onboardingCompleted: user.onboardingCompleted, profileId: user.profileId };
+      return { id: user.id, email: user.email, name: user.name, role: user.role, onboardingCompleted: user.onboardingCompleted, profileId: user.profileId, subscriptionPlan: user.subscriptionPlan };
     }),
 
   // ─── Saját profil frissítése (normál felhasználó) ─────────────────────────
@@ -148,8 +149,19 @@ export const appAuthRouter = router({
       const token = nanoid(48);
       const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
       await createPasswordResetToken({ id: nanoid(), userId: user.id, token, expiresAt });
-      // In production, send email. For now, log the token.
-      console.log(`[Password Reset] Token for ${input.email}: ${token}`);
+      // Send password reset email via Resend
+      const appUrl = process.env.APP_URL || "https://g2adash-wzybmh2r.manus.space";
+      const resetUrl = `${appUrl}/reset-password?token=${token}`;
+      const emailSent = await sendPasswordResetEmail({
+        to: user.email,
+        name: user.name,
+        resetUrl,
+      });
+      if (!emailSent) {
+        console.error(`[Password Reset] Email sending failed for ${input.email}`);
+      } else {
+        console.log(`[Password Reset] Email sent to ${input.email}`);
+      }
       return { success: true };
     }),
 

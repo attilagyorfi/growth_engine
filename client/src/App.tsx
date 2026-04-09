@@ -14,6 +14,7 @@ import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 // App pages (protected)
 import Dashboard from "./pages/Dashboard";
@@ -81,6 +82,8 @@ function Router() {
       <Route path="/bejelentkezes" component={() => <PublicOnlyRoute component={Login} />} />
       <Route path="/regisztracio" component={() => <PublicOnlyRoute component={Register} allowAuthenticated={true} />} />
       <Route path="/elfelejtett-jelszo" component={ForgotPassword} />
+      <Route path="/jelszo-visszaallitas" component={ResetPassword} />
+      <Route path="/reset-password" component={ResetPassword} />
 
       {/* Onboarding */}
       <Route path="/onboarding" component={() => <OnboardingRoute component={OnboardingWizard} />} />

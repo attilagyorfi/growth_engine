@@ -12,6 +12,7 @@ export type AppUser = {
   role: "super_admin" | "user";
   onboardingCompleted: boolean;
   profileId: string | null;
+  subscriptionPlan: string | null;
 };
 
 export function useAppAuth() {
