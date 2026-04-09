@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearch } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useProfile } from "@/contexts/ProfileContext";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -25,10 +26,12 @@ const URGENCY_CONFIG = {
 export default function Strategy() {
   const { activeProfile } = useProfile();
   const utils = trpc.useUtils();
+  const search = useSearch();
 
   const [showGenerate, setShowGenerate] = useState(false);
   const [strategyContext, setStrategyContext] = useState("");
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
+  const [autoGenerateTriggered, setAutoGenerateTriggered] = useState(false);
 
   const { data: versions = [], isLoading } = trpc.strategyVersions.list.useQuery(
     { profileId: activeProfile.id },
@@ -70,6 +73,19 @@ export default function Strategy() {
       toast.success("Stratégia archiválva.");
     },
   });
+
+  // Auto-open generate dialog when coming from onboarding with ?autoGenerate=true
+  useEffect(() => {
+    if (autoGenerateTriggered) return;
+    const params = new URLSearchParams(search);
+    if (params.get("autoGenerate") === "true" && !isLoading) {
+      setAutoGenerateTriggered(true);
+      // Only auto-open if there's no active strategy yet
+      if (!activeVersion) {
+        setShowGenerate(true);
+      }
+    }
+  }, [search, isLoading, activeVersion, autoGenerateTriggered]);
 
   const current = selectedVersionId
     ? versions.find(v => v.id === selectedVersionId)

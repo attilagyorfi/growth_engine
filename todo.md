@@ -273,3 +273,20 @@
 ### Admin CRM weboldal mező
 - [x] Admin CRM: weboldal mező a clientProfiles.website mezőből (nem appUsers-ből)
 - [x] getClientsCRM procedure: JOIN clientProfiles-szal a weboldal adatért
+
+## Sprint 8 – Auto-dialog, Dinamikus Pillérek, localStorage
+
+### Stratégia auto-dialog
+- [x] /strategia oldal: URL param vagy state alapán auto-megnyitás
+- [x] Ha nincs aktív stratégia és from=onboarding param van, dialog automatikusan nyílik
+- [x] WOW CTA "Stratégia" gomb: /strategia?autoGenerate=true URL-re navigál
+
+### Content Stúdió dinamikus pillérek
+- [x] "Javasolt" tab: mentett contentPillars lekérése az aktív profilból
+- [x] Pillérek alapán dinamikus tartalomtípus kártyák generálása
+- [x] Ha nincs mentett pillér, generikus kártyák maradnak fallback-ként
+
+### Onboarding localStorage mentés
+- [x] WizardData mentése localStorage-ba minden lépés után
+- [x] Oldal betöltéskor localStorage-ból visszatöltés
+- [x] Onboarding befejezésekor localStorage törlése

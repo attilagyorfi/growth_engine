@@ -183,13 +183,65 @@ export default function ContentStudio() {
     return [];
   }, [activeStrategy]);
 
-  // Filter templates based on strategy channels if available
+  // Full pillar data with descriptions for richer context
+  const contentPillarsFull = useMemo(() => {
+    const pillars = (activeProfile as any).contentPillars;
+    if (pillars && Array.isArray(pillars)) {
+      return pillars.filter((p: any) => p.active !== false).slice(0, 5);
+    }
+    return [];
+  }, [activeProfile]);
+
+  // Generate dynamic templates from content pillars if available
   const suggestedTemplates = useMemo(() => {
+    // If we have saved content pillars, generate pillar-specific templates
+    if (contentPillarsFull.length > 0) {
+      const PLATFORM_CYCLE: Platform[] = ["linkedin", "instagram", "facebook", "linkedin", "twitter"];
+      const CONTENT_TYPE_CYCLE = [
+        "Thought Leadership poszt",
+        "Vizuális / Infografika poszt",
+        "Közösségi kérdés / Poll",
+        "Tippek & Trükkök poszt",
+        "Iparági hír / Kommentár",
+      ];
+      const ICON_CYCLE = [
+        <BookOpen size={16} />,
+        <ImageIcon size={16} />,
+        <MessageSquare size={16} />,
+        <Zap size={16} />,
+        <BarChart2 size={16} />,
+      ];
+      const COLOR_CYCLE = [
+        "oklch(0.55 0.18 255)",
+        "oklch(0.65 0.22 20)",
+        "oklch(0.55 0.2 250)",
+        "oklch(0.55 0.18 255)",
+        "oklch(0.6 0.18 220)",
+      ];
+      // If we also have strategy channels, prefer those platforms
+      const preferredPlatforms = strategyChannels.length > 0
+        ? strategyChannels.map(ch => ch.split(" ")[0]?.toLowerCase() as Platform).filter(Boolean)
+        : PLATFORM_CYCLE;
+
+      return contentPillarsFull.map((pillar: any, i: number) => ({
+        id: `pillar-${i}`,
+        icon: ICON_CYCLE[i % ICON_CYCLE.length],
+        label: pillar.name ?? pillar,
+        description: pillar.description ?? `${pillar.name ?? pillar} témájú tartalom`,
+        platform: (preferredPlatforms[i % preferredPlatforms.length] ?? PLATFORM_CYCLE[i % PLATFORM_CYCLE.length]) as Platform,
+        contentType: CONTENT_TYPE_CYCLE[i % CONTENT_TYPE_CYCLE.length],
+        color: COLOR_CYCLE[i % COLOR_CYCLE.length],
+      } as ContentTemplate)).concat(
+        // Add 2-3 generic templates at the end for variety
+        CONTENT_TEMPLATES.slice(0, 3).filter(t => !contentPillarsFull.some((p: any) => (p.name ?? p) === t.label))
+      ).slice(0, 8);
+    }
+    // Fallback: filter templates based on strategy channels if available
     if (strategyChannels.length === 0) return CONTENT_TEMPLATES;
     return CONTENT_TEMPLATES.filter(t =>
       strategyChannels.some(ch => ch.includes(t.platform) || t.platform.includes(ch.split(" ")[0]?.toLowerCase() ?? ""))
     ).slice(0, 6).concat(CONTENT_TEMPLATES.filter(t => !strategyChannels.some(ch => ch.includes(t.platform))).slice(0, 2));
-  }, [strategyChannels]);
+  }, [contentPillarsFull, strategyChannels]);
 
   const handleApprove = async (post: Post) => {
     await updateMutation.mutateAsync({ id: post.id, status: "approved" });

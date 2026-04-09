@@ -3,7 +3,7 @@
  * 3-step wizard: Basic Data → Brand & Communication → Operations & WOW Moment
  */
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -187,11 +187,41 @@ function TagInput({ tags, onChange, placeholder, max = 10 }: {
   );
 }
 
+// ─── localStorage key ─────────────────────────────────────────────────────────
+const LS_KEY = "g2a_onboarding_draft";
+const LS_STEP_KEY = "g2a_onboarding_step";
+
+function loadDraft(): Partial<WizardData> | null {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as Partial<WizardData>;
+  } catch {
+    return null;
+  }
+}
+
+function saveDraft(data: WizardData) {
+  try {
+    // Don't persist wowOutput (large, regeneratable)
+    const { wowOutput, ...rest } = data;
+    localStorage.setItem(LS_KEY, JSON.stringify(rest));
+  } catch {
+    // localStorage might be full or unavailable
+  }
+}
+
+function clearDraft() {
+  try {
+    localStorage.removeItem(LS_KEY);
+    localStorage.removeItem(LS_STEP_KEY);
+  } catch {}
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function OnboardingWizard() {
   const [, navigate] = useLocation();
-  const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [isScraping, setIsScraping] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -200,31 +230,61 @@ export default function OnboardingWizard() {
   const { lang } = useLanguage();
   const { user: appUser } = useAppAuth();
 
-  const [data, setData] = useState<WizardData>(() => ({
-    // Use appUser's existing profileId if available, otherwise generate a new one
-    profileId: appUser?.profileId || nanoid(),
-    sessionId: nanoid(),
-    companyName: "",
-    website: "",
-    industry: "",
-    companySize: "",
-    description: "",
-    services: [],
-    targetAudience: "",
-    competitors: [],
-    toneOfVoice: "",
-    communicationStyle: "",
-    brandKeywords: [],
-    avoidWords: [],
-    brandColors: [],
-    uploadedAssets: [],
-    monthlyBudget: "",
-    teamSize: "",
-    currentChannels: [],
-    mainGoal: "",
-    timeframe: "",
-    wowOutput: null,
-  }));
+  // Restore step from localStorage
+  const [step, setStep] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem(LS_STEP_KEY);
+      const parsed = saved ? parseInt(saved, 10) : 1;
+      // Don't restore WOW step (4) on reload – restart from step 3
+      return parsed === 4 ? 3 : (parsed >= 1 && parsed <= 3 ? parsed : 1);
+    } catch {
+      return 1;
+    }
+  });
+
+  const [data, setData] = useState<WizardData>(() => {
+    const draft = loadDraft();
+    const defaultData: WizardData = {
+      profileId: appUser?.profileId || nanoid(),
+      sessionId: nanoid(),
+      companyName: "",
+      website: "",
+      industry: "",
+      companySize: "",
+      description: "",
+      services: [],
+      targetAudience: "",
+      competitors: [],
+      toneOfVoice: "",
+      communicationStyle: "",
+      brandKeywords: [],
+      avoidWords: [],
+      brandColors: [],
+      uploadedAssets: [],
+      monthlyBudget: "",
+      teamSize: "",
+      currentChannels: [],
+      mainGoal: "",
+      timeframe: "",
+      wowOutput: null,
+    };
+    if (draft) {
+      return { ...defaultData, ...draft, wowOutput: null };
+    }
+    return defaultData;
+  });
+
+  // Persist data to localStorage on every change
+  useEffect(() => {
+    saveDraft(data);
+  }, [data]);
+
+  // Persist step to localStorage
+  useEffect(() => {
+    if (step < 4) {
+      try { localStorage.setItem(LS_STEP_KEY, String(step)); } catch {}
+    }
+  }, [step]);
 
   const update = (fields: Partial<WizardData>) => setData(prev => ({ ...prev, ...fields }));
 
@@ -480,6 +540,7 @@ export default function OnboardingWizard() {
         console.error("Onboarding complete error:", e);
       }
     }
+    clearDraft();
     const target = destination ?? "/iranyitopult";
     navigate(target);
     toast.success(`${data.companyName} profil sikeresen létrehozva!`);
@@ -1018,7 +1079,7 @@ export default function OnboardingWizard() {
               <p className="text-gray-400 text-sm text-center mb-1">Mivel szeretnéd kezdeni?</p>
               <div className="grid grid-cols-3 gap-3">
                 <button
-                  onClick={() => handleFinish("/strategia")}
+                  onClick={() => handleFinish("/strategia?autoGenerate=true")}
                   className="flex flex-col items-center gap-2 px-4 py-4 rounded-xl font-medium text-white transition-all hover:opacity-90 text-sm"
                   style={{ background: "linear-gradient(135deg, oklch(0.5 0.18 255), oklch(0.45 0.16 255))" }}
                 >
