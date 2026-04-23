@@ -41,8 +41,8 @@ function AppRoute({ component: Component }: { component: React.ComponentType }) 
   const { user, loading } = useAppAuth();
   if (loading) return <DashboardLayoutSkeleton />;
   if (!user) return <Redirect to="/bejelentkezes" />;
-  // If onboarding not done, redirect to onboarding (except if already there)
-  if (!user.onboardingCompleted) return <Redirect to="/onboarding" />;
+  // Super_admin bypasses onboarding – goes straight to dashboard
+  if (!user.onboardingCompleted && user.role !== "super_admin") return <Redirect to="/onboarding" />;
   return <Component />;
 }
 
@@ -50,6 +50,8 @@ function OnboardingRoute({ component: Component }: { component: React.ComponentT
   const { user, loading } = useAppAuth();
   if (loading) return <DashboardLayoutSkeleton />;
   if (!user) return <Redirect to="/bejelentkezes" />;
+  // Super_admin never needs onboarding
+  if (user.role === "super_admin") return <Redirect to="/iranyitopult" />;
   if (user.onboardingCompleted) return <Redirect to="/iranyitopult" />;
   return <Component />;
 }
@@ -68,7 +70,8 @@ function PublicOnlyRoute({ component: Component, allowAuthenticated }: { compone
   const { user, loading } = useAppAuth();
   if (loading) return <DashboardLayoutSkeleton />;
   if (user && !allowAuthenticated) {
-    if (!user.onboardingCompleted) return <Redirect to="/onboarding" />;
+    // Super_admin bypasses onboarding
+    if (!user.onboardingCompleted && user.role !== "super_admin") return <Redirect to="/onboarding" />;
     return <Redirect to="/iranyitopult" />;
   }
   return <Component />;

@@ -16,11 +16,16 @@ export type AppUser = {
 };
 
 export function useAppAuth() {
-  const { data: user, isLoading: loading, refetch } = trpc.appAuth.me.useQuery();
+  const utils = trpc.useUtils();
+  // staleTime: 0 ensures the onboardingCompleted flag is always fresh from the server
+  // This prevents the guard from using stale cached data after login/logout
+  const { data: user, isLoading: loading, refetch } = trpc.appAuth.me.useQuery(undefined, { staleTime: 0 });
   const [, navigate] = useLocation();
 
   const logoutMutation = trpc.appAuth.logout.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Invalidate auth cache so guards re-evaluate immediately after logout
+      await utils.appAuth.me.invalidate();
       navigate("/bejelentkezes");
     },
   });

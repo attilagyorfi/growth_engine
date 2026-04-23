@@ -14,9 +14,12 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
+  const utils = trpc.useUtils();
 
   const login = trpc.appAuth.login.useMutation({
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
+      // Invalidate auth cache so AppRoute/OnboardingRoute guards get fresh data
+      await utils.appAuth.me.invalidate();
       if (!data.user.onboardingCompleted) {
         navigate("/onboarding");
       } else {

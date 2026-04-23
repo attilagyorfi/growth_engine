@@ -646,3 +646,32 @@
 - [x] Sprint 27: content.generateMonthlyPlan backend procedure (12-16 AI poszt egy hónapra)
 - [x] Sprint 27: "Teljes hónap AI-vel" gomb a Content Calendar fejlécében
 - [x] Sprint 27: Havi terv tartalmak scheduledAt mezővel mentve a naptárba
+
+
+## Sprint 28 – Onboarding újratervezés + Multi-project workspace
+
+### Super_admin bypass
+- [x] Super_admin fiók kihagyja az onboardingot (AppRoute guard: super_admin → dashboard)
+- [x] DB: info@g2amarketing.hu onboardingCompleted = 0 → reset, super_admin bypass guard-ban
+
+### Multi-project workspace (super_admin alatt)
+- [ ] DB séma: projects tábla (id, ownerId, name, website, industry, stb.)
+- [ ] Super_admin "Projektek" oldal: projekt lista + új projekt létrehozás
+- [ ] Projekt switcher a DashboardLayout-ban (super_admin-nak látható)
+- [ ] Minden modul (stratégia, tartalom, leads) projekt-szintű adatizolációval
+
+### Bővített onboarding wizard
+- [ ] 1. lépés: Alapadatok (cégnév, weboldal, iparág, cégméret)
+- [x] 1. lépés: Közösségi média profilok (LinkedIn, Facebook, Instagram, TikTok, YouTube URL-ek)
+- [x] 3. lépés: Prioritások kiválasztása (Eladás növelés, Brand ismertség, Lead generálás, Ügyfélmegtarás, Tartalom marketing, Közösség építés) + "Minden" gombb
+- [ ] 3. lépés: Csatornák és erőforrások (havi budget, csapatméret, meglévő csatornák)
+- [ ] Weboldal scraping: AI elemzi a megadott weboldalt (tartalom, USP, termékek/szolgáltatások)
+- [ ] Social media scraping: AI elemzi a megadott profilokat (hangnem, tartalom típusok, engagement)
+- [x] Iparági trend elemzés: AI iparági trendeket is beépít az elemzésbe
+- [ ] WOW kimenet: brand DNA + stratégia + content pillérek iparági trendekkel
+
+### Ingyenes tier teljes onboarding flow
+- [x] Onboarding végén automatikus stratégia generálás (minden tier)
+- [x] Onboarding végén automatikus havi tartalmi naptár generálás (minden tier)
+- [ ] Free tier: 3 AI gen limit NEM vonatkozik az onboarding flow-ra (külön kvóta)
+- [x] WOW screen: "Stratégiád kész", "Havi naptárad kész" státusz jelzők

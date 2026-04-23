@@ -33,6 +33,14 @@ interface WizardData {
   services: string[];
   targetAudience: string;
   competitors: string[];
+  // Step 1 – Social Media URLs
+  socialUrls: {
+    linkedin: string;
+    facebook: string;
+    instagram: string;
+    tiktok: string;
+    youtube: string;
+  };
   // Step 2 – Brand & Communication
   toneOfVoice: string;
   communicationStyle: string;
@@ -44,10 +52,14 @@ interface WizardData {
   monthlyBudget: string;
   teamSize: string;
   currentChannels: string[];
-  mainGoal: string;
+  marketingPriorities: string[]; // multi-select (replaces single mainGoal)
+  mainGoal: string; // kept for backward compat, set to first priority
   timeframe: string;
   // WOW output
   wowOutput: WowOutput | null;
+  // Post-WOW auto-generated assets
+  strategyGenerated: boolean;
+  calendarGenerated: boolean;
 }
 
 interface UploadedAsset {
@@ -285,6 +297,7 @@ export default function OnboardingWizard() {
       services: [],
       targetAudience: "",
       competitors: [],
+      socialUrls: { linkedin: "", facebook: "", instagram: "", tiktok: "", youtube: "" },
       toneOfVoice: "",
       communicationStyle: "",
       brandKeywords: [],
@@ -294,9 +307,12 @@ export default function OnboardingWizard() {
       monthlyBudget: "",
       teamSize: "",
       currentChannels: [],
+      marketingPriorities: [],
       mainGoal: "",
       timeframe: "",
       wowOutput: null,
+      strategyGenerated: false,
+      calendarGenerated: false,
     });
   };
 
@@ -325,6 +341,7 @@ export default function OnboardingWizard() {
       services: [],
       targetAudience: "",
       competitors: [],
+      socialUrls: { linkedin: "", facebook: "", instagram: "", tiktok: "", youtube: "" },
       toneOfVoice: "",
       communicationStyle: "",
       brandKeywords: [],
@@ -334,12 +351,15 @@ export default function OnboardingWizard() {
       monthlyBudget: "",
       teamSize: "",
       currentChannels: [],
+      marketingPriorities: [],
       mainGoal: "",
       timeframe: "",
       wowOutput: null,
+      strategyGenerated: false,
+      calendarGenerated: false,
     };
     if (draft) {
-      return { ...defaultData, ...draft, wowOutput: null };
+      return { ...defaultData, ...draft, wowOutput: null, strategyGenerated: false, calendarGenerated: false };
     }
     return defaultData;
   });
@@ -366,8 +386,14 @@ export default function OnboardingWizard() {
   const upsertProfile = trpc.profiles.upsert.useMutation();
   const generateIntelligence = trpc.intelligence.generate.useMutation();
   const generateWow = trpc.intelligence.generateWowMoment.useMutation();
+  const generateStrategy = trpc.strategyVersions.generate.useMutation();
+  const generateMonthlyPlan = trpc.content.generateMonthlyPlan.useMutation();
   const utils = trpc.useUtils();
   const completeOnboarding = trpc.appAuth.completeOnboarding.useMutation();
+  const [postWowStatus, setPostWowStatus] = useState<{ strategy: "idle" | "loading" | "done" | "error"; calendar: "idle" | "loading" | "done" | "error" }>({
+    strategy: "idle",
+    calendar: "idle",
+  });
 
   // ─── Step 1: Website Scraping ───────────────────────────────────────────────
 
@@ -574,8 +600,8 @@ export default function OnboardingWizard() {
         setIsLoading(false);
       }
     } else if (step === 3) {
-      if (!data.mainGoal) {
-        toast.error("Kérlek válassz fő célt!");
+      if (data.marketingPriorities.length === 0) {
+        toast.error("Kérlek válassz legalább egy marketing prioritást!");
         return;
       }
       setIsLoading(true);
@@ -590,8 +616,10 @@ export default function OnboardingWizard() {
             { fieldKey: "monthlyBudget", fieldValue: data.monthlyBudget },
             { fieldKey: "teamSize", fieldValue: data.teamSize },
             { fieldKey: "currentChannels", fieldValue: JSON.stringify(data.currentChannels) },
+            { fieldKey: "marketingPriorities", fieldValue: JSON.stringify(data.marketingPriorities) },
             { fieldKey: "mainGoal", fieldValue: data.mainGoal },
             { fieldKey: "timeframe", fieldValue: data.timeframe },
+            { fieldKey: "socialUrls", fieldValue: JSON.stringify(data.socialUrls) },
           ],
         });
 
@@ -612,7 +640,7 @@ export default function OnboardingWizard() {
           contentPillars: [],
         });
 
-        // Generate company intelligence
+        // Generate company intelligence (with social URLs + priorities for richer AI context)
         const intelligence = await generateIntelligence.mutateAsync({
           profileId: data.profileId,
           profileData: {
@@ -630,8 +658,10 @@ export default function OnboardingWizard() {
             { fieldKey: "services", fieldValue: JSON.stringify(data.services) },
             { fieldKey: "targetAudience", fieldValue: data.targetAudience },
             { fieldKey: "competitors", fieldValue: JSON.stringify(data.competitors) },
+            { fieldKey: "marketingPriorities", fieldValue: JSON.stringify(data.marketingPriorities) },
             { fieldKey: "mainGoal", fieldValue: data.mainGoal },
             { fieldKey: "currentChannels", fieldValue: JSON.stringify(data.currentChannels) },
+            { fieldKey: "socialUrls", fieldValue: JSON.stringify(data.socialUrls) },
           ],
         });
 
@@ -653,6 +683,40 @@ export default function OnboardingWizard() {
         update({ wowOutput: wow });
         setStep(4);
         toast.success("🎉 Elemzés kész! Íme a Growth Engine eredménye.");
+
+        // Auto-generate strategy and monthly calendar in background
+        (async () => {
+          // 1. Strategy
+          setPostWowStatus(prev => ({ ...prev, strategy: "loading" }));
+          try {
+            await generateStrategy.mutateAsync({ profileId: data.profileId, intelligenceData: intelligence });
+            setPostWowStatus(prev => ({ ...prev, strategy: "done" }));
+            update({ strategyGenerated: true });
+          } catch {
+            setPostWowStatus(prev => ({ ...prev, strategy: "error" }));
+          }
+          // 2. Monthly content calendar
+          setPostWowStatus(prev => ({ ...prev, calendar: "loading" }));
+          try {
+            const now = new Date();
+            const pillars = wow.contentPillars?.map((p: { name: string }) => p.name) ?? ["Edukáció", "Inspiráció", "Termék/Szolgáltatás", "Közösség", "Mögöttes tartalom"];
+            const platforms = data.currentChannels.filter(c =>
+              ["linkedin", "facebook", "instagram", "tiktok", "twitter"].some(p => c.toLowerCase().includes(p))
+            );
+            await generateMonthlyPlan.mutateAsync({
+              profileId: data.profileId,
+              year: now.getFullYear(),
+              month: now.getMonth(),
+              intelligenceData: intelligence,
+              contentPillars: pillars,
+              platforms: platforms.length > 0 ? platforms : ["LinkedIn", "Facebook", "Instagram"],
+            });
+            setPostWowStatus(prev => ({ ...prev, calendar: "done" }));
+            update({ calendarGenerated: true });
+          } catch {
+            setPostWowStatus(prev => ({ ...prev, calendar: "error" }));
+          }
+        })();
       } catch (e: unknown) {
         console.error(e);
         // Detect session expiry (UNAUTHORIZED) vs generic error
@@ -887,6 +951,42 @@ export default function OnboardingWizard() {
                 max={8}
               />
             </div>
+
+            {/* Social Media URLs */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
+                <span>Közösségi média profilok</span>
+                <span className="text-xs text-gray-500 font-normal">(opcionális – az AI elemzi a tartalmaidat)</span>
+              </label>
+              <div className="space-y-3">
+                {[
+                  { key: "linkedin" as const, label: "LinkedIn", placeholder: "https://linkedin.com/company/cegnev", icon: "in" },
+                  { key: "facebook" as const, label: "Facebook", placeholder: "https://facebook.com/cegnev", icon: "fb" },
+                  { key: "instagram" as const, label: "Instagram", placeholder: "https://instagram.com/cegnev", icon: "ig" },
+                  { key: "tiktok" as const, label: "TikTok", placeholder: "https://tiktok.com/@cegnev", icon: "tt" },
+                  { key: "youtube" as const, label: "YouTube", placeholder: "https://youtube.com/@cegnev", icon: "yt" },
+                ].map(({ key, label, placeholder, icon }) => (
+                  <div key={key} className="flex items-center gap-3">
+                    <div
+                      className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold text-white"
+                      style={{
+                        background: key === "linkedin" ? "#0A66C2" : key === "facebook" ? "#1877F2" : key === "instagram" ? "linear-gradient(135deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)" : key === "tiktok" ? "#010101" : "#FF0000"
+                      }}
+                    >
+                      {icon}
+                    </div>
+                    <input
+                      value={data.socialUrls[key]}
+                      onChange={e => update({ socialUrls: { ...data.socialUrls, [key]: e.target.value } })}
+                      placeholder={placeholder}
+                      className="flex-1 px-4 py-2.5 rounded-xl text-white placeholder-gray-500 outline-none border focus:border-blue-500 transition-colors text-sm"
+                      style={{ background: "oklch(0.15 0.02 255)", borderColor: "oklch(0.28 0.03 255)" }}
+                    />
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">Az AI a megadott profilok alapján elemzi a meglévő tartalmaidat, hangvételedet és eléréseidet – ez lesz a kiindulási alap.</p>
+            </div>
           </div>
         )}
 
@@ -1006,26 +1106,60 @@ export default function OnboardingWizard() {
               <p className="text-gray-400">Az utolsó lépés – ezután az AI elkészíti a teljes Growth Engine elemzést</p>
             </div>
 
-            {/* Main Goal */}
+            {/* Marketing Priorities – multi-select */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-3">Fő marketing cél *</label>
+              <div className="flex items-center justify-between mb-3">
+                <label className="block text-sm font-medium text-gray-300">Marketing prioritások *</label>
+                <button
+                  onClick={() => {
+                    const allSelected = data.marketingPriorities.length === GOALS.length;
+                    update({
+                      marketingPriorities: allSelected ? [] : [...GOALS],
+                      mainGoal: allSelected ? "" : GOALS[0],
+                    });
+                  }}
+                  className="text-xs px-3 py-1.5 rounded-lg font-medium transition-all"
+                  style={{
+                    background: data.marketingPriorities.length === GOALS.length ? "oklch(0.6 0.2 255)" : "oklch(0.22 0.03 255)",
+                    color: data.marketingPriorities.length === GOALS.length ? "white" : "oklch(0.65 0.015 240)",
+                    border: `1px solid ${data.marketingPriorities.length === GOALS.length ? "oklch(0.6 0.2 255)" : "oklch(0.32 0.03 255)"}`
+                  }}
+                >
+                  {data.marketingPriorities.length === GOALS.length ? "✓ Minden kiválasztva" : "Minden"}
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mb-3">Válassz egyet vagy többet – az AI ezek alapján építi fel a stratégiát</p>
               <div className="grid grid-cols-2 gap-3">
-                {GOALS.map(goal => (
-                  <button
-                    key={goal}
-                    onClick={() => update({ mainGoal: goal })}
-                    className={`p-3 rounded-xl border text-left text-sm transition-all ${
-                      data.mainGoal === goal ? "text-white" : "text-gray-400 hover:border-gray-500"
-                    }`}
-                    style={{
-                      background: data.mainGoal === goal ? "oklch(0.2 0.05 255)" : "oklch(0.15 0.02 255)",
-                      borderColor: data.mainGoal === goal ? "oklch(0.6 0.2 255)" : "oklch(0.28 0.03 255)",
-                    }}
-                  >
-                    <Target size={14} className="inline mr-2 opacity-70" />
-                    {goal}
-                  </button>
-                ))}
+                {GOALS.map(goal => {
+                  const selected = data.marketingPriorities.includes(goal);
+                  return (
+                    <button
+                      key={goal}
+                      onClick={() => {
+                        const next = selected
+                          ? data.marketingPriorities.filter(g => g !== goal)
+                          : [...data.marketingPriorities, goal];
+                        update({ marketingPriorities: next, mainGoal: next[0] ?? "" });
+                      }}
+                      className={`p-3 rounded-xl border text-left text-sm transition-all ${selected ? "text-white" : "text-gray-400 hover:border-gray-500"}`}
+                      style={{
+                        background: selected ? "oklch(0.2 0.05 255)" : "oklch(0.15 0.02 255)",
+                        borderColor: selected ? "oklch(0.6 0.2 255)" : "oklch(0.28 0.03 255)",
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0"
+                          style={{ background: selected ? "oklch(0.6 0.2 255)" : "oklch(0.22 0.03 255)", border: `1px solid ${selected ? "oklch(0.6 0.2 255)" : "oklch(0.35 0.03 255)"}` }}
+                        >
+                          {selected && <Check size={10} className="text-white" />}
+                        </div>
+                        <Target size={13} className="opacity-60 flex-shrink-0" />
+                        <span>{goal}</span>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -1211,6 +1345,40 @@ export default function OnboardingWizard() {
                 ))}
               </div>
             </div>
+
+            {/* Post-WOW auto-generation status */}
+            {(postWowStatus.strategy !== "idle" || postWowStatus.calendar !== "idle") && (
+              <div className="rounded-xl p-5 border" style={{ background: "oklch(0.13 0.05 145 / 30%)", borderColor: "oklch(0.4 0.12 145 / 40%)" }}>
+                <h3 className="text-green-400 font-semibold mb-4 flex items-center gap-2">
+                  <Sparkles size={16} /> Az AI még dolgozik a számodra...
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    {postWowStatus.strategy === "loading" && <Loader2 size={16} className="animate-spin text-blue-400 flex-shrink-0" />}
+                    {postWowStatus.strategy === "done" && <Check size={16} className="text-green-400 flex-shrink-0" />}
+                    {postWowStatus.strategy === "error" && <AlertTriangle size={16} className="text-orange-400 flex-shrink-0" />}
+                    <div>
+                      <p className="text-sm font-medium text-white">90 napos stratégia</p>
+                      <p className="text-xs text-gray-400">
+                        {postWowStatus.strategy === "loading" ? "Stratégia generálása folyamatban..." : postWowStatus.strategy === "done" ? "Kész! A Stratégia menüpontban találod." : postWowStatus.strategy === "error" ? "Nem sikerült, később a Stratégia oldalon generálhatod." : ""}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {postWowStatus.calendar === "loading" && <Loader2 size={16} className="animate-spin text-blue-400 flex-shrink-0" />}
+                    {postWowStatus.calendar === "done" && <Check size={16} className="text-green-400 flex-shrink-0" />}
+                    {postWowStatus.calendar === "error" && <AlertTriangle size={16} className="text-orange-400 flex-shrink-0" />}
+                    {postWowStatus.calendar === "idle" && postWowStatus.strategy !== "idle" && <Loader2 size={16} className="animate-spin text-gray-500 flex-shrink-0" />}
+                    <div>
+                      <p className="text-sm font-medium text-white">Havi tartalmi naptár</p>
+                      <p className="text-xs text-gray-400">
+                        {postWowStatus.calendar === "loading" ? "12-16 poszt generálása folyamatban..." : postWowStatus.calendar === "done" ? "Kész! A Tartalom Studió naptár nézetben találod." : postWowStatus.calendar === "error" ? "Nem sikerült, később a Tartalom Studióban generálhatod." : postWowStatus.strategy !== "idle" ? "Várakozik a stratégia készülésére..." : ""}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Content Ideas Preview */}
             <div className="rounded-xl p-5 border" style={{ background: "oklch(0.15 0.02 255)", borderColor: "oklch(0.28 0.03 255)" }}>
