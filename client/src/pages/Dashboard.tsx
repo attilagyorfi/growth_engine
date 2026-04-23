@@ -16,11 +16,14 @@ import { useProfile } from "@/contexts/ProfileContext";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { useState } from "react";
+import { Sparkles, RefreshCw } from "lucide-react";
 
 export default function Dashboard() {
   const [, navigate] = useLocation();
   const { outbound, leads, inbound, updateOutbound } = useData();
   const { activeProfile } = useProfile();
+  const [aiTasksKey, setAiTasksKey] = useState(0);
 
   // Content items from tRPC
   const { data: contentItems = [] } = trpc.content.list.useQuery(

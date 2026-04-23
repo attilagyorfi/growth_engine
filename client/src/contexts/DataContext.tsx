@@ -88,43 +88,6 @@ export type Notification = {
   link?: string;
 };
 
-// ─── Seed Data ────────────────────────────────────────────────────────────────
-
-const g2aSeedLeads = [
-  { company: "TechVision Kft.", contact: "Kovács Péter", email: "kovacs.peter@techvision.hu", position: "CEO", industry: "IT Services", source: "LinkedIn", status: "new" as LeadStatus },
-  { company: "Nexus Solutions Zrt.", contact: "Nagy Andrea", email: "nagy.andrea@nexussolutions.hu", position: "Marketing Director", industry: "Manufacturing", source: "LinkedIn", status: "new" as LeadStatus },
-];
-
-const g2aSeedOutbound = [
-  {
-    to: "kovacs.peter@techvision.hu", toName: "Kovács Péter", company: "TechVision Kft.",
-    subject: "Hatékonyabb LinkedIn jelenléttel a TechVision növekedéséért",
-    body: `Kovács Úr,\n\nA TechVision dinamikus bővülése az IT szolgáltatások terén figyelemre méltó, ugyanakkor a LinkedIn jelenlétük fejlesztésével jelentősen növelhető lenne a B2B ügyfélszerzés hatékonysága.\n\nA G2A Marketing AI-alapú tartalomoptimalizálással és célzott social media stratégiával támogatja, hogy a TechVision erőteljesebb márkaismertséget építsen és releváns vállalati döntéshozókhoz jusson el.\n\nSzívesen megosztanék néhány konkrét javaslatot egy rövid, informális beszélgetés során.\n\nÜdvözlettel,\nG2A Marketing`,
-    status: "draft" as EmailStatus,
-  },
-  {
-    to: "nagy.andrea@nexussolutions.hu", toName: "Nagy Andrea", company: "Nexus Solutions Zrt.",
-    subject: "Friss tartalom és AI-alapú social media a Nexus Solutions számára",
-    body: `Kedves Andrea,\n\nÉszrevettem, hogy a Nexus Solutions weboldalán aktív termékkommunikáció zajlik, azonban a blog és tartalommarketing terén kevés friss anyag található.\n\nA G2A Marketing AI-alapú tartalomstratégia és social media kampányok segítségével támogatni tudja a Nexus Solutions-t abban, hogy hatékonyabban érje el a célpiac döntéshozóit.\n\nSzívesen beszélnék Önnel erről – lenne rá egy rövid időpontja a héten?\n\nÜdvözlettel,\nG2A Marketing`,
-    status: "draft" as EmailStatus,
-  },
-];
-
-const g2aSeedInbound = [
-  {
-    from: "kovacs.peter@techvision.hu", fromName: "Kovács Péter", company: "TechVision Kft.",
-    subject: "Re: Hatékonyabb LinkedIn jelenléttel a TechVision növekedéséért",
-    body: "Kedves G2A Marketing,\n\nKöszönöm az üzenetét! Valóban érdekel a téma. Tudna ajánlani egy konkrét időpontot a héten egy rövid egyeztetésre?\n\nÜdvözlettel,\nKovács Péter",
-    category: "meeting_request" as InboundCategory,
-  },
-  {
-    from: "nagy.andrea@nexussolutions.hu", fromName: "Nagy Andrea", company: "Nexus Solutions Zrt.",
-    subject: "Re: Friss tartalom és AI-alapú social media",
-    body: "Köszönöm a megkeresést, de jelenleg nem áll módunkban ilyen együttműködést indítani. Talán egy későbbi időpontban.\n\nÜdvözlettel,\nNagy Andrea",
-    category: "not_interested" as InboundCategory,
-  },
-];
-
 // ─── Context ──────────────────────────────────────────────────────────────────
 
 type DataContextType = {
@@ -193,15 +156,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const leads: Lead[] = (leadsData ?? []) as Lead[];
 
-  // Seed leads on first load
-  const [leadSeeded, setLeadSeeded] = useState<Record<string, boolean>>({});
-  useEffect(() => {
-    if (!leadsLoading && leads.length === 0 && profileId === "g2a" && !leadSeeded[profileId]) {
-      setLeadSeeded(prev => ({ ...prev, [profileId]: true }));
-      g2aSeedLeads.forEach(l => createLeadMutation.mutate({ ...l, profileId }));
-    }
-  }, [leadsLoading, leads.length, profileId]);
-
   // ─── Outbound Emails ──────────────────────────────────────────────────────
   const { data: outboundData, isLoading: outboundLoading } = trpc.outbound.list.useQuery(
     { profileId },
@@ -213,14 +167,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const outbound: OutboundEmail[] = (outboundData ?? []) as OutboundEmail[];
 
-  const [outboundSeeded, setOutboundSeeded] = useState<Record<string, boolean>>({});
-  useEffect(() => {
-    if (!outboundLoading && outbound.length === 0 && profileId === "g2a" && !outboundSeeded[profileId]) {
-      setOutboundSeeded(prev => ({ ...prev, [profileId]: true }));
-      g2aSeedOutbound.forEach(e => createOutboundMutation.mutate({ ...e, profileId }));
-    }
-  }, [outboundLoading, outbound.length, profileId]);
-
   // ─── Inbound Emails ───────────────────────────────────────────────────────
   const { data: inboundData, isLoading: inboundLoading } = trpc.inbound.list.useQuery(
     { profileId },
@@ -231,14 +177,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const updateCategoryMutation = trpc.inbound.updateCategory.useMutation({ onSuccess: () => utils.inbound.list.invalidate({ profileId }) });
 
   const inbound: InboundEmail[] = (inboundData ?? []) as InboundEmail[];
-
-  const [inboundSeeded, setInboundSeeded] = useState<Record<string, boolean>>({});
-  useEffect(() => {
-    if (!inboundLoading && inbound.length === 0 && profileId === "g2a" && !inboundSeeded[profileId]) {
-      setInboundSeeded(prev => ({ ...prev, [profileId]: true }));
-      g2aSeedInbound.forEach(e => createInboundMutation.mutate({ ...e, profileId }));
-    }
-  }, [inboundLoading, inbound.length, profileId]);
 
   // ─── CRUD helpers ─────────────────────────────────────────────────────────
 

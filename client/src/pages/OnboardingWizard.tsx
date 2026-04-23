@@ -250,6 +250,8 @@ export default function OnboardingWizard() {
   const [isLoading, setIsLoading] = useState(false);
   const [isScraping, setIsScraping] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isExpressMode, setIsExpressMode] = useState(false);
+  const [isExpressRunning, setIsExpressRunning] = useState(false);
   const [showTour, setShowTour] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { lang } = useLanguage();
@@ -391,6 +393,80 @@ export default function OnboardingWizard() {
       toast.error("Nem sikerült elemezni a weboldalt. Töltsd ki kézzel!");
     } finally {
       setIsScraping(false);
+    }
+  };
+
+  // ─── Express Mode: Skip to WOW ──────────────────────────────────────────────
+
+  const handleExpressFinish = async () => {
+    if (!data.companyName || !data.industry) {
+      toast.error("Az Express módhoz add meg a cég nevét és iparágát!");
+      return;
+    }
+    setIsExpressRunning(true);
+    try {
+      // Save session and step 1 answers
+      await upsertSession.mutateAsync({ id: data.sessionId, profileId: data.profileId, currentStep: 3 });
+      await saveAnswers.mutateAsync({
+        sessionId: data.sessionId,
+        profileId: data.profileId,
+        step: 1,
+        answers: [
+          { fieldKey: "companyName", fieldValue: data.companyName },
+          { fieldKey: "website", fieldValue: data.website },
+          { fieldKey: "industry", fieldValue: data.industry },
+          { fieldKey: "companySize", fieldValue: data.companySize },
+          { fieldKey: "description", fieldValue: data.description },
+          { fieldKey: "services", fieldValue: JSON.stringify(data.services) },
+          { fieldKey: "targetAudience", fieldValue: data.targetAudience },
+          { fieldKey: "competitors", fieldValue: JSON.stringify(data.competitors) },
+        ],
+      });
+      // Create profile
+      await upsertProfile.mutateAsync({
+        id: data.profileId,
+        name: data.companyName,
+        initials: data.companyName.slice(0, 2).toUpperCase(),
+        website: data.website,
+        industry: data.industry,
+        description: data.description,
+        brandVoice: { tone: "Professzionális", style: "Informatív", keywords: [], avoid: "" },
+        contentPillars: [],
+      });
+      // Generate intelligence
+      const intelligence = await generateIntelligence.mutateAsync({
+        profileId: data.profileId,
+        profileData: {
+          name: data.companyName,
+          website: data.website,
+          industry: data.industry,
+          description: data.description,
+          brandVoice: { tone: "Professzionális", style: "Informatív", keywords: [] },
+        },
+        onboardingAnswers: [
+          { fieldKey: "services", fieldValue: JSON.stringify(data.services) },
+          { fieldKey: "targetAudience", fieldValue: data.targetAudience },
+          { fieldKey: "competitors", fieldValue: JSON.stringify(data.competitors) },
+          { fieldKey: "mainGoal", fieldValue: "lead_generation" },
+          { fieldKey: "currentChannels", fieldValue: JSON.stringify([]) },
+        ],
+      });
+      // Generate WOW moment
+      const wow = await generateWow.mutateAsync({ profileId: data.profileId, intelligenceData: intelligence });
+      await upsertSession.mutateAsync({ id: data.sessionId, profileId: data.profileId, status: "completed", currentStep: 4, completedAt: new Date() });
+      update({ wowOutput: wow });
+      setStep(4);
+      toast.success("🎉 Express elemzés kész!");
+    } catch (e: unknown) {
+      const errMsg = (e as { message?: string })?.message ?? "";
+      const isAuthError = errMsg.includes("login") || errMsg.includes("Bejelentkezés") || errMsg.includes("10001");
+      if (isAuthError) {
+        toast.error("A munkamenet lejárt. Kérlek jelentkezz be újra!", { duration: 6000 });
+      } else {
+        toast.error("Hiba az elemzés során. Próbáld újra!", { duration: 5000 });
+      }
+    } finally {
+      setIsExpressRunning(false);
     }
   };
 
@@ -1153,7 +1229,7 @@ export default function OnboardingWizard() {
           </div>
         )}
 
-        {/* ─── Navigation Buttons ─────────────────────────────────────────── */}
+            {/* ─── Navigation Buttons ─────────────────────────────────── */}
         <div className="flex justify-between mt-8 pt-6 border-t" style={{ borderColor: "oklch(0.22 0.03 255)" }}>
           {step > 1 && step < 4 ? (
             <button
@@ -1166,16 +1242,29 @@ export default function OnboardingWizard() {
           ) : <div />}
 
           {step < 4 ? (
-            <button
-              onClick={handleNext}
-              disabled={isLoading || isGenerating}
-              className="flex items-center gap-2 px-8 py-3 rounded-xl font-semibold text-white transition-all hover:opacity-90 disabled:opacity-50"
-              style={{ background: "linear-gradient(135deg, oklch(0.6 0.2 255), oklch(0.55 0.18 165))" }}
-            >
-              {isLoading ? <Loader2 size={18} className="animate-spin" /> : null}
-              {step === 3 ? (isGenerating ? "Elemzés folyamatban..." : "Growth Engine indítása") : "Következő"}
-              {!isLoading && !isGenerating && <ChevronRight size={18} />}
-            </button>
+            <div className="flex flex-col items-end gap-2">
+              {step === 1 && (
+                <button
+                  onClick={handleExpressFinish}
+                  disabled={isExpressRunning || !data.companyName || !data.industry}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-white transition-all hover:opacity-90 disabled:opacity-40 text-sm"
+                  style={{ background: "linear-gradient(135deg, oklch(0.65 0.2 60), oklch(0.6 0.18 30))" }}
+                >
+                  {isExpressRunning ? <Loader2 size={15} className="animate-spin" /> : <Zap size={15} />}
+                  {isExpressRunning ? "Express elemzés..." : "⚡ Express mód – átugorja a 2-3. lépést"}
+                </button>
+              )}
+              <button
+                onClick={handleNext}
+                disabled={isLoading || isGenerating || isExpressRunning}
+                className="flex items-center gap-2 px-8 py-3 rounded-xl font-semibold text-white transition-all hover:opacity-90 disabled:opacity-50"
+                style={{ background: "linear-gradient(135deg, oklch(0.6 0.2 255), oklch(0.55 0.18 165))" }}
+              >
+                {isLoading ? <Loader2 size={18} className="animate-spin" /> : null}
+                {step === 3 ? (isGenerating ? "Elemzés folyamatban..." : "Growth Engine indítása") : "Következő"}
+                {!isLoading && !isGenerating && <ChevronRight size={18} />}
+              </button>
+            </div>
           ) : (
             <div className="flex flex-col gap-3 w-full">
               <p className="text-gray-400 text-sm text-center mb-1">Mivel szeretnéd kezdeni?</p>

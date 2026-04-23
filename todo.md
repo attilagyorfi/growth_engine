@@ -409,3 +409,31 @@
 - [x] #14 Regisztrációs oldalon hiányzott a jelszó megerősítés mező – hozzáadva valós idejű egyezés validációval
 - [x] #15 Settings Csapat tab nem jelezte, hogy "hamarosan" – sárga "Hamarosan" badge a tab fejlécben
 - [x] #16 Nincs lazy loading – összes oldal (19 db) React.lazy() + Suspense-re átírva App.tsx-ben
+
+## Sprint 13 – Fiktív adatok eltávolítása + Új funkciók
+
+### Fiktív adatok cleanup
+- [ ] Főoldal: testimonials szekció eltávolítása
+- [ ] Főoldal: "200+ vállalkozás" trust indicator eltávolítása
+- [ ] Főoldal: placeholder ügyféllogók eltávolítása (ha van)
+- [ ] Admin panel: demo/seed ügyfelek eltávolítása
+- [ ] DataContext: összes hardkódolt demo adat eltávolítása (leads, outbound, inbound)
+- [ ] Dashboard: placeholder KPI adatok eltávolítása, valódi empty state-ek
+
+### Onboarding Guided Mode (Express)
+- [ ] Express útvonal gomb az onboarding első lépésén
+- [ ] URL megadás → AI autofill → összes mező automatikus kitöltése
+- [ ] Egyetlen "Megerősítés és indítás" gomb az Express módban
+- [ ] Visszalépés lehetősége a részletes módba
+
+### Dashboard "Mi a dolgom ma?" blokk
+- [ ] AI-alapú napi prioritás lista generálása (stratégia + kampányok + leadek alapján)
+- [ ] 3-5 konkrét teendő megjelenítése a dashboard tetején
+- [ ] Teendők kipipálhatók (done state)
+- [ ] Frissítés gomb (új AI generálás)
+
+### Social media publikálás előkészítése
+- [ ] Social accounts tábla a DB-ben (platform, accessToken, accountName)
+- [ ] Settings > Integrációk tab: Facebook/Instagram és LinkedIn csatlakoztatás UI
+- [ ] Content Studio: "Publikálás" gomb a tartalmakhoz
+- [ ] OAuth flow előkészítése Meta és LinkedIn API-hoz

@@ -244,12 +244,12 @@ export default function Leads() {
               {formError && <div className="text-red-400 text-sm bg-red-900/20 border border-red-800 rounded-lg p-3">{formError}</div>}
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { key: "company", label: "Cég neve *", placeholder: "Pl. Nexus Solutions Zrt." },
-                  { key: "contact", label: "Kapcsolattartó *", placeholder: "Pl. Nagy Andrea" },
-                  { key: "email", label: "Email *", placeholder: "nagy.andrea@nexus.hu" },
+                  { key: "company", label: "Cég neve *", placeholder: "Pl. ABC Kft." },
+                  { key: "contact", label: "Kapcsolattartó *", placeholder: "Pl. Vezeték Keresztnév" },
+                  { key: "email", label: "Email *", placeholder: "nev@cegnev.hu" },
                   { key: "phone", label: "Telefon", placeholder: "+36 30 123 4567" },
-                  { key: "position", label: "Pozíció", placeholder: "Marketing Director" },
-                  { key: "website", label: "Weboldal", placeholder: "https://nexus.hu" },
+                  { key: "position", label: "Pozíció", placeholder: "Marketing igazgató" },
+                  { key: "website", label: "Weboldal", placeholder: "https://cegnev.hu" },
                   { key: "source", label: "Forrás", placeholder: "LinkedIn, Referral..." },
                 ].map(({ key, label, placeholder }) => (
                   <div key={key} className={key === "company" || key === "email" ? "col-span-2" : ""}>

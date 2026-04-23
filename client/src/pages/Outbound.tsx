@@ -393,8 +393,8 @@ export default function Outbound() {
               <div className="grid grid-cols-2 gap-3">
                 {[
                   { key: "to", label: "Email cím *", placeholder: "pelda@ceg.hu" },
-                  { key: "toName", label: "Neve", placeholder: "Kovács Péter" },
-                  { key: "company", label: "Cég", placeholder: "Nexus Solutions Zrt." },
+                  { key: "toName", label: "Neve", placeholder: "Vezeték Keresztnév" },
+                  { key: "company", label: "Cég", placeholder: "Cégnév Kft." },
                   { key: "subject", label: "Tárgy *", placeholder: "Email tárgya..." },
                 ].map(({ key, label, placeholder }) => (
                   <div key={key} className={key === "subject" ? "col-span-2" : ""}>
