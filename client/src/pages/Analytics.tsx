@@ -113,7 +113,12 @@ export default function Analytics() {
     { enabled: !!activeProfile.id }
   );
 
-  const isLoading = leadsLoading || contentLoading;
+  const { data: outboundEmails = [], isLoading: outboundLoading } = trpc.outbound.list.useQuery(
+    { profileId: activeProfile.id },
+    { enabled: !!activeProfile.id }
+  );
+
+  const isLoading = leadsLoading || contentLoading || outboundLoading;
   const hasAnyData = leads.length > 0 || contentItems.length > 0;
 
   // ─── Derived analytics ────────────────────────────────────────────────────────
@@ -154,6 +159,37 @@ export default function Analytics() {
   const publishedContent = contentItems.filter(c => c.status === "published").length;
   const scheduledContent = contentItems.filter(c => c.status === "scheduled").length;
 
+  // Email stats
+  const sentEmails = (outboundEmails as any[]).filter(e => e.status === "sent" || e.status === "opened" || e.status === "replied").length;
+  const repliedEmails = (outboundEmails as any[]).filter(e => e.status === "replied").length;
+  const emailReplyRate = sentEmails > 0 ? Math.round((repliedEmails / sentEmails) * 100) : 0;
+
+  // Monthly trend: last 6 months
+  const monthlyTrend = useMemo(() => {
+    const months: { month: string; leads: number; tartalom: number; emailek: number }[] = [];
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const label = d.toLocaleDateString("hu-HU", { month: "short" });
+      const monthStart = d.getTime();
+      const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59).getTime();
+      const leadsInMonth = leads.filter(l => {
+        const t = l.createdAt ? new Date(l.createdAt).getTime() : 0;
+        return t >= monthStart && t <= monthEnd;
+      }).length;
+      const contentInMonth = contentItems.filter(c => {
+        const t = c.createdAt ? new Date(c.createdAt).getTime() : 0;
+        return t >= monthStart && t <= monthEnd;
+      }).length;
+      const emailsInMonth = (outboundEmails as any[]).filter(e => {
+        const t = e.createdAt ? new Date(e.createdAt).getTime() : 0;
+        return t >= monthStart && t <= monthEnd;
+      }).length;
+      months.push({ month: label, leads: leadsInMonth, tartalom: contentInMonth, emailek: emailsInMonth });
+    }
+    return months;
+  }, [leads, contentItems, outboundEmails]);
+
   return (
     <DashboardLayout title="Analitika" subtitle="Valós idejű teljesítmény áttekintő">
       <div className="p-6 space-y-6 overflow-y-auto h-full">
@@ -169,7 +205,7 @@ export default function Analytics() {
             { icon: Users, label: "Összes lead", value: String(leads.length), sub: leads.length > 0 ? `${wonLeads} megnyert` : "Még nincs lead", color: blue },
             { icon: Target, label: "Konverzió", value: `${conversionRate}%`, sub: leads.length > 0 ? "Lead → Ügyfél" : "Nincs elég adat", color: green },
             { icon: Layers, label: "Tartalmak", value: String(contentItems.length), sub: publishedContent > 0 ? `${publishedContent} publikált` : "Még nincs tartalom", color: amber },
-            { icon: Mail, label: "Ütemezett", value: String(scheduledContent), sub: "Közelgő publikálás", color: red },
+            { icon: Mail, label: "Küldött emailek", value: String(sentEmails), sub: sentEmails > 0 ? `${emailReplyRate}% válaszarány` : "Még nincs küldött email", color: red },
           ].map((card, i) => (
             <motion.div key={i} variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4 } } }}>
               <StatCard icon={card.icon} label={card.label} value={card.value} sub={card.sub} color={card.color} />
@@ -336,6 +372,82 @@ export default function Analytics() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Monthly Trend Chart */}
+        {(isLoading || leads.length > 0 || contentItems.length > 0 || (outboundEmails as any[]).length > 0) && (
+          <div className="rounded-2xl p-5" style={{ background: cardBg, border }}>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${blue.replace(")", " / 15%)")}`, color: blue }}>
+                <TrendingUp size={15} />
+              </div>
+              <div>
+                <p className="text-sm font-bold" style={{ fontFamily: "Sora, sans-serif", color: textPrimary }}>Hónapos trend</p>
+                <p className="text-xs" style={{ color: textMuted }}>Leadek, tartalmak és emailek az elmúlt 6 hónapban</p>
+              </div>
+            </div>
+            {isLoading ? (
+              <div className="h-48 flex items-center justify-center">
+                <div className="w-6 h-6 border-2 rounded-full animate-spin" style={{ borderColor: blue, borderTopColor: "transparent" }} />
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={monthlyTrend} barSize={14} barGap={4}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 6%)" vertical={false} />
+                  <XAxis dataKey="month" tick={{ fill: textMuted, fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: textMuted, fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="leads" name="Leadek" fill={blue} radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="tartalom" name="Tartalom" fill={amber} radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="emailek" name="Emailek" fill={red} radius={[3, 3, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+            <div className="flex items-center gap-4 mt-3">
+              {[{ color: blue, label: "Leadek" }, { color: amber, label: "Tartalom" }, { color: red, label: "Emailek" }].map(({ color, label }) => (
+                <div key={label} className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-sm" style={{ background: color }} />
+                  <span className="text-xs" style={{ color: textMuted }}>{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Email Analytics */}
+        {(isLoading || (outboundEmails as any[]).length > 0) && (
+          <div className="rounded-2xl p-5" style={{ background: cardBg, border }}>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${red.replace(")", " / 15%)")}`, color: red }}>
+                <Mail size={15} />
+              </div>
+              <div>
+                <p className="text-sm font-bold" style={{ fontFamily: "Sora, sans-serif", color: textPrimary }}>Email Kampány</p>
+                <p className="text-xs" style={{ color: textMuted }}>Kimenő emailek teljesítménye</p>
+              </div>
+            </div>
+            {isLoading ? (
+              <div className="h-24 flex items-center justify-center">
+                <div className="w-6 h-6 border-2 rounded-full animate-spin" style={{ borderColor: red, borderTopColor: "transparent" }} />
+              </div>
+            ) : (outboundEmails as any[]).length === 0 ? (
+              <p className="text-sm text-center py-6" style={{ color: textMuted }}>Még nincs kimenő email. Küldj emaileket az Értékesítés menüpontban.</p>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {[
+                  { label: "Összes piszkozat", value: (outboundEmails as any[]).filter(e => e.status === "draft").length, color: textMuted },
+                  { label: "Elküldött", value: sentEmails, color: green },
+                  { label: "Válaszolt", value: repliedEmails, color: blue },
+                  { label: "Válaszarány", value: `${emailReplyRate}%`, color: amber },
+                ].map(({ label, value, color }) => (
+                  <div key={label} className="rounded-xl p-3 text-center" style={{ background: "oklch(0.22 0.02 255)" }}>
+                    <p className="text-xl font-bold" style={{ color }}>{value}</p>
+                    <p className="text-xs mt-1" style={{ color: textMuted }}>{label}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

@@ -183,3 +183,61 @@ export async function sendWelcomeEmail(params: {
     return false;
   }
 }
+
+/**
+ * Outbound marketing email küldése Resend API-val
+ * A platform Resend kulcsát használja – nincs szükség saját SMTP konfigurációra
+ */
+export async function sendOutboundEmail(params: {
+  to: string;
+  toName?: string;
+  subject: string;
+  body: string;
+}): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  try {
+    const { to, toName, subject, body } = params;
+
+    // Convert plain text body to simple HTML paragraphs
+    const htmlLines = body.split("\n").map(line =>
+      line.trim() === ""
+        ? "<br>"
+        : `<p style="margin:0 0 12px;color:#1a1a2e;font-size:15px;line-height:1.6;">${line}</p>`
+    );
+    const htmlBody = htmlLines.join("\n");
+
+    const htmlTemplate = [
+      "<!DOCTYPE html><html lang='hu'><head><meta charset='UTF-8'></head>",
+      "<body style='margin:0;padding:0;background:#f8f8fc;font-family:Arial,sans-serif;'>",
+      "<table width='100%' cellpadding='0' cellspacing='0' style='padding:32px 16px;'>",
+      "<tr><td align='center'>",
+      "<table width='560' cellpadding='0' cellspacing='0' style='background:#fff;border-radius:12px;border:1px solid #e5e7eb;'>",
+      "<tr><td style='background:linear-gradient(135deg,#7c3aed,#4f46e5);padding:20px 32px;'>",
+      "<span style='color:#fff;font-size:16px;font-weight:700;'>G2A Growth Engine</span></td></tr>",
+      "<tr><td style='padding:32px;'>",
+      htmlBody,
+      "</td></tr>",
+      "<tr><td style='background:#f9fafb;padding:16px 32px;border-top:1px solid #e5e7eb;'>",
+      `<p style='color:#9ca3af;font-size:12px;text-align:center;margin:0;'>Ezt az emailt a G2A Growth Engine platform küldte. © ${new Date().getFullYear()} G2A Marketing</p>`,
+      "</td></tr></table></td></tr></table></body></html>",
+    ].join("");
+
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: toName ? `${toName} <${to}>` : to,
+      subject,
+      html: htmlTemplate,
+      text: body,
+    });
+
+    if (error) {
+      console.error("[Email] Outbound send error:", error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, messageId: data?.id };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Ismeretlen hiba";
+    console.error("[Email] Outbound unexpected error:", message);
+    return { success: false, error: message };
+  }
+}

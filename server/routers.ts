@@ -6,6 +6,7 @@ import { publicProcedure, appUserProcedure, superAdminProcedure, router } from "
 import { appAuthRouter } from "./routers/appAuth";
 import { generateImage } from "./_core/imageGeneration";
 import { sendEmail, verifyEmailConfig, type EmailConfig } from "./emailSender";
+import { sendOutboundEmail as sendOutboundEmailViaResend } from "./email";
 import { nanoid } from "nanoid";
 import { TRPCError } from "@trpc/server";
 import {
@@ -219,6 +220,27 @@ export const appRouter = router({
     delete: appUserProcedure
       .input(z.object({ id: z.string() }))
       .mutation(({ input }) => deleteOutbound(input.id)),
+
+    sendViaResend: appUserProcedure
+      .input(z.object({
+        emailId: z.string(),
+        to: z.string().email(),
+        toName: z.string().optional(),
+        subject: z.string().min(1),
+        body: z.string().min(1),
+      }))
+      .mutation(async ({ input }) => {
+        const result = await sendOutboundEmailViaResend({
+          to: input.to,
+          toName: input.toName,
+          subject: input.subject,
+          body: input.body,
+        });
+        if (result.success) {
+          await updateOutbound(input.emailId, { status: "sent", sentAt: new Date() });
+        }
+        return result;
+      }),
   }),
 
   // ─── Inbound Emails ─────────────────────────────────────────────────────────
@@ -1243,6 +1265,31 @@ export const appRouter = router({
     isLinkedInConfigured: publicProcedure
       .query(() => {
         return { configured: !!(process.env.LINKEDIN_CLIENT_ID && process.env.LINKEDIN_CLIENT_SECRET) };
+      }),
+  }),
+
+  // ─── API Config (super_admin only) ──────────────────────────────────────────
+  apiConfig: router({
+    // Get current API config status (does not expose secrets)
+    status: superAdminProcedure
+      .query(() => {
+        return {
+          linkedInConfigured: !!(process.env.LINKEDIN_CLIENT_ID && process.env.LINKEDIN_CLIENT_SECRET),
+          linkedInClientId: process.env.LINKEDIN_CLIENT_ID ? process.env.LINKEDIN_CLIENT_ID.slice(0, 8) + "..." : null,
+          resendConfigured: !!(process.env.RESEND_API_KEY),
+        };
+      }),
+    // Set LinkedIn OAuth credentials at runtime (stored in process.env for current process)
+    // Note: these are lost on server restart; use Secrets panel for permanent storage
+    setLinkedInCredentials: superAdminProcedure
+      .input(z.object({
+        clientId: z.string().min(1),
+        clientSecret: z.string().min(1),
+      }))
+      .mutation(({ input }) => {
+        process.env.LINKEDIN_CLIENT_ID = input.clientId;
+        process.env.LINKEDIN_CLIENT_SECRET = input.clientSecret;
+        return { success: true };
       }),
   }),
 

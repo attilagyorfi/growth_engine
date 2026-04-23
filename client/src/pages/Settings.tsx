@@ -6,28 +6,46 @@
 import { useState, useEffect } from "react";
 import {
   Palette, Plug, Users, ClipboardList, X, Loader2, Plus,
-  Save, Globe, Mail, Check, AlertCircle,
+  Save, Globe, Mail, Check, AlertCircle, Settings2, Eye, EyeOff,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { trpc } from "@/lib/trpc";
 import { useProfile } from "@/contexts/ProfileContext";
+import { useAppAuth } from "@/hooks/useAppAuth";
 import { toast } from "sonner";
 
-type Tab = "brand" | "integrations" | "team" | "audit";
+type Tab = "brand" | "integrations" | "team" | "audit" | "admin";
 
-const TABS: { id: Tab; label: string; icon: React.ReactNode; badge?: string }[] = [
+const BASE_TABS: { id: Tab; label: string; icon: React.ReactNode; badge?: string }[] = [
   { id: "brand", label: "Brand Center", icon: <Palette size={14} /> },
   { id: "integrations", label: "Integrációk", icon: <Plug size={14} /> },
   { id: "team", label: "Csapat", icon: <Users size={14} />, badge: "Hamarosan" },
   { id: "audit", label: "Audit Log", icon: <ClipboardList size={14} /> },
 ];
+const ADMIN_TAB: { id: Tab; label: string; icon: React.ReactNode; badge?: string } =
+  { id: "admin", label: "Admin", icon: <Settings2 size={14} /> };
 
 const cardBg = "oklch(0.17 0.022 255)";
 const border = "oklch(1 0 0 / 8%)";
 
 export default function Settings() {
   const { activeProfile } = useProfile();
+  const { user: appUser, isSuperAdmin } = useAppAuth();
   const [activeTab, setActiveTab] = useState<Tab>("brand");
+  const [linkedInCredForm, setLinkedInCredForm] = useState({ clientId: "", clientSecret: "" });
+  const [showLinkedInSecret, setShowLinkedInSecret] = useState(false);
+  const { data: apiConfigStatus, refetch: refetchApiConfig } = trpc.apiConfig.status.useQuery(
+    undefined,
+    { enabled: isSuperAdmin }
+  );
+  const setLinkedInCreds = trpc.apiConfig.setLinkedInCredentials.useMutation({
+    onSuccess: () => {
+      refetchApiConfig();
+      toast.success("LinkedIn OAuth credentials mentve (session-ig érvényes)");
+      setLinkedInCredForm({ clientId: "", clientSecret: "" });
+    },
+    onError: (e) => toast.error(e.message),
+  });
   const [brandForm, setBrandForm] = useState<any>({
     primaryColor: activeProfile.primaryColor ?? "#6366f1",
     secondaryColor: activeProfile.secondaryColor ?? "#10b981",
@@ -117,7 +135,7 @@ export default function Settings() {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 p-1 rounded-xl" style={{ background: "oklch(0.17 0.022 255)" }}>
-        {TABS.map(tab => (
+        {[...BASE_TABS, ...(isSuperAdmin ? [ADMIN_TAB] : [])].map(tab => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)}
             className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-sm font-medium transition-all"
             style={{ background: activeTab === tab.id ? "oklch(0.6 0.2 255)" : "transparent", color: activeTab === tab.id ? "white" : "oklch(0.55 0.015 240)" }}
@@ -448,6 +466,111 @@ export default function Settings() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Admin Panel – super_admin only */}
+      {activeTab === "admin" && isSuperAdmin && (
+        <div className="space-y-4">
+          {/* API Config Status */}
+          <div className="rounded-xl border p-5" style={{ background: cardBg, borderColor: border }}>
+            <h3 className="text-sm font-bold mb-3" style={{ color: "oklch(0.88 0.008 240)" }}>API Konfiguráció Állapot</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {[
+                { label: "LinkedIn OAuth", ok: apiConfigStatus?.linkedInConfigured, detail: apiConfigStatus?.linkedInClientId ? `Client ID: ${apiConfigStatus.linkedInClientId}` : "Nincs beállítva" },
+                { label: "Resend Email", ok: apiConfigStatus?.resendConfigured, detail: apiConfigStatus?.resendConfigured ? "Beállítva" : "Nincs beállítva" },
+              ].map(({ label, ok, detail }) => (
+                <div key={label} className="flex items-center gap-3 p-3 rounded-lg" style={{ background: "oklch(0.22 0.02 255)" }}>
+                  {ok
+                    ? <Check size={16} style={{ color: "oklch(0.65 0.18 165)" }} />
+                    : <AlertCircle size={16} style={{ color: "oklch(0.75 0.18 75)" }} />
+                  }
+                  <div>
+                    <p className="text-xs font-semibold" style={{ color: "oklch(0.88 0.008 240)" }}>{label}</p>
+                    <p className="text-xs" style={{ color: "oklch(0.5 0.015 240)" }}>{detail}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* LinkedIn OAuth Credentials */}
+          <div className="rounded-xl border p-5" style={{ background: cardBg, borderColor: border }}>
+            <h3 className="text-sm font-bold mb-1" style={{ color: "oklch(0.88 0.008 240)" }}>LinkedIn OAuth Credentials</h3>
+            <p className="text-xs mb-4" style={{ color: "oklch(0.5 0.015 240)" }}>
+              Ideiglenes beállítás (szerver újraindításig érvényes). Tartós tároláshoz használd a Secrets panelt.
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold mb-1 block" style={{ color: "oklch(0.65 0.015 240)" }}>LinkedIn Client ID</label>
+                <input
+                  value={linkedInCredForm.clientId}
+                  onChange={e => setLinkedInCredForm(f => ({ ...f, clientId: e.target.value }))}
+                  placeholder="86xxxxxxxxxxxxxxxx"
+                  className="w-full px-3 py-2 rounded-lg text-sm border font-mono"
+                  style={{ background: "oklch(0.22 0.02 255)", borderColor: "oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }}
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold mb-1 block" style={{ color: "oklch(0.65 0.015 240)" }}>LinkedIn Client Secret</label>
+                <div className="relative">
+                  <input
+                    type={showLinkedInSecret ? "text" : "password"}
+                    value={linkedInCredForm.clientSecret}
+                    onChange={e => setLinkedInCredForm(f => ({ ...f, clientSecret: e.target.value }))}
+                    placeholder="••••••••"
+                    className="w-full px-3 py-2 rounded-lg text-sm border font-mono pr-10"
+                    style={{ background: "oklch(0.22 0.02 255)", borderColor: "oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowLinkedInSecret(v => !v)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2"
+                    style={{ color: "oklch(0.5 0.015 240)" }}
+                  >
+                    {showLinkedInSecret ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="mt-4">
+              <button
+                onClick={() => {
+                  if (!linkedInCredForm.clientId || !linkedInCredForm.clientSecret) {
+                    toast.error("Mindkét mező kitöltése kötelező");
+                    return;
+                  }
+                  setLinkedInCreds.mutate(linkedInCredForm);
+                }}
+                disabled={setLinkedInCreds.isPending}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white"
+                style={{ background: "oklch(0.6 0.2 255)" }}
+              >
+                {setLinkedInCreds.isPending ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                Mentés
+              </button>
+            </div>
+          </div>
+
+          {/* LinkedIn App Setup Guide */}
+          <div className="rounded-xl border p-5" style={{ background: cardBg, borderColor: border }}>
+            <h3 className="text-sm font-bold mb-3" style={{ color: "oklch(0.88 0.008 240)" }}>LinkedIn App Beállítási útmutató</h3>
+            <ol className="space-y-2 text-xs" style={{ color: "oklch(0.65 0.015 240)" }}>
+              {[
+                "Nyisd meg: https://www.linkedin.com/developers/apps",
+                "Hozz létre új alkalmazást (Create App)",
+                "Products fülön add hozzá: \"Share on LinkedIn\" és \"Sign In with LinkedIn\"",
+                "Auth fülön másold ki a Client ID és Client Secret értékeket",
+                `Authorized redirect URL: ${typeof window !== "undefined" ? window.location.origin : "https://your-domain.manus.space"}/api/oauth/linkedin/callback`,
+                "Illeszd be a credentials-eket a fenti mezőkbe, vagy add hozzá a Secrets panelhez (LINKEDIN_CLIENT_ID, LINKEDIN_CLIENT_SECRET)",
+              ].map((step, i) => (
+                <li key={i} className="flex gap-2">
+                  <span className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold" style={{ background: "oklch(0.6 0.2 255 / 15%)", color: "oklch(0.6 0.2 255)" }}>{i + 1}</span>
+                  <span>{step}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
         </div>
       )}
     </DashboardLayout>

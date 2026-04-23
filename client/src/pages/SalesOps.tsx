@@ -134,6 +134,15 @@ export default function SalesOps() {
   const deleteEmail = trpc.outbound.delete.useMutation({
     onSuccess: () => utils.outbound.list.invalidate({ profileId: activeProfile.id })
   });
+  const sendEmailViaResend = trpc.outbound.sendViaResend.useMutation({
+    onSuccess: () => {
+      utils.outbound.list.invalidate({ profileId: activeProfile.id });
+      setEditModal(false);
+      setSelectedItem(null);
+      toast.success("Email sikeresen elküldve!");
+    },
+    onError: (err) => toast.error("Küldés sikertelen: " + err.message),
+  });
   const updateInboundCategory = trpc.inbound.updateCategory.useMutation({
     onSuccess: () => utils.inbound.list.invalidate({ profileId: activeProfile.id })
   });
@@ -569,6 +578,31 @@ export default function SalesOps() {
             <div className="flex gap-3 mt-5">
               <button onClick={() => { setEditModal(false); setSelectedItem(null); }} className="flex-1 py-2.5 rounded-lg text-sm font-semibold" style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.65 0.015 240)" }}>Mégse</button>
               <button onClick={handleSaveEdit} className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white" style={{ background: "oklch(0.6 0.2 255)" }}>Mentés</button>
+              {activeTab === "outbound" && selectedItem && selectedItem.status !== "sent" && (
+                <button
+                  onClick={async () => {
+                    if (!editForm.to || !editForm.subject || !editForm.body) {
+                      toast.error("Címzett email, tárgy és szöveg kötelező");
+                      return;
+                    }
+                    // Save first, then send
+                    await updateEmail.mutateAsync({ id: selectedItem.id, subject: editForm.subject, body: editForm.body });
+                    await sendEmailViaResend.mutateAsync({
+                      emailId: selectedItem.id,
+                      to: editForm.to,
+                      toName: editForm.toName,
+                      subject: editForm.subject,
+                      body: editForm.body,
+                    });
+                  }}
+                  disabled={sendEmailViaResend.isPending || updateEmail.isPending}
+                  className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white flex items-center justify-center gap-1.5"
+                  style={{ background: "oklch(0.55 0.18 145)" }}
+                >
+                  {sendEmailViaResend.isPending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                  Elküldés
+                </button>
+              )}
             </div>
           </div>
         </div>

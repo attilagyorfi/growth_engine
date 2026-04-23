@@ -509,3 +509,46 @@
 - [x] Főoldal: placeholder ügyféllogók ellenőrizve – nincs ilyen
 - [x] DataContext: összes hardkódolt demo adat eltávolítva – teljesen DB-alapú
 - [x] Dashboard: placeholder KPI adatok eltávolítva, valódi empty state-ek implementálva
+
+## Sprint 21 – SMTP email küldés (Resend integráció)
+- [ ] Resend API integráció (server/emailSender.ts helper)
+- [ ] outbound.send tRPC procedure (draft → tényleges küldés)
+- [ ] SalesOps oldal: "Küldés" gomb az outbound email drawerben
+- [ ] Email státusz frissítés: draft → sent (DB)
+- [ ] Küldési hiba kezelés + toast üzenet
+- [ ] Password reset email tényleges kiküldése Resend-del
+
+## Sprint 22 – Analytics valódi adatok
+- [ ] Analytics oldal: leads count chart (havi bontás, DB adatok)
+- [ ] Analytics oldal: content volume chart (havi bontás, DB adatok)
+- [ ] Analytics oldal: email sent/reply chart (havi bontás, DB adatok)
+- [ ] Analytics tRPC procedure: getAnalyticsSummary (aggregált adatok)
+- [ ] KPI kártyák valódi adatokkal (total leads, total content, total emails)
+- [ ] Empty state kezelés ha nincs adat
+
+## Sprint 23 – LinkedIn App setup + env var kezelés
+- [ ] LinkedIn Developer App setup útmutató (Settings > Integrációk oldalon)
+- [ ] LINKEDIN_CLIENT_ID és LINKEDIN_CLIENT_SECRET env var UI (Settings)
+- [ ] LinkedIn kapcsolat státusz vizuális jelzése (konfigurált/nem konfigurált)
+- [ ] Redirect URL megjelenítése a Settings oldalon (másolható)
+
+## Sprint 21-22-23 – 2026-04-23
+
+### Sprint 21 – Resend email küldés
+- [x] sendOutboundEmail helper hozzáadva server/email.ts-hez (Resend API)
+- [x] outbound.sendViaResend tRPC procedure implementálva
+- [x] SalesOps: "Küldés Resend-del" gomb az outbound email szerkesztő modalban
+- [x] Email státusz frissítés DB-ben küldés után (sent/failed)
+
+### Sprint 22 – Analytics valódi adatok
+- [x] Outbound email statisztikák (küldött/megnyitott/válaszolt) hozzáadva Analytics oldalhoz
+- [x] Havi trend chart (leads + content) implementálva
+- [x] Email analytics szekció az Analytics oldalon
+
+### Sprint 23 – LinkedIn App setup + Admin panel
+- [x] apiConfig tRPC router (superAdminProcedure): status, setLinkedInCredentials
+- [x] Settings oldal: Admin tab hozzáadva (csak super_admin látja)
+- [x] Admin tab: API konfiguráció állapot kártyák (LinkedIn, Resend)
+- [x] Admin tab: LinkedIn OAuth credentials form (ideiglenes runtime beállítás)
+- [x] Admin tab: LinkedIn App beállítási útmutató (lépésről lépésre)
+- [x] BASE_TABS + ADMIN_TAB dinamikus tab lista (isSuperAdmin alapján)
