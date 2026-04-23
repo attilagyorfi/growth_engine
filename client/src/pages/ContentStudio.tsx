@@ -161,6 +161,23 @@ export default function ContentStudio() {
   const generateImageMutation = trpc.ai.generateImage.useMutation();
   const generateContentMutation = trpc.ai.generatePostContent.useMutation();
 
+  // Social connections
+  const { data: socialConnections = [] } = trpc.social.listConnections.useQuery(
+    { profileId: activeProfile.id },
+    { enabled: !!activeProfile.id }
+  );
+  const publishNowMutation = trpc.social.publishNow.useMutation({
+    onSuccess: () => {
+      toast.success("Tartalom sikeresen publikálva!");
+      setPublishModal(false);
+      utils.content.list.invalidate({ profileId: activeProfile.id });
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const [publishModal, setPublishModal] = useState(false);
+  const [publishTarget, setPublishTarget] = useState<Post | null>(null);
+  const [selectedConnectionId, setSelectedConnectionId] = useState<string>("");
+
   // Strategy-based content pillars for suggestions
   const contentPillars: string[] = useMemo(() => {
     // Read from activeProfile.contentPillars (clientProfiles table)
@@ -1034,16 +1051,71 @@ export default function ContentStudio() {
                 {new Date(selectedPost.scheduledAt).toLocaleString("hu-HU")}
               </p>
             )}
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <button onClick={() => { setEditForm({ title: selectedPost.title, content: selectedPost.content, imageUrl: selectedPost.imageUrl, imagePrompt: selectedPost.imagePrompt, hashtags: selectedPost.hashtags }); setEditModal(true); }}
                 className="flex-1 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5"
                 style={{ background: "oklch(0.6 0.2 255 / 15%)", color: "oklch(0.6 0.2 255)" }}>
                 <Pencil size={13} /> Szerkesztés
               </button>
+              {socialConnections.filter(c => c.isActive).length > 0 && (
+                <button onClick={() => { setPublishTarget(selectedPost); setSelectedConnectionId(socialConnections.filter(c => c.isActive)[0]?.id ?? ""); setPublishModal(true); setSelectedPost(null); }}
+                  className="flex-1 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5"
+                  style={{ background: "oklch(0.65 0.18 165 / 15%)", color: "oklch(0.65 0.18 165)" }}>
+                  <Send size={13} /> Publikálás
+                </button>
+              )}
               <button onClick={() => handleDelete(selectedPost.id)}
                 className="flex-1 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5"
                 style={{ background: "oklch(0.65 0.22 25 / 15%)", color: "oklch(0.65 0.22 25)" }}>
                 <Trash2 size={13} /> Törlés
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Publish Modal */}
+      {publishModal && publishTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "oklch(0 0 0 / 60%)" }} onClick={() => setPublishModal(false)}>
+          <div className="w-full max-w-md rounded-2xl border p-6" style={{ background: "oklch(0.15 0.022 255)", borderColor: "oklch(1 0 0 / 12%)" }} onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-bold" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>Közzététel</h3>
+              <button onClick={() => setPublishModal(false)} style={{ color: "oklch(0.5 0.015 240)" }}><X size={18} /></button>
+            </div>
+            <p className="text-sm mb-4" style={{ color: "oklch(0.65 0.015 240)" }}>Válaszd ki, melyik fiókra szeretnéd publikálni:</p>
+            <div className="space-y-2 mb-4">
+              {socialConnections.filter(c => c.isActive).map(conn => (
+                <button key={conn.id} onClick={() => setSelectedConnectionId(conn.id)}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all"
+                  style={{ background: selectedConnectionId === conn.id ? "oklch(0.6 0.2 255 / 10%)" : "oklch(0.22 0.02 255)", borderColor: selectedConnectionId === conn.id ? "oklch(0.6 0.2 255 / 40%)" : "oklch(1 0 0 / 8%)" }}>
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "oklch(0.55 0.18 255 / 20%)", color: "oklch(0.55 0.18 255)" }}>
+                    <Linkedin size={16} />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-semibold" style={{ color: "oklch(0.88 0.008 240)" }}>{conn.platformUsername ?? conn.platform}</p>
+                    <p className="text-xs" style={{ color: "oklch(0.5 0.015 240)" }}>{conn.platform}</p>
+                  </div>
+                  {selectedConnectionId === conn.id && <div className="ml-auto w-4 h-4 rounded-full" style={{ background: "oklch(0.6 0.2 255)" }} />}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setPublishModal(false)} className="flex-1 py-2.5 rounded-lg text-sm font-semibold" style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.65 0.015 240)" }}>Mégse</button>
+              <button
+                onClick={() => {
+                  if (!selectedConnectionId || !publishTarget) return;
+                  publishNowMutation.mutate({
+                    profileId: activeProfile.id,
+                    connectionId: selectedConnectionId,
+                    text: publishTarget.content,
+                    imageUrl: publishTarget.imageUrl ?? undefined,
+                    contentId: publishTarget.id,
+                  });
+                }}
+                disabled={!selectedConnectionId || publishNowMutation.isPending}
+                className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white flex items-center justify-center gap-1.5"
+                style={{ background: "oklch(0.6 0.2 255)" }}>
+                {publishNowMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Közzétesz most
               </button>
             </div>
           </div>

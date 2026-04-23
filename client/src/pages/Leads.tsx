@@ -179,57 +179,91 @@ export default function Leads() {
           )}
         </div>
 
-        {/* Table */}
+        {/* Table (desktop) / Cards (mobile) */}
         <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
           {leadsLoading ? (
             <div className="p-8 text-center text-gray-400">Betöltés...</div>
           ) : filtered.length === 0 ? (
             <div className="p-8 text-center text-gray-400">Nincs találat.</div>
           ) : (
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-700">
-                  <th className="text-left px-4 py-3 text-xs text-gray-400 uppercase tracking-wider">Cég / Kontakt</th>
-                  <th className="text-left px-4 py-3 text-xs text-gray-400 uppercase tracking-wider">Email</th>
-                  <th className="text-left px-4 py-3 text-xs text-gray-400 uppercase tracking-wider">Iparág</th>
-                  <th className="text-left px-4 py-3 text-xs text-gray-400 uppercase tracking-wider">Forrás</th>
-                  <th className="text-left px-4 py-3 text-xs text-gray-400 uppercase tracking-wider">Státusz</th>
-                  <th className="px-4 py-3"></th>
-                </tr>
-              </thead>
-              <tbody>
+            <>
+              {/* Mobile card list */}
+              <div className="md:hidden divide-y divide-gray-700">
                 {filtered.map((lead) => (
-                  <tr key={lead.id} className="border-b border-gray-700/50 hover:bg-gray-700/30 cursor-pointer" onClick={() => setSelectedLead(lead)}>
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-white text-sm">{lead.company}</div>
-                      <div className="text-gray-400 text-xs">{lead.contact}{lead.position ? ` · ${lead.position}` : ""}</div>
-                    </td>
-                    <td className="px-4 py-3 text-gray-300 text-sm">{lead.email}</td>
-                    <td className="px-4 py-3 text-gray-400 text-sm">{lead.industry ?? "–"}</td>
-                    <td className="px-4 py-3 text-gray-400 text-sm">{lead.source ?? "–"}</td>
-                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                      <div className="relative inline-block">
-                        <button onClick={() => setOpenStatusId(openStatusId === lead.id ? null : lead.id)} className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${statusLabels[lead.status]?.cls ?? "status-new"}`}>
-                          {statusLabels[lead.status]?.label ?? lead.status} <ChevronDown size={12} />
+                  <div key={lead.id} className="p-4 flex flex-col gap-2 cursor-pointer active:bg-gray-700/40" onClick={() => setSelectedLead(lead)}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-white text-sm truncate">{lead.company}</p>
+                        <p className="text-xs text-gray-400 truncate">{lead.contact}{lead.position ? ` · ${lead.position}` : ""}</p>
+                      </div>
+                      <div className="relative flex-shrink-0" onClick={e => e.stopPropagation()}>
+                        <button onClick={() => setOpenStatusId(openStatusId === lead.id ? null : lead.id)} className={`flex items-center gap-1 px-2 py-1.5 rounded text-xs font-medium ${statusLabels[lead.status]?.cls ?? "status-new"}`}>
+                          {statusLabels[lead.status]?.label ?? lead.status} <ChevronDown size={11} />
                         </button>
                         {openStatusId === lead.id && (
-                          <div className="absolute top-full mt-1 left-0 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-20 min-w-[160px]">
+                          <div className="absolute top-full mt-1 right-0 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-20 min-w-[160px]">
                             {statusOptions.map((o) => (
                               <button key={o.value} onClick={() => handleStatusChange(lead.id, o.value)} className="w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-gray-700">{o.label}</button>
                             ))}
                           </div>
                         )}
                       </div>
-                    </td>
-                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                      <button onClick={() => handleDelete(lead.id)} className="text-gray-500 hover:text-red-400 transition-colors p-1">
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs text-gray-400 truncate">{lead.email}</p>
+                      <button onClick={e => { e.stopPropagation(); handleDelete(lead.id); }} className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-500 hover:text-red-400">
                         <Trash2 size={14} />
                       </button>
-                    </td>
-                  </tr>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+              {/* Desktop table */}
+              <table className="hidden md:table w-full">
+                <thead>
+                  <tr className="border-b border-gray-700">
+                    <th className="text-left px-4 py-3 text-xs text-gray-400 uppercase tracking-wider">Cég / Kontakt</th>
+                    <th className="text-left px-4 py-3 text-xs text-gray-400 uppercase tracking-wider">Email</th>
+                    <th className="text-left px-4 py-3 text-xs text-gray-400 uppercase tracking-wider">Iparág</th>
+                    <th className="text-left px-4 py-3 text-xs text-gray-400 uppercase tracking-wider">Forrás</th>
+                    <th className="text-left px-4 py-3 text-xs text-gray-400 uppercase tracking-wider">Státusz</th>
+                    <th className="px-4 py-3"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((lead) => (
+                    <tr key={lead.id} className="border-b border-gray-700/50 hover:bg-gray-700/30 cursor-pointer" onClick={() => setSelectedLead(lead)}>
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-white text-sm">{lead.company}</div>
+                        <div className="text-gray-400 text-xs">{lead.contact}{lead.position ? ` · ${lead.position}` : ""}</div>
+                      </td>
+                      <td className="px-4 py-3 text-gray-300 text-sm">{lead.email}</td>
+                      <td className="px-4 py-3 text-gray-400 text-sm">{lead.industry ?? "–"}</td>
+                      <td className="px-4 py-3 text-gray-400 text-sm">{lead.source ?? "–"}</td>
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <div className="relative inline-block">
+                          <button onClick={() => setOpenStatusId(openStatusId === lead.id ? null : lead.id)} className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${statusLabels[lead.status]?.cls ?? "status-new"}`}>
+                            {statusLabels[lead.status]?.label ?? lead.status} <ChevronDown size={12} />
+                          </button>
+                          {openStatusId === lead.id && (
+                            <div className="absolute top-full mt-1 left-0 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-20 min-w-[160px]">
+                              {statusOptions.map((o) => (
+                                <button key={o.value} onClick={() => handleStatusChange(lead.id, o.value)} className="w-full text-left px-3 py-2 text-xs text-gray-300 hover:bg-gray-700">{o.label}</button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <button onClick={() => handleDelete(lead.id)} className="text-gray-500 hover:text-red-400 transition-colors p-1">
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
           )}
         </div>
 

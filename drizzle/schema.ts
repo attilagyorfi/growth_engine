@@ -660,3 +660,36 @@ export const appNotifications = mysqlTable("app_notifications", {
 });
 export type AppNotification = typeof appNotifications.$inferSelect;
 export type InsertAppNotification = typeof appNotifications.$inferInsert;
+
+// ─── Social Connections ───────────────────────────────────────────────────────
+export const socialConnections = mysqlTable("social_connections", {
+  id: varchar("id", { length: 64 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  profileId: varchar("profileId", { length: 64 }).notNull(),
+  platform: mysqlEnum("platform", ["facebook", "instagram", "linkedin", "twitter"]).notNull(),
+  accessToken: text("accessToken").notNull(),
+  refreshToken: text("refreshToken"),
+  tokenExpiresAt: varchar("tokenExpiresAt", { length: 32 }),
+  platformUserId: varchar("platformUserId", { length: 255 }),
+  platformUsername: varchar("platformUsername", { length: 255 }),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type SocialConnection = typeof socialConnections.$inferSelect;
+export type InsertSocialConnection = typeof socialConnections.$inferInsert;
+
+// ─── Scheduled Posts ──────────────────────────────────────────────────────────
+export const scheduledPosts = mysqlTable("scheduled_posts", {
+  id: varchar("id", { length: 64 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  profileId: varchar("profileId", { length: 64 }).notNull(),
+  contentId: varchar("contentId", { length: 64 }),
+  platform: mysqlEnum("platform", ["facebook", "instagram", "linkedin", "twitter"]).notNull(),
+  text: text("text").notNull(),
+  imageUrl: text("imageUrl"),
+  scheduledAt: timestamp("scheduledAt").notNull(),
+  status: mysqlEnum("status", ["pending", "published", "failed"]).default("pending").notNull(),
+  publishedAt: timestamp("publishedAt"),
+  errorMessage: text("errorMessage"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type ScheduledPost = typeof scheduledPosts.$inferSelect;
+export type InsertScheduledPost = typeof scheduledPosts.$inferInsert;

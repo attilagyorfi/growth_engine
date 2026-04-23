@@ -463,3 +463,22 @@
 - [ ] Content Studio publikálás panel
 - [ ] DB-alapú értesítési rendszer (notifications tábla már létezik)
 - [ ] Mobil UX javítások (kártya nézet, touch-friendly gombok)
+
+## Sprint 15-16-17 – 2026-04-23
+
+### Sprint 16 – DB-alapú értesítési rendszer
+- [x] DashboardLayout notification dropdown valódi tRPC adatokra kötve (trpc.notifications.list)
+- [x] useData() notifications placeholder eltávolítva, DB-ből tölt
+- [x] Olvasottnak jelölés (markRead), összes olvasottnak jelölés (markAllRead) tRPC mutation-ök bekötve
+
+### Sprint 15 – Social media publikálás
+- [x] social_connections DB tábla létrehozva és migrálva (pnpm db:push)
+- [x] scheduled_posts DB tábla létrehozva és migrálva
+- [x] socialPublisher.ts helper – LinkedIn UGC Posts API integráció
+- [x] social tRPC router: connections CRUD, schedulePost, publishNow, getScheduled
+- [x] ContentStudio – Publikálás panel (platform kiválasztás, azonnali/ütemezett közzététel)
+- [x] Settings > Integrációk tab – social fiók csatlakoztatás/kezelés valódi DB UI-val
+
+### Sprint 17 – Mobil UX javítások
+- [x] Leads oldal – mobil kártya nézet (md:hidden) + desktop tábla (hidden md:table)
+- [x] SalesOps oldal – mobil kártya nézet + desktop tábla, touch-friendly 44px gombok

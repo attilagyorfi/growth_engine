@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useData } from "@/contexts/DataContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useAppAuth } from "@/hooks/useAppAuth";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -70,7 +69,30 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
   const [showNotifs, setShowNotifs] = useState(false);
   const [showProfileSwitcher, setShowProfileSwitcher] = useState(false);
   const [pendingProfileId, setPendingProfileId] = useState<string | null>(null);
-  const { notifications, markNotificationRead, markAllNotificationsRead, unreadCount } = useData();
+  // DB-alapú értesítések tRPC-n keresztül
+  const { data: dbNotifications = [], refetch: refetchNotifs } = trpc.notifications.list.useQuery(
+    undefined,
+    { staleTime: 30_000, refetchInterval: 60_000 }
+  );
+  const markReadMutation = trpc.notifications.markRead.useMutation({
+    onSuccess: () => refetchNotifs(),
+  });
+  const markAllReadMutation = trpc.notifications.markAllRead.useMutation({
+    onSuccess: () => refetchNotifs(),
+  });
+  // Adapter: DB AppNotification → helyi Notification shape
+  const notifications = dbNotifications.map((n) => ({
+    id: n.id,
+    type: (n.type === "reply_received" ? "email_reply" : n.type === "approval_ready" ? "approval_needed" : n.type === "campaign_deadline" ? "scheduled" : "info") as "email_reply" | "approval_needed" | "scheduled" | "info",
+    title: n.title,
+    message: n.body ?? "",
+    time: n.createdAt ? new Date(n.createdAt).toLocaleDateString("hu-HU", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "",
+    read: n.isRead,
+    link: n.actionUrl ?? undefined,
+  }));
+  const unreadCount = notifications.filter(n => !n.read).length;
+  const markNotificationRead = (id: string) => markReadMutation.mutate({ id });
+  const markAllNotificationsRead = () => markAllReadMutation.mutate();
   const { profiles, activeProfile, setActiveProfileId } = useProfile();
   const { user, logout, isSuperAdmin, refetch } = useAppAuth();
   const { theme, toggleTheme } = useTheme();

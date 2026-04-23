@@ -322,59 +322,103 @@ export default function SalesOps() {
               <button onClick={() => setNewLeadModal(true)} className="px-4 py-2 rounded-lg text-sm font-medium text-white" style={{ background: "oklch(0.6 0.2 255)" }}>+ Első lead hozzáadása</button>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr style={{ background: "oklch(0.2 0.022 255)", borderBottom: `1px solid ${border}` }}>
-                    {["Kapcsolattartó", "Email", "Cég", "Pozíció", "Státusz", "Forrás", ""].map(h => (
-                      <th key={h} className="text-left px-4 py-3 text-xs font-semibold" style={{ color: "oklch(0.5 0.015 240)" }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredLeads.map((lead: any, i: number) => (
-                    <tr key={lead.id} style={{ background: i % 2 === 0 ? cardBg : "oklch(0.185 0.022 255)", borderBottom: `1px solid ${border}` }}>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ background: "oklch(0.6 0.2 255 / 20%)", color: "oklch(0.6 0.2 255)" }}>
-                            {(lead.contact || "?")[0].toUpperCase()}
-                          </div>
-                          <span className="font-medium" style={{ color: "oklch(0.88 0.008 240)" }}>{lead.contact}</span>
+            <>
+              {/* Mobile card list */}
+              <div className="md:hidden divide-y" style={{ borderColor: border }}>
+                {filteredLeads.map((lead: any) => (
+                  <div key={lead.id} className="p-4 flex flex-col gap-2" style={{ background: cardBg }}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ background: "oklch(0.6 0.2 255 / 20%)", color: "oklch(0.6 0.2 255)" }}>
+                          {(lead.contact || "?")[0].toUpperCase()}
                         </div>
-                      </td>
-                      <td className="px-4 py-3" style={{ color: "oklch(0.62 0.015 240)" }}>{lead.email}</td>
-                      <td className="px-4 py-3" style={{ color: "oklch(0.62 0.015 240)" }}>{lead.company}</td>
-                      <td className="px-4 py-3" style={{ color: "oklch(0.62 0.015 240)" }}>{lead.position || "—"}</td>
-                      <td className="px-4 py-3">
-                        <select value={lead.status}
-                          onChange={async (e: React.ChangeEvent<HTMLSelectElement>) => {
-                            await updateLead.mutateAsync({ id: lead.id, status: e.target.value as LeadStatus });
-                            toast.success("Státusz frissítve");
-                          }}
-                          className="text-xs px-2 py-1 rounded-lg border-0 font-semibold"
-                          style={{ background: `${LEAD_STATUS_COLORS[lead.status as LeadStatus] ?? "oklch(0.6 0.2 255)"} / 15%`, color: LEAD_STATUS_COLORS[lead.status as LeadStatus] ?? "oklch(0.6 0.2 255)" }}
-                        >
-                          {Object.entries(LEAD_STATUS_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                        </select>
-                      </td>
-                      <td className="px-4 py-3" style={{ color: "oklch(0.5 0.015 240)" }}>{lead.source || "—"}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex gap-1 justify-end">
-                          <button onClick={() => { setSelectedItem(lead); setEditForm({ contact: lead.contact, email: lead.email, company: lead.company, position: lead.position, phone: lead.phone, website: lead.website, notes: lead.notes }); setEditModal(true); }}
-                            className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "oklch(0.6 0.2 255 / 10%)" }}>
-                            <Pencil size={12} style={{ color: "oklch(0.6 0.2 255)" }} />
-                          </button>
-                          <button onClick={async () => { await deleteLead.mutateAsync({ id: lead.id }); toast.success("Lead törölve"); }}
-                            className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "oklch(0.65 0.22 25 / 10%)" }}>
-                            <Trash2 size={12} style={{ color: "oklch(0.65 0.22 25)" }} />
-                          </button>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-sm truncate" style={{ color: "oklch(0.88 0.008 240)" }}>{lead.contact}</p>
+                          <p className="text-xs truncate" style={{ color: "oklch(0.55 0.015 240)" }}>{lead.company}{lead.position ? ` · ${lead.position}` : ""}</p>
                         </div>
-                      </td>
+                      </div>
+                      <select value={lead.status}
+                        onChange={async (e: React.ChangeEvent<HTMLSelectElement>) => {
+                          await updateLead.mutateAsync({ id: lead.id, status: e.target.value as LeadStatus });
+                          toast.success("Státusz frissítve");
+                        }}
+                        className="text-xs px-2 py-1.5 rounded-lg border-0 font-semibold flex-shrink-0"
+                        style={{ background: `${LEAD_STATUS_COLORS[lead.status as LeadStatus] ?? "oklch(0.6 0.2 255)"} / 15%`, color: LEAD_STATUS_COLORS[lead.status as LeadStatus] ?? "oklch(0.6 0.2 255)" }}
+                      >
+                        {Object.entries(LEAD_STATUS_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                      </select>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs truncate" style={{ color: "oklch(0.55 0.015 240)" }}>{lead.email}</p>
+                      <div className="flex gap-1 flex-shrink-0">
+                        <button onClick={() => { setSelectedItem(lead); setEditForm({ contact: lead.contact, email: lead.email, company: lead.company, position: lead.position, phone: lead.phone, website: lead.website, notes: lead.notes }); setEditModal(true); }}
+                          className="min-w-[44px] min-h-[44px] rounded-lg flex items-center justify-center" style={{ background: "oklch(0.6 0.2 255 / 10%)" }}>
+                          <Pencil size={13} style={{ color: "oklch(0.6 0.2 255)" }} />
+                        </button>
+                        <button onClick={async () => { await deleteLead.mutateAsync({ id: lead.id }); toast.success("Lead törölve"); }}
+                          className="min-w-[44px] min-h-[44px] rounded-lg flex items-center justify-center" style={{ background: "oklch(0.65 0.22 25 / 10%)" }}>
+                          <Trash2 size={13} style={{ color: "oklch(0.65 0.22 25)" }} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* Desktop table */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr style={{ background: "oklch(0.2 0.022 255)", borderBottom: `1px solid ${border}` }}>
+                      {["Kapcsolattartó", "Email", "Cég", "Pozíció", "Státusz", "Forrás", ""].map(h => (
+                        <th key={h} className="text-left px-4 py-3 text-xs font-semibold" style={{ color: "oklch(0.5 0.015 240)" }}>{h}</th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {filteredLeads.map((lead: any, i: number) => (
+                      <tr key={lead.id} style={{ background: i % 2 === 0 ? cardBg : "oklch(0.185 0.022 255)", borderBottom: `1px solid ${border}` }}>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ background: "oklch(0.6 0.2 255 / 20%)", color: "oklch(0.6 0.2 255)" }}>
+                              {(lead.contact || "?")[0].toUpperCase()}
+                            </div>
+                            <span className="font-medium" style={{ color: "oklch(0.88 0.008 240)" }}>{lead.contact}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3" style={{ color: "oklch(0.62 0.015 240)" }}>{lead.email}</td>
+                        <td className="px-4 py-3" style={{ color: "oklch(0.62 0.015 240)" }}>{lead.company}</td>
+                        <td className="px-4 py-3" style={{ color: "oklch(0.62 0.015 240)" }}>{lead.position || "—"}</td>
+                        <td className="px-4 py-3">
+                          <select value={lead.status}
+                            onChange={async (e: React.ChangeEvent<HTMLSelectElement>) => {
+                              await updateLead.mutateAsync({ id: lead.id, status: e.target.value as LeadStatus });
+                              toast.success("Státusz frissítve");
+                            }}
+                            className="text-xs px-2 py-1 rounded-lg border-0 font-semibold"
+                            style={{ background: `${LEAD_STATUS_COLORS[lead.status as LeadStatus] ?? "oklch(0.6 0.2 255)"} / 15%`, color: LEAD_STATUS_COLORS[lead.status as LeadStatus] ?? "oklch(0.6 0.2 255)" }}
+                          >
+                            {Object.entries(LEAD_STATUS_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                          </select>
+                        </td>
+                        <td className="px-4 py-3" style={{ color: "oklch(0.5 0.015 240)" }}>{lead.source || "—"}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex gap-1 justify-end">
+                            <button onClick={() => { setSelectedItem(lead); setEditForm({ contact: lead.contact, email: lead.email, company: lead.company, position: lead.position, phone: lead.phone, website: lead.website, notes: lead.notes }); setEditModal(true); }}
+                              className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "oklch(0.6 0.2 255 / 10%)" }}>
+                              <Pencil size={12} style={{ color: "oklch(0.6 0.2 255)" }} />
+                            </button>
+                            <button onClick={async () => { await deleteLead.mutateAsync({ id: lead.id }); toast.success("Lead törölve"); }}
+                              className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "oklch(0.65 0.22 25 / 10%)" }}>
+                              <Trash2 size={12} style={{ color: "oklch(0.65 0.22 25)" }} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       )}

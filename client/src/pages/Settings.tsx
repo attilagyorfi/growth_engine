@@ -62,6 +62,20 @@ export default function Settings() {
   });
 
   const [emailForm, setEmailForm] = useState<any>({ provider: "gmail", email: "" });
+  // Social connections
+  const { data: socialConnections = [], refetch: refetchSocial } = trpc.social.listConnections.useQuery(
+    { profileId: activeProfile.id },
+    { enabled: !!activeProfile.id && activeTab === "integrations" }
+  );
+  const disconnectSocial = trpc.social.disconnect.useMutation({
+    onSuccess: () => { refetchSocial(); toast.success("Kapcsolat megszakítva"); },
+  });
+  const saveConnection = trpc.social.saveConnection.useMutation({
+    onSuccess: () => { refetchSocial(); toast.success("LinkedIn fiók csatlakoztatva!"); setLinkedInModal(false); },
+    onError: (e) => toast.error(e.message),
+  });
+  const [linkedInModal, setLinkedInModal] = useState(false);
+  const [linkedInForm, setLinkedInForm] = useState({ accessToken: "", platformUserId: "", platformUsername: "" });
 
   const handleSaveBrand = async () => {
     await upsertProfile.mutateAsync({ id: activeProfile.id, name: activeProfile.name, initials: activeProfile.initials, ...brandForm });
@@ -228,26 +242,95 @@ export default function Settings() {
 
           {/* Social Media Integrations */}
           <div className="rounded-xl border p-5" style={{ background: cardBg, borderColor: border }}>
-            <h3 className="text-sm font-bold mb-4" style={{ color: "oklch(0.88 0.008 240)" }}>Social Media</h3>
-            <div className="space-y-3">
-              {[
-                { platform: "LinkedIn", color: "oklch(0.6 0.2 255)", connected: false },
-                { platform: "Facebook", color: "oklch(0.6 0.2 240)", connected: false },
-                { platform: "Instagram", color: "oklch(0.7 0.18 300)", connected: false },
-              ].map(s => (
-                <div key={s.platform} className="flex items-center justify-between p-3 rounded-lg" style={{ background: "oklch(0.22 0.02 255)" }}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${s.color} / 15%` }}>
-                      <Globe size={14} style={{ color: s.color }} />
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-bold" style={{ color: "oklch(0.88 0.008 240)" }}>Social Media</h3>
+              <button onClick={() => setLinkedInModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
+                style={{ background: "oklch(0.55 0.18 255 / 15%)", color: "oklch(0.55 0.18 255)" }}>
+                <Plus size={12} /> LinkedIn csatlakoztatás
+              </button>
+            </div>
+            {socialConnections.filter(c => c.isActive).length === 0 ? (
+              <div className="text-center py-8">
+                <Globe size={28} className="mx-auto mb-2" style={{ color: "oklch(0.35 0.015 240)" }} />
+                <p className="text-sm font-semibold mb-1" style={{ color: "oklch(0.65 0.015 240)" }}>Nincs csatlakoztatott fiók</p>
+                <p className="text-xs" style={{ color: "oklch(0.45 0.015 240)" }}>Csatlakoztass egy LinkedIn fiókot a direkt publikáláshoz</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {socialConnections.filter(c => c.isActive).map(conn => (
+                  <div key={conn.id} className="flex items-center justify-between p-3 rounded-xl" style={{ background: "oklch(0.22 0.02 255)" }}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "oklch(0.55 0.18 255 / 20%)" }}>
+                        <Globe size={16} style={{ color: "oklch(0.55 0.18 255)" }} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold" style={{ color: "oklch(0.88 0.008 240)" }}>{conn.platformUsername ?? conn.platform}</p>
+                        <p className="text-xs" style={{ color: "oklch(0.5 0.015 240)" }}>{conn.platform} • <span style={{ color: "oklch(0.65 0.18 165)" }}>Csatlakozva</span></p>
+                      </div>
                     </div>
-                    <p className="text-sm font-medium" style={{ color: "oklch(0.82 0.008 240)" }}>{s.platform}</p>
+                    <button onClick={() => disconnectSocial.mutate({ connectionId: conn.id })}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+                      style={{ background: "oklch(0.65 0.22 25 / 15%)", color: "oklch(0.65 0.22 25)" }}>
+                      Lecsatlakoztatás
+                    </button>
                   </div>
-                  <button onClick={() => toast.info("Social media integráció hamarosan")}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold" style={{ background: `${s.color} / 15%`, color: s.color }}>
-                    Csatlakoztatás
-                  </button>
-                </div>
-              ))}
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* LinkedIn Connect Modal */}
+      {linkedInModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "oklch(0 0 0 / 60%)" }} onClick={() => setLinkedInModal(false)}>
+          <div className="w-full max-w-md rounded-2xl border p-6" style={{ background: "oklch(0.15 0.022 255)", borderColor: "oklch(1 0 0 / 12%)" }} onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-bold" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>LinkedIn fiók csatlakoztatása</h3>
+              <button onClick={() => setLinkedInModal(false)} style={{ color: "oklch(0.5 0.015 240)" }}><X size={18} /></button>
+            </div>
+            <p className="text-xs mb-4 p-3 rounded-lg" style={{ background: "oklch(0.75 0.18 75 / 8%)", color: "oklch(0.75 0.18 75)" }}>
+              A LinkedIn OAuth integráció fejlesztés alatt áll. Addig manuálisan add meg az access tokent a LinkedIn Developer Portal-ból.
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold mb-1 block" style={{ color: "oklch(0.65 0.015 240)" }}>Access Token *</label>
+                <input value={linkedInForm.accessToken} onChange={e => setLinkedInForm(f => ({ ...f, accessToken: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg text-sm border font-mono" style={{ background: "oklch(0.22 0.02 255)", borderColor: "oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }}
+                  placeholder="AQV..." />
+              </div>
+              <div>
+                <label className="text-xs font-semibold mb-1 block" style={{ color: "oklch(0.65 0.015 240)" }}>LinkedIn Person ID *</label>
+                <input value={linkedInForm.platformUserId} onChange={e => setLinkedInForm(f => ({ ...f, platformUserId: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg text-sm border" style={{ background: "oklch(0.22 0.02 255)", borderColor: "oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }}
+                  placeholder="urn:li:person:xxx" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold mb-1 block" style={{ color: "oklch(0.65 0.015 240)" }}>Felhasználónév (megjelenítéshez)</label>
+                <input value={linkedInForm.platformUsername} onChange={e => setLinkedInForm(f => ({ ...f, platformUsername: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg text-sm border" style={{ background: "oklch(0.22 0.02 255)", borderColor: "oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }}
+                  placeholder="Név vagy @handle" />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-5">
+              <button onClick={() => setLinkedInModal(false)} className="flex-1 py-2.5 rounded-lg text-sm font-semibold" style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.65 0.015 240)" }}>Mégse</button>
+              <button
+                onClick={() => {
+                  if (!linkedInForm.accessToken || !linkedInForm.platformUserId) { toast.error("Access Token és Person ID kötelező"); return; }
+                  saveConnection.mutate({
+                    profileId: activeProfile.id,
+                    platform: "linkedin",
+                    accessToken: linkedInForm.accessToken,
+                    platformUserId: linkedInForm.platformUserId,
+                    platformUsername: linkedInForm.platformUsername || undefined,
+                  });
+                }}
+                disabled={saveConnection.isPending}
+                className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white flex items-center justify-center gap-1.5"
+                style={{ background: "oklch(0.6 0.2 255)" }}>
+                {saveConnection.isPending ? <Loader2 size={13} className="animate-spin" /> : <Plug size={13} />} Csatlakoztatás
+              </button>
             </div>
           </div>
         </div>
