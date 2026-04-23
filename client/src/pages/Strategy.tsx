@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { trpc } from "@/lib/trpc";
 import { useProfile } from "@/contexts/ProfileContext";
 import DashboardLayout from "@/components/DashboardLayout";
+import { AiLimitBanner } from "@/components/AiLimitBanner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -108,6 +109,9 @@ export default function Strategy() {
   return (
     <DashboardLayout>
       <div className="p-6 space-y-6">
+        {/* AI Limit Banner */}
+        <AiLimitBanner />
+
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}

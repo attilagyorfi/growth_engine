@@ -13,6 +13,8 @@ import {
   BookOpen, TrendingUp, MessageSquare, Video, BarChart2, Zap,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
+import { EmptyState } from "@/components/EmptyState";
+import { AiLimitBanner } from "@/components/AiLimitBanner";
 import { trpc } from "@/lib/trpc";
 import { useProfile } from "@/contexts/ProfileContext";
 import { toast } from "sonner";
@@ -494,6 +496,9 @@ export default function ContentStudio() {
         </div>
       </div>
 
+      {/* AI Limit Banner */}
+      <AiLimitBanner />
+
       {/* Tabs */}
       <div className="flex gap-1 mb-6 p-1 rounded-xl overflow-x-auto" style={{ background: "oklch(0.17 0.022 255)" }}>
         {TABS.map(tab => {
@@ -709,13 +714,16 @@ export default function ContentStudio() {
       {!isLoading && activeTab === "drafts" && (
         <div>
           {draftPosts.length === 0 ? (
-            <div className="text-center py-16">
-              <FileText size={32} className="mx-auto mb-3" style={{ color: "oklch(0.35 0.015 240)" }} />
-              <p className="text-sm font-semibold mb-1" style={{ color: "oklch(0.65 0.015 240)" }}>Nincsenek piszkozatok</p>
-              <button onClick={() => setActiveTab("javasolt")} className="mt-2 text-sm" style={{ color: "oklch(0.6 0.2 255)" }}>
-                Nézd meg a javasolt tartalmakat →
-              </button>
-            </div>
+            <EmptyState
+              icon={<FileText className="w-12 h-12" />}
+              title="Nincsenek piszkozataid"
+              description="Generálj AI-vel tartalmat, majd mentsd el piszkozatként szerkesztés előtt."
+              action={
+                <button onClick={() => setActiveTab("javasolt")} className="text-sm text-primary hover:underline">
+                  Nézd meg a javasolt tartalmakat →
+                </button>
+              }
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {draftPosts.map(p => <PostCard key={p.id} post={p} />)}
@@ -728,11 +736,11 @@ export default function ContentStudio() {
       {!isLoading && activeTab === "approval" && (
         <div>
           {approvalPosts.length === 0 ? (
-            <div className="text-center py-16">
-              <Clock size={32} className="mx-auto mb-3" style={{ color: "oklch(0.35 0.015 240)" }} />
-              <p className="text-sm font-semibold mb-1" style={{ color: "oklch(0.65 0.015 240)" }}>Nincs jóváhagyott tartalom</p>
-              <p className="text-xs" style={{ color: "oklch(0.45 0.015 240)" }}>Jóváhagyott tartalmakat itt időzítheted</p>
-            </div>
+            <EmptyState
+              icon={<Clock className="w-12 h-12" />}
+              title="Nincs jóváhagyott tartalom"
+              description="Jóváhagyott tartalmakat itt ütemezd közzétételre."
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {approvalPosts.map(p => <PostCard key={p.id} post={p} />)}
@@ -745,10 +753,11 @@ export default function ContentStudio() {
       {!isLoading && activeTab === "published" && (
         <div>
           {publishedPosts.length === 0 ? (
-            <div className="text-center py-16">
-              <CheckCircle2 size={32} className="mx-auto mb-3" style={{ color: "oklch(0.35 0.015 240)" }} />
-              <p className="text-sm font-semibold mb-1" style={{ color: "oklch(0.65 0.015 240)" }}>Még nincs publikált tartalom</p>
-            </div>
+            <EmptyState
+              icon={<CheckCircle2 className="w-12 h-12" />}
+              title="Még nincs publikált tartalmad"
+              description="Publikált tartalmaid itt jelennek meg az előzményekben."
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {publishedPosts.map(p => <PostCard key={p.id} post={p} showActions={false} />)}

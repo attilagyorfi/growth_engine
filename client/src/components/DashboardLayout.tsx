@@ -14,6 +14,7 @@ import {
   User, KeyRound, UserCog, Crown, Sparkles, Menu, Brain,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useData } from "@/contexts/DataContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useAppAuth } from "@/hooks/useAppAuth";
@@ -197,11 +198,16 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
           {navItems.map(({ href, label, icon: Icon }) => {
             const isActive = location === href || (href !== "/iranyitopult" && location.startsWith(href));
             return (
-              <Link key={href} href={href} className={cn("nav-item", isActive && "active")}>
-                <Icon size={15} />
-                <span>{label}</span>
-                {isActive && <ChevronRight size={13} className="ml-auto opacity-60" />}
-              </Link>
+              <Tooltip key={href} delayDuration={400}>
+                <TooltipTrigger asChild>
+                  <Link href={href} className={cn("nav-item", isActive && "active")}>
+                    <Icon size={15} />
+                    <span>{label}</span>
+                    {isActive && <ChevronRight size={13} className="ml-auto opacity-60" />}
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="text-xs">{label}</TooltipContent>
+              </Tooltip>
             );
           })}
         </nav>

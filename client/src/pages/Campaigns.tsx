@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Plus, Target, Zap, Calendar, BarChart2, Loader2, Trash2, Edit2, ChevronRight, Megaphone } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   draft: { label: "Vázlat", color: "bg-gray-100 text-gray-700" },
@@ -166,14 +167,18 @@ export default function Campaigns() {
           </div>
         ) : campaigns.length === 0 ? (
           <Card>
-            <CardContent className="p-12 text-center">
-              <Megaphone className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Még nincs kampány</h3>
-              <p className="text-muted-foreground mb-4">Hozd létre az első kampányodat és az AI segít elkészíteni a briefet.</p>
-              <Button onClick={() => setShowCreate(true)} className="gap-2">
-                <Plus className="w-4 h-4" />
-                Első kampány létrehozása
-              </Button>
+            <CardContent>
+              <EmptyState
+                icon={<Megaphone className="w-12 h-12" />}
+                title="Még nincs kampányod"
+                description="Hozd létre az első kampányodat – az AI segít összeállítani a briefet és a tartalmat."
+                action={
+                  <Button onClick={() => setShowCreate(true)} className="gap-2">
+                    <Plus className="w-4 h-4" />
+                    Első kampány létrehozása
+                  </Button>
+                }
+              />
             </CardContent>
           </Card>
         ) : (

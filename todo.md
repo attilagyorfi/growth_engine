@@ -437,3 +437,29 @@
 - [ ] Settings > Integrációk tab: Facebook/Instagram és LinkedIn csatlakoztatás UI
 - [ ] Content Studio: "Publikálás" gomb a tartalmakhoz
 - [ ] OAuth flow előkészítése Meta és LinkedIn API-hoz
+
+## Sprint 14 – CODEX.md implementálás
+
+### EmptyState és AiLimitBanner komponensek
+- [x] EmptyState komponens létrehozva (client/src/components/EmptyState.tsx)
+- [x] AiLimitBanner komponens létrehozva (client/src/components/AiLimitBanner.tsx)
+- [x] AiLimitBanner alkalmazva: ContentStudio, Strategy, Intelligence, Campaigns oldalakra
+- [x] EmptyState alkalmazva: ContentStudio, Campaigns oldalakra
+
+### Dashboard "Mi a dolgom ma?" blokk
+- [x] dailyTasks.generate backend procedure hozzáadva (server/routers.ts)
+- [x] DailyTasksBlock frontend komponens létrehozva (client/src/components/DailyTasksBlock.tsx)
+- [x] DailyTasksBlock integrálva a Dashboard.tsx-be (KPI blokkok előtt)
+- [x] Loading skeleton, motiváló üzenet, kategória badge-ek, navigációs linkek
+
+### Navigáció és UX
+- [x] Navigáció már 7 fő menüpontra egyszerűsítve (CODEX.md 9.1 alapján)
+- [x] Tooltip-ek hozzáadva a navigációs ikonokhoz (shadcn/ui Tooltip)
+- [x] Breadcrumb komponens létrehozva (client/src/components/Breadcrumb.tsx)
+
+### Következő sprint (Sprint 15)
+- [ ] Social media publikálás – DB séma: socialConnections + scheduledPosts táblák
+- [ ] LinkedIn UGC Posts API integráció
+- [ ] Content Studio publikálás panel
+- [ ] DB-alapú értesítési rendszer (notifications tábla már létezik)
+- [ ] Mobil UX javítások (kártya nézet, touch-friendly gombok)

@@ -1014,6 +1014,82 @@ export const appRouter = router({
       }),
   }),
 
+  // ─── Daily Tasks („Mi a dolgom ma?”) ──────────────────────────────────────────────
+  dailyTasks: router({
+    generate: appUserProcedure
+      .input(z.object({ profileId: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        await checkAiUsageLimit(ctx.appUser.id, ctx.appUser.subscriptionPlan ?? "free");
+
+        // Gather context: strategy version, leads, drafts
+        const strategy = await getActiveStrategyVersion(input.profileId);
+        const { getDb } = await import("./db");
+        const { leads: leadsTable, contentPosts: postsTable } = await import("../drizzle/schema");
+        const { eq, and } = await import("drizzle-orm");
+        const rawDb = await getDb();
+        const newLeads = rawDb ? await rawDb.select().from(leadsTable)
+          .where(and(eq(leadsTable.profileId, input.profileId), eq(leadsTable.status, "new")))
+          .limit(5) : [];
+        const draftPosts = rawDb ? await rawDb.select().from(postsTable)
+          .where(and(eq(postsTable.profileId, input.profileId), eq(postsTable.status, "draft")))
+          .limit(5) : [];
+
+        const contextParts = [
+          strategy ? `Aktív stratégia: ${strategy.title}.` : "Nincs aktív stratégia.",
+          newLeads.length > 0 ? `${newLeads.length} új lead vár feldolgozásra.` : "Nincs új lead.",
+          draftPosts.length > 0 ? `${draftPosts.length} piszkozat tartalom vár jóváhagyásra.` : "Nincs piszkozat tartalom.",
+        ];
+
+        const response = await invokeLLM({
+          messages: [
+            {
+              role: "system",
+              content: "Te egy marketing asszisztens vagy. A vállalkozás kontextusa alapján adj 3-5 konkrét, rövid napi teendőt. Minden teendő legyen cselekvő igével kezdődő, max 10 szavas magyar mondat. Adj egy rövid motiváló üzenetet is.",
+            },
+            {
+              role: "user",
+              content: `Kontextus: ${contextParts.join(" ")}. Mai dátum: ${new Date().toLocaleDateString("hu-HU")}. Add meg a napi teendőket.`,
+            },
+          ],
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "daily_tasks",
+              strict: true,
+              schema: {
+                type: "object",
+                properties: {
+                  tasks: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        text: { type: "string" },
+                        category: { type: "string", enum: ["tartalom", "lead", "stratégia", "kampány", "egyéb"] },
+                        link: { type: "string" },
+                      },
+                      required: ["text", "category", "link"],
+                      additionalProperties: false,
+                    },
+                  },
+                  motivationalMessage: { type: "string" },
+                },
+                required: ["tasks", "motivationalMessage"],
+                additionalProperties: false,
+              },
+            },
+          },
+        });
+        const raw = response.choices[0]?.message?.content ?? "{}";
+        await recordAiUsage(ctx.appUser.id, "daily_tasks");
+        return JSON.parse(typeof raw === "string" ? raw : JSON.stringify(raw)) as {
+          tasks: { text: string; category: string; link: string }[];
+          motivationalMessage: string;
+        };
+      }),
+  }),
+
   // ─── AI Usage Status ─────────────────────────────────────────────────────────
   aiUsage: router({
     status: appUserProcedure

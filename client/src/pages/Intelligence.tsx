@@ -5,6 +5,7 @@
 
 import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
+import { AiLimitBanner } from "@/components/AiLimitBanner";
 import { trpc } from "@/lib/trpc";
 import { useProfile } from "@/contexts/ProfileContext";
 import { toast } from "sonner";
@@ -159,6 +160,9 @@ export default function Intelligence() {
   return (
     <DashboardLayout>
       <div className="p-6 space-y-6">
+        {/* AI Limit Banner */}
+        <AiLimitBanner />
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>

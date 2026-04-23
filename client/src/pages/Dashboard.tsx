@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { Sparkles, RefreshCw } from "lucide-react";
+import DailyTasksBlock from "@/components/DailyTasksBlock";
 
 export default function Dashboard() {
   const [, navigate] = useLocation();
@@ -105,6 +106,9 @@ export default function Dashboard() {
         </div>
 
       </div>
+
+      {/* Mi a dolgom ma? – AI napi teendők */}
+      {activeProfile.id && <DailyTasksBlock profileId={activeProfile.id} />}
 
       {/* PRIMARY BLOCKS */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
