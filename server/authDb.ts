@@ -151,10 +151,11 @@ export async function getMonthlyAiUsageCount(appUserId: string, month?: string):
   return rows[0]?.count ?? 0;
 }
 
-/** Record an AI usage event (skipped for super_admin) */
-export async function recordAiUsage(appUserId: string, action: string, role?: string): Promise<void> {
-  // Super admins don't consume AI usage quota
+/** Record an AI usage event (skipped for super_admin and onboarding flow) */
+export async function recordAiUsage(appUserId: string, action: string, role?: string, isOnboarding?: boolean): Promise<void> {
+  // Super admins and onboarding flow don't consume AI usage quota
   if (role === "super_admin") return;
+  if (isOnboarding) return; // Onboarding AI calls are always free
   const db = await requireDb();
   await db.insert(aiUsage).values({
     appUserId,
@@ -164,7 +165,7 @@ export async function recordAiUsage(appUserId: string, action: string, role?: st
 }
 
 /** Check if a user can perform an AI action (within plan limits) */
-export async function checkAiUsageLimit(appUserId: string, plan: string, role?: string): Promise<{
+export async function checkAiUsageLimit(appUserId: string, plan: string, role?: string, isOnboarding?: boolean): Promise<{
   allowed: boolean;
   used: number;
   limit: number;
@@ -173,6 +174,10 @@ export async function checkAiUsageLimit(appUserId: string, plan: string, role?: 
   // Super admins always have unlimited AI access regardless of subscription plan
   if (role === "super_admin") {
     return { allowed: true, used: 0, limit: -1, plan: "super_admin" };
+  }
+  // Onboarding flow is always allowed regardless of plan
+  if (isOnboarding) {
+    return { allowed: true, used: 0, limit: -1, plan: `${plan}_onboarding` };
   }
   const limit = AI_PLAN_LIMITS[plan] ?? 3;
   if (limit === -1) {

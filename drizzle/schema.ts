@@ -693,3 +693,41 @@ export const scheduledPosts = mysqlTable("scheduled_posts", {
 });
 export type ScheduledPost = typeof scheduledPosts.$inferSelect;
 export type InsertScheduledPost = typeof scheduledPosts.$inferInsert;
+
+// ─── Projects (Super Admin Multi-Workspace) ───────────────────────────────────
+export const projects = mysqlTable("projects", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  ownerId: varchar("ownerId", { length: 64 }).notNull(), // appUsers.id
+  name: varchar("name", { length: 255 }).notNull(),
+  website: varchar("website", { length: 500 }),
+  industry: varchar("industry", { length: 255 }),
+  description: text("description"),
+  logoUrl: varchar("logoUrl", { length: 500 }),
+  color: varchar("color", { length: 100 }).default("oklch(0.6 0.2 255)"),
+  profileId: varchar("profileId", { length: 64 }), // linked client_profile
+  isActive: boolean("isActive").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type Project = typeof projects.$inferSelect;
+export type InsertProject = typeof projects.$inferInsert;
+
+// ─── Social Profile Scraping Cache ───────────────────────────────────────────
+export const socialProfileCache = mysqlTable("social_profile_cache", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  profileId: varchar("profileId", { length: 64 }).notNull(),
+  platform: varchar("platform", { length: 50 }).notNull(), // linkedin, facebook, instagram, tiktok, youtube
+  url: varchar("url", { length: 500 }).notNull(),
+  analysis: json("analysis").$type<{
+    tone: string;
+    contentTypes: string[];
+    postFrequency: string;
+    topTopics: string[];
+    engagementStyle: string;
+    audienceSignals: string[];
+    rawSummary: string;
+  }>(),
+  scrapedAt: timestamp("scrapedAt").defaultNow().notNull(),
+});
+export type SocialProfileCache = typeof socialProfileCache.$inferSelect;
+export type InsertSocialProfileCache = typeof socialProfileCache.$inferInsert;

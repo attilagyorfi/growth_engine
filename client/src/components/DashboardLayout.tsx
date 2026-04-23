@@ -11,7 +11,7 @@ import {
   LayoutDashboard, Users, BarChart3, Layers, TrendingUp, Settings,
   Zap, ChevronRight, Bell, X, CheckCircle, AlertCircle, Info, Mail,
   ChevronDown, LogOut, Shield, Megaphone,
-  User, KeyRound, UserCog, Crown, Sparkles, Menu, Brain,
+  User, KeyRound, UserCog, Crown, Sparkles, Menu, Brain, FolderOpen, Plus, Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -68,6 +68,8 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState("");
+  const [showProjectMenu, setShowProjectMenu] = useState(false);
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
 
   // DB-alapú értesítések tRPC-n keresztül
   const { data: dbNotifications = [], refetch: refetchNotifs } = trpc.notifications.list.useQuery(
@@ -118,6 +120,22 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
   };
 
   const { data: aiUsageStatus } = trpc.aiUsage.status.useQuery(undefined, { staleTime: 60_000 });
+
+  // Super_admin: project switcher
+  const { data: adminProjects = [], refetch: refetchProjects } = trpc.projects.list.useQuery(
+    undefined,
+    { enabled: isSuperAdmin, staleTime: 30_000 }
+  );
+  const createProjectMutation = trpc.projects.upsert.useMutation({
+    onSuccess: (p: { id: string; name: string }) => {
+      toast.success(`"${p.name}" projekt létrehozva!`);
+      setActiveProjectId(p.id);
+      refetchProjects();
+      setShowProjectMenu(false);
+    },
+    onError: (e: { message: string }) => toast.error(e.message),
+  });
+  const activeProject = adminProjects.find((p: { id: string }) => p.id === activeProjectId) ?? adminProjects[0] ?? null;
 
   const PLAN_LABELS: Record<string, string> = {
     free: "Free",
@@ -182,6 +200,58 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
             </p>
           </div>
         </div>
+
+        {/* Super Admin: Project Switcher */}
+        {isSuperAdmin && (
+          <div className="mx-3 mb-1 relative">
+            <button
+              type="button"
+              onClick={() => setShowProjectMenu(v => !v)}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border text-left transition-all hover:border-yellow-500/40"
+              style={{ background: "oklch(0.75 0.18 75 / 8%)", borderColor: "oklch(0.75 0.18 75 / 25%)" }}
+            >
+              <FolderOpen size={13} style={{ color: "oklch(0.75 0.18 75)" }} className="flex-shrink-0" />
+              <span className="text-xs font-medium truncate flex-1" style={{ color: "oklch(0.88 0.008 240)" }}>
+                {activeProject ? activeProject.name : "Projekt kiválasztása"}
+              </span>
+              <ChevronDown size={12} style={{ color: "oklch(0.55 0.015 240)" }} />
+            </button>
+            {showProjectMenu && (
+              <div
+                className="absolute left-0 right-0 top-full mt-1 rounded-xl border shadow-xl z-50 overflow-hidden"
+                style={{ background: "oklch(0.18 0.025 255)", borderColor: "oklch(1 0 0 / 12%)" }}
+              >
+                {adminProjects.map((p: { id: string; name: string }) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => { setActiveProjectId(p.id); setShowProjectMenu(false); }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-white/5 transition-colors"
+                    style={{ color: p.id === activeProject?.id ? "oklch(0.75 0.18 75)" : "oklch(0.78 0.008 240)" }}
+                  >
+                    {p.id === activeProject?.id && <Check size={11} />}
+                    {p.id !== activeProject?.id && <span className="w-[11px]" />}
+                    {p.name}
+                  </button>
+                ))}
+                <div className="border-t" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const name = prompt("Projekt neve:");
+                      if (name?.trim()) createProjectMutation.mutate({ name: name.trim() });
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-white/5 transition-colors"
+                    style={{ color: "oklch(0.75 0.18 75)" }}
+                  >
+                    <Plus size={11} />
+                    Új projekt
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Navigation */}
         <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">

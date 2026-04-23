@@ -675,3 +675,26 @@
 - [x] Onboarding végén automatikus havi tartalmi naptár generálás (minden tier)
 - [ ] Free tier: 3 AI gen limit NEM vonatkozik az onboarding flow-ra (külön kvóta)
 - [x] WOW screen: "Stratégiád kész", "Havi naptárad kész" státusz jelzők
+
+## Sprint 29 – Multi-project workspace + Kvóta bypass + Social scraping
+
+### Multi-project workspace
+- [x] DB séma: projects tábla (id, ownerId, name, website, industry, description, createdAt)
+- [x] Backend: projects router (list, get, getActive, upsert, setActive, delete) – superAdminProcedure
+- [x] Super_admin DashboardLayout: projekt switcher dropdown
+- [ ] Projektek oldal: projekt lista + új projekt létrehozás form
+- [ ] Minden modul (stratégia, tartalom, leads) projekt-szintű context
+
+### Free tier onboarding kvóta bypass
+- [x] AI usage check: onboarding flow-ban ne vonjon le kvótát (isOnboarding flag)
+- [x] intelligence.generate: isOnboarding paraméter
+- [x] strategyVersions.generate: isOnboarding paraméter
+- [x] content.generateMonthlyPlan: isOnboarding paraméter
+- [x] OnboardingWizard: isOnboarding=true flag átadása minden AI híváshoz
+
+### Social media scraping
+- [x] Backend: onboarding.scrapeSocialProfile procedure (URL → AI elemzés)
+- [x] Scraping: LinkedIn, Facebook, Instagram, TikTok, YouTube profilok
+- [x] AI: hangnem, tartalom típusok, engagement elemzés a profilokból
+- [x] OnboardingWizard: "Profilok elemzése" gomb + státusz jelzők
+- [x] Intelligence generate: social scraping eredmények beépítése

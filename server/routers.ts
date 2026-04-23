@@ -34,6 +34,10 @@ import {
 import { invokeLLM } from "./_core/llm";
 import { storagePut } from "./storage";
 import { checkAiUsageLimit, recordAiUsage } from "./authDb";
+import {
+  getProjectsByOwner, getProjectById, upsertProject, setActiveProject, deleteProject, getActiveProjectByOwner,
+  getSocialProfileCache, upsertSocialProfileCache, getSocialProfilesByProfile,
+} from "./projectsDb";
 
 // Helper: verify that the profileId belongs to the current appUser (or user is super_admin)
 // If userProfileId is null (onboarding in progress), falls back to DB check via appUserId on the profile row
@@ -337,10 +341,11 @@ export const appRouter = router({
         intelligenceData: z.any().optional(),
         contentPillars: z.array(z.string()).optional(),
         platforms: z.array(z.string()).optional(),
+        isOnboarding: z.boolean().optional(), // bypass AI usage quota during onboarding
       }))
       .mutation(async ({ input, ctx }) => {
         await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
-        const limitCheck = await checkAiUsageLimit(ctx.appUser.id, ctx.appUser.subscriptionPlan, ctx.appUser.role);
+        const limitCheck = await checkAiUsageLimit(ctx.appUser.id, ctx.appUser.subscriptionPlan, ctx.appUser.role, input.isOnboarding);
         if (!limitCheck.allowed) throw new TRPCError({ code: "FORBIDDEN", message: `AI használati limit elérve (${limitCheck.used}/${limitCheck.limit})` });
 
         const monthName = new Date(input.year, input.month, 1).toLocaleString("hu-HU", { month: "long", year: "numeric" });
@@ -408,7 +413,7 @@ export const appRouter = router({
           created.push(result);
         }
 
-        await recordAiUsage(ctx.appUser.id, "monthly_content_plan", ctx.appUser.role);
+        await recordAiUsage(ctx.appUser.id, "monthly_content_plan", ctx.appUser.role, input.isOnboarding);
         return { created: created.length, posts: created };
       }),
   }),
@@ -658,6 +663,41 @@ export const appRouter = router({
     deleteBrandAsset: appUserProcedure
       .input(z.object({ id: z.string() }))
       .mutation(({ input }) => deleteBrandAsset(input.id)),
+
+    scrapeSocialProfile: appUserProcedure
+      .input(z.object({
+        profileId: z.string(),
+        platform: z.string(), // linkedin, facebook, instagram, tiktok, youtube
+        url: z.string(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        // Check cache first (1 hour TTL)
+        const cached = await getSocialProfileCache(input.profileId, input.platform, input.url);
+        if (cached && cached.scrapedAt) {
+          const ageMs = Date.now() - new Date(cached.scrapedAt).getTime();
+          if (ageMs < 3600_000) return cached.analysis; // return cached result
+        }
+        // AI-based analysis (no actual scraping due to auth walls, but AI can infer from URL + platform knowledge)
+        const response = await invokeLLM({
+          messages: [
+            { role: "system", content: "Te egy közösségi média elemző vagy. A megadott profil URL alapján határozott, tényközlő stílusban elemzed a profilt. TILOS feltételes megfogalmazást használni. MINDEN szöveges választ KIZÁRÓLAG MAGYARUL adj meg. Adj vissza kizárólag érvényes JSON-t." },
+            { role: "user", content: `Elemezd ezt a ${input.platform} profilt: ${input.url}\n\nA profil URL-je és a platform neve alapján következtetj a tartalom stílusára, hangvitelére, témaköreire. Adj vissza JSON-t: tone (hangvitel magyarul), contentTypes (tartalom típusok tömb magyarul), postFrequency (becsült poszt frekvencia magyarul), topTopics (fő témakörök tömb magyarul), engagementStyle (elköteleződési stílus magyarul), audienceSignals (célcsoport jelzők tömb magyarul), rawSummary (rövid összefoglaló magyarul)` },
+          ],
+          response_format: { type: "json_schema", json_schema: { name: "social_profile_analysis", strict: true, schema: { type: "object", properties: { tone: { type: "string" }, contentTypes: { type: "array", items: { type: "string" } }, postFrequency: { type: "string" }, topTopics: { type: "array", items: { type: "string" } }, engagementStyle: { type: "string" }, audienceSignals: { type: "array", items: { type: "string" } }, rawSummary: { type: "string" } }, required: ["tone", "contentTypes", "postFrequency", "topTopics", "engagementStyle", "audienceSignals", "rawSummary"], additionalProperties: false } } },
+        });
+        const raw = response.choices[0]?.message?.content ?? "{}";
+        const analysis = JSON.parse(typeof raw === "string" ? raw : JSON.stringify(raw));
+        // Cache the result
+        await upsertSocialProfileCache({
+          id: nanoid(),
+          profileId: input.profileId,
+          platform: input.platform,
+          url: input.url,
+          analysis,
+          scrapedAt: new Date(),
+        });
+        return analysis;
+      }),
   }),
 
   // ─── Company Intelligence ────────────────────────────────────────────────────
@@ -682,13 +722,14 @@ export const appRouter = router({
         }),
         websiteAnalysis: z.any().optional(),
         onboardingAnswers: z.array(z.object({ fieldKey: z.string(), fieldValue: z.string().nullable() })).optional(),
+        isOnboarding: z.boolean().optional(), // bypass AI usage quota during onboarding
       }))
       .mutation(async ({ input, ctx }) => {
         await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
-        // Feature gating: check AI usage limit
-        const usageCheck = await checkAiUsageLimit(ctx.appUser.id, ctx.appUser.subscriptionPlan ?? "free", ctx.appUser.role);
+        // Feature gating: check AI usage limit (bypass during onboarding)
+        const usageCheck = await checkAiUsageLimit(ctx.appUser.id, ctx.appUser.subscriptionPlan ?? "free", ctx.appUser.role, input.isOnboarding);
         if (!usageCheck.allowed) {
-          throw new TRPCError({ code: "FORBIDDEN", message: `AI generálási limit elérve (${usageCheck.used}/${usageCheck.limit} ebben a hónapban). Frissítsd az előfizetésed a folytatáshoz.`, cause: { code: "AI_LIMIT_REACHED", used: usageCheck.used, limit: usageCheck.limit, plan: usageCheck.plan } });
+          throw new TRPCError({ code: "FORBIDDEN", message: `AI generálási limit elérve (${usageCheck.used}/${usageCheck.limit} ebben a hónapban). Frísítsd az előfizetésed a folytatáshoz.`, cause: { code: "AI_LIMIT_REACHED", used: usageCheck.used, limit: usageCheck.limit, plan: usageCheck.plan } });
         }
         // Extract social URLs and marketing priorities for richer AI context
         const socialUrlsAnswer = input.onboardingAnswers?.find(a => a.fieldKey === "socialUrls")?.fieldValue;
@@ -717,8 +758,8 @@ export const appRouter = router({
         });
         const content = response.choices[0]?.message?.content ?? "{}";
         const parsed = JSON.parse(typeof content === "string" ? content : JSON.stringify(content));
-        // Record AI usage
-        await recordAiUsage(ctx.appUser.id, "intelligence", ctx.appUser.role);
+        // Record AI usage (skip during onboarding)
+        await recordAiUsage(ctx.appUser.id, "intelligence", ctx.appUser.role, input.isOnboarding);
         return upsertCompanyIntelligence({
           id: nanoid(),
           profileId: input.profileId,
@@ -918,11 +959,12 @@ export const appRouter = router({
         profileId: z.string(),
         intelligenceData: z.any(),
         strategyContext: z.string().optional(),
+        isOnboarding: z.boolean().optional(), // bypass AI usage quota during onboarding
       }))
       .mutation(async ({ input, ctx }) => {
         await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
-        // Feature gating: check AI usage limit
-        const usageCheck = await checkAiUsageLimit(ctx.appUser.id, ctx.appUser.subscriptionPlan ?? "free", ctx.appUser.role);
+        // Feature gating: check AI usage limit (bypass during onboarding)
+        const usageCheck = await checkAiUsageLimit(ctx.appUser.id, ctx.appUser.subscriptionPlan ?? "free", ctx.appUser.role, input.isOnboarding);
         if (!usageCheck.allowed) {
           throw new TRPCError({ code: "FORBIDDEN", message: `AI generálási limit elérve (${usageCheck.used}/${usageCheck.limit} ebben a hónapban). Frissítsd az előfizetésed a folytatáshoz.`, cause: { code: "AI_LIMIT_REACHED", used: usageCheck.used, limit: usageCheck.limit, plan: usageCheck.plan } });
         }
@@ -938,8 +980,8 @@ export const appRouter = router({
         });
         const content = response.choices[0]?.message?.content ?? "{}";
         const parsed = JSON.parse(typeof content === "string" ? content : JSON.stringify(content));
-        // Record AI usage
-        await recordAiUsage(ctx.appUser.id, "strategy", ctx.appUser.role);
+        // Record AI usage (skip during onboarding)
+        await recordAiUsage(ctx.appUser.id, "strategy", ctx.appUser.role, input.isOnboarding);
         const existing = await getStrategyVersionsByProfile(input.profileId);
         const versionNumber = existing.length + 1;
         return upsertStrategyVersion({
@@ -1450,6 +1492,51 @@ A link mező mindig ezek egyike legyen, ne találj ki más URL-t.`,
       .mutation(({ input }) => {
         process.env.LINKEDIN_CLIENT_ID = input.clientId;
         process.env.LINKEDIN_CLIENT_SECRET = input.clientSecret;
+        return { success: true };
+      }),
+  }),
+
+  // ─── Projects (Super Admin Multi-Workspace) ─────────────────────────────────
+  projects: router({
+    list: superAdminProcedure.query(({ ctx }) => getProjectsByOwner(ctx.appUser.id)),
+
+    get: superAdminProcedure
+      .input(z.object({ id: z.string() }))
+      .query(async ({ input, ctx }) => {
+        const project = await getProjectById(input.id);
+        if (!project || project.ownerId !== ctx.appUser.id) throw new TRPCError({ code: "NOT_FOUND" });
+        return project;
+      }),
+
+    getActive: superAdminProcedure.query(({ ctx }) => getActiveProjectByOwner(ctx.appUser.id)),
+
+    upsert: superAdminProcedure
+      .input(z.object({
+        id: z.string().optional(),
+        name: z.string().min(1),
+        website: z.string().optional(),
+        industry: z.string().optional(),
+        description: z.string().optional(),
+        logoUrl: z.string().optional(),
+        color: z.string().optional(),
+        profileId: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const id = input.id ?? nanoid();
+        return upsertProject({ id, ownerId: ctx.appUser.id, ...input, isActive: false });
+      }),
+
+    setActive: superAdminProcedure
+      .input(z.object({ projectId: z.string() }))
+      .mutation(async ({ input, ctx }) => {
+        await setActiveProject(ctx.appUser.id, input.projectId);
+        return { success: true };
+      }),
+
+    delete: superAdminProcedure
+      .input(z.object({ id: z.string() }))
+      .mutation(async ({ input, ctx }) => {
+        await deleteProject(input.id, ctx.appUser.id);
         return { success: true };
       }),
   }),

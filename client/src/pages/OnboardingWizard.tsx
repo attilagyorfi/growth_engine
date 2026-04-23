@@ -14,7 +14,7 @@ import {
   Check, Loader2, Building2, Users, Target,
   Sparkles, TrendingUp, Star, AlertTriangle,
   FileText, Image, BarChart3, X, Plus, Trash2,
-  MessageSquare, Palette, Settings
+  MessageSquare, Palette, Settings, Search
 } from "lucide-react";
 import { nanoid } from "nanoid";
 import { useAppAuth } from "@/hooks/useAppAuth";
@@ -388,8 +388,10 @@ export default function OnboardingWizard() {
   const generateWow = trpc.intelligence.generateWowMoment.useMutation();
   const generateStrategy = trpc.strategyVersions.generate.useMutation();
   const generateMonthlyPlan = trpc.content.generateMonthlyPlan.useMutation();
+  const scrapeSocialProfile = trpc.onboarding.scrapeSocialProfile.useMutation();
   const utils = trpc.useUtils();
   const completeOnboarding = trpc.appAuth.completeOnboarding.useMutation();
+  const [socialScrapeStatus, setSocialScrapeStatus] = useState<Record<string, "idle" | "loading" | "done" | "error">>({});
   const [postWowStatus, setPostWowStatus] = useState<{ strategy: "idle" | "loading" | "done" | "error"; calendar: "idle" | "loading" | "done" | "error" }>({
     strategy: "idle",
     calendar: "idle",
@@ -420,6 +422,38 @@ export default function OnboardingWizard() {
       toast.error("Nem sikerült elemezni a weboldalt. Töltsd ki kézzel!");
     } finally {
       setIsScraping(false);
+    }
+  };
+
+  // ─── Step 1: Social Media Scraping ─────────────────────────────────────────
+
+  const handleScrapeSocialProfiles = async () => {
+    const urls = Object.entries(data.socialUrls).filter(([, v]) => v.trim() !== "");
+    if (urls.length === 0) {
+      toast.error("Adj meg legalább egy közösségi média profil URL-t!");
+      return;
+    }
+    const newStatus: Record<string, "idle" | "loading" | "done" | "error"> = {};
+    urls.forEach(([k]) => { newStatus[k] = "loading"; });
+    setSocialScrapeStatus(newStatus);
+    let anySuccess = false;
+    for (const [platform, url] of urls) {
+      try {
+        const result = await scrapeSocialProfile.mutateAsync({ url, platform, profileId: data.profileId });
+        setSocialScrapeStatus(prev => ({ ...prev, [platform]: "done" }));
+        // Enrich description with social insights
+        if (result.summary && !data.description) {
+          update({ description: result.summary });
+        }
+        anySuccess = true;
+      } catch {
+        setSocialScrapeStatus(prev => ({ ...prev, [platform]: "error" }));
+      }
+    }
+    if (anySuccess) {
+      toast.success("Közösségi média profilok elemezve! Az adatok be lesznek építve az AI elemzésbe.");
+    } else {
+      toast.error("Nem sikerült elemezni a profilokat. Az AI az URL-ek alapján fog következtetni.");
     }
   };
 
@@ -460,7 +494,7 @@ export default function OnboardingWizard() {
         brandVoice: { tone: "Professzionális", style: "Informatív", keywords: [], avoid: "" },
         contentPillars: [],
       });
-      // Generate intelligence
+      // Generate intelligence (isOnboarding=true bypasses AI quota)
       const intelligence = await generateIntelligence.mutateAsync({
         profileId: data.profileId,
         profileData: {
@@ -477,6 +511,7 @@ export default function OnboardingWizard() {
           { fieldKey: "mainGoal", fieldValue: "lead_generation" },
           { fieldKey: "currentChannels", fieldValue: JSON.stringify([]) },
         ],
+        isOnboarding: true,
       });
       // Generate WOW moment
       const wow = await generateWow.mutateAsync({ profileId: data.profileId, intelligenceData: intelligence });
@@ -640,7 +675,7 @@ export default function OnboardingWizard() {
           contentPillars: [],
         });
 
-        // Generate company intelligence (with social URLs + priorities for richer AI context)
+        // Generate company intelligence (isOnboarding=true bypasses AI quota)
         const intelligence = await generateIntelligence.mutateAsync({
           profileId: data.profileId,
           profileData: {
@@ -663,6 +698,7 @@ export default function OnboardingWizard() {
             { fieldKey: "currentChannels", fieldValue: JSON.stringify(data.currentChannels) },
             { fieldKey: "socialUrls", fieldValue: JSON.stringify(data.socialUrls) },
           ],
+          isOnboarding: true,
         });
 
         // Generate WOW moment
@@ -689,7 +725,7 @@ export default function OnboardingWizard() {
           // 1. Strategy
           setPostWowStatus(prev => ({ ...prev, strategy: "loading" }));
           try {
-            await generateStrategy.mutateAsync({ profileId: data.profileId, intelligenceData: intelligence });
+            await generateStrategy.mutateAsync({ profileId: data.profileId, intelligenceData: intelligence, isOnboarding: true });
             setPostWowStatus(prev => ({ ...prev, strategy: "done" }));
             update({ strategyGenerated: true });
           } catch {
@@ -710,6 +746,7 @@ export default function OnboardingWizard() {
               intelligenceData: intelligence,
               contentPillars: pillars,
               platforms: platforms.length > 0 ? platforms : ["LinkedIn", "Facebook", "Instagram"],
+              isOnboarding: true,
             });
             setPostWowStatus(prev => ({ ...prev, calendar: "done" }));
             update({ calendarGenerated: true });
@@ -985,7 +1022,35 @@ export default function OnboardingWizard() {
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-gray-500 mt-2">Az AI a megadott profilok alapján elemzi a meglévő tartalmaidat, hangvételedet és eléréseidet – ez lesz a kiindulási alap.</p>
+              {/* Scrape button + status */}
+              <div className="mt-3 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleScrapeSocialProfiles}
+                  disabled={Object.values(socialScrapeStatus).some(s => s === "loading") || Object.values(data.socialUrls).every(v => !v.trim())}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{ background: "oklch(0.35 0.12 255)" }}
+                >
+                  {Object.values(socialScrapeStatus).some(s => s === "loading") ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Search className="w-4 h-4" />
+                  )}
+                  Profilok elemzése
+                </button>
+                {/* Per-platform status indicators */}
+                <div className="flex gap-2">
+                  {Object.entries(socialScrapeStatus).map(([platform, status]) => (
+                    <span key={platform} className="flex items-center gap-1 text-xs">
+                      {status === "loading" && <Loader2 className="w-3 h-3 animate-spin text-blue-400" />}
+                      {status === "done" && <Check className="w-3 h-3 text-green-400" />}
+                      {status === "error" && <AlertTriangle className="w-3 h-3 text-yellow-400" />}
+                      <span className={status === "done" ? "text-green-400" : status === "error" ? "text-yellow-400" : "text-blue-400"}>{platform}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">Az AI a megadott profilok alapján elemzi a meglevő tartalmaidat, hangvételedet és eléréseidet – ez lesz a kiindulási alap.</p>
             </div>
           </div>
         )}
