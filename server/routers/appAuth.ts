@@ -284,4 +284,14 @@ export const appAuthRouter = router({
       await updateAppUser(input.userId, { passwordHash });
       return { success: true };
     }),
+
+  // ─── Tesztelési mód: onboarding reset (csak super_admin) ─────────────────────
+  // Visszaállítja az onboardingCompleted=false értéket, hogy az onboarding újra lejátszható legyen
+  resetOnboardingForTesting: superAdminProcedure
+    .input(z.object({ userId: z.string().optional() }))
+    .mutation(async ({ input, ctx }) => {
+      const targetId = input.userId ?? ctx.appUser.id;
+      await updateAppUser(targetId, { onboardingCompleted: false, profileId: null });
+      return { success: true };
+    }),
 });

@@ -38,6 +38,12 @@ export default function Settings() {
     undefined,
     { enabled: isSuperAdmin }
   );
+  const resetOnboarding = trpc.appAuth.resetOnboardingForTesting.useMutation({
+    onSuccess: () => {
+      toast.success("Onboarding állapot visszaállítva. Következő bejelentkezéskor az onboarding oldal jelenik meg.");
+    },
+    onError: (e) => toast.error(e.message),
+  });
   const setLinkedInCreds = trpc.apiConfig.setLinkedInCredentials.useMutation({
     onSuccess: () => {
       refetchApiConfig();
@@ -549,6 +555,36 @@ export default function Settings() {
                 {setLinkedInCreds.isPending ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
                 Mentés
               </button>
+            </div>
+          </div>
+
+          {/* Onboarding tesztelési mód */}
+          <div className="rounded-xl border p-5" style={{ background: "oklch(0.18 0.025 30 / 40%)", borderColor: "oklch(0.7 0.2 30 / 30%)" }}>
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-base" style={{ background: "oklch(0.7 0.2 30 / 15%)" }}>🧪</div>
+              <div className="flex-1">
+                <h3 className="text-sm font-bold mb-1" style={{ color: "oklch(0.88 0.008 240)" }}>Onboarding tesztelési mód</h3>
+                <p className="text-xs mb-4" style={{ color: "oklch(0.5 0.015 240)" }}>
+                  Visszaállítja az onboarding állapotot. A következő bejelentkezéskor az onboarding oldal jelenik meg friss felhasználóként.
+                  A profil adatok törlődnek, de a meglévő tartalmak és lead-ek megmaradnak.
+                </p>
+                <button
+                  onClick={() => {
+                    if (window.confirm('Biztosan visszaállítod az onboarding állapotot? A profil adatok törlődnek.')) {
+                      resetOnboarding.mutate({});
+                    }
+                  }}
+                  disabled={resetOnboarding.isPending}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white"
+                  style={{ background: "oklch(0.55 0.18 30)" }}
+                >
+                  {resetOnboarding.isPending ? (
+                    <><Loader2 size={13} className="animate-spin" /> Visszaállítás...</>
+                  ) : (
+                    <>🔄 Onboarding visszaállítása</>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
 

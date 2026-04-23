@@ -612,3 +612,37 @@
 - [x] campaigns.generateContentFromBrief tRPC procedure (brief → Content Studio tartalmak)
 - [x] Campaigns oldal: „Tartalmak automatikus létrehozása" gomb a brief tab-on
 - [x] Campaigns oldal: feature gate (Pro csomag szükséges)
+
+## Kritikus javítások + Sprint 27 – 2026-04-23
+
+### Onboarding-first flow debug
+- [ ] Diagnosztizálni miért nem irányít onboarding-ra az első belépés
+- [ ] Tesztelési mód: logout után onboardingCompleted=false reset (dev/test célra)
+- [ ] App.tsx AppRoute: onboardingCompleted=false → /onboarding redirect megerősítése
+
+### UI cleanup
+- [ ] Dark mode only: ThemeProvider defaultTheme="dark", light mode eltávolítása
+- [ ] Témaváltó gomb eltávolítása a navigációból
+- [ ] Nyelvválasztó eltávolítása (fordítások nincsenek kész)
+- [ ] Profil switcher eltávolítása a jobb felső sarokból (minden user csak saját profilját éri el)
+- [ ] DashboardLayout: profil switcher dropdown törlése
+- [ ] Ügyfelek menüpont: csak super_admin látja
+- [ ] Felhasználók kezelése menüpont: csak super_admin látja
+
+### Sprint 27 – Content Calendar + Havi tartalom generálás
+- [ ] Content Calendar nézet implementálása (havi naptár, drag-and-drop)
+- [ ] Havi tartalom generálás: egy kattintásra 20-30 poszt generálása (LinkedIn, Facebook, Instagram)
+- [ ] Generált tartalmak automatikusan megjelennek a naptárban scheduledAt dátummal
+- [ ] Content Studio: "Havi tartalom generálása" gomb + konfiguráló modal
+
+## Sprint 27 + UX javítások – 2026-04-23
+
+- [x] Onboarding-first flow: appAuth.me cache invalidálás completeOnboarding után (OnboardingWizard)
+- [x] Settings > Admin tab: Onboarding reset gomb teszteléshez (resetOnboardingForTesting procedure)
+- [x] Dark mode only: ThemeProvider defaultTheme="dark" rögzítve, toggle eltávolítva
+- [x] LanguageSwitcher eltávolítva DashboardLayout-ból és Landing.tsx-ből
+- [x] Profil switcher eltávolítva DashboardLayout-ból (mindenki csak saját profilját érheti el)
+- [x] Super_admin-only menüpontok: Ügyfelek és Felhasználók csak adminNavItems-ben
+- [x] Sprint 27: content.generateMonthlyPlan backend procedure (12-16 AI poszt egy hónapra)
+- [x] Sprint 27: "Teljes hónap AI-vel" gomb a Content Calendar fejlécében
+- [x] Sprint 27: Havi terv tartalmak scheduledAt mezővel mentve a naptárba

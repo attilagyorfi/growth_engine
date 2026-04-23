@@ -102,16 +102,14 @@ function SlideIn({ children, delay = 0, direction = "left", className = "" }: { 
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function Landing() {
-  const { lang, t } = useLanguage();
-  const { theme, toggleTheme, switchable } = useTheme();
-  const handleToggleTheme = () => toggleTheme?.();
+  const { lang } = useLanguage();
 
-  const isDark = theme === "dark";
-  const bg = isDark ? "#0A0A0F" : "#F8F8FC";
-  const text = isDark ? "text-white" : "text-gray-900";
-  const subtext = isDark ? "text-white/50" : "text-gray-500";
-  const cardBg = isDark ? "bg-white/[0.03] border-white/[0.06]" : "bg-white border-gray-200";
-  const navBg = isDark ? "bg-[#0A0A0F]/90 border-white/5" : "bg-white/90 border-gray-200";
+  const isDark = true; // dark mode only
+  const bg = "#0A0A0F";
+  const text = "text-white";
+  const subtext = "text-white/50";
+  const cardBg = "bg-white/[0.03] border-white/[0.06]";
+  const navBg = "bg-[#0A0A0F]/90 border-white/5";
 
   const features = [
     {
@@ -202,28 +200,14 @@ export default function Landing() {
 
           {/* Right actions */}
           <div className="flex items-center gap-2">
-            {/* Language switcher – only on public pages */}
-            <LanguageSwitcher variant="compact" />
-
-            {/* Dark/light toggle */}
-            {switchable && (
-              <button
-                onClick={handleToggleTheme}
-                className={`p-2 rounded-lg transition-colors ${isDark ? "hover:bg-white/10 text-white/60 hover:text-white" : "hover:bg-gray-100 text-gray-500 hover:text-gray-900"}`}
-                title={isDark ? "Világos mód" : "Sötét mód"}
-              >
-                {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-              </button>
-            )}
-
             <Link href="/bejelentkezes">
-              <Button variant="ghost" size="sm" className={isDark ? "text-white/70 hover:text-white" : "text-gray-600 hover:text-gray-900"}>
-                {lang === "hu" ? "Bejelentkezés" : "Login"}
+              <Button variant="ghost" size="sm" className="text-white/70 hover:text-white">
+                Bejelentkezés
               </Button>
             </Link>
             <Link href="/regisztracio">
               <Button size="sm" className="bg-violet-600 hover:bg-violet-500 text-white border-0">
-                {lang === "hu" ? "Ingyenes próba" : "Free trial"}
+                Ingyenes próba
               </Button>
             </Link>
           </div>

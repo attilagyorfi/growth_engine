@@ -161,6 +161,20 @@ export default function ContentStudio() {
   const generateImageMutation = trpc.ai.generateImage.useMutation();
   const generateContentMutation = trpc.ai.generatePostContent.useMutation();
 
+  // Monthly plan generation
+  const [generatingMonthlyPlan, setGeneratingMonthlyPlan] = useState(false);
+  const generateMonthlyPlanMutation = trpc.content.generateMonthlyPlan.useMutation({
+    onSuccess: (data) => {
+      utils.content.list.invalidate({ profileId: activeProfile.id });
+      toast.success(`✅ ${data.created} tartalom létrehozva ${MONTHS_HU[calendarMonth]} hónapra!`);
+      setGeneratingMonthlyPlan(false);
+    },
+    onError: (e) => {
+      toast.error(e.message);
+      setGeneratingMonthlyPlan(false);
+    },
+  });
+
   // Social connections
   const { data: socialConnections = [] } = trpc.social.listConnections.useQuery(
     { profileId: activeProfile.id },
@@ -686,7 +700,35 @@ export default function ContentStudio() {
             <h2 className="text-base font-bold" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.88 0.008 240)" }}>
               {MONTHS_HU[calendarMonth]} {calendarYear}
             </h2>
-            <div className="flex gap-1">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  if (generatingMonthlyPlan) return;
+                  setGeneratingMonthlyPlan(true);
+                  generateMonthlyPlanMutation.mutate({
+                    profileId: activeProfile.id,
+                    year: calendarYear,
+                    month: calendarMonth,
+                    intelligenceData: intelligence ?? undefined,
+                    contentPillars: contentPillars.length > 0 ? contentPillars : undefined,
+                    platforms: strategyChannels.length > 0 ? strategyChannels : undefined,
+                  });
+                }}
+                disabled={generatingMonthlyPlan}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                style={{
+                  background: generatingMonthlyPlan ? "oklch(0.22 0.02 255)" : "oklch(0.55 0.2 255)",
+                  color: "oklch(0.95 0.005 240)",
+                  cursor: generatingMonthlyPlan ? "not-allowed" : "pointer",
+                  opacity: generatingMonthlyPlan ? 0.7 : 1,
+                }}
+              >
+                {generatingMonthlyPlan ? (
+                  <><Loader2 size={12} className="animate-spin" /> Generálás...</>
+                ) : (
+                  <><Sparkles size={12} /> Teljes hónap AI-vel</>
+                )}
+              </button>
               <button onClick={() => setCalendarDate(new Date(calendarYear, calendarMonth - 1, 1))}
                 className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "oklch(0.22 0.02 255)" }}>
                 <ChevronLeft size={14} style={{ color: "oklch(0.7 0.015 240)" }} />
