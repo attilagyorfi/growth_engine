@@ -7,6 +7,8 @@
 import DashboardLayout from "@/components/DashboardLayout";
 import { useProfile } from "@/contexts/ProfileContext";
 import { trpc } from "@/lib/trpc";
+import UpgradePrompt from "@/components/UpgradePrompt";
+import { useSubscription } from "@/hooks/useSubscription";
 import {
   BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -102,6 +104,7 @@ function EmptyState({ icon: Icon, title, description, actionLabel, onAction }: {
 export default function Analytics() {
   const { activeProfile } = useProfile();
   const [, navigate] = useLocation();
+  const subscription = useSubscription();
 
   const { data: leads = [], isLoading: leadsLoading } = trpc.leads.list.useQuery(
     { profileId: activeProfile.id },
@@ -189,6 +192,21 @@ export default function Analytics() {
     }
     return months;
   }, [leads, contentItems, outboundEmails]);
+
+  // Feature gate: Analytics requires Starter plan or above
+  if (!subscription.canUseAnalytics) {
+    return (
+      <DashboardLayout>
+        <div className="p-6">
+          <UpgradePrompt
+            feature="Analytics modul"
+            requiredPlan="starter"
+            description="Az analytics modul Starter csomagtól érhető el. Kövesd nyomon a lead-ek, tartalmak és email kampányok teljesítményét valós idejű grafikonokkal."
+          />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout title="Analitika" subtitle="Valós idejű teljesítmény áttekintő">

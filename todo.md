@@ -552,3 +552,63 @@
 - [x] Admin tab: LinkedIn OAuth credentials form (ideiglenes runtime beállítás)
 - [x] Admin tab: LinkedIn App beállítási útmutató (lépésről lépésre)
 - [x] BASE_TABS + ADMIN_TAB dinamikus tab lista (isSuperAdmin alapján)
+
+## Onboarding-first flow + DailyTasks kattintható akciók – 2026-04-23
+
+### Onboarding-first flow
+- [ ] Első bejelentkezés után onboarding oldal fogadja a felhasználót (ne az irányítópult)
+- [ ] Onboarding lépések: céges adatok → brand voice → arculat → célok → auto-generálás
+- [ ] Intelligence auto-generálás az onboarding végén (brand DNA, stratégia, tartalmak)
+- [ ] Ha már van profil és onboarding kész: irányítópult
+- [ ] Onboarding progress perzisztálása (visszalépés után folytatás)
+
+### DailyTasksBlock kattintható akciók
+- [ ] Minden generált feladat kattintható legyen (navigáció + auto-trigger)
+- [ ] "Stratégia-tervezet készítése" → Strategy oldal, stratégia generálás auto-trigger
+- [ ] "Tartalom létrehozása" → Content Studio, generálás auto-trigger
+- [ ] "Lead feldolgozás" → Sales Ops, leads tab
+- [ ] Akció típus alapján routing logika (action_type mező a feladatokon)
+
+## Sprint 24 – Subscription & Feature Gating
+- [ ] Free/Pro/Agency szintek feature gate-jeinek implementálása
+- [ ] AI limit per szint (Free: 3, Pro: 50, Agency: korlátlan)
+- [ ] Profil limit per szint (Free: 1, Pro: 5, Agency: korlátlan)
+- [ ] Kampány builder hozzáférés (Pro+)
+- [ ] Upgrade prompt UI (feature lock overlay)
+
+## Sprint 25 – Vitest tesztek
+- [ ] Auth flow tesztek (register, login, logout, forgot-password)
+- [ ] Adatizoláció tesztek (user csak saját profilját látja)
+- [ ] Onboarding completion logika tesztje
+- [ ] AI limit bypass tesztje (super_admin)
+- [ ] Social connections CRUD tesztek
+
+## Sprint 26 – TBD (következő sprint meghatározása implementálás után)
+
+## Sprint 24-25-26 + Onboarding fixes – 2026-04-23
+
+### Onboarding-first flow javítások
+- [x] OnboardingWizard handleFinish: trpc.appAuth.me cache invalidálása completeOnboarding után
+- [x] Express mód: szintén a handleFinish-en keresztül fejezi be az onboardingot (cache invalidálás örökli)
+- [x] App.tsx AppRoute guard: onboardingCompleted=false → /onboarding redirect (megerősítve)
+
+### DailyTasksBlock kattintható akciók
+- [x] Backend: dailyTasks.generate procedure frissítve – actionType mező hozzáadva (navigate/generate/link)
+- [x] Frontend: DailyTasksBlock újraírva – kattintható akciók, kategória badge-ek, navigáció + auto-trigger
+- [x] Strategy oldal ?autoGenerate=true URL param kezelés megerősítve (már meglévő, működik)
+
+### Sprint 24 – Subscription & Feature Gating
+- [x] useSubscription hook létrehozva (client/src/hooks/useSubscription.ts)
+- [x] UpgradePrompt komponens létrehozva (client/src/components/UpgradePrompt.tsx)
+- [x] Strategy oldal: feature gate (starter+ szükséges)
+- [x] Analytics oldal: feature gate (starter+ szükséges)
+- [x] Campaigns oldal: feature gate (pro+ szükséges)
+
+### Sprint 25 – Vitest tesztek
+- [x] server/onboarding.test.ts: 26 teszt (onboarding state, role assignment, AI limit bypass, data isolation, subscription plans, auth context)
+- [x] Összes teszt: 37/37 passed (4 test file)
+
+### Sprint 26 – Kampány Builder kiegészítések
+- [x] campaigns.generateContentFromBrief tRPC procedure (brief → Content Studio tartalmak)
+- [x] Campaigns oldal: „Tartalmak automatikus létrehozása" gomb a brief tab-on
+- [x] Campaigns oldal: feature gate (Pro csomag szükséges)

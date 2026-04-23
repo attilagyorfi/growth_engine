@@ -933,6 +933,60 @@ export const appRouter = router({
         status: z.enum(["draft", "review", "approved", "published"]).optional(),
       }))
       .mutation(({ input }) => upsertCampaignAsset({ ...input, id: input.id ?? nanoid(), status: input.status ?? "draft" })),
+
+    generateContentFromBrief: appUserProcedure
+      .input(z.object({
+        profileId: z.string(),
+        campaignId: z.string(),
+        campaignTitle: z.string(),
+        brief: z.object({
+          hook: z.string(),
+          mainMessage: z.string(),
+          cta: z.string(),
+          contentIdeas: z.array(z.object({ title: z.string(), format: z.string(), platform: z.string() })),
+          kpis: z.array(z.object({ label: z.string(), target: z.string() })),
+        }),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        const limitCheck = await checkAiUsageLimit(ctx.appUser.id, ctx.appUser.subscriptionPlan ?? "free", ctx.appUser.role);
+        if (!limitCheck.allowed) {
+          throw new TRPCError({ code: "FORBIDDEN", message: `AI limit elérve (${limitCheck.used}/${limitCheck.limit})` });
+        }
+        const PLATFORM_MAP: Record<string, "linkedin" | "facebook" | "instagram" | "twitter" | "tiktok"> = {
+          linkedin: "linkedin", facebook: "facebook", instagram: "instagram",
+          twitter: "twitter", tiktok: "tiktok",
+        };
+        const created: string[] = [];
+        const ideasToProcess = input.brief.contentIdeas.slice(0, 5);
+        for (const idea of ideasToProcess) {
+          const response = await invokeLLM({
+            messages: [
+              { role: "system", content: "Te egy marketing tartalomíró vagy. Kizárólag MAGYARUL írj." },
+              { role: "user", content: `Írj egy ${idea.format} formátumú tartalmat ${idea.platform} platformra a következő kampányhoz:\nKampány: ${input.campaignTitle}\nCím: ${idea.title}\nFő üzenete: ${input.brief.mainMessage}\nHook: ${input.brief.hook}\nCTA: ${input.brief.cta}\n\nAdj vissza JSON-t: {"title": "...", "content": "...", "hashtags": ["..."]}` },
+            ],
+            response_format: { type: "json_schema", json_schema: { name: "content_item", strict: true, schema: { type: "object", properties: { title: { type: "string" }, content: { type: "string" }, hashtags: { type: "array", items: { type: "string" } } }, required: ["title", "content", "hashtags"], additionalProperties: false } } },
+          });
+          const raw = response.choices[0]?.message?.content ?? "{}";
+          const parsed = JSON.parse(typeof raw === "string" ? raw : JSON.stringify(raw));
+          const platformKey = idea.platform.toLowerCase().replace(/\s+/g, "");
+          const platform = PLATFORM_MAP[platformKey] ?? "linkedin";
+          const contentId = nanoid();
+          await createContent({
+            id: contentId,
+            profileId: input.profileId,
+            platform,
+            title: parsed.title ?? idea.title,
+            content: parsed.content ?? "",
+            hashtags: parsed.hashtags ?? [],
+            status: "draft",
+            pillar: input.campaignId,
+          });
+          created.push(contentId);
+        }
+        await recordAiUsage(ctx.appUser.id, "campaign_content_generation", ctx.appUser.role);
+        return { created: created.length, contentIds: created };
+      }),
   }),
 
   // ─── Recommendations ────────────────────────────────────────────────────────
@@ -1070,7 +1124,17 @@ export const appRouter = router({
           messages: [
             {
               role: "system",
-              content: "Te egy marketing asszisztens vagy. A vállalkozás kontextusa alapján adj 3-5 konkrét, rövid napi teendőt. Minden teendő legyen cselekvő igével kezdődő, max 10 szavas magyar mondat. Adj egy rövid motiváló üzenetet is.",
+              content: `Te egy marketing asszisztens vagy. A vállalkozás kontextusa alapján adj 3-5 konkrét, rövid napi teendőt. Minden teendő legyen cselekvő igével kezdődő, max 10 szavas magyar mondat. Adj egy rövid motiváló üzenetet is.
+
+FONTOS: Minden feladathoz adj meg egy actionType-ot és egy link URL-t az alábbi szabályok szerint:
+- Ha a feladat stratégiával kapcsolatos: actionType="strategy", link="/strategia?autoGenerate=true"
+- Ha a feladat tartalommal kapcsolatos (poszt, cikk, social): actionType="content", link="/tartalom-studio"
+- Ha a feladat lead-del vagy értékesítéssel kapcsolatos: actionType="sales", link="/ertekesites"
+- Ha a feladat kampánnyal kapcsolatos: actionType="campaign", link="/kampanyok"
+- Ha a feladat intelligence/elemzéssel kapcsolatos: actionType="intelligence", link="/intelligencia"
+- Egyéb esetben: actionType="other", link="/iranyitopult"
+
+A link mező mindig ezek egyike legyen, ne találj ki más URL-t.`,
             },
             {
               role: "user",
@@ -1093,8 +1157,9 @@ export const appRouter = router({
                         text: { type: "string" },
                         category: { type: "string", enum: ["tartalom", "lead", "stratégia", "kampány", "egyéb"] },
                         link: { type: "string" },
+                        actionType: { type: "string", enum: ["strategy", "content", "sales", "campaign", "intelligence", "other"] },
                       },
-                      required: ["text", "category", "link"],
+                      required: ["text", "category", "link", "actionType"],
                       additionalProperties: false,
                     },
                   },
@@ -1109,7 +1174,7 @@ export const appRouter = router({
         const raw = response.choices[0]?.message?.content ?? "{}";
         await recordAiUsage(ctx.appUser.id, "daily_tasks", ctx.appUser.role);
         return JSON.parse(typeof raw === "string" ? raw : JSON.stringify(raw)) as {
-          tasks: { text: string; category: string; link: string }[];
+          tasks: { text: string; category: string; link: string; actionType: string }[];
           motivationalMessage: string;
         };
       }),

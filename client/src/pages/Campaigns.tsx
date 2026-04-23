@@ -2,6 +2,8 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useProfile } from "@/contexts/ProfileContext";
 import DashboardLayout from "@/components/DashboardLayout";
+import UpgradePrompt from "@/components/UpgradePrompt";
+import { useSubscription } from "@/hooks/useSubscription";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +30,7 @@ const CHANNELS = ["LinkedIn", "Facebook", "Instagram", "Email", "TikTok", "Googl
 export default function Campaigns() {
   const { activeProfile } = useProfile();
   const utils = trpc.useUtils();
+  const subscription = useSubscription();
 
   const [showCreate, setShowCreate] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<string | null>(null);
@@ -91,6 +94,33 @@ export default function Campaigns() {
     },
   });
 
+  const [generatingContent, setGeneratingContent] = useState(false);
+
+  const generateContentMutation = trpc.campaigns.generateContentFromBrief.useMutation({
+    onSuccess: (result) => {
+      setGeneratingContent(false);
+      toast.success(`${result.created} tartalom létrehozva a Content Studio-ban!`);
+    },
+    onError: () => {
+      setGeneratingContent(false);
+      toast.error("Nem sikerült a tartalmak generálása.");
+    },
+  });
+
+  function handleGenerateContent(campaign: typeof selectedCampaignData) {
+    if (!campaign?.brief) {
+      toast.error("Először generálj kampány briefet!");
+      return;
+    }
+    setGeneratingContent(true);
+    generateContentMutation.mutate({
+      profileId: activeProfile.id,
+      campaignId: campaign.id,
+      campaignTitle: campaign.title,
+      brief: campaign.brief,
+    });
+  }
+
   function resetForm() {
     setForm({ title: "", objective: "", targetAudience: "", channels: [], budget: "", startDate: "", endDate: "", status: "draft" });
   }
@@ -124,6 +154,21 @@ export default function Campaigns() {
 
   const activeCampaigns = campaigns.filter(c => c.status === "active");
   const draftCampaigns = campaigns.filter(c => c.status === "draft");
+
+  // Feature gate: Campaigns requires Pro plan or above
+  if (!subscription.canUseCampaigns) {
+    return (
+      <DashboardLayout>
+        <div className="p-6">
+          <UpgradePrompt
+            feature="Kampány Builder"
+            requiredPlan="pro"
+            description="A Kampány Builder Pro csomagtól érhető el. Hozz létre AI-alapú marketing kampányokat, automatikusan generálj tartalmakat és kövesd nyomon a kampány teljesítményét."
+          />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -435,11 +480,27 @@ export default function Campaigns() {
                           </div>
                         </div>
                       )}
+                      <div className="mt-4 pt-4 border-t">
+                        <Button
+                          onClick={() => handleGenerateContent(selectedCampaignData)}
+                          disabled={generatingContent || generateContentMutation.isPending}
+                          className="w-full"
+                          variant="default"
+                        >
+                          {(generatingContent || generateContentMutation.isPending) ? (
+                            <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Tartalmak generálása...(max 5 db)</>
+                          ) : (
+                            <><Zap className="w-4 h-4 mr-2" />⚡ Tartalmak automatikus létrehozása a Content Studio-ban</>
+                          )}
+                        </Button>
+                        <p className="text-xs text-muted-foreground mt-2 text-center">Az AI a brief alapján létrehozza a tartalmakat – ezek a Content Studio-ban lesznek elérhetők</p>
+                      </div>
                     </div>
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
                       <Zap className="w-8 h-8 mx-auto mb-2" />
                       <p>Ehhez a kampányhoz még nincs AI brief generálva.</p>
+                      <p className="text-xs mt-1">Először hozz létre egy kampányt és generálj briefet!</p>
                     </div>
                   )}
                 </TabsContent>

@@ -5,6 +5,8 @@ import { trpc } from "@/lib/trpc";
 import { useProfile } from "@/contexts/ProfileContext";
 import DashboardLayout from "@/components/DashboardLayout";
 import { AiLimitBanner } from "@/components/AiLimitBanner";
+import UpgradePrompt from "@/components/UpgradePrompt";
+import { useSubscription } from "@/hooks/useSubscription";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +31,7 @@ export default function Strategy() {
   const { activeProfile } = useProfile();
   const utils = trpc.useUtils();
   const search = useSearch();
+  const subscription = useSubscription();
 
   const [showGenerate, setShowGenerate] = useState(false);
   const [strategyContext, setStrategyContext] = useState("");
@@ -105,6 +108,21 @@ export default function Strategy() {
 
   const activeVersions = versions;
   const archivedVersions: typeof versions = [];
+
+  // Feature gate: Strategy requires Starter plan or above
+  if (!subscription.canUseStrategy) {
+    return (
+      <DashboardLayout>
+        <div className="p-6">
+          <UpgradePrompt
+            feature="Stratégia modul"
+            requiredPlan="starter"
+            description="A stratégia modul Starter csomagtól érhető el. Generálj AI-alapú negyedéves és havi marketing stratégiát a vállalkozásod számára."
+          />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>

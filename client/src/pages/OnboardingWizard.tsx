@@ -366,6 +366,7 @@ export default function OnboardingWizard() {
   const upsertProfile = trpc.profiles.upsert.useMutation();
   const generateIntelligence = trpc.intelligence.generate.useMutation();
   const generateWow = trpc.intelligence.generateWowMoment.useMutation();
+  const utils = trpc.useUtils();
   const completeOnboarding = trpc.appAuth.completeOnboarding.useMutation();
 
   // ─── Step 1: Website Scraping ───────────────────────────────────────────────
@@ -689,6 +690,8 @@ export default function OnboardingWizard() {
           });
         }
         await completeOnboarding.mutateAsync({ profileId: data.profileId });
+        // Invalidate auth cache so AppRoute sees onboardingCompleted=true immediately
+        await utils.appAuth.me.invalidate();
       } catch (e) {
         console.error("Onboarding complete error:", e);
       }
