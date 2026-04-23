@@ -13,6 +13,8 @@ import {
 import DashboardLayout from "@/components/DashboardLayout";
 import { useData } from "@/contexts/DataContext";
 import { useProfile } from "@/contexts/ProfileContext";
+import { useAppAuth } from "@/hooks/useAppAuth";
+import { useActiveProject } from "@/hooks/useActiveProject";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -24,6 +26,8 @@ export default function Dashboard() {
   const [, navigate] = useLocation();
   const { outbound, leads, inbound, updateOutbound } = useData();
   const { activeProfile } = useProfile();
+  const { isSuperAdmin } = useAppAuth();
+  const { activeProject } = useActiveProject();
   const [aiTasksKey, setAiTasksKey] = useState(0);
 
   // Content items from tRPC
@@ -99,8 +103,17 @@ export default function Dashboard() {
             Jó reggelt! 👋
           </h1>
           <p className="text-sm mt-0.5" style={{ color: "oklch(0.55 0.015 240)" }}>
-            Aktív ügyfél: <span className="font-semibold" style={{ color: "oklch(0.75 0.18 255)" }}>{activeProfile.name}</span>
-            <span className="mx-2" style={{ color: "oklch(0.35 0.015 240)" }}>·</span>
+            {isSuperAdmin && activeProject ? (
+              <>
+                Aktív projekt: <span className="font-semibold" style={{ color: "oklch(0.75 0.18 75)" }}>{activeProject.name}</span>
+                <span className="mx-2" style={{ color: "oklch(0.35 0.015 240)" }}>·</span>
+              </>
+            ) : activeProfile.name ? (
+              <>
+                Aktív ügyfél: <span className="font-semibold" style={{ color: "oklch(0.75 0.18 255)" }}>{activeProfile.name}</span>
+                <span className="mx-2" style={{ color: "oklch(0.35 0.015 240)" }}>·</span>
+              </>
+            ) : null}
             <span style={{ color: "oklch(0.45 0.015 240)" }}>{new Date().toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric" })}</span>
           </p>
         </div>

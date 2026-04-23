@@ -698,3 +698,26 @@
 - [x] AI: hangnem, tartalom típusok, engagement elemzés a profilokból
 - [x] OnboardingWizard: "Profilok elemzése" gomb + státusz jelzők
 - [x] Intelligence generate: social scraping eredmények beépítése
+
+## Sprint 30 – Projektek oldal + Adatizoláció + Onboarding reset
+
+### Projektek oldal
+- [x] /projektek route + ProjectsPage komponens (super_admin only)
+- [x] Projekt lista kártyák: név, weboldal, iparág, aktív jelzés
+- [x] Új projekt létrehozás form (inline)
+- [x] Projekt szerkesztés (név, weboldal, iparág, leírás, szín, logó URL)
+- [x] Aktív projekt váltás gomb
+- [x] Projekt törlés (megerősítéssel)
+- [x] adminNavItems: "Projektek" menüpont hozzáadása
+
+### Projekt-szintű adatizoláció
+- [x] useActiveProject() hook: aktív projekt ID tárolása és szinkronizálása (localStorage + DB)
+- [ ] Stratégia modul: aktív projekt szerint szűrés (Sprint 31)
+- [ ] Tartalom Studio: aktív projekt szerint szűrés (Sprint 31)
+- [ ] Leads/SalesOps: aktív projekt szerint szűrés (Sprint 31)
+- [x] Dashboard: aktív projekt neve megjelenítése
+
+### Onboarding tesztelhetőség
+- [x] Settings > Fiók tab hozzáadva (profil adatok + onboarding reset)
+- [x] appAuth.resetMyOnboarding procedure (minden bejelentkezett felhasználó eléri)
+- [x] Onboarding reset procedure: saját fiókra is elérhető (Settings > Fiók tab)

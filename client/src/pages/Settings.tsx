@@ -14,9 +14,10 @@ import { useProfile } from "@/contexts/ProfileContext";
 import { useAppAuth } from "@/hooks/useAppAuth";
 import { toast } from "sonner";
 
-type Tab = "brand" | "integrations" | "team" | "audit" | "admin";
+type Tab = "brand" | "integrations" | "team" | "audit" | "admin" | "fiok";
 
 const BASE_TABS: { id: Tab; label: string; icon: React.ReactNode; badge?: string }[] = [
+  { id: "fiok", label: "Fiók", icon: <Users size={14} /> },
   { id: "brand", label: "Brand Center", icon: <Palette size={14} /> },
   { id: "integrations", label: "Integrációk", icon: <Plug size={14} /> },
   { id: "team", label: "Csapat", icon: <Users size={14} />, badge: "Hamarosan" },
@@ -38,6 +39,12 @@ export default function Settings() {
     undefined,
     { enabled: isSuperAdmin }
   );
+  const resetMyOnboarding = trpc.appAuth.resetMyOnboarding.useMutation({
+    onSuccess: () => {
+      toast.success("Onboarding állapot visszaállítva. Következő belépéskor az onboarding oldal jelenik meg.");
+    },
+    onError: (e) => toast.error(e.message),
+  });
   const resetOnboarding = trpc.appAuth.resetOnboardingForTesting.useMutation({
     onSuccess: () => {
       toast.success("Onboarding állapot visszaállítva. Következő bejelentkezéskor az onboarding oldal jelenik meg.");
@@ -155,6 +162,60 @@ export default function Settings() {
           </button>
         ))}
       </div>
+
+      {/* Fiók */}
+      {activeTab === "fiok" && (
+        <div className="space-y-5">
+          {/* Profil adatok */}
+          <div className="rounded-xl border p-5" style={{ background: cardBg, borderColor: border }}>
+            <h3 className="text-sm font-bold mb-4" style={{ color: "oklch(0.88 0.008 240)" }}>Profil adatok</h3>
+            <div className="space-y-2">
+              <div className="flex items-center gap-3 p-3 rounded-lg" style={{ background: "oklch(0.14 0.02 255)" }}>
+                <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold" style={{ background: "oklch(0.6 0.2 255 / 20%)", color: "oklch(0.75 0.18 255)" }}>
+                  {appUser?.name?.[0]?.toUpperCase() ?? "?"}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: "oklch(0.88 0.008 240)" }}>{appUser?.name ?? "Ismeretlen"}</p>
+                  <p className="text-xs" style={{ color: "oklch(0.55 0.015 240)" }}>{appUser?.email ?? ""}</p>
+                </div>
+                <span className="ml-auto text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: "oklch(0.6 0.2 255 / 15%)", color: "oklch(0.75 0.18 255)" }}>
+                  {appUser?.role === "super_admin" ? "Super Admin" : "Felhasználó"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Onboarding tesztelési mód */}
+          <div className="rounded-xl border p-5" style={{ background: "oklch(0.18 0.025 30 / 40%)", borderColor: "oklch(0.7 0.2 30 / 30%)" }}>
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-base" style={{ background: "oklch(0.7 0.2 30 / 15%)" }}>🧪</div>
+              <div className="flex-1">
+                <h3 className="text-sm font-bold mb-1" style={{ color: "oklch(0.88 0.008 240)" }}>Onboarding tesztelési mód</h3>
+                <p className="text-xs mb-4" style={{ color: "oklch(0.5 0.015 240)" }}>
+                  Visszaállítja az onboarding állapotot. A következő belépéskor az onboarding oldal jelenik meg, mintha új felhasználó lennél.
+                  A profil adatok törlődnek, de a meglévő tartalmak és lead-ek megmaradnak.
+                </p>
+                <button
+                  onClick={() => {
+                    if (window.confirm('Biztosan visszaállítod az onboarding állapotot? A profil adatok törlődnek.')) {
+                      resetMyOnboarding.mutate();
+                    }
+                  }}
+                  disabled={resetMyOnboarding.isPending}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white"
+                  style={{ background: "oklch(0.55 0.18 30)" }}
+                >
+                  {resetMyOnboarding.isPending ? (
+                    <><Loader2 size={13} className="animate-spin" /> Visszaállítás...</>
+                  ) : (
+                    <>🔄 Onboarding visszaállítása</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Brand Center */}
       {activeTab === "brand" && (

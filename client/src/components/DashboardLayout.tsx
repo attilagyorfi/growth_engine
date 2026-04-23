@@ -32,6 +32,7 @@ const publicNavItems = [
 const adminNavItems = [
   { href: "/iranyitopult", label: "Irányítópult", icon: LayoutDashboard },
   { href: "/ugyfelek", label: "Ügyfelek", icon: Users },
+  { href: "/projektek", label: "Projektek", icon: FolderOpen },
   { href: "/intelligencia", label: "Intelligencia", icon: Brain },
   { href: "/strategia", label: "Stratégia", icon: BarChart3 },
   { href: "/tartalom-studio", label: "Tartalom Studio", icon: Layers },

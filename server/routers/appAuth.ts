@@ -294,4 +294,11 @@ export const appAuthRouter = router({
       await updateAppUser(targetId, { onboardingCompleted: false, profileId: null });
       return { success: true };
     }),
+
+  // Saját onboarding reset – bármely bejelentkezett felhasználó elérheti
+  resetMyOnboarding: appUserProcedure
+    .mutation(async ({ ctx }) => {
+      await updateAppUser(ctx.appUser.id, { onboardingCompleted: false, profileId: null });
+      return { success: true };
+    }),
 });

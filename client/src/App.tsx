@@ -34,6 +34,7 @@ const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 
 // Admin pages
 const AdminUsers = lazy(() => import("./pages/AdminUsers"));
+const ProjectsPage = lazy(() => import("./pages/ProjectsPage"));
 
 // ─── Route Guards ─────────────────────────────────────────────────────────────
 
@@ -109,6 +110,7 @@ function Router() {
 
       {/* Admin routes */}
       <Route path="/admin/felhasznalok" component={() => <AdminRoute component={AdminUsers} />} />
+      <Route path="/projektek" component={() => <AdminRoute component={ProjectsPage} />} />
 
       {/* Legacy English URL redirects */}
       <Route path="/login" component={() => <Redirect to="/bejelentkezes" />} />
