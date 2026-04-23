@@ -581,7 +581,7 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
         // Feature gating: check AI usage limit
-        const usageCheck = await checkAiUsageLimit(ctx.appUser.id, ctx.appUser.subscriptionPlan ?? "free");
+        const usageCheck = await checkAiUsageLimit(ctx.appUser.id, ctx.appUser.subscriptionPlan ?? "free", ctx.appUser.role);
         if (!usageCheck.allowed) {
           throw new TRPCError({ code: "FORBIDDEN", message: `AI generálási limit elérve (${usageCheck.used}/${usageCheck.limit} ebben a hónapban). Frissítsd az előfizetésed a folytatáshoz.`, cause: { code: "AI_LIMIT_REACHED", used: usageCheck.used, limit: usageCheck.limit, plan: usageCheck.plan } });
         }
@@ -600,7 +600,7 @@ export const appRouter = router({
         const content = response.choices[0]?.message?.content ?? "{}";
         const parsed = JSON.parse(typeof content === "string" ? content : JSON.stringify(content));
         // Record AI usage
-        await recordAiUsage(ctx.appUser.id, "intelligence");
+        await recordAiUsage(ctx.appUser.id, "intelligence", ctx.appUser.role);
         return upsertCompanyIntelligence({
           id: nanoid(),
           profileId: input.profileId,
@@ -804,7 +804,7 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
         // Feature gating: check AI usage limit
-        const usageCheck = await checkAiUsageLimit(ctx.appUser.id, ctx.appUser.subscriptionPlan ?? "free");
+        const usageCheck = await checkAiUsageLimit(ctx.appUser.id, ctx.appUser.subscriptionPlan ?? "free", ctx.appUser.role);
         if (!usageCheck.allowed) {
           throw new TRPCError({ code: "FORBIDDEN", message: `AI generálási limit elérve (${usageCheck.used}/${usageCheck.limit} ebben a hónapban). Frissítsd az előfizetésed a folytatáshoz.`, cause: { code: "AI_LIMIT_REACHED", used: usageCheck.used, limit: usageCheck.limit, plan: usageCheck.plan } });
         }
@@ -821,7 +821,7 @@ export const appRouter = router({
         const content = response.choices[0]?.message?.content ?? "{}";
         const parsed = JSON.parse(typeof content === "string" ? content : JSON.stringify(content));
         // Record AI usage
-        await recordAiUsage(ctx.appUser.id, "strategy");
+        await recordAiUsage(ctx.appUser.id, "strategy", ctx.appUser.role);
         const existing = await getStrategyVersionsByProfile(input.profileId);
         const versionNumber = existing.length + 1;
         return upsertStrategyVersion({
@@ -994,7 +994,7 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         // Feature gating: check AI usage limit
-        const usageCheck = await checkAiUsageLimit(ctx.appUser.id, ctx.appUser.subscriptionPlan ?? "free");
+        const usageCheck = await checkAiUsageLimit(ctx.appUser.id, ctx.appUser.subscriptionPlan ?? "free", ctx.appUser.role);
         if (!usageCheck.allowed) {
           throw new TRPCError({ code: "FORBIDDEN", message: `AI generálási limit elérve (${usageCheck.used}/${usageCheck.limit} ebben a hónapban). Frissítsd az előfizetésed a folytatáshoz.`, cause: { code: "AI_LIMIT_REACHED", used: usageCheck.used, limit: usageCheck.limit, plan: usageCheck.plan } });
         }
@@ -1009,7 +1009,7 @@ export const appRouter = router({
         });
         const raw = response.choices[0]?.message?.content ?? "{}";
         // Record AI usage
-        await recordAiUsage(ctx.appUser.id, "content");
+        await recordAiUsage(ctx.appUser.id, "content", ctx.appUser.role);
         return JSON.parse(typeof raw === "string" ? raw : JSON.stringify(raw));
       }),
   }),
@@ -1020,7 +1020,10 @@ export const appRouter = router({
       .input(z.object({ profileId: z.string() }))
       .mutation(async ({ ctx, input }) => {
         await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
-        await checkAiUsageLimit(ctx.appUser.id, ctx.appUser.subscriptionPlan ?? "free");
+        const dailyTasksUsageCheck = await checkAiUsageLimit(ctx.appUser.id, ctx.appUser.subscriptionPlan ?? "free", ctx.appUser.role);
+        if (!dailyTasksUsageCheck.allowed) {
+          throw new TRPCError({ code: "FORBIDDEN", message: `AI generálási limit elérve (${dailyTasksUsageCheck.used}/${dailyTasksUsageCheck.limit} ebben a hónapban). Frissítsd az előfizetésed a folytatáshoz.`, cause: { code: "AI_LIMIT_REACHED", used: dailyTasksUsageCheck.used, limit: dailyTasksUsageCheck.limit, plan: dailyTasksUsageCheck.plan } });
+        }
 
         // Gather context: strategy version, leads, drafts
         const strategy = await getActiveStrategyVersion(input.profileId);
@@ -1082,7 +1085,7 @@ export const appRouter = router({
           },
         });
         const raw = response.choices[0]?.message?.content ?? "{}";
-        await recordAiUsage(ctx.appUser.id, "daily_tasks");
+        await recordAiUsage(ctx.appUser.id, "daily_tasks", ctx.appUser.role);
         return JSON.parse(typeof raw === "string" ? raw : JSON.stringify(raw)) as {
           tasks: { text: string; category: string; link: string }[];
           motivationalMessage: string;
@@ -1218,12 +1221,39 @@ export const appRouter = router({
           .orderBy(desc(scheduledPosts.scheduledAt))
           .limit(50);
       }),
+    getLinkedInOAuthUrl: appUserProcedure
+      .input(z.object({ profileId: z.string(), origin: z.string() }))
+      .query(async ({ ctx, input }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        const clientId = process.env.LINKEDIN_CLIENT_ID ?? "";
+        if (!clientId) {
+          return { url: null, configured: false };
+        }
+        const state = Buffer.from(JSON.stringify({ profileId: input.profileId, origin: input.origin })).toString("base64url");
+        const redirectUri = `${input.origin}/api/oauth/linkedin/callback`;
+        const params = new URLSearchParams({
+          response_type: "code",
+          client_id: clientId,
+          redirect_uri: redirectUri,
+          state,
+          scope: "openid profile email w_member_social",
+        });
+        return { url: `https://www.linkedin.com/oauth/v2/authorization?${params.toString()}`, configured: true };
+      }),
+    isLinkedInConfigured: publicProcedure
+      .query(() => {
+        return { configured: !!(process.env.LINKEDIN_CLIENT_ID && process.env.LINKEDIN_CLIENT_SECRET) };
+      }),
   }),
 
   // ─── AI Usage Status ─────────────────────────────────────────────────────────
   aiUsage: router({
     status: appUserProcedure
       .query(async ({ ctx }) => {
+        // Super admins always have unlimited AI access
+        if (ctx.appUser.role === "super_admin") {
+          return { plan: "super_admin", used: 0, limit: -1, unlimited: true, remaining: Infinity };
+        }
         const plan = ctx.appUser.subscriptionPlan ?? "free";
         const { AI_PLAN_LIMITS, getMonthlyAiUsageCount, getCurrentMonth } = await import("./authDb");
         const limit = AI_PLAN_LIMITS[plan] ?? 3;

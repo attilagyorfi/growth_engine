@@ -3,7 +3,7 @@
  * Brand Center, Integrations, Team, Audit Log összevonva
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Palette, Plug, Users, ClipboardList, X, Loader2, Plus,
   Save, Globe, Mail, Check, AlertCircle,
@@ -76,6 +76,29 @@ export default function Settings() {
   });
   const [linkedInModal, setLinkedInModal] = useState(false);
   const [linkedInForm, setLinkedInForm] = useState({ accessToken: "", platformUserId: "", platformUsername: "" });
+  const { data: linkedInConfig } = trpc.social.isLinkedInConfigured.useQuery();
+  const { data: linkedInOAuthData } = trpc.social.getLinkedInOAuthUrl.useQuery(
+    { profileId: activeProfile.id, origin: typeof window !== "undefined" ? window.location.origin : "" },
+    { enabled: !!activeProfile.id && !!linkedInConfig?.configured }
+  );
+
+  // Handle LinkedIn OAuth callback result from URL params
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const linkedinStatus = params.get("linkedin");
+    if (linkedinStatus === "connected") {
+      const username = params.get("username") ?? "";
+      toast.success(`LinkedIn fiók csatlakoztatva${username ? `: ${username}` : ""}!`);
+      refetchSocial();
+      // Clean URL
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (linkedinStatus === "error") {
+      const reason = params.get("reason") ?? "unknown";
+      toast.error(`LinkedIn csatlakoztatás sikertelen: ${reason}`);
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSaveBrand = async () => {
     await upsertProfile.mutateAsync({ id: activeProfile.id, name: activeProfile.name, initials: activeProfile.initials, ...brandForm });
@@ -244,11 +267,19 @@ export default function Settings() {
           <div className="rounded-xl border p-5" style={{ background: cardBg, borderColor: border }}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-bold" style={{ color: "oklch(0.88 0.008 240)" }}>Social Media</h3>
-              <button onClick={() => setLinkedInModal(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
-                style={{ background: "oklch(0.55 0.18 255 / 15%)", color: "oklch(0.55 0.18 255)" }}>
-                <Plus size={12} /> LinkedIn csatlakoztatás
-              </button>
+              {linkedInOAuthData?.url ? (
+                <a href={linkedInOAuthData.url}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
+                  style={{ background: "oklch(0.55 0.18 255 / 15%)", color: "oklch(0.55 0.18 255)" }}>
+                  <Plus size={12} /> LinkedIn csatlakoztatás
+                </a>
+              ) : (
+                <button onClick={() => setLinkedInModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
+                  style={{ background: "oklch(0.55 0.18 255 / 15%)", color: "oklch(0.55 0.18 255)" }}>
+                  <Plus size={12} /> LinkedIn csatlakoztatás
+                </button>
+              )}
             </div>
             {socialConnections.filter(c => c.isActive).length === 0 ? (
               <div className="text-center py-8">
@@ -290,9 +321,22 @@ export default function Settings() {
               <h3 className="text-base font-bold" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>LinkedIn fiók csatlakoztatása</h3>
               <button onClick={() => setLinkedInModal(false)} style={{ color: "oklch(0.5 0.015 240)" }}><X size={18} /></button>
             </div>
-            <p className="text-xs mb-4 p-3 rounded-lg" style={{ background: "oklch(0.75 0.18 75 / 8%)", color: "oklch(0.75 0.18 75)" }}>
-              A LinkedIn OAuth integráció fejlesztés alatt áll. Addig manuálisan add meg az access tokent a LinkedIn Developer Portal-ból.
-            </p>
+            {linkedInOAuthData?.url ? (
+              <div className="mb-4">
+                <p className="text-xs mb-3 p-3 rounded-lg" style={{ background: "oklch(0.55 0.18 255 / 8%)", color: "oklch(0.7 0.15 255)" }}>
+                  Kattints az alábbi gombra a LinkedIn fiókod biztonságos csatlakoztatásához. Átirányítunk a LinkedIn bejelentkezési oldalára.
+                </p>
+                <a href={linkedInOAuthData.url}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-white text-sm"
+                  style={{ background: "oklch(0.55 0.18 255)" }}>
+                  <Plug size={15} /> Csatlakozás LinkedIn-nel
+                </a>
+              </div>
+            ) : (
+              <p className="text-xs mb-4 p-3 rounded-lg" style={{ background: "oklch(0.75 0.18 75 / 8%)", color: "oklch(0.75 0.18 75)" }}>
+                A LinkedIn OAuth integráció konfiguráláshoz szükséges a LINKEDIN_CLIENT_ID és LINKEDIN_CLIENT_SECRET env var. Addig manuálisan add meg az access tokent.
+              </p>
+            )}
             <div className="space-y-3">
               <div>
                 <label className="text-xs font-semibold mb-1 block" style={{ color: "oklch(0.65 0.015 240)" }}>Access Token *</label>

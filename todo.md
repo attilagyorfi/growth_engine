@@ -482,3 +482,30 @@
 ### Sprint 17 – Mobil UX javítások
 - [x] Leads oldal – mobil kártya nézet (md:hidden) + desktop tábla (hidden md:table)
 - [x] SalesOps oldal – mobil kártya nézet + desktop tábla, touch-friendly 44px gombok
+
+## Kritikus bug – Super admin AI limit bypass
+
+- [x] checkAiUsageLimit: super_admin role esetén ne ellenőrizze a limitet (korlátlan AI)
+- [x] recordAiUsage: super_admin esetén ne számolja a generálásokat
+- [x] Frontend: super_admin-nál ne jelenjen meg az AI usage progress bar / upgrade prompt
+
+## Sprint 18 – LinkedIn OAuth valódi flow
+- [x] LinkedIn OAuth 2.0 app regisztráció dokumentálása
+- [x] /api/oauth/linkedin/callback endpoint implementálása (server/linkedinOAuth.ts)
+- [x] LinkedIn access token csere és DB mentés (social_connections tábla)
+- [x] Settings > Integrációk: "Csatlakozás LinkedIn-nel" gomb valódi OAuth flow-val
+- [x] social.getLinkedInOAuthUrl és social.isLinkedInConfigured tRPC procedure-ök
+- [x] Settings oldal: OAuth callback URL paraméter kezelés (toast, URL cleanup)
+
+## Sprint 19 – Onboarding Express mód
+- [x] Express útvonal gomb az onboarding első lépésén (⚡ Express mód gomb)
+- [x] URL megadás → AI autofill → összes mező automatikus kitöltése
+- [x] Egyetlen "Megerősítés és indítás" gomb az Express módban (handleExpressFinish)
+- [x] Visszalépés lehetősége a részletes módba
+
+## Sprint 20 – Fiktív adatok teljes cleanup
+- [x] Főoldal: testimonials szekció ellenőrizve – nincs fiktív adat (Landing.tsx)
+- [x] Főoldal: "200+ vállalkozás" trust indicator ellenőrizve – nincs ilyen (Stats szekció valódi termékjellemzőket mutat)
+- [x] Főoldal: placeholder ügyféllogók ellenőrizve – nincs ilyen
+- [x] DataContext: összes hardkódolt demo adat eltávolítva – teljesen DB-alapú
+- [x] Dashboard: placeholder KPI adatok eltávolítva, valódi empty state-ek implementálva

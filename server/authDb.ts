@@ -151,8 +151,10 @@ export async function getMonthlyAiUsageCount(appUserId: string, month?: string):
   return rows[0]?.count ?? 0;
 }
 
-/** Record an AI usage event */
-export async function recordAiUsage(appUserId: string, action: string): Promise<void> {
+/** Record an AI usage event (skipped for super_admin) */
+export async function recordAiUsage(appUserId: string, action: string, role?: string): Promise<void> {
+  // Super admins don't consume AI usage quota
+  if (role === "super_admin") return;
   const db = await requireDb();
   await db.insert(aiUsage).values({
     appUserId,
@@ -162,12 +164,16 @@ export async function recordAiUsage(appUserId: string, action: string): Promise<
 }
 
 /** Check if a user can perform an AI action (within plan limits) */
-export async function checkAiUsageLimit(appUserId: string, plan: string): Promise<{
+export async function checkAiUsageLimit(appUserId: string, plan: string, role?: string): Promise<{
   allowed: boolean;
   used: number;
   limit: number;
   plan: string;
 }> {
+  // Super admins always have unlimited AI access regardless of subscription plan
+  if (role === "super_admin") {
+    return { allowed: true, used: 0, limit: -1, plan: "super_admin" };
+  }
   const limit = AI_PLAN_LIMITS[plan] ?? 3;
   if (limit === -1) {
     return { allowed: true, used: 0, limit: -1, plan };
