@@ -80,6 +80,31 @@ const INDUSTRIES = [
 
 const COMPANY_SIZES = ["1-5 fő", "6-20 fő", "21-50 fő", "51-200 fő", "200+ fő"];
 
+// Normalize AI-returned industry string to the closest INDUSTRIES list value
+function normalizeIndustry(aiIndustry: string): string {
+  if (!aiIndustry) return "";
+  const lower = aiIndustry.toLowerCase();
+  const map: [string[], string][] = [
+    [["tech", "szoftver", "saas", "it", "informatika", "fejleszt", "digital", "web", "app"], "Technológia / SaaS"],
+    [["e-ker", "eker", "webshop", "online áruház", "webstore", "ecommerce", "e-commerce"], "E-kereskedelem"],
+    [["pénz", "bank", "fintech", "biztosit", "befektet", "számvitel", "könyvel", "adó"], "Pénzügyi szolgáltatások"],
+    [["egészség", "orvos", "gyógysz", "klinika", "kórház", "medical", "health"], "Egészségügy"],
+    [["oktatás", "képzés", "iskola", "tanfolyam", "edtech", "education", "training"], "Oktatás"],
+    [["ingatlan", "ing", "real estate", "property", "bérlet"], "Ingatlan"],
+    [["jogi", "jog", "ügyvéd", "law", "legal", "notari"], "Jogi szolgáltatások"],
+    [["marketing", "reklám", "pr", "kommunikáció", "hirdetés", "advertising", "media"], "Marketing / Reklám"],
+    [["gyártás", "ipar", "mérnök", "manufacturing", "industrial", "logisztika", "szállít"], "Gyártás / Ipar"],
+    [["vendéglátás", "hotel", "turizmus", "étterem", "café", "hospitality", "travel", "tourism"], "Vendéglátás / Turizmus"],
+    [["szépség", "wellness", "fitness", "spa", "beauty", "kozmetik", "fodrász"], "Szépségipar / Wellness"],
+    [["nonprofit", "civil", "alapítvány", "ngo", "jótékony"], "Nonprofit"],
+  ];
+  for (const [keywords, label] of map) {
+    if (keywords.some(k => lower.includes(k))) return label;
+  }
+  // If no match found, return "Egyéb" so dropdown is not empty
+  return "Egyéb";
+}
+
 const TONE_OPTIONS = [
   { value: "professional", label: "Professzionális", desc: "Formális, tekintélyes, megbízható" },
   { value: "friendly", label: "Barátságos", desc: "Közvetlen, meleg, könnyen megközelíthető" },
@@ -350,10 +375,12 @@ export default function OnboardingWizard() {
       let url = data.website;
       if (!url.startsWith("http")) url = "https://" + url;
       const result = await scrapeWebsite.mutateAsync({ url });
+      // Normalize AI-returned industry to the closest dropdown value
+      const normalizedIndustry = result.industry ? normalizeIndustry(result.industry) : "";
       update({
         // Fill companyName and industry from AI so validation passes
         ...(result.companyName && !data.companyName ? { companyName: result.companyName } : {}),
-        ...(result.industry && !data.industry ? { industry: result.industry } : {}),
+        ...(normalizedIndustry && !data.industry ? { industry: normalizedIndustry } : {}),
         services: result.services ?? [],
         targetAudience: result.targetAudience ?? "",
         competitors: result.competitorCandidates ?? [],
@@ -549,9 +576,16 @@ export default function OnboardingWizard() {
         update({ wowOutput: wow });
         setStep(4);
         toast.success("🎉 Elemzés kész! Íme a Growth Engine eredménye.");
-      } catch (e) {
+      } catch (e: unknown) {
         console.error(e);
-        toast.error("Hiba az elemzés során. Próbáld újra!");
+        // Detect session expiry (UNAUTHORIZED) vs generic error
+        const errMsg = (e as { message?: string })?.message ?? "";
+        const isAuthError = errMsg.includes("login") || errMsg.includes("Bejelentkezés") || errMsg.includes("10001");
+        if (isAuthError) {
+          toast.error("A munkamenet lejárt. Kérlek jelentkezz be újra, majd folytasd az onboardingot.", { duration: 6000 });
+        } else {
+          toast.error("Hiba az elemzés során. Próbáld újra!", { duration: 5000 });
+        }
       } finally {
         setIsLoading(false);
         setIsGenerating(false);

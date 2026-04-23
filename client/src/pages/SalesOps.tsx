@@ -317,8 +317,9 @@ export default function SalesOps() {
           {filteredLeads.length === 0 ? (
             <div className="text-center py-16" style={{ background: cardBg }}>
               <Users size={32} className="mx-auto mb-3" style={{ color: "oklch(0.35 0.015 240)" }} />
-              <p className="text-sm font-semibold mb-1" style={{ color: "oklch(0.65 0.015 240)" }}>Nincsenek leadek</p>
-              <button onClick={() => setNewLeadModal(true)} className="mt-2 text-sm" style={{ color: "oklch(0.6 0.2 255)" }}>Első lead hozzáadása →</button>
+              <p className="text-sm font-semibold mb-1" style={{ color: "oklch(0.65 0.015 240)" }}>Még nincs egyetlen lead sem</p>
+              <p className="text-xs mb-3" style={{ color: "oklch(0.45 0.015 240)" }}>Add hozzá az első potenciális ügyféldet, és kövesd nyomon az értékesítési folyamatot</p>
+              <button onClick={() => setNewLeadModal(true)} className="px-4 py-2 rounded-lg text-sm font-medium text-white" style={{ background: "oklch(0.6 0.2 255)" }}>+ Első lead hozzáadása</button>
             </div>
           ) : (
             <div className="overflow-x-auto">

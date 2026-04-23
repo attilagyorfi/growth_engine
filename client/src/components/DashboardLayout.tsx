@@ -11,7 +11,7 @@ import {
   LayoutDashboard, Users, BarChart3, Layers, TrendingUp, Settings,
   Zap, ChevronRight, Bell, X, CheckCircle, AlertCircle, Info, Mail,
   ChevronDown, ShieldAlert, LogOut, Shield, Megaphone, Sun, Moon,
-  User, KeyRound, UserCog, Crown, Sparkles,
+  User, KeyRound, UserCog, Crown, Sparkles, Menu, Brain,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useData } from "@/contexts/DataContext";
@@ -24,6 +24,7 @@ import { trpc } from "@/lib/trpc";
 
 const publicNavItems = [
   { href: "/iranyitopult", label: "Irányítópult", icon: LayoutDashboard },
+  { href: "/intelligencia", label: "Intelligencia", icon: Brain },
   { href: "/strategia", label: "Stratégia", icon: BarChart3 },
   { href: "/tartalom-studio", label: "Tartalom Studio", icon: Layers },
   { href: "/kampanyok", label: "Kampányok", icon: Megaphone },
@@ -34,6 +35,7 @@ const publicNavItems = [
 const adminNavItems = [
   { href: "/iranyitopult", label: "Irányítópult", icon: LayoutDashboard },
   { href: "/ugyfelek", label: "Ügyfelek", icon: Users },
+  { href: "/intelligencia", label: "Intelligencia", icon: Brain },
   { href: "/strategia", label: "Stratégia", icon: BarChart3 },
   { href: "/tartalom-studio", label: "Tartalom Studio", icon: Layers },
   { href: "/ertekesites", label: "Értékesítés", icon: Mail },
@@ -74,6 +76,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
   const handleToggleTheme = () => toggleTheme?.();
   const navItems = isSuperAdmin ? adminNavItems : publicNavItems;
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState("");
   const updateSelf = trpc.appAuth.updateSelf.useMutation({
@@ -133,8 +136,22 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "oklch(0.13 0.025 255)" }}>
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
       {/* Sidebar */}
-      <aside className="w-56 flex-shrink-0 flex flex-col border-r" style={{ background: "oklch(0.16 0.022 255)", borderColor: "oklch(1 0 0 / 8%)" }}>
+      <aside
+        className={cn(
+          "flex-shrink-0 flex flex-col border-r z-50 transition-transform duration-200",
+          "fixed md:relative inset-y-0 left-0 w-56",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+        )}
+        style={{ background: "oklch(0.16 0.022 255)", borderColor: "oklch(1 0 0 / 8%)" }}
+      >
         {/* Logo */}
         <div className="px-5 py-5 border-b" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
           <Link href="/">
@@ -219,10 +236,21 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
-        <header className="flex-shrink-0 flex items-center justify-between px-6 py-3.5 border-b" style={{ background: "oklch(0.16 0.022 255)", borderColor: "oklch(1 0 0 / 8%)" }}>
-          <div>
-            {title && <h1 className="text-base font-bold leading-none" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>{title}</h1>}
-            {subtitle && <p className="text-xs mt-0.5" style={{ color: "oklch(0.55 0.015 240)" }}>{subtitle}</p>}
+        <header className="flex-shrink-0 flex items-center justify-between px-4 md:px-6 py-3.5 border-b" style={{ background: "oklch(0.16 0.022 255)", borderColor: "oklch(1 0 0 / 8%)" }}>
+          <div className="flex items-center gap-3">
+            {/* Mobile hamburger */}
+            <button
+              className="md:hidden w-9 h-9 rounded-lg flex items-center justify-center"
+              style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.65 0.015 240)" }}
+              onClick={() => setSidebarOpen(v => !v)}
+              aria-label="Menü megnyitása"
+            >
+              <Menu size={18} />
+            </button>
+            <div>
+              {title && <h1 className="text-base font-bold leading-none" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>{title}</h1>}
+              {subtitle && <p className="text-xs mt-0.5" style={{ color: "oklch(0.55 0.015 240)" }}>{subtitle}</p>}
+            </div>
           </div>
           <div className="flex items-center gap-2">
             {/* Language Switcher */}

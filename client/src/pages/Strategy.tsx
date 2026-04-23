@@ -59,7 +59,15 @@ export default function Strategy() {
       setStrategyContext("");
       toast.success("Stratégia sikeresen generálva!");
     },
-    onError: () => toast.error("Nem sikerült a stratégia generálása."),
+    onError: (err) => {
+      // Check if this is an AI usage limit error
+      const cause = (err as { data?: { cause?: { code?: string; used?: number; limit?: number } } })?.data?.cause;
+      if (cause?.code === "AI_LIMIT_REACHED") {
+        toast.error(`AI limit elérve (${cause.used}/${cause.limit} használat ebben a hónapban). Frissítsd az előfizetésed a folytatáshoz!`, { duration: 7000 });
+      } else {
+        toast.error("Nem sikerült a stratégia generálása. Próbáld újra!");
+      }
+    },
   });
 
   const setActiveMutation = trpc.strategyVersions.setActive.useMutation({

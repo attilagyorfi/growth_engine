@@ -327,7 +327,14 @@ export default function ContentStudio() {
         platform: template?.platform ?? p.platform,
       }));
       toast.success("Tartalom generálva! Szerkesztheted és mentheted.");
-    } catch { toast.error("Generálás sikertelen. Próbáld újra!"); }
+    } catch (err: unknown) {
+      const cause = (err as { data?: { cause?: { code?: string; used?: number; limit?: number } } })?.data?.cause;
+      if (cause?.code === "AI_LIMIT_REACHED") {
+        toast.error(`AI limit elérve (${cause.used}/${cause.limit} használat ebben a hónapban). Frissítsd az előfizetésed!`, { duration: 7000 });
+      } else {
+        toast.error("Generálás sikertelen. Próbáld újra!");
+      }
+    }
     finally { setGeneratingContent(false); }
   };
 

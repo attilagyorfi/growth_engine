@@ -9,29 +9,31 @@ import { ProfileProvider } from "./contexts/ProfileContext";
 import DashboardLayoutSkeleton from "./components/DashboardLayoutSkeleton";
 import { useAppAuth } from "./hooks/useAppAuth";
 
+import { lazy, Suspense } from "react";
+
 // Public pages
-import Landing from "./pages/Landing";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
+const Landing = lazy(() => import("./pages/Landing"));
+const Login = lazy(() => import("./pages/Login"));
+const Register = lazy(() => import("./pages/Register"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 
 // App pages (protected)
-import Dashboard from "./pages/Dashboard";
-import Clients from "./pages/Clients";
-import Strategy from "./pages/Strategy";
-import ContentStudio from "./pages/ContentStudio";
-import SalesOps from "./pages/SalesOps";
-import Analytics from "./pages/Analytics";
-import Campaigns from "./pages/Campaigns";
-import Settings from "./pages/Settings";
-import OnboardingWizard from "./pages/OnboardingWizard";
-import Intelligence from "./pages/Intelligence";
-import AIWriter from "./pages/AIWriter";
-import ProfilePage from "./pages/ProfilePage";
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Clients = lazy(() => import("./pages/Clients"));
+const Strategy = lazy(() => import("./pages/Strategy"));
+const ContentStudio = lazy(() => import("./pages/ContentStudio"));
+const SalesOps = lazy(() => import("./pages/SalesOps"));
+const Analytics = lazy(() => import("./pages/Analytics"));
+const Campaigns = lazy(() => import("./pages/Campaigns"));
+const Settings = lazy(() => import("./pages/Settings"));
+const OnboardingWizard = lazy(() => import("./pages/OnboardingWizard"));
+const Intelligence = lazy(() => import("./pages/Intelligence"));
+const AIWriter = lazy(() => import("./pages/AIWriter"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 
 // Admin pages
-import AdminUsers from "./pages/AdminUsers";
+const AdminUsers = lazy(() => import("./pages/AdminUsers"));
 
 // ─── Route Guards ─────────────────────────────────────────────────────────────
 
@@ -94,7 +96,7 @@ function Router() {
       <Route path="/ugyfelek/uj" component={() => <AdminRoute component={Clients} />} />
       <Route path="/strategia" component={() => <AppRoute component={Strategy} />} />
       <Route path="/tartalom-studio" component={() => <AppRoute component={ContentStudio} />} />
-      <Route path="/ertekesites" component={() => <AdminRoute component={SalesOps} />} />
+      <Route path="/ertekesites" component={() => <AppRoute component={SalesOps} />} />
       <Route path="/analitika" component={() => <AppRoute component={Analytics} />} />
       <Route path="/kampanyok" component={() => <AppRoute component={Campaigns} />} />
       <Route path="/beallitasok" component={() => <AppRoute component={Settings} />} />
@@ -141,7 +143,9 @@ function App() {
           <DataProvider>
             <TooltipProvider>
               <Toaster />
-              <Router />
+              <Suspense fallback={<DashboardLayoutSkeleton />}>
+                <Router />
+              </Suspense>
             </TooltipProvider>
           </DataProvider>
         </ProfileProvider>

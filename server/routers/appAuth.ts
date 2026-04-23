@@ -6,7 +6,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
-import { router, publicProcedure, protectedProcedure, appUserProcedure } from "../_core/trpc";
+import { router, publicProcedure, protectedProcedure, appUserProcedure, superAdminProcedure } from "../_core/trpc";
 import { sendPasswordResetEmail } from "../email";
 import {
   createAppUser, getAppUserByEmail, getAppUserById,
@@ -104,6 +104,13 @@ export const appAuthRouter = router({
   // ─── Aktuális felhasználó ────────────────────────────────────────────────────
   me: publicProcedure
     .query(async ({ ctx }) => {
+      // 1. Ha az appUser már be van töltve a context-ben (OAuth bridge vagy app_token),
+      //    közvetlenül visszaadjuk – ez kezeli az OAuth-on bejelentkezett felhasználókat is.
+      if (ctx.appUser && ctx.appUser.active) {
+        const u = ctx.appUser;
+        return { id: u.id, email: u.email, name: u.name, role: u.role, onboardingCompleted: u.onboardingCompleted, profileId: u.profileId, subscriptionPlan: u.subscriptionPlan };
+      }
+      // 2. Fallback: közvetlen cookie ellenőrzés (ha a context nem töltötte be)
       const cookieHeader = ctx.req.headers.cookie ?? "";
       const match = cookieHeader.match(/app_token=([^;]+)/);
       if (!match) return null;
@@ -150,7 +157,8 @@ export const appAuthRouter = router({
       const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
       await createPasswordResetToken({ id: nanoid(), userId: user.id, token, expiresAt });
       // Send password reset email via Resend
-      const appUrl = process.env.APP_URL || "https://g2adash-wzybmh2r.manus.space";
+      // Use APP_URL env if set, otherwise derive from request Origin header (works in all environments)
+      const appUrl = process.env.APP_URL || "https://g2a-growth-engine.manus.space";
       const resetUrl = `${appUrl}/reset-password?token=${token}`;
       const emailSent = await sendPasswordResetEmail({
         to: user.email,
@@ -181,17 +189,9 @@ export const appAuthRouter = router({
       await markResetTokenUsed(resetToken.id);
       return { success: true };
     }),
-
-  // ─── Admin: Felhasználók listája ─────────────────────────────────────────────
-  adminListUsers: publicProcedure
-    .query(async ({ ctx }) => {
-      const cookieHeader = ctx.req.headers.cookie ?? "";
-      const match = cookieHeader.match(/app_token=([^;]+)/);
-      if (!match) throw new TRPCError({ code: "UNAUTHORIZED" });
-      const payload = await verifyAppToken(match[1]);
-      if (!payload || payload.role !== "super_admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Csak adminok férhetnek hozzá" });
-      }
+  // ─── Admin: Felhasználók listája ──────────────────────────────────────────────────
+  adminListUsers: superAdminProcedure
+    .query(async () => {
       const users = await getAllAppUsers();
       return users.map(u => ({
         id: u.id,
@@ -205,36 +205,22 @@ export const appAuthRouter = router({
       }));
     }),
 
-  // ─── Admin: Felhasználó frissítése ───────────────────────────────────────────
-  adminUpdateUser: publicProcedure
+  // ─── Admin: Felhasználó frissítése ──────────────────────────────────────────────────
+  adminUpdateUser: superAdminProcedure
     .input(z.object({
       userId: z.string(),
       name: z.string().optional(),
       active: z.boolean().optional(),
       role: z.enum(["super_admin", "user"]).optional(),
     }))
-    .mutation(async ({ input, ctx }) => {
-      const cookieHeader = ctx.req.headers.cookie ?? "";
-      const match = cookieHeader.match(/app_token=([^;]+)/);
-      if (!match) throw new TRPCError({ code: "UNAUTHORIZED" });
-      const payload = await verifyAppToken(match[1]);
-      if (!payload || payload.role !== "super_admin") {
-        throw new TRPCError({ code: "FORBIDDEN" });
-      }
+    .mutation(async ({ input }) => {
       const { userId, ...data } = input;
       return updateAppUser(userId, data);
     }),
 
   // ─── Admin: CRM – Ügyfelek listája (csak nem-szenzitív adatok) ────────────────
-  adminGetCRMClients: publicProcedure
-    .query(async ({ ctx }) => {
-      const cookieHeader = ctx.req.headers.cookie ?? "";
-      const match = cookieHeader.match(/app_token=([^;]+)/);
-      if (!match) throw new TRPCError({ code: "UNAUTHORIZED" });
-      const payload = await verifyAppToken(match[1]);
-      if (!payload || payload.role !== "super_admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Csak adminok férhetnek hozzá" });
-      }
+  adminGetCRMClients: superAdminProcedure
+    .query(async () => {
       const users = await getAllAppUsers();
       // Fetch profile data (website) for each user
       const usersWithProfiles = await Promise.all(
@@ -272,7 +258,7 @@ export const appAuthRouter = router({
     }),
 
   // ─── Admin: CRM – Ügyfél frissítése (csak CRM mezők) ────────────────────────
-  adminUpdateCRMClient: publicProcedure
+  adminUpdateCRMClient: superAdminProcedure
     .input(z.object({
       userId: z.string(),
       companyName: z.string().optional(),
@@ -282,32 +268,18 @@ export const appAuthRouter = router({
       notes: z.string().optional(),
       active: z.boolean().optional(),
     }))
-    .mutation(async ({ input, ctx }) => {
-      const cookieHeader = ctx.req.headers.cookie ?? "";
-      const match = cookieHeader.match(/app_token=([^;]+)/);
-      if (!match) throw new TRPCError({ code: "UNAUTHORIZED" });
-      const payload = await verifyAppToken(match[1]);
-      if (!payload || payload.role !== "super_admin") {
-        throw new TRPCError({ code: "FORBIDDEN" });
-      }
+    .mutation(async ({ input }) => {
       const { userId, ...data } = input;
       return updateAppUser(userId, data);
     }),
 
   // ─── Admin: Jelszó reset ─────────────────────────────────────────────────────
-  adminResetPassword: publicProcedure
+  adminResetPassword: superAdminProcedure
     .input(z.object({
       userId: z.string(),
       newPassword: z.string().min(8),
     }))
-    .mutation(async ({ input, ctx }) => {
-      const cookieHeader = ctx.req.headers.cookie ?? "";
-      const match = cookieHeader.match(/app_token=([^;]+)/);
-      if (!match) throw new TRPCError({ code: "UNAUTHORIZED" });
-      const payload = await verifyAppToken(match[1]);
-      if (!payload || payload.role !== "super_admin") {
-        throw new TRPCError({ code: "FORBIDDEN" });
-      }
+    .mutation(async ({ input }) => {
       const passwordHash = await bcrypt.hash(input.newPassword, 12);
       await updateAppUser(input.userId, { passwordHash });
       return { success: true };

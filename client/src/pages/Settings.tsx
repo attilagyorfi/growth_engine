@@ -15,10 +15,10 @@ import { toast } from "sonner";
 
 type Tab = "brand" | "integrations" | "team" | "audit";
 
-const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
+const TABS: { id: Tab; label: string; icon: React.ReactNode; badge?: string }[] = [
   { id: "brand", label: "Brand Center", icon: <Palette size={14} /> },
   { id: "integrations", label: "Integrációk", icon: <Plug size={14} /> },
-  { id: "team", label: "Csapat", icon: <Users size={14} /> },
+  { id: "team", label: "Csapat", icon: <Users size={14} />, badge: "Hamarosan" },
   { id: "audit", label: "Audit Log", icon: <ClipboardList size={14} /> },
 ];
 
@@ -47,6 +47,11 @@ export default function Settings() {
 
   const { data: emailIntegration } = trpc.emailIntegration.get.useQuery(
     { profileId: activeProfile.id }, { enabled: !!activeProfile.id }
+  );
+
+  const { data: auditLogs, isLoading: auditLoading } = trpc.auditLog.list.useQuery(
+    { profileId: activeProfile.id },
+    { enabled: !!activeProfile.id && activeTab === "audit" }
   );
 
   const upsertEmailIntegration = trpc.emailIntegration.upsert.useMutation({
@@ -81,6 +86,11 @@ export default function Settings() {
             style={{ background: activeTab === tab.id ? "oklch(0.6 0.2 255)" : "transparent", color: activeTab === tab.id ? "white" : "oklch(0.55 0.015 240)" }}
           >
             {tab.icon} {tab.label}
+            {tab.badge && (
+              <span className="text-xs px-1.5 py-0.5 rounded-full font-semibold" style={{ background: "oklch(0.65 0.18 75 / 20%)", color: "oklch(0.75 0.18 75)" }}>
+                {tab.badge}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -280,11 +290,37 @@ export default function Settings() {
             <h3 className="text-sm font-bold" style={{ color: "oklch(0.88 0.008 240)" }}>Audit Log</h3>
             <p className="text-xs mt-0.5" style={{ color: "oklch(0.5 0.015 240)" }}>Rendszeresemények és változások naplója</p>
           </div>
-          <div className="text-center py-16">
-            <ClipboardList size={32} className="mx-auto mb-3" style={{ color: "oklch(0.35 0.015 240)" }} />
-            <p className="text-sm font-semibold mb-1" style={{ color: "oklch(0.65 0.015 240)" }}>Nincs rögzített esemény</p>
-            <p className="text-xs" style={{ color: "oklch(0.45 0.015 240)" }}>A rendszeresemények itt lesznek láthatók</p>
-          </div>
+          {auditLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 size={20} className="animate-spin" style={{ color: "oklch(0.5 0.015 240)" }} />
+            </div>
+          ) : !auditLogs || auditLogs.length === 0 ? (
+            <div className="text-center py-16">
+              <ClipboardList size={32} className="mx-auto mb-3" style={{ color: "oklch(0.35 0.015 240)" }} />
+              <p className="text-sm font-semibold mb-1" style={{ color: "oklch(0.65 0.015 240)" }}>Nincs rögzített esemény</p>
+              <p className="text-xs" style={{ color: "oklch(0.45 0.015 240)" }}>A rendszeresemények automatikusan kerülnek ide</p>
+            </div>
+          ) : (
+            <div className="divide-y" style={{ borderColor: border }}>
+              {auditLogs.map((log) => (
+                <div key={log.id} className="flex items-start gap-3 px-4 py-3">
+                  <ClipboardList size={14} className="mt-0.5 flex-shrink-0" style={{ color: "oklch(0.5 0.2 255)" }} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium" style={{ color: "oklch(0.82 0.008 240)" }}>{log.action}</p>
+                    {(log.objectTitle || log.objectType) && (
+                      <p className="text-xs mt-0.5 truncate" style={{ color: "oklch(0.5 0.015 240)" }}>
+                        {log.objectType}{log.objectTitle ? `: ${log.objectTitle}` : ""}
+                        {log.userName ? ` – ${log.userName}` : ""}
+                      </p>
+                    )}
+                  </div>
+                  <span className="text-xs flex-shrink-0" style={{ color: "oklch(0.45 0.015 240)" }}>
+                    {log.createdAt ? new Date(log.createdAt).toLocaleString("hu-HU") : "–"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </DashboardLayout>

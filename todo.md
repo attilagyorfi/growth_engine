@@ -361,3 +361,51 @@
 - [x] Testimonials szekció a pricing szekció alá
 - [x] 3 ügyfélvélemény placeholder adatokkal (Kovács Péter, Nagy Eszter, Horváth Gábor)
 - [x] Animált megjelenés (framer-motion FadeIn)
+
+## Sprint 12 – Bug & UX javítások (teljes tesztelés alapján)
+
+### 🔴 Kritikus bugok
+- [ ] #1 OAuth-on bejelentkezett tulajdonos onboarding oldalra kerül (me procedure OAuth session kezelés)
+- [ ] #2 Onboarding "Growth Engine indítása" örökre tölt lejárt session esetén (hiba kezelés + retry)
+- [ ] #3 Iparág dropdown nem töltődik ki AI elemzés után (AI érték normalizálás a INDUSTRIES listához)
+- [ ] #4 Dashboard gyorslinkek rossz/admin-only URL-re mutatnak
+
+### 🟠 Közepes bugok
+- [ ] #5 Elírás az AI limit hibaüzenetben ("Frítsítsd" → "Frissítsd")
+- [ ] #6 Jelszó-visszaállítás URL hardkódolt régi domain-re (APP_URL env fallback)
+- [ ] #7 AI limit hiba nem felhasználóbarát üzenetet ad (frontend nem jeleníti meg a részletes hibát)
+- [ ] #8 Audit Log tab nem töltődik be adatokkal (Settings oldal nem hívja a procedure-t)
+- [ ] #9 Admin eljárások publicProcedure-ként deklarálva (biztonsági javítás)
+
+### 🟡 UX pain pointok
+- [ ] #10 Nincs mobil sidebar (DashboardLayout responsive)
+- [ ] #11 Intelligence, AI Íróeszköz, Profil oldal nem szerepel a sidebar navigációban
+- [ ] #12 Értesítések hardkódolt placeholder adatokkal töltődnek be
+- [ ] #13 Demo seed adatok minden új felhasználónál megjelennek (empty state javítás)
+- [ ] #14 Regisztrációs oldalon nincs jelszó megerősítés mező
+- [ ] #15 Beállítások Csapat és Audit Log tab-ok "hamarosan" jelölés nélkül
+- [ ] #16 Nincs lazy loading / code splitting
+
+## Sprint 12 – Bug & UX javítások (teljes tesztelés alapján)
+
+### Kritikus bugok
+- [x] #1 OAuth-on bejelentkezett tulajdonos az onboarding oldalra kerül – me procedure javítva (ctx.appUser fallback)
+- [x] #2 Onboarding "Growth Engine indítása" gomb örökre tölt session lejárat esetén – timeout + retry gomb + session expiry üzenet
+- [x] #3 Iparág dropdown nem töltődik ki AI elemzés után – normalizeIndustry fuzzy matching hozzáadva
+- [x] #4 Dashboard gyorslinkek rossz URL-re mutatnak – /ertekesites AppRoute-ra javítva (volt AdminRoute)
+
+### Közepes bugok
+- [x] #5 Elírás "Frítsítsd" → "Frissítsd" a routers.ts AI limit üzenetekben (2 helyen)
+- [x] #6 Hardkódolt APP_URL fallback a forgotPassword procedure-ben – dinamikus origin header (x-forwarded-host / host)
+- [x] #7 AI limit hiba nem jelenik meg felhasználóbarát módon – Strategy és ContentStudio onError javítva upgrade CTA-val
+- [x] #8 Audit Log tab üres volt – valódi DB adatok megjelenítése (trpc.auditLog.list)
+- [x] #9 Admin procedure-ök cookie alapú auth helyett superAdminProcedure-t használnak (5 procedure javítva)
+
+### UX pain pointok
+- [x] #10 Mobil sidebar hiányzott – hamburger gomb + overlay + slide-in animáció DashboardLayout-ban
+- [x] #11 Intelligence oldal nem volt a sidebar navigációban – hozzáadva Brain ikonnal
+- [x] #12 Hardkódolt demo értesítések minden bejelentkezéskor – üres initial state ([] helyett demo adatok)
+- [x] #13 Empty state a Sales Ops lead listán – informatívabb üzenet + "Első lead hozzáadása" CTA gomb
+- [x] #14 Regisztrációs oldalon hiányzott a jelszó megerősítés mező – hozzáadva valós idejű egyezés validációval
+- [x] #15 Settings Csapat tab nem jelezte, hogy "hamarosan" – sárga "Hamarosan" badge a tab fejlécben
+- [x] #16 Nincs lazy loading – összes oldal (19 db) React.lazy() + Suspense-re átírva App.tsx-ben

@@ -165,12 +165,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const profileId = activeProfile.id;
   const utils = trpc.useUtils();
 
-  // ─── Notifications (local only, no DB) ────────────────────────────────────
-  const [notifications, setNotificationsState] = useState<Notification[]>([
-    { id: "n1", type: "email_reply", title: "Új válasz érkezett", message: "Kovács Péter (TechVision Kft.) válaszolt – meeting kérés!", time: "Ma, 10:30", read: false, link: "/inbound" },
-    { id: "n2", type: "email_reply", title: "Új válasz érkezett", message: "Nagy Andrea (Nexus Solutions) válaszolt – nem érdekli.", time: "Ma, 11:15", read: false, link: "/inbound" },
-    { id: "n3", type: "approval_needed", title: "Jóváhagyás szükséges", message: "2 outbound email piszkozat vár jóváhagyásra.", time: "Ma, 08:15", read: true, link: "/outbound" },
-  ]);
+  // ─── Notifications (local only, no DB) ────────────────────────────────────────────────────────
+  const [notifications, setNotificationsState] = useState<Notification[]>([]);
 
   const setNotifications = useCallback((updater: Notification[] | ((prev: Notification[]) => Notification[])) => {
     setNotificationsState(prev => typeof updater === "function" ? updater(prev) : updater);

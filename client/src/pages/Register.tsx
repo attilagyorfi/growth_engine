@@ -56,7 +56,9 @@ export default function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
   const [error, setError] = useState("");
 
   const register = trpc.appAuth.register.useMutation({
@@ -75,6 +77,10 @@ export default function Register() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    if (password !== confirmPassword) {
+      setError("A két jelszó nem egyezik meg.");
+      return;
+    }
     register.mutate({ email, password, name: name || undefined, subscriptionPlan: selectedPlan });
   };
 
@@ -300,6 +306,33 @@ export default function Register() {
                     }`}>
                       Jelszó erőssége: {passwordStrength}
                     </p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-white/70 text-sm">Jelszó megerősítése *</Label>
+                  <div className="relative">
+                    <Input
+                      type={showConfirmPass ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Írja be mégegyszer a jelszót"
+                      required
+                      className="bg-white/[0.05] border-white/[0.08] text-white placeholder:text-white/30 focus:border-violet-500/50 pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPass(!showConfirmPass)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
+                    >
+                      {showConfirmPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  {confirmPassword && password !== confirmPassword && (
+                    <p className="text-xs text-red-400">A két jelszó nem egyezik meg</p>
+                  )}
+                  {confirmPassword && password === confirmPassword && confirmPassword.length >= 8 && (
+                    <p className="text-xs text-green-400">✓ A jelszók egyeznek</p>
                   )}
                 </div>
 
