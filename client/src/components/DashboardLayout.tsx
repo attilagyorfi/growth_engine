@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAppAuth } from "@/hooks/useAppAuth";
 import { useActiveProject } from "@/hooks/useActiveProject";
+import { useSubscription } from "@/hooks/useSubscription";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 
@@ -100,6 +101,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
 
   const { user, logout, isSuperAdmin, refetch } = useAppAuth();
   const navItems = isSuperAdmin ? adminNavItems : publicNavItems;
+  const subscription = useSubscription();
 
   const updateSelf = trpc.appAuth.updateSelf.useMutation({
     onSuccess: () => {
@@ -285,6 +287,31 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
               <p className="text-xs truncate" style={{ color: "oklch(0.5 0.015 240)" }}>{user.email}</p>
             )}
           </div>
+          {/* Pricing badge – csak nem-super_admin felhasználóknak */}
+          {!isSuperAdmin && (
+            <div
+              className="px-3 py-2 rounded-lg flex items-center gap-2 cursor-pointer"
+              style={{ background: subscription.plan === 'free' ? 'oklch(0.28 0.05 280 / 60%)' : 'oklch(0.22 0.04 150 / 50%)' }}
+              onClick={() => window.location.href = '/beallitasok?tab=billing'}
+              title="Csomag kezelése"
+            >
+              {subscription.plan === 'free' ? (
+                <Zap size={13} style={{ color: 'oklch(0.75 0.18 280)' }} />
+              ) : (
+                <Crown size={13} style={{ color: 'oklch(0.8 0.15 95)' }} />
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold" style={{ color: subscription.plan === 'free' ? 'oklch(0.82 0.12 280)' : 'oklch(0.85 0.1 95)' }}>
+                  {subscription.plan === 'free' ? 'Ingyenes csomag' :
+                   subscription.plan === 'starter' ? 'Starter' :
+                   subscription.plan === 'pro' ? 'Pro' : 'Agency'}
+                </p>
+                {subscription.plan === 'free' && (
+                  <p className="text-xs" style={{ color: 'oklch(0.6 0.08 280)' }}>Bővítés →</p>
+                )}
+              </div>
+            </div>
+          )}
           <button
             onClick={logout}
             className="nav-item w-full text-left"

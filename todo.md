@@ -763,3 +763,36 @@
 - [x] Content Studio: free tier esetén havi naptár AI gomb letiltva (UpgradePrompt compact)
 - [x] Onboarding utáni stratégia/naptár: megtekinthető de új nem generálható (free tier)
 - [ ] Pricing badge a navigációban (free tier esetén "Ingyenes" badge upgrade CTA-val) [később]
+
+## Sprint 34 – Pricing badge a navigációban
+
+- [x] DashboardLayout sidebar aljára: csomag badge (Ingyenes / Starter / Pro / Agency)
+- [x] Free tier esetén: "Ingyenes" badge + "Bővítés" CTA gomb
+- [x] Paid tier esetén: csomag neve + zöld pipa (nincs CTA)
+- [x] Badge kattintásra: /beallitasok?tab=billing navigáció
+- [x] useSubscription hook alapján dinamikus megjelenítés
+
+## Sprint 35 – Onboarding tesztelhetőség megerősítése
+
+- [x] Settings > Fiók tab: "Onboarding újraindítása" gomb megerősítő dialog-gal
+- [x] Gomb megnyomása után: onboardingCompleted=false DB-ben + redirect /onboarding-ra
+- [x] Onboarding reset után: cache invalidation (appAuth.me query)
+- [x] Super admin: Settings > Admin tab-on is elérhető bármely user reset-je
+
+## Sprint 36 – Approval workflow
+
+### Backend
+- [x] content.submitForReview procedure (draft → review)
+- [x] content.approvePost procedure (review → approved)
+- [x] content.rejectPost procedure (review → rejected)
+- [x] content.schedulePost procedure (approved → scheduled)
+- [x] content.markPublished procedure (scheduled → published)
+- [ ] Email értesítés jóváhagyáskor (notifyOwner) [később]
+
+### Frontend
+- [x] ContentStudio: státusz badge-ek (draft/review/approved/scheduled/published/rejected)
+- [x] "Beküldés jóváhagyásra" gomb (draft → review)
+- [x] "Jóváhagyom" / "Elutasítom" gombok (review állapotban minden felhasználónál)
+- [x] Approval queue tab a ContentStudio-ban (Piszkozatok tab tartalmazza a review státuszú posztokat is)
+- [x] Státusz szűrő: STATUS_LABELS + STATUS_COLORS bővítve review értékkel
+- [x] Toast értesítés státusváltáskor

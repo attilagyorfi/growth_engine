@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import {
   Palette, Plug, Users, ClipboardList, X, Loader2, Plus,
   Save, Globe, Mail, Check, AlertCircle, Settings2, Eye, EyeOff,
@@ -39,9 +40,11 @@ export default function Settings() {
     undefined,
     { enabled: isSuperAdmin }
   );
+  const [, navigate] = useLocation();
   const resetMyOnboarding = trpc.appAuth.resetMyOnboarding.useMutation({
     onSuccess: () => {
-      toast.success("Onboarding állapot visszaállítva. Következő belépéskor az onboarding oldal jelenik meg.");
+      toast.success("Onboarding állapot visszaállítva. Az onboarding oldal most betöltődik...");
+      setTimeout(() => navigate("/onboarding"), 1200);
     },
     onError: (e) => toast.error(e.message),
   });

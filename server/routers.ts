@@ -416,6 +416,115 @@ export const appRouter = router({
         await recordAiUsage(ctx.appUser.id, "monthly_content_plan", ctx.appUser.role, input.isOnboarding);
         return { created: created.length, posts: created };
       }),
+    // ─── Approval Workflow ──────────────────────────────────────────────────────
+    submitForReview: appUserProcedure
+      .input(z.object({ postId: z.string() }))
+      .mutation(async ({ input, ctx }) => {
+        const { contentPosts } = await import("../drizzle/schema");
+        const { getDb } = await import("./db");
+        const { eq } = await import("drizzle-orm");
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Adatbázis nem elérhető" });
+        const [post] = await db.select().from(contentPosts).where(eq(contentPosts.id, input.postId));
+        if (!post) throw new TRPCError({ code: "NOT_FOUND", message: "Poszt nem található" });
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, post.profileId, ctx.appUser.profileId);
+        await db.update(contentPosts)
+          .set({ status: "review", updatedAt: new Date() })
+          .where(eq(contentPosts.id, input.postId));
+        return { success: true };
+      }),
+
+    approvePost: appUserProcedure
+      .input(z.object({ postId: z.string() }))
+      .mutation(async ({ input, ctx }) => {
+        const { contentPosts } = await import("../drizzle/schema");
+        const { getDb } = await import("./db");
+        const { eq } = await import("drizzle-orm");
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Adatbázis nem elérhető" });
+        const [post] = await db.select().from(contentPosts).where(eq(contentPosts.id, input.postId));
+        if (!post) throw new TRPCError({ code: "NOT_FOUND", message: "Poszt nem található" });
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, post.profileId, ctx.appUser.profileId);
+        await db.update(contentPosts)
+          .set({ status: "approved", reviewedBy: ctx.appUser.id, reviewedAt: new Date(), updatedAt: new Date() })
+          .where(eq(contentPosts.id, input.postId));
+        return { success: true };
+      }),
+
+    rejectPost: appUserProcedure
+      .input(z.object({ postId: z.string(), reason: z.string().optional() }))
+      .mutation(async ({ input, ctx }) => {
+        const { contentPosts } = await import("../drizzle/schema");
+        const { getDb } = await import("./db");
+        const { eq } = await import("drizzle-orm");
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Adatbázis nem elérhető" });
+        const [post] = await db.select().from(contentPosts).where(eq(contentPosts.id, input.postId));
+        if (!post) throw new TRPCError({ code: "NOT_FOUND", message: "Poszt nem található" });
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, post.profileId, ctx.appUser.profileId);
+        await db.update(contentPosts)
+          .set({ status: "rejected", rejectionReason: input.reason ?? null, reviewedBy: ctx.appUser.id, reviewedAt: new Date(), updatedAt: new Date() })
+          .where(eq(contentPosts.id, input.postId));
+        return { success: true };
+      }),
+
+    schedulePost: appUserProcedure
+      .input(z.object({ postId: z.string(), scheduledAt: z.date() }))
+      .mutation(async ({ input, ctx }) => {
+        const { contentPosts } = await import("../drizzle/schema");
+        const { getDb } = await import("./db");
+        const { eq } = await import("drizzle-orm");
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Adatbázis nem elérhető" });
+        const [post] = await db.select().from(contentPosts).where(eq(contentPosts.id, input.postId));
+        if (!post) throw new TRPCError({ code: "NOT_FOUND", message: "Poszt nem található" });
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, post.profileId, ctx.appUser.profileId);
+        if (post.status !== "approved") throw new TRPCError({ code: "BAD_REQUEST", message: "Csak jóváhagyott poszt ütemezhető" });
+        await db.update(contentPosts)
+          .set({ status: "scheduled", scheduledAt: input.scheduledAt, updatedAt: new Date() })
+          .where(eq(contentPosts.id, input.postId));
+        return { success: true };
+      }),
+
+    markPublished: appUserProcedure
+      .input(z.object({ postId: z.string() }))
+      .mutation(async ({ input, ctx }) => {
+        const { contentPosts } = await import("../drizzle/schema");
+        const { getDb } = await import("./db");
+        const { eq } = await import("drizzle-orm");
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Adatbázis nem elérhető" });
+        const [post] = await db.select().from(contentPosts).where(eq(contentPosts.id, input.postId));
+        if (!post) throw new TRPCError({ code: "NOT_FOUND", message: "Poszt nem található" });
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, post.profileId, ctx.appUser.profileId);
+        await db.update(contentPosts)
+          .set({ status: "published", publishedAt: new Date(), updatedAt: new Date() })
+          .where(eq(contentPosts.id, input.postId));
+        return { success: true };
+      }),
+
+    bulkUpdateStatus: appUserProcedure
+      .input(z.object({
+        postIds: z.array(z.string()),
+        status: z.enum(["draft", "review", "approved", "scheduled", "published", "rejected"]),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { contentPosts } = await import("../drizzle/schema");
+        const { getDb } = await import("./db");
+        const { eq } = await import("drizzle-orm");
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Adatbázis nem elérhető" });
+        for (const postId of input.postIds) {
+          const [post] = await db.select().from(contentPosts).where(eq(contentPosts.id, postId));
+          if (!post) continue;
+          await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, post.profileId, ctx.appUser.profileId);
+          await db.update(contentPosts)
+            .set({ status: input.status, updatedAt: new Date() })
+            .where(eq(contentPosts.id, postId));
+        }
+        return { updated: input.postIds.length };
+      }),
+
   }),
 
   // ─── Strategies ─────────────────────────────────────────────────────────────

@@ -71,6 +71,13 @@
       "when": 1776966592320,
       "tag": "0009_even_lyja",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1777012258141,
+      "tag": "0010_opposite_rocket_racer",
+      "breakpoints": true
     }
   ]
 }

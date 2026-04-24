@@ -21,7 +21,7 @@ import { trpc } from "@/lib/trpc";
 import { useProfile } from "@/contexts/ProfileContext";
 import { toast } from "sonner";
 
-type PostStatus = "draft" | "approved" | "scheduled" | "published" | "rejected";
+type PostStatus = "draft" | "review" | "approved" | "scheduled" | "published" | "rejected";
 type Platform = "linkedin" | "facebook" | "instagram" | "twitter" | "tiktok";
 
 type Post = {
@@ -58,6 +58,7 @@ const PLATFORM_COLORS: Record<Platform, string> = {
 
 const STATUS_LABELS: Record<PostStatus, string> = {
   draft: "Piszkozat",
+  review: "Jóváhagyásra vár",
   approved: "Jóváhagyva",
   scheduled: "Ütemezve",
   published: "Publikálva",
@@ -66,6 +67,7 @@ const STATUS_LABELS: Record<PostStatus, string> = {
 
 const STATUS_COLORS: Record<PostStatus, string> = {
   draft: "oklch(0.75 0.18 75)",
+  review: "oklch(0.7 0.2 50)",
   approved: "oklch(0.65 0.18 165)",
   scheduled: "oklch(0.6 0.2 255)",
   published: "oklch(0.65 0.18 165)",
@@ -433,9 +435,23 @@ export default function ContentStudio() {
     return map;
   }, [posts, calendarYear, calendarMonth]);
 
-  const draftPosts = (posts as Post[]).filter(p => p.status === "draft");
+  const draftPosts = (posts as Post[]).filter(p => p.status === "draft" || p.status === "review");
+  const reviewPosts = (posts as Post[]).filter(p => p.status === "review");
   const approvalPosts = (posts as Post[]).filter(p => p.status === "approved");
   const publishedPosts = (posts as Post[]).filter(p => p.status === "published");
+
+  const submitForReviewMutation = trpc.content.submitForReview.useMutation({
+    onSuccess: () => { utils.content.list.invalidate(); toast.success("Poszt beküldve jóváhagyásra"); },
+    onError: () => toast.error("Hiba a beküldés során"),
+  });
+  const approvePostMutation = trpc.content.approvePost.useMutation({
+    onSuccess: () => { utils.content.list.invalidate(); toast.success("Poszt jóváhagyva"); },
+    onError: () => toast.error("Hiba a jóváhagyás során"),
+  });
+  const rejectPostMutation = trpc.content.rejectPost.useMutation({
+    onSuccess: () => { utils.content.list.invalidate(); toast.error("Poszt elutasítva"); },
+    onError: () => toast.error("Hiba az elutasítás során"),
+  });
 
   const cardBg = "oklch(0.17 0.022 255)";
   const border = "oklch(1 0 0 / 8%)";
@@ -488,14 +504,20 @@ export default function ContentStudio() {
         </p>
       )}
       {showActions && post.status === "draft" && (
+        <button onClick={() => submitForReviewMutation.mutate({ postId: post.id })} className="w-full py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
+          style={{ background: "oklch(0.7 0.2 50 / 15%)", color: "oklch(0.7 0.2 50)" }}>
+          <Send size={12} /> Beküld jóváhagyásra
+        </button>
+      )}
+      {showActions && post.status === "review" && (
         <div className="flex gap-2">
-          <button onClick={() => handleApprove(post)} className="flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
+          <button onClick={() => approvePostMutation.mutate({ postId: post.id })} className="flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
             style={{ background: "oklch(0.65 0.18 165 / 15%)", color: "oklch(0.65 0.18 165)" }}>
-            <ThumbsUp size={12} /> Jóváhagyás
+            <ThumbsUp size={12} /> Jóváhagyom
           </button>
-          <button onClick={() => handleReject(post)} className="flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
+          <button onClick={() => rejectPostMutation.mutate({ postId: post.id })} className="flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
             style={{ background: "oklch(0.65 0.22 25 / 15%)", color: "oklch(0.65 0.22 25)" }}>
-            <ThumbsDown size={12} /> Elutasítás
+            <ThumbsDown size={12} /> Elutasítom
           </button>
         </div>
       )}
