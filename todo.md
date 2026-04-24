@@ -815,3 +815,20 @@
 - [x] ProjectsPage: kártyákon "Megnyitás" gomb → /projektek/:id
 - [x] App.tsx: /projektek/:id és /projektek/:id/onboarding route-ok (AdminRoute guard)
 - [x] 14 új Vitest teszt (51/51 zöld)
+
+## Sprint 38 – ProjectDashboard bővítés + projekt váltó
+
+### ProjectDashboard widgetek
+- [x] projects.getProgress procedure: onboarding / stratégia / naptár / lead státusz lekérése
+- [x] Stratégia widget: legutolsó verzió neve, verziószám
+- [x] Content calendar widget: következő ütemezett posztok (platform + cím)
+- [x] Lead widget: lead count + legutolsó lead cég/név
+- [x] Onboarding widget: profil összekapcsolt / nem indult el
+
+### ProjectsPage előrehaladás jelzők
+- [x] ProgressBadge komponens (Onboarding / Stratégia / Naptár / Leadek)
+- [x] ProjectCard: getProgress query + badge-ek megjelenítése
+
+### DashboardLayout projekt váltó
+- [x] Meglévő projekt váltó bővítése: minden projektnél ChevronRight gomb → /projektek/:id
+- [x] Hover-re megjelenő navigációs gomb (setActive és irányítópult különválasztva)

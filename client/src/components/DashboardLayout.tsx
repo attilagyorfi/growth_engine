@@ -220,17 +220,26 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
                 style={{ background: "oklch(0.18 0.025 255)", borderColor: "oklch(1 0 0 / 12%)" }}
               >
                 {adminProjects.map((p: { id: string; name: string }) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => { setActiveProjectHook(p.id); setShowProjectMenu(false); }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-white/5 transition-colors"
-                    style={{ color: p.id === activeProject?.id ? "oklch(0.75 0.18 75)" : "oklch(0.78 0.008 240)" }}
-                  >
-                    {p.id === activeProject?.id && <Check size={11} />}
-                    {p.id !== activeProject?.id && <span className="w-[11px]" />}
-                    {p.name}
-                  </button>
+                  <div key={p.id} className="flex items-center group">
+                    <button
+                      type="button"
+                      onClick={() => { setActiveProjectHook(p.id); setShowProjectMenu(false); }}
+                      className="flex-1 flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-white/5 transition-colors"
+                      style={{ color: p.id === activeProject?.id ? "oklch(0.75 0.18 75)" : "oklch(0.78 0.008 240)" }}
+                    >
+                      {p.id === activeProject?.id ? <Check size={11} /> : <span className="w-[11px]" />}
+                      <span className="truncate flex-1">{p.name}</span>
+                    </button>
+                    <button
+                      type="button"
+                      title="Projekt irányítópult"
+                      onClick={(e) => { e.stopPropagation(); setShowProjectMenu(false); navigate(`/projektek/${p.id}`); }}
+                      className="px-2 py-2 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/8 rounded"
+                      style={{ color: "oklch(0.55 0.015 240)" }}
+                    >
+                      <ChevronRight size={11} />
+                    </button>
+                  </div>
                 ))}
                 <div className="border-t" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
                   <button

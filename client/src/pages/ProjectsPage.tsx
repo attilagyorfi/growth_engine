@@ -3,7 +3,7 @@
  * Lists all projects owned by the super_admin, allows create/edit/delete/setActive
  */
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import {
   FolderOpen, Plus, Globe, Building2, Pencil, Trash2,
   CheckCircle, Circle, Loader2, X, Save, ExternalLink, LayoutDashboard,
+  Sparkles, TrendingUp, Calendar, Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -238,6 +239,7 @@ interface ProjectCardProps {
     color?: string | null;
     isActive?: boolean | null;
     createdAt?: Date | null;
+    profileId?: string | null;
   };
   onEdit: () => void;
   onSetActive: () => void;
@@ -246,8 +248,27 @@ interface ProjectCardProps {
   isSettingActive: boolean;
 }
 
+function ProgressBadge({ done, icon, label, count }: { done: boolean; icon: React.ReactNode; label: string; count?: number }) {
+  return (
+    <span
+      className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium"
+      style={{
+        background: done ? "oklch(0.55 0.18 145 / 15%)" : "oklch(0.55 0.015 240 / 10%)",
+        color: done ? "oklch(0.7 0.18 145)" : "oklch(0.45 0.015 240)",
+      }}
+    >
+      {icon}
+      {label}{count !== undefined && count > 0 ? ` (${count})` : ""}
+    </span>
+  );
+}
+
 function ProjectCard({ project, onEdit, onSetActive, onDelete, onOpen, isSettingActive }: ProjectCardProps) {
   const accentColor = project.color ?? "oklch(0.6 0.2 255)";
+  const { data: progress } = trpc.projects.getProgress.useQuery(
+    { projectId: project.id },
+    { staleTime: 60_000 }
+  );
 
   return (
     <div
@@ -307,6 +328,32 @@ function ProjectCard({ project, onEdit, onSetActive, onDelete, onOpen, isSetting
             {project.description}
           </p>
         )}
+        {/* Progress badges */}
+        <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
+          <ProgressBadge
+            done={!!progress?.onboarding.done}
+            icon={<Sparkles size={10} />}
+            label="Onboarding"
+          />
+          <ProgressBadge
+            done={!!progress?.strategy.done}
+            icon={<TrendingUp size={10} />}
+            label="Stratégia"
+            count={progress?.strategy.count}
+          />
+          <ProgressBadge
+            done={!!progress?.content.done}
+            icon={<Calendar size={10} />}
+            label="Naptár"
+            count={progress?.content.count}
+          />
+          <ProgressBadge
+            done={!!progress?.leads.done}
+            icon={<Users size={10} />}
+            label="Leadek"
+            count={progress?.leads.count}
+          />
+        </div>
       </div>
 
       {/* Actions */}

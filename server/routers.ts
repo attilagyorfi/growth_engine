@@ -1674,9 +1674,54 @@ A link mező mindig ezek egyike legyen, ne találj ki más URL-t.`,
           industry: project.industry ?? undefined,
           description: project.description ?? undefined,
         });
-        // Hozzárendeljük a projekthez
+        // Hozzárendelünk a projekthez
         await upsertProject({ ...project, profileId });
         return { profileId };
+      }),
+
+    getProgress: superAdminProcedure
+      .input(z.object({ projectId: z.string() }))
+      .query(async ({ input, ctx }) => {
+        const project = await getProjectById(input.projectId);
+        if (!project || project.ownerId !== ctx.appUser.id) throw new TRPCError({ code: "NOT_FOUND" });
+        const profileId = project.profileId;
+        if (!profileId) {
+          return {
+            onboarding: { done: false, count: 0 },
+            strategy: { done: false, count: 0, latest: null as null | { id: string; title: string; createdAt: Date | null } },
+            content: { done: false, count: 0, upcoming: [] as Array<{ id: string; title: string; platform: string; scheduledAt: Date | null }> },
+            leads: { done: false, count: 0, latest: null as null | { id: string; company: string; contact: string; createdAt: Date | null } },
+          };
+        }
+        const [strategies, posts, leadsData] = await Promise.all([
+          getStrategyVersionsByProfile(profileId),
+          getContentByProfile(profileId),
+          getLeadsByProfile(profileId),
+        ]);
+        const latestStrategy = strategies[0] ?? null;
+        const upcomingPosts = posts
+          .filter(p => p.scheduledAt && new Date(p.scheduledAt) >= new Date())
+          .slice(0, 3)
+          .map(p => ({ id: p.id, title: p.title, platform: p.platform, scheduledAt: p.scheduledAt ?? null }));
+        const latestLead = leadsData[0] ?? null;
+        return {
+          onboarding: { done: true, count: 1 },
+          strategy: {
+            done: strategies.length > 0,
+            count: strategies.length,
+            latest: latestStrategy ? { id: latestStrategy.id, title: latestStrategy.title, createdAt: latestStrategy.createdAt ?? null } : null,
+          },
+          content: {
+            done: posts.length > 0,
+            count: posts.length,
+            upcoming: upcomingPosts,
+          },
+          leads: {
+            done: leadsData.length > 0,
+            count: leadsData.length,
+            latest: latestLead ? { id: latestLead.id, company: latestLead.company, contact: latestLead.contact, createdAt: latestLead.createdAt ?? null } : null,
+          },
+        };
       }),
   }),
 

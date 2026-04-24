@@ -1,9 +1,11 @@
+/**
+ * ProjectDashboard – Super admin view for a single project
+ * Shows: project details, onboarding status, strategy/content/lead summaries
+ */
 import { useParams, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft,
   Globe,
@@ -16,9 +18,41 @@ import {
   LayoutDashboard,
   PlayCircle,
   RefreshCw,
+  TrendingUp,
+  Calendar,
+  Users,
+  ChevronRight,
+  Sparkles,
 } from "lucide-react";
-import { useActiveProject } from "@/hooks/useActiveProject";
 import { toast } from "sonner";
+
+const PLATFORM_LABELS: Record<string, string> = {
+  linkedin: "LinkedIn",
+  facebook: "Facebook",
+  instagram: "Instagram",
+  twitter: "Twitter/X",
+  tiktok: "TikTok",
+};
+
+function StatusBadge({ done, label }: { done: boolean; label: string }) {
+  return done ? (
+    <span
+      className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium"
+      style={{ background: "oklch(0.55 0.18 145 / 20%)", color: "oklch(0.7 0.18 145)" }}
+    >
+      <CheckCircle2 size={11} />
+      {label}
+    </span>
+  ) : (
+    <span
+      className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium"
+      style={{ background: "oklch(0.55 0.015 240 / 15%)", color: "oklch(0.55 0.015 240)" }}
+    >
+      <Clock size={11} />
+      Nem kész
+    </span>
+  );
+}
 
 export default function ProjectDashboard() {
   const { id } = useParams<{ id: string }>();
@@ -29,10 +63,17 @@ export default function ProjectDashboard() {
     { enabled: !!id }
   );
 
+  const { data: progress, isLoading: progressLoading } = trpc.projects.getProgress.useQuery(
+    { projectId: id! },
+    { enabled: !!id, staleTime: 30_000 }
+  );
+
   const utils = trpc.useUtils();
+
   const startOnboarding = trpc.projects.startOnboarding.useMutation({
     onSuccess: (data) => {
       utils.projects.get.invalidate({ id: id! });
+      utils.projects.getProgress.invalidate({ projectId: id! });
       navigate(`/projektek/${id}/onboarding?profileId=${data.profileId}`);
     },
     onError: (err) => {
@@ -54,7 +95,6 @@ export default function ProjectDashboard() {
   const handleStartOnboarding = () => {
     if (!id) return;
     if (project?.profileId) {
-      // Már van profileId – folytatjuk az onboardingot
       navigate(`/projektek/${id}/onboarding?profileId=${project.profileId}`);
     } else {
       startOnboarding.mutate({ projectId: id });
@@ -70,7 +110,7 @@ export default function ProjectDashboard() {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
+          <Loader2 className="w-8 h-8 animate-spin" style={{ color: "oklch(0.6 0.2 255)" }} />
         </div>
       </DashboardLayout>
     );
@@ -91,216 +131,297 @@ export default function ProjectDashboard() {
     );
   }
 
+  const accentColor = project.color ?? "oklch(0.6 0.2 255)";
   const hasProfile = !!project.profileId;
-  // We consider onboarding "done" if there's a profileId linked
-  // (the actual onboarding completion status lives in the onboarding session)
-  const onboardingStatus = hasProfile ? "linked" : "not_started";
 
   return (
     <DashboardLayout>
-      <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
+      <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
+
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm" style={{ color: "oklch(0.55 0.015 240)" }}>
+          <button
             onClick={() => navigate("/projektek")}
-            className="text-gray-400 hover:text-white"
+            className="hover:text-white transition-colors flex items-center gap-1"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
+            <ArrowLeft size={14} />
             Projektek
-          </Button>
+          </button>
+          <span>/</span>
+          <span className="text-white">{project.name}</span>
         </div>
 
+        {/* Project Header */}
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-4">
-            {/* Project color avatar */}
             <div
               className="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold text-xl flex-shrink-0"
-              style={{ background: project.color ?? "oklch(0.6 0.2 255)" }}
+              style={{ background: accentColor, boxShadow: `0 0 24px ${accentColor}50` }}
             >
-              {project.name
-                .split(" ")
-                .slice(0, 2)
-                .map((w) => w[0]?.toUpperCase() ?? "")
-                .join("")}
+              {project.name.split(" ").slice(0, 2).map(w => w[0]?.toUpperCase() ?? "").join("")}
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white">{project.name}</h1>
+              <h1 className="text-2xl font-bold text-white" style={{ fontFamily: "Sora, sans-serif" }}>
+                {project.name}
+              </h1>
               {project.industry && (
-                <p className="text-gray-400 text-sm mt-0.5">{project.industry}</p>
+                <p className="text-sm mt-0.5" style={{ color: "oklch(0.55 0.015 240)" }}>
+                  {project.industry}
+                </p>
               )}
             </div>
           </div>
 
-          {/* Primary CTA */}
-          <div className="flex gap-2 flex-shrink-0">
-            {hasProfile ? (
-              <Button
-                onClick={handleOpenDashboard}
-                disabled={setActive.isPending}
-                className="text-white"
-                style={{ background: "linear-gradient(135deg, oklch(0.6 0.2 255), oklch(0.55 0.18 165))" }}
+          {hasProfile && (
+            <Button
+              onClick={handleOpenDashboard}
+              disabled={setActive.isPending}
+              className="text-white flex-shrink-0"
+              style={{ background: `linear-gradient(135deg, ${accentColor}, oklch(0.55 0.18 165))` }}
+            >
+              {setActive.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <LayoutDashboard className="w-4 h-4 mr-2" />
+              )}
+              Irányítópult megnyitása
+            </Button>
+          )}
+        </div>
+
+        {/* Project Info */}
+        <div
+          className="rounded-2xl p-5 space-y-3"
+          style={{ background: "oklch(0.16 0.022 255)", border: "1px solid oklch(1 0 0 / 8%)" }}
+        >
+          <h2 className="text-sm font-semibold text-white mb-3">Projekt adatok</h2>
+          {project.website && (
+            <div className="flex items-center gap-3 text-sm">
+              <Globe className="w-4 h-4 flex-shrink-0" style={{ color: "oklch(0.55 0.015 240)" }} />
+              <a
+                href={project.website.startsWith("http") ? project.website : `https://${project.website}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:underline truncate"
+                style={{ color: "oklch(0.6 0.2 255)" }}
               >
-                {setActive.isPending ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <LayoutDashboard className="w-4 h-4 mr-2" />
-                )}
-                Irányítópult megnyitása
-              </Button>
-            ) : null}
+                {project.website}
+              </a>
+            </div>
+          )}
+          {project.industry && (
+            <div className="flex items-center gap-3 text-sm">
+              <Building2 className="w-4 h-4 flex-shrink-0" style={{ color: "oklch(0.55 0.015 240)" }} />
+              <span className="text-gray-300">{project.industry}</span>
+            </div>
+          )}
+          {project.description && (
+            <div className="flex items-start gap-3 text-sm">
+              <FileText className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: "oklch(0.55 0.015 240)" }} />
+              <span className="text-gray-300">{project.description}</span>
+            </div>
+          )}
+          {!project.website && !project.industry && !project.description && (
+            <p className="text-sm" style={{ color: "oklch(0.45 0.015 240)" }}>
+              Nincsenek megadott projekt adatok.
+            </p>
+          )}
+        </div>
+
+        {/* Progress Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+          {/* Onboarding Card */}
+          <div
+            className="rounded-2xl p-5 flex flex-col gap-3"
+            style={{ background: "oklch(0.16 0.022 255)", border: `1px solid ${hasProfile ? "oklch(0.55 0.18 145 / 30%)" : "oklch(1 0 0 / 8%)"}` }}
+          >
+            <div className="flex items-center justify-between">
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ background: hasProfile ? "oklch(0.55 0.18 145 / 20%)" : "oklch(0.55 0.015 240 / 15%)" }}
+              >
+                <Sparkles size={16} style={{ color: hasProfile ? "oklch(0.7 0.18 145)" : "oklch(0.55 0.015 240)" }} />
+              </div>
+              <StatusBadge done={hasProfile} label="Kész" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-white mb-0.5">Onboarding</p>
+              <p className="text-xs" style={{ color: "oklch(0.5 0.015 240)" }}>
+                {hasProfile ? "Profil összekapcsolva" : "Nincs elindítva"}
+              </p>
+            </div>
+            <button
+              onClick={handleStartOnboarding}
+              disabled={startOnboarding.isPending}
+              className="mt-auto flex items-center gap-1.5 text-xs font-medium transition-all hover:opacity-80 disabled:opacity-40"
+              style={{ color: accentColor }}
+            >
+              {startOnboarding.isPending ? (
+                <Loader2 size={12} className="animate-spin" />
+              ) : hasProfile ? (
+                <RefreshCw size={12} />
+              ) : (
+                <PlayCircle size={12} />
+              )}
+              {hasProfile ? "Szerkesztés" : "Indítás"}
+              <ChevronRight size={12} />
+            </button>
+          </div>
+
+          {/* Strategy Card */}
+          <div
+            className="rounded-2xl p-5 flex flex-col gap-3"
+            style={{ background: "oklch(0.16 0.022 255)", border: `1px solid ${progress?.strategy.done ? "oklch(0.6 0.2 255 / 30%)" : "oklch(1 0 0 / 8%)"}` }}
+          >
+            <div className="flex items-center justify-between">
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ background: progress?.strategy.done ? "oklch(0.6 0.2 255 / 20%)" : "oklch(0.55 0.015 240 / 15%)" }}
+              >
+                <TrendingUp size={16} style={{ color: progress?.strategy.done ? "oklch(0.7 0.18 255)" : "oklch(0.55 0.015 240)" }} />
+              </div>
+              <StatusBadge done={!!progress?.strategy.done} label={`${progress?.strategy.count ?? 0} verzió`} />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-white mb-0.5">Stratégia</p>
+              {progressLoading ? (
+                <div className="h-3 w-24 rounded animate-pulse" style={{ background: "oklch(0.25 0.02 255)" }} />
+              ) : progress?.strategy.latest ? (
+                <p className="text-xs truncate" style={{ color: "oklch(0.5 0.015 240)" }}>
+                  {progress.strategy.latest.title}
+                </p>
+              ) : (
+                <p className="text-xs" style={{ color: "oklch(0.5 0.015 240)" }}>
+                  {hasProfile ? "Még nincs generálva" : "Onboarding szükséges"}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={handleOpenDashboard}
+              disabled={!hasProfile || setActive.isPending}
+              className="mt-auto flex items-center gap-1.5 text-xs font-medium transition-all hover:opacity-80 disabled:opacity-40"
+              style={{ color: progress?.strategy.done ? "oklch(0.7 0.18 255)" : "oklch(0.45 0.015 240)" }}
+            >
+              <LayoutDashboard size={12} />
+              Megnyitás
+              <ChevronRight size={12} />
+            </button>
+          </div>
+
+          {/* Content Calendar Card */}
+          <div
+            className="rounded-2xl p-5 flex flex-col gap-3"
+            style={{ background: "oklch(0.16 0.022 255)", border: `1px solid ${progress?.content.done ? "oklch(0.55 0.18 165 / 30%)" : "oklch(1 0 0 / 8%)"}` }}
+          >
+            <div className="flex items-center justify-between">
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ background: progress?.content.done ? "oklch(0.55 0.18 165 / 20%)" : "oklch(0.55 0.015 240 / 15%)" }}
+              >
+                <Calendar size={16} style={{ color: progress?.content.done ? "oklch(0.7 0.18 165)" : "oklch(0.55 0.015 240)" }} />
+              </div>
+              <StatusBadge done={!!progress?.content.done} label={`${progress?.content.count ?? 0} poszt`} />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-white mb-0.5">Tartalom naptár</p>
+              {progressLoading ? (
+                <div className="h-3 w-24 rounded animate-pulse" style={{ background: "oklch(0.25 0.02 255)" }} />
+              ) : progress?.content.upcoming.length ? (
+                <div className="space-y-1">
+                  {progress.content.upcoming.slice(0, 2).map(p => (
+                    <p key={p.id} className="text-xs truncate" style={{ color: "oklch(0.5 0.015 240)" }}>
+                      {PLATFORM_LABELS[p.platform] ?? p.platform}: {p.title}
+                    </p>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs" style={{ color: "oklch(0.5 0.015 240)" }}>
+                  {hasProfile ? "Nincs ütemezett poszt" : "Onboarding szükséges"}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={handleOpenDashboard}
+              disabled={!hasProfile || setActive.isPending}
+              className="mt-auto flex items-center gap-1.5 text-xs font-medium transition-all hover:opacity-80 disabled:opacity-40"
+              style={{ color: progress?.content.done ? "oklch(0.7 0.18 165)" : "oklch(0.45 0.015 240)" }}
+            >
+              <LayoutDashboard size={12} />
+              Megnyitás
+              <ChevronRight size={12} />
+            </button>
+          </div>
+
+          {/* Leads Card */}
+          <div
+            className="rounded-2xl p-5 flex flex-col gap-3"
+            style={{ background: "oklch(0.16 0.022 255)", border: `1px solid ${progress?.leads.done ? "oklch(0.7 0.2 50 / 30%)" : "oklch(1 0 0 / 8%)"}` }}
+          >
+            <div className="flex items-center justify-between">
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ background: progress?.leads.done ? "oklch(0.7 0.2 50 / 20%)" : "oklch(0.55 0.015 240 / 15%)" }}
+              >
+                <Users size={16} style={{ color: progress?.leads.done ? "oklch(0.8 0.18 50)" : "oklch(0.55 0.015 240)" }} />
+              </div>
+              <StatusBadge done={!!progress?.leads.done} label={`${progress?.leads.count ?? 0} lead`} />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-white mb-0.5">Leadek</p>
+              {progressLoading ? (
+                <div className="h-3 w-24 rounded animate-pulse" style={{ background: "oklch(0.25 0.02 255)" }} />
+              ) : progress?.leads.latest ? (
+                <p className="text-xs truncate" style={{ color: "oklch(0.5 0.015 240)" }}>
+                  {progress.leads.latest.company} – {progress.leads.latest.contact}
+                </p>
+              ) : (
+                <p className="text-xs" style={{ color: "oklch(0.5 0.015 240)" }}>
+                  {hasProfile ? "Még nincs lead" : "Onboarding szükséges"}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={handleOpenDashboard}
+              disabled={!hasProfile || setActive.isPending}
+              className="mt-auto flex items-center gap-1.5 text-xs font-medium transition-all hover:opacity-80 disabled:opacity-40"
+              style={{ color: progress?.leads.done ? "oklch(0.8 0.18 50)" : "oklch(0.45 0.015 240)" }}
+            >
+              <LayoutDashboard size={12} />
+              Megnyitás
+              <ChevronRight size={12} />
+            </button>
           </div>
         </div>
 
-        {/* Project Details Card */}
-        <Card className="border-0" style={{ background: "oklch(0.15 0.02 255)" }}>
-          <CardHeader>
-            <CardTitle className="text-white text-base">Projekt adatok</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {project.website && (
-              <div className="flex items-center gap-3 text-sm">
-                <Globe className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                <a
-                  href={project.website.startsWith("http") ? project.website : `https://${project.website}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-400 hover:text-blue-300 truncate"
-                >
-                  {project.website}
-                </a>
-              </div>
-            )}
-            {project.industry && (
-              <div className="flex items-center gap-3 text-sm">
-                <Building2 className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                <span className="text-gray-300">{project.industry}</span>
-              </div>
-            )}
-            {project.description && (
-              <div className="flex items-start gap-3 text-sm">
-                <FileText className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
-                <span className="text-gray-300">{project.description}</span>
-              </div>
-            )}
-            {!project.website && !project.industry && !project.description && (
-              <p className="text-gray-500 text-sm">Nincsenek megadott projekt adatok.</p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Status Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {/* Onboarding Status */}
-          <Card className="border-0" style={{ background: "oklch(0.15 0.02 255)" }}>
-            <CardContent className="pt-5 pb-5">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-gray-400 text-xs uppercase tracking-wider font-medium">Onboarding</span>
-                {onboardingStatus === "linked" ? (
-                  <Badge className="bg-green-500/20 text-green-400 border-0 text-xs">
-                    <CheckCircle2 className="w-3 h-3 mr-1" />
-                    Összekapcsolva
-                  </Badge>
-                ) : (
-                  <Badge className="bg-yellow-500/20 text-yellow-400 border-0 text-xs">
-                    <Clock className="w-3 h-3 mr-1" />
-                    Nem indult el
-                  </Badge>
-                )}
-              </div>
-              <p className="text-gray-400 text-xs mb-4">
-                {onboardingStatus === "linked"
-                  ? "A projekt profil össze van kapcsolva. Az onboarding adatok megadva."
-                  : "Az onboarding kitöltésével AI-alapú stratégia és tartalom naptár generálható."}
-              </p>
-              <Button
-                size="sm"
-                variant="outline"
-                className="w-full border-gray-600 text-gray-300 hover:text-white hover:border-gray-400"
-                onClick={handleStartOnboarding}
-                disabled={startOnboarding.isPending}
-              >
-                {startOnboarding.isPending ? (
-                  <Loader2 className="w-3 h-3 mr-2 animate-spin" />
-                ) : onboardingStatus === "linked" ? (
-                  <RefreshCw className="w-3 h-3 mr-2" />
-                ) : (
-                  <PlayCircle className="w-3 h-3 mr-2" />
-                )}
-                {onboardingStatus === "linked" ? "Onboarding szerkesztése" : "Onboarding indítása"}
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Strategy Status */}
-          <Card className="border-0" style={{ background: "oklch(0.15 0.02 255)" }}>
-            <CardContent className="pt-5 pb-5">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-gray-400 text-xs uppercase tracking-wider font-medium">Stratégia</span>
-                {hasProfile ? (
-                  <Badge className="bg-blue-500/20 text-blue-400 border-0 text-xs">
-                    <CheckCircle2 className="w-3 h-3 mr-1" />
-                    Elérhető
-                  </Badge>
-                ) : (
-                  <Badge className="bg-gray-500/20 text-gray-400 border-0 text-xs">
-                    –
-                  </Badge>
-                )}
-              </div>
-              <p className="text-gray-400 text-xs mb-4">
-                {hasProfile
-                  ? "A stratégia az irányítópulton érhető el."
-                  : "Az onboarding elvégzése után válik elérhetővé."}
-              </p>
-              <Button
-                size="sm"
-                variant="outline"
-                className="w-full border-gray-600 text-gray-300 hover:text-white hover:border-gray-400"
-                onClick={handleOpenDashboard}
-                disabled={!hasProfile || setActive.isPending}
-              >
-                <LayoutDashboard className="w-3 h-3 mr-2" />
-                Megnyitás
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Content Calendar Status */}
-          <Card className="border-0" style={{ background: "oklch(0.15 0.02 255)" }}>
-            <CardContent className="pt-5 pb-5">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-gray-400 text-xs uppercase tracking-wider font-medium">Tartalom naptár</span>
-                {hasProfile ? (
-                  <Badge className="bg-blue-500/20 text-blue-400 border-0 text-xs">
-                    <CheckCircle2 className="w-3 h-3 mr-1" />
-                    Elérhető
-                  </Badge>
-                ) : (
-                  <Badge className="bg-gray-500/20 text-gray-400 border-0 text-xs">
-                    –
-                  </Badge>
-                )}
-              </div>
-              <p className="text-gray-400 text-xs mb-4">
-                {hasProfile
-                  ? "A tartalom naptár az irányítópulton érhető el."
-                  : "Az onboarding elvégzése után válik elérhetővé."}
-              </p>
-              <Button
-                size="sm"
-                variant="outline"
-                className="w-full border-gray-600 text-gray-300 hover:text-white hover:border-gray-400"
-                onClick={handleOpenDashboard}
-                disabled={!hasProfile || setActive.isPending}
-              >
-                <LayoutDashboard className="w-3 h-3 mr-2" />
-                Megnyitás
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Quick Actions */}
+        {!hasProfile && (
+          <div
+            className="rounded-2xl p-6 text-center"
+            style={{ background: `${accentColor}10`, border: `1px solid ${accentColor}30` }}
+          >
+            <Sparkles size={28} className="mx-auto mb-3" style={{ color: accentColor }} />
+            <h3 className="text-white font-semibold mb-1" style={{ fontFamily: "Sora, sans-serif" }}>
+              Indítsd el az onboardingot
+            </h3>
+            <p className="text-sm mb-4" style={{ color: "oklch(0.55 0.015 240)" }}>
+              Az onboarding kitöltésével AI-alapú stratégia, tartalom naptár és lead generálás válik elérhetővé.
+            </p>
+            <Button
+              onClick={handleStartOnboarding}
+              disabled={startOnboarding.isPending}
+              className="text-white"
+              style={{ background: accentColor }}
+            >
+              {startOnboarding.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <PlayCircle className="w-4 h-4 mr-2" />
+              )}
+              Onboarding indítása
+            </Button>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );
