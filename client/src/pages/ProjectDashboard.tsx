@@ -243,13 +243,30 @@ export default function ProjectDashboard() {
               >
                 <Sparkles size={16} style={{ color: hasProfile ? "oklch(0.7 0.18 145)" : "oklch(0.55 0.015 240)" }} />
               </div>
-              <StatusBadge done={hasProfile} label="Kész" />
+              <StatusBadge done={!!progress?.onboarding.completed} label={progress?.onboarding.completed ? "Kész" : hasProfile ? "Folyamatban" : "Nem indult"} />
             </div>
             <div>
               <p className="text-xs font-semibold text-white mb-0.5">Onboarding</p>
-              <p className="text-xs" style={{ color: "oklch(0.5 0.015 240)" }}>
-                {hasProfile ? "Profil összekapcsolva" : "Nincs elindítva"}
-              </p>
+              {progressLoading ? (
+                <div className="h-3 w-24 rounded animate-pulse" style={{ background: "oklch(0.25 0.02 255)" }} />
+              ) : hasProfile ? (
+                <>
+                  <p className="text-xs mb-2" style={{ color: "oklch(0.5 0.015 240)" }}>
+                    {progress?.onboarding.currentStep ?? 1}/{progress?.onboarding.totalSteps ?? 6} lépés kitöltve
+                  </p>
+                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "oklch(0.25 0.02 255)" }}>
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${Math.round(((progress?.onboarding.currentStep ?? 1) / (progress?.onboarding.totalSteps ?? 6)) * 100)}%`,
+                        background: progress?.onboarding.completed ? "oklch(0.65 0.18 145)" : accentColor,
+                      }}
+                    />
+                  </div>
+                </>
+              ) : (
+                <p className="text-xs" style={{ color: "oklch(0.5 0.015 240)" }}>Nincs elíndítva</p>
+              )}
             </div>
             <button
               onClick={handleStartOnboarding}
@@ -264,7 +281,7 @@ export default function ProjectDashboard() {
               ) : (
                 <PlayCircle size={12} />
               )}
-              {hasProfile ? "Szerkesztés" : "Indítás"}
+              {hasProfile ? (progress?.onboarding.completed ? "Szerkesztés" : "Folytatás") : "Indítás"}
               <ChevronRight size={12} />
             </button>
           </div>
@@ -297,16 +314,30 @@ export default function ProjectDashboard() {
                 </p>
               )}
             </div>
-            <button
-              onClick={handleOpenDashboard}
-              disabled={!hasProfile || setActive.isPending}
-              className="mt-auto flex items-center gap-1.5 text-xs font-medium transition-all hover:opacity-80 disabled:opacity-40"
-              style={{ color: progress?.strategy.done ? "oklch(0.7 0.18 255)" : "oklch(0.45 0.015 240)" }}
-            >
-              <LayoutDashboard size={12} />
-              Megnyitás
-              <ChevronRight size={12} />
-            </button>
+            {/* CTA: ha onboarding kész de nincs stratégia → Stratégia generálása gomb */}
+            {hasProfile && !progress?.strategy.done && progress?.onboarding.completed ? (
+              <button
+                onClick={handleOpenDashboard}
+                disabled={setActive.isPending}
+                className="mt-auto flex items-center gap-1.5 text-xs font-medium transition-all hover:opacity-80 disabled:opacity-40 px-2.5 py-1.5 rounded-lg"
+                style={{ background: "oklch(0.6 0.2 255 / 20%)", color: "oklch(0.7 0.18 255)" }}
+              >
+                <Sparkles size={12} />
+                Stratégia generálása
+                <ChevronRight size={12} />
+              </button>
+            ) : (
+              <button
+                onClick={handleOpenDashboard}
+                disabled={!hasProfile || setActive.isPending}
+                className="mt-auto flex items-center gap-1.5 text-xs font-medium transition-all hover:opacity-80 disabled:opacity-40"
+                style={{ color: progress?.strategy.done ? "oklch(0.7 0.18 255)" : "oklch(0.45 0.015 240)" }}
+              >
+                <LayoutDashboard size={12} />
+                Megnyitás
+                <ChevronRight size={12} />
+              </button>
+            )}
           </div>
 
           {/* Content Calendar Card */}

@@ -709,6 +709,7 @@ export const projects = mysqlTable("projects", {
   color: varchar("color", { length: 100 }).default("oklch(0.6 0.2 255)"),
   profileId: varchar("profileId", { length: 64 }), // linked client_profile
   isActive: boolean("isActive").default(false).notNull(),
+  isArchived: boolean("isArchived").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

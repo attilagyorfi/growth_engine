@@ -36,6 +36,7 @@ import { storagePut } from "./storage";
 import { checkAiUsageLimit, recordAiUsage } from "./authDb";
 import {
   getProjectsByOwner, getProjectById, upsertProject, setActiveProject, deleteProject, getActiveProjectByOwner,
+  archiveProject, restoreProject, getArchivedProjectsByOwner,
   getSocialProfileCache, upsertSocialProfileCache, getSocialProfilesByProfile,
 } from "./projectsDb";
 
@@ -1679,6 +1680,22 @@ A link mező mindig ezek egyike legyen, ne találj ki más URL-t.`,
         return { profileId };
       }),
 
+    listArchived: superAdminProcedure.query(({ ctx }) => getArchivedProjectsByOwner(ctx.appUser.id)),
+
+    archive: superAdminProcedure
+      .input(z.object({ id: z.string() }))
+      .mutation(async ({ input, ctx }) => {
+        await archiveProject(input.id, ctx.appUser.id);
+        return { success: true };
+      }),
+
+    restore: superAdminProcedure
+      .input(z.object({ id: z.string() }))
+      .mutation(async ({ input, ctx }) => {
+        await restoreProject(input.id, ctx.appUser.id);
+        return { success: true };
+      }),
+
     getProgress: superAdminProcedure
       .input(z.object({ projectId: z.string() }))
       .query(async ({ input, ctx }) => {
@@ -1693,10 +1710,11 @@ A link mező mindig ezek egyike legyen, ne találj ki más URL-t.`,
             leads: { done: false, count: 0, latest: null as null | { id: string; company: string; contact: string; createdAt: Date | null } },
           };
         }
-        const [strategies, posts, leadsData] = await Promise.all([
+        const [strategies, posts, leadsData, onboardingSession] = await Promise.all([
           getStrategyVersionsByProfile(profileId),
           getContentByProfile(profileId),
           getLeadsByProfile(profileId),
+          getOnboardingSession(profileId),
         ]);
         const latestStrategy = strategies[0] ?? null;
         const upcomingPosts = posts
@@ -1704,8 +1722,17 @@ A link mező mindig ezek egyike legyen, ne találj ki más URL-t.`,
           .slice(0, 3)
           .map(p => ({ id: p.id, title: p.title, platform: p.platform, scheduledAt: p.scheduledAt ?? null }));
         const latestLead = leadsData[0] ?? null;
+        const onboardingCurrentStep = onboardingSession?.currentStep ?? 1;
+        const ONBOARDING_TOTAL_STEPS = 6;
+        const onboardingCompleted = onboardingSession?.status === "completed";
         return {
-          onboarding: { done: true, count: 1 },
+          onboarding: {
+            done: true,
+            count: 1,
+            currentStep: onboardingCurrentStep,
+            totalSteps: ONBOARDING_TOTAL_STEPS,
+            completed: onboardingCompleted,
+          },
           strategy: {
             done: strategies.length > 0,
             count: strategies.length,

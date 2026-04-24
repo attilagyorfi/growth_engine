@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import {
   FolderOpen, Plus, Globe, Building2, Pencil, Trash2,
   CheckCircle, Circle, Loader2, X, Save, ExternalLink, LayoutDashboard,
-  Sparkles, TrendingUp, Calendar, Users,
+  Sparkles, TrendingUp, Calendar, Users, Archive, RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,11 +66,16 @@ export default function ProjectsPage() {
   const [showNewForm, setShowNewForm] = useState(false);
   const [newForm, setNewForm] = useState<ProjectFormData>({ ...emptyForm });
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   const utils = trpc.useUtils();
 
   const { data: projects = [], isLoading } = trpc.projects.list.useQuery(undefined, {
     staleTime: 15_000,
+  });
+
+  const { data: archivedProjects = [] } = trpc.projects.listArchived.useQuery(undefined, {
+    staleTime: 30_000,
   });
 
   const upsertMutation = trpc.projects.upsert.useMutation({
@@ -97,6 +102,24 @@ export default function ProjectsPage() {
       toast.success("Projekt törölve.");
       utils.projects.list.invalidate();
       setDeleteConfirmId(null);
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const archiveMutation = trpc.projects.archive.useMutation({
+    onSuccess: () => {
+      toast.success("Projekt archiválva.");
+      utils.projects.list.invalidate();
+      utils.projects.listArchived.invalidate();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const restoreMutation = trpc.projects.restore.useMutation({
+    onSuccess: () => {
+      toast.success("Projekt visszahelyezve.");
+      utils.projects.list.invalidate();
+      utils.projects.listArchived.invalidate();
     },
     onError: (e) => toast.error(e.message),
   });
@@ -128,14 +151,28 @@ export default function ProjectsPage() {
               Minden projekt egy izolált workspace – saját stratégiával, tartalommal és leadekkel.
             </p>
           </div>
-          <Button
-            onClick={() => { setShowNewForm(true); setEditingProject(null); }}
-            className="flex items-center gap-2"
-            style={{ background: "oklch(0.6 0.2 255)", color: "white" }}
-          >
-            <Plus size={15} />
-            Új projekt
-          </Button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowArchived(v => !v)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:opacity-80"
+              style={{
+                background: showArchived ? "oklch(0.55 0.015 240 / 20%)" : "oklch(0.22 0.02 255)",
+                color: showArchived ? "oklch(0.78 0.008 240)" : "oklch(0.55 0.015 240)",
+              }}
+            >
+              <Archive size={13} />
+              Archivált ({archivedProjects.length})
+            </button>
+            <Button
+              onClick={() => { setShowNewForm(true); setEditingProject(null); }}
+              className="flex items-center gap-2"
+              style={{ background: "oklch(0.6 0.2 255)", color: "white" }}
+            >
+              <Plus size={15} />
+              Új projekt
+            </Button>
+          </div>
         </div>
 
         {/* New project form */}
@@ -192,11 +229,53 @@ export default function ProjectsPage() {
                     onSetActive={() => setActiveMutation.mutate({ projectId: p.id })}
                     onDelete={() => setDeleteConfirmId(p.id)}
                     onOpen={() => navigate(`/projektek/${p.id}`)}
+                    onArchive={() => archiveMutation.mutate({ id: p.id })}
                     isSettingActive={setActiveMutation.isPending}
                   />
                 )}
               </div>
             ))}
+            {/* Archived projects section */}
+            {showArchived && archivedProjects.length > 0 && (
+              <>
+                <div className="flex items-center gap-2 mt-4 mb-2">
+                  <div className="h-px flex-1" style={{ background: "oklch(1 0 0 / 8%)" }} />
+                  <span className="text-xs font-medium" style={{ color: "oklch(0.45 0.015 240)" }}>Archivált projektek</span>
+                  <div className="h-px flex-1" style={{ background: "oklch(1 0 0 / 8%)" }} />
+                </div>
+                {archivedProjects.map((p) => (
+                  <div
+                    key={p.id}
+                    className="rounded-2xl border p-4 flex items-center gap-4 opacity-60"
+                    style={{ background: "oklch(0.14 0.018 255)", borderColor: "oklch(1 0 0 / 6%)" }}
+                  >
+                    <div
+                      className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 text-white font-bold text-xs"
+                      style={{ background: p.color ?? "oklch(0.4 0.01 240)" }}
+                    >
+                      {p.name[0]?.toUpperCase() ?? "P"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate" style={{ color: "oklch(0.65 0.008 240)" }}>{p.name}</p>
+                      {p.industry && <p className="text-xs" style={{ color: "oklch(0.45 0.015 240)" }}>{p.industry}</p>}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => restoreMutation.mutate({ id: p.id })}
+                      disabled={restoreMutation.isPending}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:opacity-80 disabled:opacity-40"
+                      style={{ background: "oklch(0.55 0.18 145 / 15%)", color: "oklch(0.65 0.18 145)" }}
+                    >
+                      <RotateCcw size={11} />
+                      Visszahelyezés
+                    </button>
+                  </div>
+                ))}
+              </>
+            )}
+            {showArchived && archivedProjects.length === 0 && (
+              <p className="text-xs text-center py-4" style={{ color: "oklch(0.45 0.015 240)" }}>Nincs archivált projekt.</p>
+            )}
           </div>
         )}
       </div>
@@ -245,6 +324,7 @@ interface ProjectCardProps {
   onSetActive: () => void;
   onDelete: () => void;
   onOpen: () => void;
+  onArchive?: () => void;
   isSettingActive: boolean;
 }
 
@@ -263,7 +343,7 @@ function ProgressBadge({ done, icon, label, count }: { done: boolean; icon: Reac
   );
 }
 
-function ProjectCard({ project, onEdit, onSetActive, onDelete, onOpen, isSettingActive }: ProjectCardProps) {
+function ProjectCard({ project, onEdit, onSetActive, onDelete, onOpen, onArchive, isSettingActive }: ProjectCardProps) {
   const accentColor = project.color ?? "oklch(0.6 0.2 255)";
   const { data: progress } = trpc.projects.getProgress.useQuery(
     { projectId: project.id },
@@ -395,6 +475,17 @@ function ProjectCard({ project, onEdit, onSetActive, onDelete, onOpen, isSetting
         >
           <Pencil size={14} />
         </button>
+        {onArchive && (
+          <button
+            type="button"
+            onClick={onArchive}
+            className="p-1.5 rounded-lg transition-all hover:bg-yellow-500/10"
+            style={{ color: "oklch(0.55 0.015 240)" }}
+            title="Archiválás"
+          >
+            <Archive size={14} />
+          </button>
+        )}
         <button
           type="button"
           onClick={onDelete}

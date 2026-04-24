@@ -7,12 +7,13 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import {
   Palette, Plug, Users, ClipboardList, X, Loader2, Plus,
-  Save, Globe, Mail, Check, AlertCircle, Settings2, Eye, EyeOff,
+  Save, Globe, Mail, Check, AlertCircle, Settings2, Eye, EyeOff, PlayCircle,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { trpc } from "@/lib/trpc";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useAppAuth } from "@/hooks/useAppAuth";
+import { useTour } from "@/hooks/useTour";
 import { toast } from "sonner";
 
 type Tab = "brand" | "integrations" | "team" | "audit" | "admin" | "fiok";
@@ -33,6 +34,7 @@ const border = "oklch(1 0 0 / 8%)";
 export default function Settings() {
   const { activeProfile } = useProfile();
   const { user: appUser, isSuperAdmin } = useAppAuth();
+  const { restartTour } = useTour();
   const [activeTab, setActiveTab] = useState<Tab>("brand");
   const [linkedInCredForm, setLinkedInCredForm] = useState({ clientId: "", clientSecret: "" });
   const [showLinkedInSecret, setShowLinkedInSecret] = useState(false);
@@ -184,6 +186,29 @@ export default function Settings() {
                 <span className="ml-auto text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: "oklch(0.6 0.2 255 / 15%)", color: "oklch(0.75 0.18 255)" }}>
                   {appUser?.role === "super_admin" ? "Super Admin" : "Felhasználó"}
                 </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Interaktív bemutato */}
+          <div className="rounded-xl border p-5" style={{ background: "oklch(0.18 0.025 255 / 40%)", borderColor: "oklch(0.6 0.2 255 / 30%)" }}>
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "oklch(0.6 0.2 255 / 15%)" }}>
+                <PlayCircle size={16} style={{ color: "oklch(0.7 0.18 255)" }} />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-bold mb-1" style={{ color: "oklch(0.88 0.008 240)" }}>Interaktív bemutato</h3>
+                <p className="text-xs mb-4" style={{ color: "oklch(0.5 0.015 240)" }}>
+                  Végigvezet a platform főbb funkcióin. Hasznos új csapattagoknak vagy ha szeretnéd újra átnézni a lehetőségeket.
+                </p>
+                <button
+                  onClick={restartTour}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white"
+                  style={{ background: "oklch(0.6 0.2 255)" }}
+                >
+                  <PlayCircle size={13} />
+                  Bemutato indítása
+                </button>
               </div>
             </div>
           </div>

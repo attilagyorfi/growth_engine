@@ -832,3 +832,25 @@
 ### DashboardLayout projekt váltó
 - [x] Meglévő projekt váltó bővítése: minden projektnél ChevronRight gomb → /projektek/:id
 - [x] Hover-re megjelenő navigációs gomb (setActive és irányítópult különválasztva)
+
+## Sprint 39 – Onboarding %, stratégia CTA, projekt archiválás, Shepherd.js tour
+
+### Onboarding teljességi % + stratégia CTA
+- [x] getProgress: onboardingSession lépés-count lekérése (kitöltött / összes)
+- [x] ProjectDashboard Onboarding kártya: X/6 lépés progress bar
+- [x] ProjectDashboard Stratégia kártya: "Stratégia generálása" CTA ha onboarding kész de nincs stratégia
+
+### Projekt archiválás
+- [x] projects tábla: isArchived mező (boolean, default false)
+- [x] db:push migráció
+- [x] projects.archive / projects.restore / projects.listArchived procedure
+- [x] ProjectsPage: "Archiválás" gomb + archivált projektek szűrő toggle
+- [x] Archivált projektek kiszűrése az aktív projekt listából
+
+### Shepherd.js interaktív tour
+- [x] shepherd.js csomag telepítése (v15.2.2)
+- [x] useTour hook: 7 lépéses tour (welcome + 6 navigaciós elem)
+- [x] Tour triggerelés: első belépéskor (localStorage flag: g2a_tour_done)
+- [x] DashboardLayout: useTour hook integrálva
+- [x] Beállítások / Fiók tab: "Bemutato indítása" gomb (kézi újraindítás)
+- [x] 51/51 teszt zöld, TypeScript: 0 hiba

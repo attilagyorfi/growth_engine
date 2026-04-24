@@ -78,6 +78,13 @@
       "when": 1777012258141,
       "tag": "0010_opposite_rocket_racer",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1777015301628,
+      "tag": "0011_past_tusk",
+      "breakpoints": true
     }
   ]
 }

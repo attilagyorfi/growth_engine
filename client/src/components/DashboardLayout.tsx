@@ -18,6 +18,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useAppAuth } from "@/hooks/useAppAuth";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useTour } from "@/hooks/useTour";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 
@@ -102,6 +103,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
   const { user, logout, isSuperAdmin, refetch } = useAppAuth();
   const navItems = isSuperAdmin ? adminNavItems : publicNavItems;
   const subscription = useSubscription();
+  const { restartTour } = useTour();
 
   const updateSelf = trpc.appAuth.updateSelf.useMutation({
     onSuccess: () => {

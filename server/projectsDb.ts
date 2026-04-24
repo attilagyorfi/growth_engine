@@ -1,12 +1,21 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, ne } from "drizzle-orm";
 import { getDb } from "./db";
 import { projects, socialProfileCache } from "../drizzle/schema";
 import type { InsertProject, InsertSocialProfileCache } from "../drizzle/schema";
 
-export async function getProjectsByOwner(ownerId: string) {
+export async function getProjectsByOwner(ownerId: string, includeArchived = false) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(projects).where(eq(projects.ownerId, ownerId));
+  if (includeArchived) {
+    return db.select().from(projects).where(eq(projects.ownerId, ownerId));
+  }
+  return db.select().from(projects).where(and(eq(projects.ownerId, ownerId), ne(projects.isArchived, true)));
+}
+
+export async function getArchivedProjectsByOwner(ownerId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(projects).where(and(eq(projects.ownerId, ownerId), eq(projects.isArchived, true)));
 }
 
 export async function getProjectById(id: string) {
@@ -44,6 +53,18 @@ export async function deleteProject(id: string, ownerId: string) {
   const db = await getDb();
   if (!db) throw new Error("DB unavailable");
   await db.delete(projects).where(and(eq(projects.id, id), eq(projects.ownerId, ownerId)));
+}
+
+export async function archiveProject(id: string, ownerId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("DB unavailable");
+  await db.update(projects).set({ isArchived: true, isActive: false }).where(and(eq(projects.id, id), eq(projects.ownerId, ownerId)));
+}
+
+export async function restoreProject(id: string, ownerId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("DB unavailable");
+  await db.update(projects).set({ isArchived: false }).where(and(eq(projects.id, id), eq(projects.ownerId, ownerId)));
 }
 
 // ─── Social Profile Cache ─────────────────────────────────────────────────────
