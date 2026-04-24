@@ -110,14 +110,17 @@ export default function Strategy() {
   const archivedVersions: typeof versions = [];
 
   // Feature gate: Strategy requires Starter plan or above
-  if (!subscription.canUseStrategy) {
+  // Exception: free tier users can VIEW existing strategies (generated during onboarding)
+  // but cannot generate new ones
+  const isReadOnly = !subscription.canUseStrategy;
+  if (isReadOnly && versions.length === 0 && !isLoading) {
     return (
       <DashboardLayout>
         <div className="p-6">
           <UpgradePrompt
             feature="Stratégia modul"
             requiredPlan="starter"
-            description="A stratégia modul Starter csomagtól érhető el. Generálj AI-alapú negyedéves és havi marketing stratégiát a vállalkozásod számára."
+            description="A stratégia modul Starter csomagtól érhető el. Generálj AI-alapú negyedéves és havi marketing stratégiát a vállalkozásod számára. Az onboarding során generált stratégiád megtekinthető marad."
           />
         </div>
       </DashboardLayout>
@@ -158,10 +161,14 @@ export default function Strategy() {
                 Összehasonlítás
               </Button>
             )}
-            <Button onClick={() => setShowGenerate(true)} className="gap-2">
-              <Zap className="w-4 h-4" />
-              AI Stratégia generálása
-            </Button>
+            {isReadOnly ? (
+              <UpgradePrompt feature="Új stratégia" requiredPlan="starter" compact />
+            ) : (
+              <Button onClick={() => setShowGenerate(true)} className="gap-2">
+                <Zap className="w-4 h-4" />
+                AI Stratégia generálása
+              </Button>
+            )}
           </div>
         </motion.div>
 
@@ -197,10 +204,18 @@ export default function Strategy() {
               <p className="text-muted-foreground mb-6 max-w-md mx-auto">
                 Az AI elemzi a céged profilját és az Intelligence adatokat, majd elkészít egy teljes körű marketing stratégiát negyed-, havi és heti bontásban.
               </p>
-              <Button onClick={() => setShowGenerate(true)} className="gap-2">
-                <Zap className="w-4 h-4" />
-                Stratégia generálása
-              </Button>
+              {isReadOnly ? (
+                <UpgradePrompt
+                  feature="Stratégia generálás"
+                  requiredPlan="starter"
+                  description="Az onboarding során létrehozott stratégiádat megtekintheted, de új stratégia generálásához Starter csomag szükséges."
+                />
+              ) : (
+                <Button onClick={() => setShowGenerate(true)} className="gap-2">
+                  <Zap className="w-4 h-4" />
+                  Stratégia generálása
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : (

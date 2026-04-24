@@ -721,3 +721,45 @@
 - [x] Settings > Fiók tab hozzáadva (profil adatok + onboarding reset)
 - [x] appAuth.resetMyOnboarding procedure (minden bejelentkezett felhasználó eléri)
 - [x] Onboarding reset procedure: saját fiókra is elérhető (Settings > Fiók tab)
+
+## Sprint 31 – Modul adatizoláció projekt szerint
+
+### Backend
+- [x] projects router: getActive procedure visszaadja az aktív projekt profileId-ját
+- [x] Stratégia router: profileId szűrés az aktív projekt profileId-ja alapján (ProfileContext szinkron)
+- [x] Tartalom router: profileId szűrés az aktív projekt profileId-ja alapján (ProfileContext szinkron)
+- [x] Leads router: profileId szűrés az aktív projekt profileId-ja alapján (ProfileContext szinkron)
+
+### Frontend
+- [x] useActiveProject hook: ProfileContext.setActiveProfileId szinkronizáció projekt váltáskor
+- [x] Strategy.tsx: aktív projekt profileId alapján szűrés (ProfileContext.activeProfile.id)
+- [x] ContentStudio.tsx: aktív projekt profileId alapján szűrés (ProfileContext.activeProfile.id)
+- [x] SalesOps.tsx: aktív projekt profileId alapján szűrés (ProfileContext.activeProfile.id)
+- [x] DashboardLayout projekt switcher: useActiveProject hook használata, cache invalidation
+
+## Sprint 32 – Onboarding AI előnézet
+
+### Backend
+- [x] onboarding.scrapeSocialProfile procedure: scraping eredmények tárolása social_profile_cache-ben
+- [x] onboarding.approveScrapingResults: AI előnézet jóváhagyás → form mezők kitöltése
+
+### Frontend
+- [x] OnboardingWizard 2. lépés: AI előnézet panel (websiteAnalysis eredmények)
+- [x] Szerkeszthető mezők: cég neve, iparág, leírás, brand hang, tartalom pillérek
+- [x] "Elfogadom" / "Módosítom" gomb az AI előnézet panelen
+- [x] Scraping státusz jelzők minden platformhoz (loading / done / error)
+- [x] Ha nincs scraping eredmény, kézi kitöltés lehetséges
+
+## Sprint 33 – Free tier korlátok UI
+
+### Backend
+- [x] aiUsage.status procedure: havi AI gen szám + limit visszaadása (már meglévő)
+- [x] Feature gating: free tier limitek (3 AI gen/hó, canUseStrategy=false)
+
+### Frontend
+- [x] AI limit jelző a DashboardLayout profil menüjében (progress bar + számláló)
+- [x] Upgrade CTA: ha eléri a limitet, AiLimitBanner + UpgradePrompt compact megjelenik
+- [x] Stratégia oldal: free tier read-only mód (meglévő stratégia megtekinthető, új nem generálható)
+- [x] Content Studio: free tier esetén havi naptár AI gomb letiltva (UpgradePrompt compact)
+- [x] Onboarding utáni stratégia/naptár: megtekinthető de új nem generálható (free tier)
+- [ ] Pricing badge a navigációban (free tier esetén "Ingyenes" badge upgrade CTA-val) [később]

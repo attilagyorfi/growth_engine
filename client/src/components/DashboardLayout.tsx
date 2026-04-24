@@ -16,6 +16,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAppAuth } from "@/hooks/useAppAuth";
+import { useActiveProject } from "@/hooks/useActiveProject";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 
@@ -70,7 +71,6 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState("");
   const [showProjectMenu, setShowProjectMenu] = useState(false);
-  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
 
   // DB-alapú értesítések tRPC-n keresztül
   const { data: dbNotifications = [], refetch: refetchNotifs } = trpc.notifications.list.useQuery(
@@ -122,21 +122,16 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
 
   const { data: aiUsageStatus } = trpc.aiUsage.status.useQuery(undefined, { staleTime: 60_000 });
 
-  // Super_admin: project switcher
-  const { data: adminProjects = [], refetch: refetchProjects } = trpc.projects.list.useQuery(
-    undefined,
-    { enabled: isSuperAdmin, staleTime: 30_000 }
-  );
+  // Super_admin: project switcher – uses useActiveProject for ProfileContext sync
+  const { activeProject, projects: adminProjects, setActiveProject: setActiveProjectHook, refetch: refetchProjects } = useActiveProject();
   const createProjectMutation = trpc.projects.upsert.useMutation({
     onSuccess: (p: { id: string; name: string }) => {
       toast.success(`"${p.name}" projekt létrehozva!`);
-      setActiveProjectId(p.id);
       refetchProjects();
       setShowProjectMenu(false);
     },
     onError: (e: { message: string }) => toast.error(e.message),
   });
-  const activeProject = adminProjects.find((p: { id: string }) => p.id === activeProjectId) ?? adminProjects[0] ?? null;
 
   const PLAN_LABELS: Record<string, string> = {
     free: "Free",
@@ -226,7 +221,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
                   <button
                     key={p.id}
                     type="button"
-                    onClick={() => { setActiveProjectId(p.id); setShowProjectMenu(false); }}
+                    onClick={() => { setActiveProjectHook(p.id); setShowProjectMenu(false); }}
                     className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-white/5 transition-colors"
                     style={{ color: p.id === activeProject?.id ? "oklch(0.75 0.18 75)" : "oklch(0.78 0.008 240)" }}
                   >

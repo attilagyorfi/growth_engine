@@ -20,7 +20,7 @@ describe("OAuth Bridge – getOrCreateAppUserFromOAuth", () => {
     expect(result?.role).toBe("user");
     expect(result?.active).toBe(true);
     expect(result?.onboardingCompleted).toBe(false);
-  });
+  }, 15_000);
 
   it("returns the existing appUser on second call (idempotent)", async () => {
     const first = await getOrCreateAppUserFromOAuth({

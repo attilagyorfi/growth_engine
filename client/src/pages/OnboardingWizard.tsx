@@ -391,7 +391,10 @@ export default function OnboardingWizard() {
   const scrapeSocialProfile = trpc.onboarding.scrapeSocialProfile.useMutation();
   const utils = trpc.useUtils();
   const completeOnboarding = trpc.appAuth.completeOnboarding.useMutation();
-  const [socialScrapeStatus, setSocialScrapeStatus] = useState<Record<string, "idle" | "loading" | "done" | "error">>({});
+  const [socialScrapeStatus, setSocialScrapeStatus] = useState<Record<string, "idle" | "loading" | "done" | "error">>({}); 
+  // AI előnézet: weboldal scraping eredmények megmutatása a 2. lépésben
+  const [aiPreviewApproved, setAiPreviewApproved] = useState(false);
+  const [showAiPreview, setShowAiPreview] = useState(true);
   const [postWowStatus, setPostWowStatus] = useState<{ strategy: "idle" | "loading" | "done" | "error"; calendar: "idle" | "loading" | "done" | "error" }>({
     strategy: "idle",
     calendar: "idle",
@@ -1062,8 +1065,91 @@ export default function OnboardingWizard() {
               <h1 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: "Sora, sans-serif" }}>
                 Brand & Kommunikáció
               </h1>
-              <p className="text-gray-400">Határozd meg a márka hangját és töltsd fel a meglévő anyagokat</p>
+              <p className="text-gray-400">Határozd meg a márka hangát és töltsd fel a meglévő anyagokat</p>
             </div>
+
+            {/* AI Előnézet Panel – weboldal scraping eredmények */}
+            {showAiPreview && (data.companyName || data.description || data.services.length > 0) && (
+              <div
+                className="rounded-2xl border p-5 space-y-4"
+                style={{ background: "oklch(0.16 0.04 255 / 60%)", borderColor: "oklch(0.6 0.2 255 / 40%)" }}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center text-sm" style={{ background: "oklch(0.6 0.2 255 / 20%)" }}>🤖</div>
+                    <div>
+                      <p className="text-sm font-bold" style={{ color: "oklch(0.88 0.008 240)" }}>AI által feltöltött adatok</p>
+                      <p className="text-xs" style={{ color: "oklch(0.55 0.015 240)" }}>A weboldal elemzés alapján – ellenőrizd és módosítsd, ha szükséges</p>
+                    </div>
+                  </div>
+                  {aiPreviewApproved && (
+                    <span className="flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full" style={{ background: "oklch(0.5 0.18 165 / 20%)", color: "oklch(0.75 0.18 165)" }}>
+                      <Check size={11} /> Jóváhagyva
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {data.companyName && (
+                    <div className="rounded-xl p-3" style={{ background: "oklch(0.14 0.02 255)" }}>
+                      <p className="text-xs font-semibold mb-1" style={{ color: "oklch(0.55 0.015 240)" }}>Cég neve</p>
+                      <p className="text-sm" style={{ color: "oklch(0.88 0.008 240)" }}>{data.companyName}</p>
+                    </div>
+                  )}
+                  {data.industry && (
+                    <div className="rounded-xl p-3" style={{ background: "oklch(0.14 0.02 255)" }}>
+                      <p className="text-xs font-semibold mb-1" style={{ color: "oklch(0.55 0.015 240)" }}>Iparág</p>
+                      <p className="text-sm" style={{ color: "oklch(0.88 0.008 240)" }}>{data.industry}</p>
+                    </div>
+                  )}
+                  {data.description && (
+                    <div className="rounded-xl p-3 sm:col-span-2" style={{ background: "oklch(0.14 0.02 255)" }}>
+                      <p className="text-xs font-semibold mb-1" style={{ color: "oklch(0.55 0.015 240)" }}>Cég leírás</p>
+                      <p className="text-sm line-clamp-3" style={{ color: "oklch(0.78 0.008 240)" }}>{data.description}</p>
+                    </div>
+                  )}
+                  {data.services.length > 0 && (
+                    <div className="rounded-xl p-3 sm:col-span-2" style={{ background: "oklch(0.14 0.02 255)" }}>
+                      <p className="text-xs font-semibold mb-2" style={{ color: "oklch(0.55 0.015 240)" }}>Szolgáltatások / termékek</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {data.services.slice(0, 6).map((s, i) => (
+                          <span key={i} className="text-xs px-2 py-0.5 rounded-full" style={{ background: "oklch(0.6 0.2 255 / 15%)", color: "oklch(0.75 0.18 255)" }}>{s}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  {!aiPreviewApproved ? (
+                    <>
+                      <button
+                        onClick={() => { setAiPreviewApproved(true); setShowAiPreview(false); toast.success("AI adatok jóváhagyva! Folytasd a brand hang beállításával."); }}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white"
+                        style={{ background: "oklch(0.5 0.18 165)" }}
+                      >
+                        <Check size={13} /> Elfogadom
+                      </button>
+                      <button
+                        onClick={() => setShowAiPreview(false)}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border"
+                        style={{ borderColor: "oklch(1 0 0 / 15%)", color: "oklch(0.65 0.015 240)" }}
+                      >
+                        Módosítom alul
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => setShowAiPreview(true)}
+                      className="text-xs px-3 py-1.5 rounded-lg border"
+                      style={{ borderColor: "oklch(1 0 0 / 12%)", color: "oklch(0.55 0.015 240)" }}
+                    >
+                      Előnézet újra megmutatása
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Tone of Voice */}
             <div>

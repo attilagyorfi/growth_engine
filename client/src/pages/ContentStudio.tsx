@@ -15,6 +15,8 @@ import {
 import DashboardLayout from "@/components/DashboardLayout";
 import { EmptyState } from "@/components/EmptyState";
 import { AiLimitBanner } from "@/components/AiLimitBanner";
+import UpgradePrompt from "@/components/UpgradePrompt";
+import { useSubscription } from "@/hooks/useSubscription";
 import { trpc } from "@/lib/trpc";
 import { useProfile } from "@/contexts/ProfileContext";
 import { toast } from "sonner";
@@ -132,6 +134,9 @@ export default function ContentStudio() {
     { profileId: activeProfile.id },
     { enabled: !!activeProfile.id }
   );
+
+  const subscription = useSubscription();
+  const isReadOnly = !subscription.canUseStrategy; // free tier: view only, no new generation
 
   const { data: intelligence } = trpc.intelligence.get.useQuery(
     { profileId: activeProfile.id },
@@ -701,34 +706,38 @@ export default function ContentStudio() {
               {MONTHS_HU[calendarMonth]} {calendarYear}
             </h2>
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  if (generatingMonthlyPlan) return;
-                  setGeneratingMonthlyPlan(true);
-                  generateMonthlyPlanMutation.mutate({
-                    profileId: activeProfile.id,
-                    year: calendarYear,
-                    month: calendarMonth,
-                    intelligenceData: intelligence ?? undefined,
-                    contentPillars: contentPillars.length > 0 ? contentPillars : undefined,
-                    platforms: strategyChannels.length > 0 ? strategyChannels : undefined,
-                  });
-                }}
-                disabled={generatingMonthlyPlan}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-                style={{
-                  background: generatingMonthlyPlan ? "oklch(0.22 0.02 255)" : "oklch(0.55 0.2 255)",
-                  color: "oklch(0.95 0.005 240)",
-                  cursor: generatingMonthlyPlan ? "not-allowed" : "pointer",
-                  opacity: generatingMonthlyPlan ? 0.7 : 1,
-                }}
-              >
-                {generatingMonthlyPlan ? (
-                  <><Loader2 size={12} className="animate-spin" /> Generálás...</>
-                ) : (
-                  <><Sparkles size={12} /> Teljes hónap AI-vel</>
-                )}
-              </button>
+              {isReadOnly ? (
+                <UpgradePrompt feature="Havi naptár AI" requiredPlan="starter" compact />
+              ) : (
+                <button
+                  onClick={() => {
+                    if (generatingMonthlyPlan) return;
+                    setGeneratingMonthlyPlan(true);
+                    generateMonthlyPlanMutation.mutate({
+                      profileId: activeProfile.id,
+                      year: calendarYear,
+                      month: calendarMonth,
+                      intelligenceData: intelligence ?? undefined,
+                      contentPillars: contentPillars.length > 0 ? contentPillars : undefined,
+                      platforms: strategyChannels.length > 0 ? strategyChannels : undefined,
+                    });
+                  }}
+                  disabled={generatingMonthlyPlan}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                  style={{
+                    background: generatingMonthlyPlan ? "oklch(0.22 0.02 255)" : "oklch(0.55 0.2 255)",
+                    color: "oklch(0.95 0.005 240)",
+                    cursor: generatingMonthlyPlan ? "not-allowed" : "pointer",
+                    opacity: generatingMonthlyPlan ? 0.7 : 1,
+                  }}
+                >
+                  {generatingMonthlyPlan ? (
+                    <><Loader2 size={12} className="animate-spin" /> Generálás...</>
+                  ) : (
+                    <><Sparkles size={12} /> Teljes hónap AI-vel</>
+                  )}
+                </button>
+              )}
               <button onClick={() => setCalendarDate(new Date(calendarYear, calendarMonth - 1, 1))}
                 className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "oklch(0.22 0.02 255)" }}>
                 <ChevronLeft size={14} style={{ color: "oklch(0.7 0.015 240)" }} />
