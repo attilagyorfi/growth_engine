@@ -796,3 +796,22 @@
 - [x] Approval queue tab a ContentStudio-ban (Piszkozatok tab tartalmazza a review státuszú posztokat is)
 - [x] Státusz szűrő: STATUS_LABELS + STATUS_COLORS bővítve review értékkel
 - [x] Toast értesítés státusváltáskor
+
+## Sprint 37 – Super admin projekt onboarding
+
+### Backend
+- [x] projects.getById procedure: egyetlen projekt lekérése (superAdminProcedure) – már létezett
+- [x] projects.startOnboarding procedure: clientProfile létrehozás + projekt profileId frissítés
+- [x] Projekt onboarding befejezése: projects.upsert(profileId) – NEM completeOnboarding
+
+### Frontend
+- [x] /projektek/:id route + ProjectDashboard oldal (projekt részletek + CTA-k)
+- [x] ProjectDashboard: "Onboarding indítása" gomb (ha még nem volt onboarding)
+- [x] ProjectDashboard: "Onboarding szerkesztése" gomb (ha van profileId)
+- [x] ProjectDashboard: státusz jelzők (onboarding kész / stratégia / naptár elérhetősége)
+- [x] OnboardingWizard: projectId + profileId query param támogatás (projekt-specifikus mód)
+- [x] Projekt onboarding mód: külön localStorage kulcs (g2a_onboarding_draft_PROJECT_ID)
+- [x] Projekt onboarding befejezése után: redirect a projekt irányítópultjára
+- [x] ProjectsPage: kártyákon "Megnyitás" gomb → /projektek/:id
+- [x] App.tsx: /projektek/:id és /projektek/:id/onboarding route-ok (AdminRoute guard)
+- [x] 14 új Vitest teszt (51/51 zöld)

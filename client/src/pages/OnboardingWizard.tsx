@@ -4,7 +4,7 @@
  */
 
 import { useState, useRef, useEffect } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch, useParams } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { HelpBanner, HelpPopup, StepTour } from "@/components/OnboardingHelpPopup";
@@ -225,12 +225,19 @@ function TagInput({ tags, onChange, placeholder, max = 10 }: {
 }
 
 // ─── localStorage key ─────────────────────────────────────────────────────────
-const LS_KEY = "g2a_onboarding_draft";
-const LS_STEP_KEY = "g2a_onboarding_step";
+const BASE_LS_KEY = "g2a_onboarding_draft";
+const BASE_LS_STEP_KEY = "g2a_onboarding_step";
 
-function loadDraft(): Partial<WizardData> | null {
+function getLsKey(projectId?: string | null) {
+  return projectId ? `${BASE_LS_KEY}_${projectId}` : BASE_LS_KEY;
+}
+function getLsStepKey(projectId?: string | null) {
+  return projectId ? `${BASE_LS_STEP_KEY}_${projectId}` : BASE_LS_STEP_KEY;
+}
+
+function loadDraft(projectId?: string | null): Partial<WizardData> | null {
   try {
-    const raw = localStorage.getItem(LS_KEY);
+    const raw = localStorage.getItem(getLsKey(projectId));
     if (!raw) return null;
     return JSON.parse(raw) as Partial<WizardData>;
   } catch {
@@ -238,20 +245,20 @@ function loadDraft(): Partial<WizardData> | null {
   }
 }
 
-function saveDraft(data: WizardData) {
+function saveDraft(data: WizardData, projectId?: string | null) {
   try {
     // Don't persist wowOutput (large, regeneratable)
     const { wowOutput, ...rest } = data;
-    localStorage.setItem(LS_KEY, JSON.stringify(rest));
+    localStorage.setItem(getLsKey(projectId), JSON.stringify(rest));
   } catch {
     // localStorage might be full or unavailable
   }
 }
 
-function clearDraft() {
+function clearDraft(projectId?: string | null) {
   try {
-    localStorage.removeItem(LS_KEY);
-    localStorage.removeItem(LS_STEP_KEY);
+    localStorage.removeItem(getLsKey(projectId));
+    localStorage.removeItem(getLsStepKey(projectId));
   } catch {}
 }
 
@@ -259,6 +266,15 @@ function clearDraft() {
 
 export default function OnboardingWizard() {
   const [, navigate] = useLocation();
+  const searchString = useSearch();
+  const { id: routeProjectId } = useParams<{ id?: string }>();
+  // Query params: ?projectId=...&profileId=...
+  const searchParams = new URLSearchParams(searchString);
+  const queryProjectId = searchParams.get("projectId") || routeProjectId || null;
+  const queryProfileId = searchParams.get("profileId") || null;
+  // Project mode: wizard is running for a specific project (super_admin filling on behalf of client)
+  const isProjectMode = !!queryProjectId;
+
   const [isLoading, setIsLoading] = useState(false);
   const [isScraping, setIsScraping] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -272,7 +288,7 @@ export default function OnboardingWizard() {
   // Draft restore banner
   const [showDraftBanner, setShowDraftBanner] = useState<boolean>(() => {
     try {
-      const raw = localStorage.getItem(LS_KEY);
+      const raw = localStorage.getItem(getLsKey(queryProjectId));
       if (!raw) return false;
       const draft = JSON.parse(raw) as Partial<WizardData>;
       // Only show banner if there's meaningful data (not just empty fields)
@@ -282,12 +298,15 @@ export default function OnboardingWizard() {
     }
   });
 
+  // In project mode, the profileId comes from query param; otherwise from appUser
+  const initialProfileId = queryProfileId || appUser?.profileId || nanoid();
+
   const handleDiscardDraft = () => {
-    clearDraft();
+    clearDraft(queryProjectId);
     setShowDraftBanner(false);
     setStep(1);
     setData({
-      profileId: appUser?.profileId || nanoid(),
+      profileId: initialProfileId,
       sessionId: nanoid(),
       companyName: "",
       website: "",
@@ -319,7 +338,7 @@ export default function OnboardingWizard() {
   // Restore step from localStorage
   const [step, setStep] = useState<number>(() => {
     try {
-      const saved = localStorage.getItem(LS_STEP_KEY);
+      const saved = localStorage.getItem(getLsStepKey(queryProjectId));
       const parsed = saved ? parseInt(saved, 10) : 1;
       // Don't restore WOW step (4) on reload – restart from step 3
       return parsed === 4 ? 3 : (parsed >= 1 && parsed <= 3 ? parsed : 1);
@@ -329,9 +348,9 @@ export default function OnboardingWizard() {
   });
 
   const [data, setData] = useState<WizardData>(() => {
-    const draft = loadDraft();
+    const draft = loadDraft(queryProjectId);
     const defaultData: WizardData = {
-      profileId: appUser?.profileId || nanoid(),
+      profileId: initialProfileId,
       sessionId: nanoid(),
       companyName: "",
       website: "",
@@ -366,14 +385,16 @@ export default function OnboardingWizard() {
 
   // Persist data to localStorage on every change
   useEffect(() => {
-    saveDraft(data);
+    saveDraft(data, queryProjectId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
 
   // Persist step to localStorage
   useEffect(() => {
     if (step < 4) {
-      try { localStorage.setItem(LS_STEP_KEY, String(step)); } catch {}
+      try { localStorage.setItem(getLsStepKey(queryProjectId), String(step)); } catch {}
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
   const update = (fields: Partial<WizardData>) => setData(prev => ({ ...prev, ...fields }));
@@ -391,6 +412,7 @@ export default function OnboardingWizard() {
   const scrapeSocialProfile = trpc.onboarding.scrapeSocialProfile.useMutation();
   const utils = trpc.useUtils();
   const completeOnboarding = trpc.appAuth.completeOnboarding.useMutation();
+  const upsertProject = trpc.projects.upsert.useMutation();
   const [socialScrapeStatus, setSocialScrapeStatus] = useState<Record<string, "idle" | "loading" | "done" | "error">>({}); 
   // AI előnézet: weboldal scraping eredmények megmutatása a 2. lépésben
   const [aiPreviewApproved, setAiPreviewApproved] = useState(false);
@@ -779,7 +801,7 @@ export default function OnboardingWizard() {
       try {
         // Save content pillars from WOW output to clientProfiles
         if (data.wowOutput?.contentPillars?.length) {
-          const pillarsToSave = data.wowOutput.contentPillars.map((p, i) => ({
+          const pillarsToSave = data.wowOutput.contentPillars.map((p) => ({
             id: nanoid(),
             name: p.name,
             description: p.description,
@@ -793,15 +815,32 @@ export default function OnboardingWizard() {
             contentPillars: pillarsToSave,
           });
         }
-        await completeOnboarding.mutateAsync({ profileId: data.profileId });
-        // Invalidate auth cache so AppRoute sees onboardingCompleted=true immediately
-        await utils.appAuth.me.invalidate();
+
+        if (isProjectMode && queryProjectId) {
+          // Projekt mód: NE hívjuk completeOnboarding-ot (az a super_admin saját flag-jét írná felül)
+          // Ehelyett: frissítsük a projekt profileId-ját
+          await upsertProject.mutateAsync({
+            id: queryProjectId,
+            name: data.companyName || "Projekt",
+            profileId: data.profileId,
+          });
+          await utils.projects.get.invalidate({ id: queryProjectId });
+          await utils.projects.list.invalidate();
+        } else {
+          // Normál mód: appUser saját onboardingCompleted flag-jét állítjuk be
+          await completeOnboarding.mutateAsync({ profileId: data.profileId });
+          // Invalidate auth cache so AppRoute sees onboardingCompleted=true immediately
+          await utils.appAuth.me.invalidate();
+        }
       } catch (e) {
         console.error("Onboarding complete error:", e);
       }
     }
-    clearDraft();
-    const target = destination ?? "/iranyitopult";
+    clearDraft(queryProjectId);
+    // Projekt módban visszamegyünk a projekt dashboardra
+    const target = isProjectMode && queryProjectId
+      ? `/projektek/${queryProjectId}`
+      : (destination ?? "/iranyitopult");
     navigate(target);
     toast.success(`${data.companyName} profil sikeresen létrehozva!`);
   };
@@ -819,7 +858,20 @@ export default function OnboardingWizard() {
           <span className="font-bold text-white" style={{ fontFamily: "Sora, sans-serif" }}>G2A Growth Engine</span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-gray-400 text-sm">{lang === "hu" ? "Új ügyfél beállítása" : "New client setup"}</span>
+          {isProjectMode && (
+            <button
+              onClick={() => navigate(`/projektek/${queryProjectId}`)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white transition-colors"
+              style={{ background: "oklch(0.18 0.02 255)", border: "1px solid oklch(0.28 0.03 255)" }}
+            >
+              ← Vissza
+            </button>
+          )}
+          <span className="text-gray-400 text-sm">
+            {isProjectMode
+              ? `Onboarding: ${data.companyName || "Projekt"}`
+              : (lang === "hu" ? "Új ügyfél beállítása" : "New client setup")}
+          </span>
           <button
             onClick={() => setShowTour(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:opacity-80"

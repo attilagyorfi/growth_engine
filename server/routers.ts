@@ -1648,6 +1648,36 @@ A link mező mindig ezek egyike legyen, ne találj ki más URL-t.`,
         await deleteProject(input.id, ctx.appUser.id);
         return { success: true };
       }),
+
+    startOnboarding: superAdminProcedure
+      .input(z.object({ projectId: z.string() }))
+      .mutation(async ({ input, ctx }) => {
+        const project = await getProjectById(input.projectId);
+        if (!project || project.ownerId !== ctx.appUser.id) throw new TRPCError({ code: "NOT_FOUND" });
+        // Ha már van profileId, azt adjuk vissza
+        if (project.profileId) return { profileId: project.profileId };
+        // Különben létrehozunk egy új clientProfile-t
+        const profileId = nanoid();
+        const projectName = project.name;
+        const initials = projectName
+          .split(" ")
+          .slice(0, 2)
+          .map((w: string) => w[0]?.toUpperCase() ?? "")
+          .join("") || "PR";
+        await upsertProfile({
+          id: profileId,
+          appUserId: ctx.appUser.id,
+          name: projectName,
+          initials,
+          color: project.color ?? "oklch(0.6 0.2 255)",
+          website: project.website ?? undefined,
+          industry: project.industry ?? undefined,
+          description: project.description ?? undefined,
+        });
+        // Hozzárendeljük a projekthez
+        await upsertProject({ ...project, profileId });
+        return { profileId };
+      }),
   }),
 
   // ─── AI Usage Status ─────────────────────────────────────────────────────────

@@ -4,12 +4,13 @@
  */
 
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { toast } from "sonner";
 import {
   FolderOpen, Plus, Globe, Building2, Pencil, Trash2,
-  CheckCircle, Circle, Loader2, X, Save, ExternalLink,
+  CheckCircle, Circle, Loader2, X, Save, ExternalLink, LayoutDashboard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,6 +60,7 @@ const emptyForm: ProjectFormData = {
 };
 
 export default function ProjectsPage() {
+  const [, navigate] = useLocation();
   const [editingProject, setEditingProject] = useState<ProjectFormData | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
   const [newForm, setNewForm] = useState<ProjectFormData>({ ...emptyForm });
@@ -188,6 +190,7 @@ export default function ProjectsPage() {
                     })}
                     onSetActive={() => setActiveMutation.mutate({ projectId: p.id })}
                     onDelete={() => setDeleteConfirmId(p.id)}
+                    onOpen={() => navigate(`/projektek/${p.id}`)}
                     isSettingActive={setActiveMutation.isPending}
                   />
                 )}
@@ -239,10 +242,11 @@ interface ProjectCardProps {
   onEdit: () => void;
   onSetActive: () => void;
   onDelete: () => void;
+  onOpen: () => void;
   isSettingActive: boolean;
 }
 
-function ProjectCard({ project, onEdit, onSetActive, onDelete, isSettingActive }: ProjectCardProps) {
+function ProjectCard({ project, onEdit, onSetActive, onDelete, onOpen, isSettingActive }: ProjectCardProps) {
   const accentColor = project.color ?? "oklch(0.6 0.2 255)";
 
   return (
@@ -307,16 +311,26 @@ function ProjectCard({ project, onEdit, onSetActive, onDelete, isSettingActive }
 
       {/* Actions */}
       <div className="flex items-center gap-2 flex-shrink-0">
+        <button
+          type="button"
+          onClick={onOpen}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:opacity-80"
+          style={{ background: `${accentColor}20`, color: accentColor }}
+          title="Projekt megnyitása"
+        >
+          <LayoutDashboard size={12} />
+          Megnyitás
+        </button>
         {!project.isActive && (
           <button
             type="button"
             onClick={onSetActive}
             disabled={isSettingActive}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:opacity-80 disabled:opacity-40"
-            style={{ background: `${accentColor}20`, color: accentColor }}
+            style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.6 0.015 240)" }}
           >
             {isSettingActive ? <Loader2 size={12} className="animate-spin" /> : <Circle size={12} />}
-            Aktívvá tesz
+            Aktívává tesz
           </button>
         )}
         {project.isActive && (
