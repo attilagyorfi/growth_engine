@@ -31,7 +31,7 @@ const PLANS = [
       hu: ["1 vállalkozás profil", "AI stratégia (1x/hó)", "5 tartalom/hó", "Alapanalitika"],
       en: ["1 business profile", "AI strategy (1x/mo)", "5 content/mo", "Basic analytics"],
     },
-    cta: { hu: "Ingyenes regisztráció", en: "Start for free" },
+    cta: { hu: "Kezdd el ingyen", en: "Start for free" },
     popular: false,
     highlight: false,
   },
@@ -58,8 +58,8 @@ const PLANS = [
     icon: Building2,
     description: { hu: "Növekvő vállalkozásoknak", en: "For growing businesses" },
     features: {
-      hu: ["3 vállalkozás profil", "Korlátlan minden", "AI képgenerálás", "Prioritásos támogatás", "White-label lehetőség"],
-      en: ["3 business profiles", "Unlimited everything", "AI image generation", "Priority support", "White-label option"],
+      hu: ["3 vállalkozás profil", "Korlátlan minden", "AI képgeneralás", "HeyGen AI videókészítő (5 videó/hó)", "Prioritásos támogatás", "White-label lehetőség"],
+      en: ["3 business profiles", "Unlimited everything", "AI image generation", "HeyGen AI video creator (5 videos/mo)", "Priority support", "White-label option"],
     },
     cta: { hu: "Pro indítása", en: "Start Pro" },
     popular: false,
@@ -207,7 +207,7 @@ export default function Landing() {
             </Link>
             <Link href="/regisztracio">
               <Button size="sm" className="bg-violet-600 hover:bg-violet-500 text-white border-0">
-                Ingyenes próba
+                {lang === "hu" ? "Kezdd el ingyen" : "Start for free"}
               </Button>
             </Link>
           </div>
@@ -280,7 +280,7 @@ export default function Landing() {
             transition={{ delay: 0.5 }}
             className={`mt-4 text-sm ${isDark ? "text-white/30" : "text-gray-400"}`}
           >
-            {lang === "hu" ? "Nincs szükség bankkártyára · Ingyenes csomag elérhető" : "No credit card required · Free plan available"}
+            {lang === "hu" ? "Nincs szükség bankkártya adatok megadására · Ingyenes csomag elérhető" : "No credit card details required · Free plan available"}
           </motion.p>
         </div>
 
@@ -293,8 +293,8 @@ export default function Landing() {
         >
           <div className={`rounded-2xl overflow-hidden border shadow-2xl ${isDark ? "border-white/10 shadow-violet-900/20" : "border-gray-200 shadow-gray-200"}`}>
             <img
-              src="/manus-storage/dashboard-hero-screenshot_8908be6a.webp"
-              alt="G2A Growth Engine Dashboard"
+              src="https://d2xsxph8kpxj0f.cloudfront.net/109169450/WzYbMH2rdiW2pftdUmZaz8/screenshot-dashboard-minta-Hy6fyXi499rgi2TiWUxnqb.webp"
+              alt="G2A Growth Engine Dashboard – Minta Cég Kft. Pro"
               className="w-full object-cover"
             />
           </div>
@@ -350,26 +350,26 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ─── Screenshot section ──────────────────────────────────────────────── */}
+      {/* ─── Screenshot section: Tartalom naptár + Videókészítő ──────────────────────── */}
       <section className={`py-24 px-6 ${isDark ? "bg-white/[0.02]" : "bg-gray-50"}`}>
         <div className="max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <SlideIn direction="left">
               <Badge className="mb-4 bg-violet-500/10 text-violet-400 border-violet-500/20">
-                {lang === "hu" ? "Valódi adatok, valódi eredmények" : "Real data, real results"}
+                {lang === "hu" ? "Tartalom + Videó egy helyen" : "Content + Video in one place"}
               </Badge>
               <h2 className="text-3xl md:text-4xl font-bold mb-6">
-                {lang === "hu" ? "Minden adat egy helyen, átláthatóan" : "All data in one place, clearly"}
+                {lang === "hu" ? "Tartalom naptár és AI videókészítő" : "Content calendar and AI video creator"}
               </h2>
               <p className={`text-lg mb-8 leading-relaxed ${subtext}`}>
                 {lang === "hu"
-                  ? "Az analitika modul valós idejű adatokat mutat a tartalmaid teljesítményéről, a lead konverzióról és az email kampányok hatékonyságáról."
-                  : "The analytics module shows real-time data on your content performance, lead conversion and email campaign effectiveness."}
+                  ? "Tervezd meg a hónapos tartalomnaptárat, majd Pro csomaggal alakítsd át a legjobb posztjaidat HeyGen AI avatár videókká – kamera és stúdió nélkül."
+                  : "Plan your monthly content calendar, then with the Pro plan convert your best posts into HeyGen AI avatar videos – no camera or studio needed."}
               </p>
               <div className="space-y-3">
                 {(lang === "hu"
-                  ? ["Valós idejű lead konverzió nyomon követés", "Email megnyitási és kattintási arányok", "Tartalom teljesítmény platformonként", "AI-alapú ajánlások az adatok alapján"]
-                  : ["Real-time lead conversion tracking", "Email open and click rates", "Content performance by platform", "AI-based recommendations from data"]
+                  ? ["Havi tartalom naptár LinkedIn, Facebook, Instagram platformokra", "Vazélat, ütemezett és közzétett posztok színkódolássa", "AI avatár videók szkriptből – 2-5 perc alatt (Pro)", "5 videó per hónap a Pro csomagban"]
+                  : ["Monthly content calendar for LinkedIn, Facebook, Instagram", "Draft, scheduled and published posts with color coding", "AI avatar videos from script – in 2-5 minutes (Pro)", "5 videos per month in the Pro plan"]
                 ).map((item) => (
                   <div key={item} className="flex items-center gap-3">
                     <CheckCircle2 className="w-5 h-5 text-violet-400 shrink-0" />
@@ -381,12 +381,87 @@ export default function Landing() {
             <SlideIn direction="right" delay={0.15}>
               <div className={`rounded-2xl overflow-hidden border shadow-xl ${isDark ? "border-white/10" : "border-gray-200"}`}>
                 <img
-                  src="/manus-storage/analytics-screenshot_1564b029.webp"
-                  alt="Analytics Dashboard"
+                  src="https://d2xsxph8kpxj0f.cloudfront.net/109169450/WzYbMH2rdiW2pftdUmZaz8/screenshot-content-minta-QFnVmj9cHdhsCZ6tLWtfDx.webp"
+                  alt="Tartalom Naptár és Videókészítő – Minta Cég Kft. Pro"
                   className="w-full object-cover"
                 />
               </div>
             </SlideIn>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Jövőbeli funkciók (Roadmap) ────────────────────────────────────────────── */}
+      <section className="py-24 px-6">
+        <div className="max-w-6xl mx-auto">
+          <FadeIn className="text-center mb-16">
+            <Badge className="mb-4 bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+              {lang === "hu" ? "🚧 Hamarosan" : "🚧 Coming soon"}
+            </Badge>
+            <h2 className="text-4xl font-bold mb-4">
+              {lang === "hu" ? "A platform folyamatosan bővül" : "The platform keeps growing"}
+            </h2>
+            <p className={`text-lg max-w-2xl mx-auto ${subtext}`}>
+              {lang === "hu"
+                ? "A G2A Growth Engine egy élő termék – folyamatosan új funkciókkal bővítjük az ügyfelek visszajelzései alapján."
+                : "G2A Growth Engine is a living product – we continuously add new features based on customer feedback."}
+            </p>
+          </FadeIn>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[
+              {
+                icon: "🎙️",
+                phase: { hu: "Q3 2026", en: "Q3 2026" },
+                title: { hu: "Podcast & Hang studió", en: "Podcast & Audio Studio" },
+                desc: { hu: "AI-alapú podcast szkript generatálás, hangfelvétel és automatikus átirat egy helyen.", en: "AI-powered podcast script generation, audio recording and automatic transcription in one place." },
+              },
+              {
+                icon: "📊",
+                phase: { hu: "Q3 2026", en: "Q3 2026" },
+                title: { hu: "Fejlett Riportálás", en: "Advanced Reporting" },
+                desc: { hu: "Automatikus héti és havi marketing riportok PDF-ben – küldhető az ügyfelenek.", en: "Automatic weekly and monthly marketing reports in PDF – sendable to clients." },
+              },
+              {
+                icon: "🤝",
+                phase: { hu: "Q4 2026", en: "Q4 2026" },
+                title: { hu: "Csapat Együttműködés", en: "Team Collaboration" },
+                desc: { hu: "Több felhasználó egy munkaterületen, szerepkörökkel és jóváhagyási folyamatokkal.", en: "Multiple users on one workspace, with roles and approval workflows." },
+              },
+              {
+                icon: "🔗",
+                phase: { hu: "Q4 2026", en: "Q4 2026" },
+                title: { hu: "Direkt Social Közzététel", en: "Direct Social Publishing" },
+                desc: { hu: "Valódi OAuth integráció LinkedIn, Facebook és Instagram API-val – automatikus közzététel az ütemezés alapján.", en: "Real OAuth integration with LinkedIn, Facebook and Instagram API – automatic publishing based on schedule." },
+              },
+              {
+                icon: "🌐",
+                phase: { hu: "2027 Q1", en: "2027 Q1" },
+                title: { hu: "Többnyelvű Tartalom", en: "Multilingual Content" },
+                desc: { hu: "Tartalmak automatikus fordítása és lokalizációja 10+ nyelvre AI segítségével.", en: "Automatic translation and localization of content into 10+ languages with AI." },
+              },
+              {
+                icon: "🛒",
+                phase: { hu: "2027 Q1", en: "2027 Q1" },
+                title: { hu: "E-commerce Integráció", en: "E-commerce Integration" },
+                desc: { hu: "Shopify, WooCommerce és Unas összekötés – termék adatok automatikus betöltése a tartalom generatáláshoz.", en: "Shopify, WooCommerce and Unas connection – automatic product data loading for content generation." },
+              },
+            ].map((item, i) => (
+              <FadeIn key={item.title.hu} delay={i * 0.07}>
+                <Card className={`h-full relative overflow-hidden ${cardBg} hover:scale-[1.02] transition-transform duration-300`}>
+                  <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-500/40 via-violet-500/40 to-transparent" />
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-2xl">{item.icon}</span>
+                      <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-xs">
+                        {item.phase[lang]}
+                      </Badge>
+                    </div>
+                    <h3 className="font-semibold text-lg mb-2">{item.title[lang]}</h3>
+                    <p className={`text-sm leading-relaxed ${subtext}`}>{item.desc[lang]}</p>
+                  </CardContent>
+                </Card>
+              </FadeIn>
+            ))}
           </div>
         </div>
       </section>
@@ -520,7 +595,7 @@ export default function Landing() {
             </div>
           </Link>
           <div className={`flex items-center gap-6 text-sm ${isDark ? "text-white/30" : "text-gray-400"}`}>
-            <span>© 2025 G2A Marketing</span>
+            <span>© 2026 G2A Marketing</span>
             <span>·</span>
             <span className="flex items-center gap-1"><Shield className="w-3 h-3" /> {lang === "hu" ? "Adatvédelem" : "Privacy"}</span>
           </div>

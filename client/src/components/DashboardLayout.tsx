@@ -10,7 +10,7 @@ import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, Users, BarChart3, Layers, TrendingUp, Settings,
   Zap, ChevronRight, Bell, X, CheckCircle, AlertCircle, Info, Mail,
-  ChevronDown, LogOut, Shield, Megaphone, SearchCheck,
+  ChevronDown, LogOut, Shield, Megaphone, SearchCheck, Video,
   User, KeyRound, UserCog, Crown, Sparkles, Menu, Brain, FolderOpen, Plus, Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -30,6 +30,7 @@ const publicNavItems = [
   { href: "/kampanyok", label: "Kampányok", icon: Megaphone },
   { href: "/analitika", label: "Analitika", icon: TrendingUp },
   { href: "/seo", label: "SEO Audit", icon: SearchCheck },
+  { href: "/video-studio", label: "Videókészítő", icon: Video },
   { href: "/beallitasok", label: "Beállítások", icon: Settings },
 ];
 
@@ -44,6 +45,7 @@ const adminNavItems = [
   { href: "/kampanyok", label: "Kampányok", icon: Megaphone },
   { href: "/analitika", label: "Analitika", icon: TrendingUp },
   { href: "/seo", label: "SEO Audit", icon: SearchCheck },
+  { href: "/video-studio", label: "Videókészítő", icon: Video },
   { href: "/beallitasok", label: "Beállítások", icon: Settings },
 ];
 

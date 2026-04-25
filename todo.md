@@ -898,3 +898,29 @@
 - [x] Backend: newsletterConsent mező a register procedure inputban
 - [x] Feliratkozó automatikusan bekerül a super_admin leads CRM listájába
 - [x] 51/51 teszt zöld, TypeScript: 0 hiba
+
+## Sprint 41 – HeyGen videókészítő, Landing frissítés, Jövőbeli funkciók
+
+### HeyGen videókészítő (Pro csomag)
+- [x] HeyGen API helper modul (server/_core/heygen.ts) – listAvatars, listVoices, createVideo, getVideoStatus
+- [x] heygenVideos tábla + db:push migráció
+- [x] heygen router: enabled, avatars, voices, createVideo, getStatus, listVideos, quotaStatus
+- [x] Pro gate: csak pro/agency csomagban elérhető (createVideo)
+- [x] Havi keret: 5 videó/hó, quotaStatus procedure
+- [x] VideoStudio oldal (/video-studio): avatar választó, hang, szkript, generálás, státusz polling
+- [x] DashboardLayout: Video Studió menüpont hozzáadva
+- [x] App.tsx: /video-studio route hozzáadva
+- [x] HEYGEN_API_KEY nélkül is működik (disabled mód, API kulcs megadásakor élesedik)
+
+### Landing oldal frissítések
+- [x] CTA szöveg: "Kezdd el ingyen" (navbar + hero)
+- [x] Alcím: "Nincs szükség bankkártya adatok megadására"
+- [x] Footer év: 2026
+- [x] Screenshotok: AI-generlt Minta Cég Kft. Pro felhasználói nézet (CDN URL)
+- [x] Tartalom naptár + Videókészítő preview szekció (részletes feature lista)
+- [x] Pro csomag: HeyGen AI videókészítő (5 videó/hó) hozzáadva a feature listához
+
+### Jövőbeli funkciók (roadmap szekció)
+- [x] Roadmap szekció a landingon 6 kártyával (Q3 2026 – 2027 Q1)
+- [x] Funkciók: Podcast & Hang studió, Fejlett Riportálás, Csapat Együttműködés, Direkt Social Közzététel, Többnyelvű Tartalom, E-commerce Integráció
+- [x] 51/51 teszt zöld, TypeScript: 0 hiba

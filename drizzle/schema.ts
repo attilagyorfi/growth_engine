@@ -798,3 +798,25 @@ export const seoAudits = mysqlTable("seo_audits", {
 });
 export type SeoAudit = typeof seoAudits.$inferSelect;
 export type InsertSeoAudit = typeof seoAudits.$inferInsert;
+
+// ─── HeyGen Videos ───────────────────────────────────────────────────────────
+
+export const heygenVideos = mysqlTable("heygenVideos", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  userId: varchar("userId", { length: 64 }).notNull(),
+  profileId: varchar("profileId", { length: 64 }),
+  heygenVideoId: varchar("heygenVideoId", { length: 255 }), // returned by HeyGen API
+  title: varchar("title", { length: 255 }).notNull(),
+  script: text("script").notNull(),
+  avatarId: varchar("avatarId", { length: 255 }),
+  voiceId: varchar("voiceId", { length: 255 }),
+  status: mysqlEnum("status", ["pending", "processing", "completed", "failed"]).default("pending").notNull(),
+  videoUrl: varchar("videoUrl", { length: 1000 }),
+  thumbnailUrl: varchar("thumbnailUrl", { length: 1000 }),
+  durationSeconds: int("durationSeconds"),
+  errorMessage: text("errorMessage"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type HeygenVideo = typeof heygenVideos.$inferSelect;
+export type InsertHeygenVideo = typeof heygenVideos.$inferInsert;
