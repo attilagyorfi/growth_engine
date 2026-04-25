@@ -60,6 +60,7 @@ export default function Register() {
   const [showPass, setShowPass] = useState(false);
   const [showConfirmPass, setShowConfirmPass] = useState(false);
   const [error, setError] = useState("");
+  const [newsletterConsent, setNewsletterConsent] = useState(true);
 
   const register = trpc.appAuth.register.useMutation({
     onSuccess: (data) => {
@@ -81,7 +82,7 @@ export default function Register() {
       setError("A két jelszó nem egyezik meg.");
       return;
     }
-    register.mutate({ email, password, name: name || undefined, subscriptionPlan: selectedPlan });
+    register.mutate({ email, password, name: name || undefined, subscriptionPlan: selectedPlan, newsletterConsent });
   };
 
   const passwordStrength = password.length >= 8 ? (
@@ -335,6 +336,27 @@ export default function Register() {
                     <p className="text-xs text-green-400">✓ A jelszók egyeznek</p>
                   )}
                 </div>
+
+                {/* Newsletter consent */}
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <div
+                    onClick={() => setNewsletterConsent(v => !v)}
+                    className="mt-0.5 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors"
+                    style={{
+                      background: newsletterConsent ? "oklch(0.65 0.22 290)" : "transparent",
+                      borderColor: newsletterConsent ? "oklch(0.65 0.22 290)" : "oklch(1 0 0 / 20%)",
+                    }}
+                  >
+                    {newsletterConsent && (
+                      <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                        <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </div>
+                  <span className="text-xs text-white/50 group-hover:text-white/70 transition-colors leading-relaxed">
+                    Feliratkozom a G2A Growth Engine hírlevelére – tippeket, stratégiai tartalmakat és exkluzív ajánlatokat kapok e-mailben. Bármikor leiratkozhatok.
+                  </span>
+                </label>
 
                 <Button
                   type="submit"

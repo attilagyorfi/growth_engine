@@ -20,6 +20,7 @@ import {
 import { useLocation } from "wouter";
 import { useMemo } from "react";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 
 // ─── Style tokens ──────────────────────────────────────────────────────────────
 const cardBg = "oklch(0.18 0.022 255)";
@@ -208,9 +209,38 @@ export default function Analytics() {
     );
   }
 
+  const handleExport = () => {
+    if (!subscription.canExportData) {
+      toast.warning("Az export Starter csomagtól érhető el. Frissítsd az előfizetésed a Beállítások menüben.");
+      return;
+    }
+    // Build CSV from leads
+    const rows = [["Név", "Cég", "Státusz", "Email", "Létrehozva"],
+      ...leads.map(l => [l.contact ?? "", l.company ?? "", l.status ?? "", l.email ?? "", new Date(l.createdAt).toLocaleDateString("hu-HU")])
+    ];
+    const csv = rows.map(r => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "analytics-export.csv"; a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <DashboardLayout title="Analitika" subtitle="Valós idejű teljesítmény áttekintő">
       <div className="p-6 space-y-6 overflow-y-auto h-full">
+
+        {/* Free tier notice */}
+        {!subscription.canExportData && (
+          <div className="flex items-center justify-between rounded-xl px-4 py-3 text-sm" style={{ background: "oklch(0.6 0.2 255 / 8%)", border: "1px solid oklch(0.6 0.2 255 / 20%)" }}>
+            <span style={{ color: "oklch(0.75 0.015 240)" }}>📊 Ingyenes csomag – Az analitika megtekinthető, de az export Starter csomagtól érhető el.</span>
+            <button onClick={handleExport} className="ml-4 px-3 py-1 rounded-lg text-xs font-medium" style={{ background: "oklch(0.6 0.2 255 / 20%)", color: "oklch(0.8 0.1 255)" }}>Exportálás 🔒</button>
+          </div>
+        )}
+        {subscription.canExportData && (
+          <div className="flex justify-end">
+            <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium" style={{ background: "oklch(0.6 0.2 255 / 15%)", color: "oklch(0.8 0.1 255)", border: "1px solid oklch(0.6 0.2 255 / 30%)" }}>CSV exportálás</button>
+          </div>
+        )}
 
         {/* Stat Cards */}
         <motion.div

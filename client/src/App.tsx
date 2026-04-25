@@ -31,6 +31,7 @@ const OnboardingWizard = lazy(() => import("./pages/OnboardingWizard"));
 const Intelligence = lazy(() => import("./pages/Intelligence"));
 const AIWriter = lazy(() => import("./pages/AIWriter"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const SeoAudit = lazy(() => import("./pages/SeoAudit"));
 
 // Admin pages
 const AdminUsers = lazy(() => import("./pages/AdminUsers"));
@@ -108,6 +109,7 @@ function Router() {
       <Route path="/intelligencia" component={() => <AppRoute component={Intelligence} />} />
       <Route path="/ai-iro" component={() => <AppRoute component={AIWriter} />} />
       <Route path="/profil" component={() => <AppRoute component={ProfilePage} />} />
+      <Route path="/seo" component={() => <AppRoute component={SeoAudit} />} />
 
       {/* Admin routes */}
       <Route path="/admin/felhasznalok" component={() => <AdminRoute component={AdminUsers} />} />

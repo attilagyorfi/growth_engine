@@ -735,3 +735,66 @@ export const socialProfileCache = mysqlTable("social_profile_cache", {
 });
 export type SocialProfileCache = typeof socialProfileCache.$inferSelect;
 export type InsertSocialProfileCache = typeof socialProfileCache.$inferInsert;
+
+// ─── SEO Audits ───────────────────────────────────────────────────────────────
+export const seoAudits = mysqlTable("seo_audits", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  profileId: varchar("profileId", { length: 64 }).notNull(),
+  url: varchar("url", { length: 500 }).notNull(),
+  status: mysqlEnum("status", ["pending", "running", "done", "error"]).default("pending").notNull(),
+  score: int("score"), // 0-100 overall SEO score
+  report: json("report").$type<{
+    meta: {
+      title: string | null;
+      titleLength: number;
+      description: string | null;
+      descriptionLength: number;
+      canonical: string | null;
+      robots: string | null;
+      ogTitle: string | null;
+      ogDescription: string | null;
+      ogImage: string | null;
+    };
+    headings: {
+      h1Count: number;
+      h1Texts: string[];
+      h2Count: number;
+      h2Texts: string[];
+      h3Count: number;
+    };
+    performance: {
+      loadTime: number | null;
+      pageSize: number | null;
+      hasHttps: boolean;
+      hasSitemap: boolean;
+      hasRobotsTxt: boolean;
+    };
+    content: {
+      wordCount: number;
+      internalLinks: number;
+      externalLinks: number;
+      imagesWithoutAlt: number;
+      totalImages: number;
+    };
+    technical: {
+      hasStructuredData: boolean;
+      hasViewport: boolean;
+      hasCharset: boolean;
+      hasFavicon: boolean;
+      langAttribute: string | null;
+    };
+    issues: Array<{
+      severity: "critical" | "warning" | "info";
+      category: string;
+      title: string;
+      description: string;
+      recommendation: string;
+    }>;
+    aiInsights: string; // AI-generated comprehensive analysis
+    aiRecommendations: string; // AI-generated action plan
+  }>(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type SeoAudit = typeof seoAudits.$inferSelect;
+export type InsertSeoAudit = typeof seoAudits.$inferInsert;

@@ -424,7 +424,8 @@ export default function ContentStudio() {
 
   const scheduledByDay = useMemo(() => {
     const map: Record<string, Post[]> = {};
-    (posts as Post[]).filter(p => p.status === "scheduled" && p.scheduledAt).forEach(p => {
+    // Show all posts with a scheduledAt date (draft, scheduled, approved, published)
+    (posts as Post[]).filter(p => p.scheduledAt).forEach(p => {
       const d = new Date(p.scheduledAt!);
       if (d.getFullYear() === calendarYear && d.getMonth() === calendarMonth) {
         const key = d.getDate().toString();
@@ -784,12 +785,16 @@ export default function ContentStudio() {
                   {day !== null && (
                     <>
                       <p className="text-xs font-semibold mb-1" style={{ color: isToday ? "oklch(0.6 0.2 255)" : "oklch(0.65 0.015 240)" }}>{day}</p>
-                      {dayPosts.slice(0, 2).map(p => (
-                        <div key={p.id} className="text-xs px-1 py-0.5 rounded mb-0.5 truncate cursor-pointer" style={{ background: `${PLATFORM_COLORS[p.platform]} / 20%`, color: PLATFORM_COLORS[p.platform] }}
-                          onClick={() => setSelectedPost(p)}>
-                          {p.title}
-                        </div>
-                      ))}
+                      {dayPosts.slice(0, 2).map(p => {
+                        const statusDot = p.status === "published" ? "oklch(0.65 0.18 165)" : p.status === "scheduled" ? "oklch(0.6 0.2 255)" : p.status === "approved" ? "oklch(0.75 0.18 75)" : "oklch(0.55 0.015 240)";
+                        return (
+                          <div key={p.id} className="text-xs px-1 py-0.5 rounded mb-0.5 truncate cursor-pointer flex items-center gap-1" style={{ background: `oklch(0.25 0.02 255)`, color: "oklch(0.82 0.008 240)" }}
+                            onClick={() => setSelectedPost(p)}>
+                            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: statusDot }} />
+                            <span className="truncate">{p.title}</span>
+                          </div>
+                        );
+                      })}
                       {dayPosts.length > 2 && <p className="text-xs" style={{ color: "oklch(0.5 0.015 240)" }}>+{dayPosts.length - 2}</p>}
                     </>
                   )}
@@ -929,6 +934,29 @@ export default function ContentStudio() {
                 <input type="time" value={scheduleTime} onChange={e => setScheduleTime(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg text-sm border" style={{ background: "oklch(0.22 0.02 255)", borderColor: "oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }} />
               </div>
+              {/* Social account selection for connected accounts */}
+              {socialConnections.filter(c => c.isActive).length > 0 && (
+                <div>
+                  <label className="text-xs font-semibold mb-1 block" style={{ color: "oklch(0.65 0.015 240)" }}>Közzétevő fiók (opcionális)</label>
+                  <div className="space-y-1.5">
+                    <button
+                      onClick={() => setSelectedConnectionId("")}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm border transition-all"
+                      style={{ background: !selectedConnectionId ? "oklch(0.6 0.2 255 / 10%)" : "oklch(0.22 0.02 255)", borderColor: !selectedConnectionId ? "oklch(0.6 0.2 255 / 40%)" : "oklch(1 0 0 / 8%)", color: "oklch(0.78 0.008 240)" }}>
+                      <span className="text-xs">Csak ütemezés (nem publikál automatikusan)</span>
+                    </button>
+                    {socialConnections.filter(c => c.isActive).map(conn => (
+                      <button key={conn.id} onClick={() => setSelectedConnectionId(conn.id)}
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm border transition-all"
+                        style={{ background: selectedConnectionId === conn.id ? "oklch(0.6 0.2 255 / 10%)" : "oklch(0.22 0.02 255)", borderColor: selectedConnectionId === conn.id ? "oklch(0.6 0.2 255 / 40%)" : "oklch(1 0 0 / 8%)", color: "oklch(0.78 0.008 240)" }}>
+                        <Linkedin size={14} style={{ color: "oklch(0.55 0.18 255)" }} />
+                        <span className="font-medium">{conn.platformUsername ?? conn.platform}</span>
+                        <span className="ml-auto text-xs" style={{ color: "oklch(0.5 0.015 240)" }}>automatikus publikálás</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             <div className="flex gap-3 mt-5">
               <button onClick={() => setScheduleModal(null)} className="flex-1 py-2.5 rounded-lg text-sm font-semibold" style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.65 0.015 240)" }}>Mégse</button>

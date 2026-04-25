@@ -10,7 +10,7 @@ import { Link, useLocation } from "wouter";
 import {
   LayoutDashboard, Users, BarChart3, Layers, TrendingUp, Settings,
   Zap, ChevronRight, Bell, X, CheckCircle, AlertCircle, Info, Mail,
-  ChevronDown, LogOut, Shield, Megaphone,
+  ChevronDown, LogOut, Shield, Megaphone, SearchCheck,
   User, KeyRound, UserCog, Crown, Sparkles, Menu, Brain, FolderOpen, Plus, Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -29,6 +29,7 @@ const publicNavItems = [
   { href: "/tartalom-studio", label: "Tartalom Studio", icon: Layers },
   { href: "/kampanyok", label: "Kampányok", icon: Megaphone },
   { href: "/analitika", label: "Analitika", icon: TrendingUp },
+  { href: "/seo", label: "SEO Audit", icon: SearchCheck },
   { href: "/beallitasok", label: "Beállítások", icon: Settings },
 ];
 
@@ -42,6 +43,7 @@ const adminNavItems = [
   { href: "/ertekesites", label: "Értékesítés", icon: Mail },
   { href: "/kampanyok", label: "Kampányok", icon: Megaphone },
   { href: "/analitika", label: "Analitika", icon: TrendingUp },
+  { href: "/seo", label: "SEO Audit", icon: SearchCheck },
   { href: "/beallitasok", label: "Beállítások", icon: Settings },
 ];
 
@@ -173,7 +175,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
       >
         {/* Logo */}
         <div className="px-5 py-5 border-b" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
-          <Link href="/">
+          <Link href="/iranyitopult">
             <div className="flex items-center gap-2.5 cursor-pointer group">
               <div className="w-8 h-8 rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform" style={{ background: "linear-gradient(135deg, oklch(0.6 0.2 255), oklch(0.55 0.22 280))", boxShadow: "0 0 16px oklch(0.6 0.2 255 / 40%)" }}>
                 <Zap size={16} className="text-white" />

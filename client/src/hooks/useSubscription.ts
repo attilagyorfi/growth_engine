@@ -32,10 +32,10 @@ const PLAN_FEATURES: Record<SubscriptionPlan, PlanFeatures> = {
     maxContentPosts: 10,
     canUseContentStudio: true,
     canUseStrategy: false,
-    canUseAnalytics: false,
+    canUseAnalytics: true,   // Free tier can view analytics (read-only, no export)
     canUseCampaigns: false,
     canUseSocialPublish: false,
-    canExportData: false,
+    canExportData: false,    // Export requires Starter+
     canInviteTeam: false,
     isUnlimited: false,
   },

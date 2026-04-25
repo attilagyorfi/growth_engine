@@ -6,7 +6,7 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import {
-  Sparkles, RefreshCw, ArrowRight, CheckCircle2, Loader2,
+  Sparkles, RefreshCw, ArrowRight, CheckCircle2, Loader2, Zap,
   TrendingUp, FileText, Users, Megaphone, Brain, LayoutDashboard,
   ExternalLink,
 } from "lucide-react";
@@ -260,13 +260,25 @@ export default function DailyTasksBlock({ profileId }: DailyTasksBlockProps) {
               animate={{ opacity: 1 }}
               className="flex flex-col items-center justify-center py-6 text-center"
             >
-              <CheckCircle2 size={28} className="mb-2" style={{ color: "oklch(0.4 0.015 240)" }} />
-              <p className="text-sm font-medium mb-1" style={{ color: "oklch(0.65 0.008 240)" }}>
-                Kattints a „Generálás" gombra
-              </p>
-              <p className="text-xs" style={{ color: "oklch(0.45 0.015 240)" }}>
-                Az AI elemzi a vállalkozásod állapotát és személyre szabott napi teendőket javasol
-              </p>
+              <button
+                onClick={handleGenerate}
+                disabled={isLoading}
+                className="flex flex-col items-center gap-2 px-6 py-4 rounded-xl border transition-all cursor-pointer w-full"
+                style={{ background: "oklch(0.6 0.2 255 / 8%)", borderColor: "oklch(0.6 0.2 255 / 25%)", borderStyle: "dashed" }}
+                onMouseEnter={(e: any) => { e.currentTarget.style.background = "oklch(0.6 0.2 255 / 15%)"; }}
+                onMouseLeave={(e: any) => { e.currentTarget.style.background = "oklch(0.6 0.2 255 / 8%)"; }}
+              >
+                {isLoading
+                  ? <Loader2 size={24} className="animate-spin" style={{ color: "oklch(0.6 0.2 255)" }} />
+                  : <Zap size={24} style={{ color: "oklch(0.6 0.2 255)" }} />
+                }
+                <p className="text-sm font-semibold" style={{ color: "oklch(0.75 0.015 240)" }}>
+                  {isLoading ? "AI elemzés folyamatban..." : "Napi teendők generálása"}
+                </p>
+                <p className="text-xs" style={{ color: "oklch(0.45 0.015 240)" }}>
+                  Az AI elemzi a vállalkozásod állapotát és személyre szabott javaslatokat ad
+                </p>
+              </button>
             </motion.div>
           )}
         </AnimatePresence>

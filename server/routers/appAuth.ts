@@ -47,6 +47,7 @@ export const appAuthRouter = router({
       password: z.string().min(8, "A jelszó legalább 8 karakter legyen"),
       name: z.string().min(1, "Add meg a neved").optional(),
       subscriptionPlan: z.enum(["free", "starter", "pro"]).optional().default("free"),
+      newsletterConsent: z.boolean().optional().default(false),
     }))
     .mutation(async ({ input, ctx }) => {
       const existing = await getAppUserByEmail(input.email);
@@ -68,6 +69,35 @@ export const appAuthRouter = router({
         subscriptionPlan: input.subscriptionPlan ?? "free",
       });
       if (!user) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Regisztráció sikertelen" });
+
+      // Save newsletter subscriber to leads (owner's CRM)
+      if (input.newsletterConsent) {
+        try {
+          const { getDb } = await import("../db");
+          const { leads } = await import("../../drizzle/schema");
+          const { nanoid: nid } = await import("nanoid");
+          const { OWNER_OPEN_ID } = await import("../routers").then(() => process.env);
+          const db = await getDb();
+          // Find the owner's active profile to attach the lead
+          const { appUsers } = await import("../../drizzle/schema");
+          const { eq: eqLead } = await import("drizzle-orm");
+          const ownerRows = await db!.select().from(appUsers).where(eqLead(appUsers.role, "super_admin" as any)).limit(1);
+          const ownerProfileId = ownerRows[0]?.profileId;
+          if (ownerProfileId) {
+            await db!.insert(leads).values({
+              id: nid(),
+              profileId: ownerProfileId,
+              company: "Hírlevél feliratkozó",
+              contact: input.name ?? input.email,
+              email: input.email,
+              source: "regisztráció",
+              status: "new",
+              notes: `Hírlevél feliratkozó – regisztrációs form. Csomag: ${input.subscriptionPlan ?? "free"}`,
+            });
+          }
+        } catch { /* non-fatal */ }
+      }
+
       const token = await signToken(user.id, user.role);
       ctx.res.setHeader("Set-Cookie", `app_token=${token}; HttpOnly; Path=/; Max-Age=${30 * 24 * 3600}; SameSite=Lax`);
       return { success: true, user: { id: user.id, email: user.email, name: user.name, role: user.role, onboardingCompleted: user.onboardingCompleted } };

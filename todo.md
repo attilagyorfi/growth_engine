@@ -854,3 +854,47 @@
 - [x] DashboardLayout: useTour hook integrálva
 - [x] Beállítások / Fiók tab: "Bemutato indítása" gomb (kézi újraindítás)
 - [x] 51/51 teszt zöld, TypeScript: 0 hiba
+
+## Sprint 40 – Scrape fix, Calendar fix, Social scheduling, SEO audit, Hírlevél
+
+### Web/Social scrape javítás
+- [x] Onboarding web scrape: valódi HTML fetch + meta/OG/OpenGraph tag kinyerés, 15s timeout
+- [x] Social scrape: platform-specifikus URL felismerés + AI-alapú profiladat kinyerés
+- [x] AI prefill: csak ténylegesen kinyerétt adatokat tölti ki
+
+### Content calendar fix
+- [x] Havi tartalom generálás után automatikusan jelennek meg a naptárban (draft + scheduled)
+- [x] ContentStudio Calendar tab: draft és scheduled státuszú tartalmak is megjelenek scheduledAt alapján
+- [x] Színkódolás: draft (lila), scheduled (kék), published (zöld)
+
+### Social media scheduling
+- [x] ContentStudio: időzítés modal bővítve összekötött social fiók kiválasztással
+- [x] Összekötött fiókok megjelenítve az időzítés modalban
+
+### UX javítások
+- [x] Admin DashboardLayout: logóra kattintva /iranyitopult-ra navigál
+- [x] Landing oldal: valós dashboard és analytics screenshot-ok CDN-ről
+- [x] Dashboard "Mi a dolgom ma": üres állapot maga a CTA gomb (kattintható)
+
+### Analytics free tier
+- [x] Analytics modul: ingyenes felhasználóknak is elérhető (canUseAnalytics=true)
+- [x] Export gomb: ingyenes felhasználóknál letiltva + upgrade toast
+- [x] Free tier banner megjelenítése az Analytics oldalon
+
+### Beállítások social connect UI
+- [x] Social media fiókok: ikon-alapú csatlakoztatás kártyák (LinkedIn, Facebook, Instagram, TikTok, Twitter/X)
+- [x] Email integráció szekció eltávolítva a Beállításokból
+
+### SEO audit modul
+- [x] SEO menüpont hozzáadva a navigációhoz (mindkét nav lista)
+- [x] SEO audit oldal (/seo): URL bevitel + valódi HTML scrape + AI elemzés
+- [x] Audit eredmény: 5 tab (Problémák, Meta, Tartalom, Technikai, AI elemzés)
+- [x] Score ring (0-100), színkódolt severity badge-ek, kinyitható issue kártyák
+- [x] seoAudits tábla + db:push migráció
+- [x] AI insights + cselekvési terv (Streamdown renderelés)
+
+### Regisztrációs hírlevél feliratkozás
+- [x] Regisztrációs oldal: "Feliratkozom a hírlevélre" checkbox (alapértelmezetten bepipálva)
+- [x] Backend: newsletterConsent mező a register procedure inputban
+- [x] Feliratkozó automatikusan bekerül a super_admin leads CRM listájába
+- [x] 51/51 teszt zöld, TypeScript: 0 hiba

@@ -293,7 +293,7 @@ export default function Landing() {
         >
           <div className={`rounded-2xl overflow-hidden border shadow-2xl ${isDark ? "border-white/10 shadow-violet-900/20" : "border-gray-200 shadow-gray-200"}`}>
             <img
-              src="https://d2xsxph8kpxj0f.cloudfront.net/109169450/WzYbMH2rdiW2pftdUmZaz8/dashboard-hero_e45d4804.jpg"
+              src="/manus-storage/dashboard-hero-screenshot_8908be6a.webp"
               alt="G2A Growth Engine Dashboard"
               className="w-full object-cover"
             />
@@ -381,7 +381,7 @@ export default function Landing() {
             <SlideIn direction="right" delay={0.15}>
               <div className={`rounded-2xl overflow-hidden border shadow-xl ${isDark ? "border-white/10" : "border-gray-200"}`}>
                 <img
-                  src="https://d2xsxph8kpxj0f.cloudfront.net/109169450/WzYbMH2rdiW2pftdUmZaz8/dashboard-analytics_8cbb760e.png"
+                  src="/manus-storage/analytics-screenshot_1564b029.webp"
                   alt="Analytics Dashboard"
                   className="w-full object-cover"
                 />
