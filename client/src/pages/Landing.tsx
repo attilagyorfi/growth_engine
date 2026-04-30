@@ -38,7 +38,7 @@ const PLANS = [
   {
     id: "starter",
     name: { hu: "Starter", en: "Starter" },
-    price: "4 900 Ft",
+    price: "9 900 Ft",
     period: { hu: "/hó", en: "/mo" },
     icon: Rocket,
     description: { hu: "Kis vállalkozásoknak", en: "For small businesses" },
@@ -53,7 +53,7 @@ const PLANS = [
   {
     id: "pro",
     name: { hu: "Pro", en: "Pro" },
-    price: "14 900 Ft",
+    price: "24 900 Ft",
     period: { hu: "/hó", en: "/mo" },
     icon: Building2,
     description: { hu: "Növekvő vállalkozásoknak", en: "For growing businesses" },

@@ -947,3 +947,18 @@
 - [x] Árazási szekció: „korlátlan” → konkrét számok minden csomagnál (4 900 Ft / 14 900 Ft)
 - [x] Feature lista frissítése: pontos kvóta számok
 - [x] Tesztek frissítése: 53/53 zöld (ai.usage.test.ts + onboarding.test.ts per-feature struktúrára frissítve)
+
+## Sprint 43 – Árazás felülvizsgálata (piaci alapú)
+
+### Elvégzett
+- [x] Piaci benchmark elemzés (Buffer, Hootsuite, Jasper, Semrush, ContentStudio, Writesonic)
+- [x] AI API költségszámítás per csomag (GPT-4o + DALL-E 3 + HeyGen)
+- [x] Landing.tsx árak frissítve: Starter 9 900 Ft, Pro 24 900 Ft
+- [x] Register.tsx árak szinkronizálva: Starter 9 900 Ft, Pro 24 900 Ft
+- [x] 53/53 teszt zöld, TypeScript: 0 hiba
+
+### Árazási indoklás
+- Starter 9 900 Ft (~25 EUR): ContentStudio/Writesonic szintű ár, de AI stratégia + SEO + lead is benne
+- Pro 24 900 Ft (~64 EUR): Jasper Pro szintű ár, de SEO + HeyGen videó + analytics is benne
+- Agency 49 900 Ft (~128 EUR): Hootsuite Standard szintű ár, de AI-alapú, multi-client
+- API cost margin: Starter 94%, Pro 72%, Agency 57% (100% kvóta kihasználásnál)
