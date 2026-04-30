@@ -1,8 +1,9 @@
 /**
  * UpgradePrompt – Feature gating UI komponens
  * Megjelenik, ha a felhasználónak nincs hozzáférése egy funkcióhoz.
+ * Szinkronban van a useSubscription.ts PLAN_FEATURES struktúrával.
  */
-import { Lock, Sparkles, TrendingUp, Zap } from "lucide-react";
+import { Lock, Sparkles, TrendingUp, Zap, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 
@@ -17,6 +18,12 @@ const PLAN_LABELS: Record<string, string> = {
   starter: "Starter",
   pro: "Pro",
   agency: "Agency",
+};
+
+const PLAN_PRICES: Record<string, string> = {
+  starter: "9 900 Ft/hó",
+  pro: "24 900 Ft/hó",
+  agency: "49 900 Ft/hó",
 };
 
 const PLAN_COLORS: Record<string, { bg: string; text: string; border: string }> = {
@@ -37,6 +44,25 @@ const PLAN_COLORS: Record<string, { bg: string; text: string; border: string }> 
   },
 };
 
+// Per-plan highlight features (szinkron: useSubscription.ts PLAN_FEATURES)
+const PLAN_HIGHLIGHTS: Record<string, Array<{ icon: React.ElementType; label: string }>> = {
+  starter: [
+    { icon: Sparkles, label: "5 AI stratégia/hó" },
+    { icon: Zap, label: "50 AI poszt/hó" },
+    { icon: TrendingUp, label: "Analitika export" },
+  ],
+  pro: [
+    { icon: Zap, label: "300 AI szöveges/hó" },
+    { icon: Sparkles, label: "30 AI kép + 5 videó/hó" },
+    { icon: TrendingUp, label: "Kampány builder" },
+  ],
+  agency: [
+    { icon: Crown, label: "1 000 AI szöveges/hó" },
+    { icon: Sparkles, label: "100 AI kép + 15 videó/hó" },
+    { icon: TrendingUp, label: "White-label + korlátlan projekt" },
+  ],
+};
+
 export default function UpgradePrompt({
   feature,
   requiredPlan,
@@ -46,6 +72,8 @@ export default function UpgradePrompt({
   const [, navigate] = useLocation();
   const colors = PLAN_COLORS[requiredPlan] ?? PLAN_COLORS.pro;
   const planLabel = PLAN_LABELS[requiredPlan] ?? "Pro";
+  const planPrice = PLAN_PRICES[requiredPlan] ?? "";
+  const highlights = PLAN_HIGHLIGHTS[requiredPlan] ?? [];
 
   if (compact) {
     return (
@@ -80,35 +108,26 @@ export default function UpgradePrompt({
         <Lock size={24} style={{ color: colors.text }} />
       </div>
       <h3
-        className="text-lg font-bold mb-2"
+        className="text-lg font-bold mb-1"
         style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}
       >
         {feature} – {planLabel} csomag szükséges
       </h3>
+      <p className="text-xs mb-4" style={{ color: "oklch(0.55 0.015 240)" }}>
+        {planPrice}
+      </p>
       {description && (
         <p className="text-sm mb-4 max-w-md" style={{ color: "oklch(0.6 0.015 240)" }}>
           {description}
         </p>
       )}
-      <div className="flex items-center gap-3 mb-6">
-        {requiredPlan === "starter" && (
-          <div className="flex items-center gap-1.5 text-xs" style={{ color: colors.text }}>
-            <Sparkles size={13} />
-            <span>20 AI generálás/hó</span>
+      <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
+        {highlights.map(({ icon: Icon, label }) => (
+          <div key={label} className="flex items-center gap-1.5 text-xs" style={{ color: colors.text }}>
+            <Icon size={13} />
+            <span>{label}</span>
           </div>
-        )}
-        {(requiredPlan === "pro" || requiredPlan === "agency") && (
-          <>
-            <div className="flex items-center gap-1.5 text-xs" style={{ color: colors.text }}>
-              <Zap size={13} />
-              <span>Korlátlan AI</span>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs" style={{ color: colors.text }}>
-              <TrendingUp size={13} />
-              <span>Teljes hozzáférés</span>
-            </div>
-          </>
-        )}
+        ))}
       </div>
       <Button
         onClick={() => navigate("/beallitasok?tab=billing")}

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Zap, Loader2, Eye, EyeOff, CheckCircle2, ArrowLeft, Sparkles, Rocket, Building2, Check } from "lucide-react";
+import { Zap, Loader2, Eye, EyeOff, CheckCircle2, ArrowLeft, Sparkles, Rocket, Building2, Check, Crown } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 
@@ -43,6 +43,18 @@ const PLANS = [
     description: "Növekvő vállalkozásoknak",
     features: ["3 vállalkozás profil", "300 AI szöveges/hó", "30 AI kép/hó", "5 HeyGen AI videó/hó", "10 SEO audit/hó", "Prioritásos támogatás"],
     cta: "Pro indítása",
+    popular: false,
+  },
+  {
+    id: "agency",
+    name: "Agency",
+    price: "49 900 Ft",
+    period: "/hó",
+    icon: Crown,
+    color: "oklch(0.75 0.18 75)",
+    description: "Marketing ügynökségeknek",
+    features: ["Korlátlan projekt", "1 000 AI szöveges/hó", "100 AI kép/hó", "15 HeyGen AI videó/hó", "30 SEO audit/hó", "White-label lehetőség", "Dedikált támogatás"],
+    cta: "Agency indítása",
     popular: false,
   },
 ] as const;

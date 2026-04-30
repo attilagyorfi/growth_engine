@@ -11,11 +11,11 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { motion, useInView } from "framer-motion";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import {
   BarChart3, Brain, Mail, Megaphone, Target, Users,
   CheckCircle2, ArrowRight, Zap, Shield, TrendingUp,
-  Sun, Moon, Sparkles, Rocket, Building2,
+  Sun, Moon, Sparkles, Rocket, Building2, Crown,
 } from "lucide-react";
 
 // ─── Shared Plans (synced with Register.tsx) ──────────────────────────────────
@@ -65,6 +65,21 @@ const PLANS = [
     popular: false,
     highlight: false,
   },
+  {
+    id: "agency",
+    name: { hu: "Agency", en: "Agency" },
+    price: "49 900 Ft",
+    period: { hu: "/hó", en: "/mo" },
+    icon: Crown,
+    description: { hu: "Marketing ügynökségeknek", en: "For marketing agencies" },
+    features: {
+      hu: ["Korlátlan projekt", "1 000 AI szöveges/hó", "100 AI kép/hó", "15 HeyGen AI videó/hó", "30 SEO audit/hó", "White-label lehetőség", "Dedikált támogatás"],
+      en: ["Unlimited projects", "1,000 AI texts/mo", "100 AI images/mo", "15 HeyGen AI videos/mo", "30 SEO audits/mo", "White-label option", "Dedicated support"],
+    },
+    cta: { hu: "Agency indítása", en: "Start Agency" },
+    popular: false,
+    highlight: false,
+  },
 ] as const;
 
 // ─── Animation helpers ────────────────────────────────────────────────────────
@@ -101,8 +116,23 @@ function SlideIn({ children, delay = 0, direction = "left", className = "" }: { 
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
+// ─── Annual prices (10 months = 2 months free) ───────────────────────────────
+const ANNUAL_PRICES: Record<string, { hu: string; en: string }> = {
+  free:    { hu: "0 Ft",           en: "0 Ft" },
+  starter: { hu: "99 000 Ft",     en: "99,000 Ft" },
+  pro:     { hu: "249 000 Ft",    en: "249,000 Ft" },
+  agency:  { hu: "499 000 Ft",    en: "499,000 Ft" },
+};
+const ANNUAL_MONTHLY_EQUIV: Record<string, { hu: string; en: string }> = {
+  free:    { hu: "0 Ft/hó",        en: "0 Ft/mo" },
+  starter: { hu: "8 250 Ft/hó",   en: "8,250 Ft/mo" },
+  pro:     { hu: "20 750 Ft/hó",  en: "20,750 Ft/mo" },
+  agency:  { hu: "41 583 Ft/hó",  en: "41,583 Ft/mo" },
+};
+
 export default function Landing() {
   const { lang } = useLanguage();
+  const [isYearly, setIsYearly] = useState(false);
 
   const isDark = true; // dark mode only
   const bg = "#0A0A0F";
@@ -503,9 +533,29 @@ export default function Landing() {
             <h2 className="text-4xl font-bold mb-4">
               {lang === "hu" ? "Egyszerű árazás" : "Simple pricing"}
             </h2>
-            <p className={`text-lg ${subtext}`}>
+            <p className={`text-lg mb-8 ${subtext}`}>
               {lang === "hu" ? "Kezdj el ingyen, fejlődj velünk" : "Start free, grow with us"}
             </p>
+            {/* Éves/havi kapcsoló */}
+            <div className="inline-flex items-center gap-1 p-1 rounded-xl" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <button
+                onClick={() => setIsYearly(false)}
+                className="px-5 py-2 rounded-lg text-sm font-semibold transition-all"
+                style={!isYearly ? { background: "oklch(0.6 0.2 255)", color: "white" } : { color: "rgba(255,255,255,0.45)" }}
+              >
+                {lang === "hu" ? "Havi" : "Monthly"}
+              </button>
+              <button
+                onClick={() => setIsYearly(true)}
+                className="px-5 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2"
+                style={isYearly ? { background: "oklch(0.6 0.2 255)", color: "white" } : { color: "rgba(255,255,255,0.45)" }}
+              >
+                {lang === "hu" ? "Éves" : "Annual"}
+                <span className="text-xs px-1.5 py-0.5 rounded-full font-bold" style={{ background: "oklch(0.65 0.18 165 / 30%)", color: "oklch(0.65 0.18 165)" }}>
+                  {lang === "hu" ? "-17%" : "-17%"}
+                </span>
+              </button>
+            </div>
           </FadeIn>
           <div className="grid md:grid-cols-3 gap-6">
             {PLANS.map((plan, i) => (
@@ -528,10 +578,27 @@ export default function Landing() {
                         <plan.icon className="w-5 h-5 text-violet-400" />
                       </div>
                       <h3 className="text-xl font-bold mb-1">{plan.name[lang]}</h3>
-                      <div className="text-3xl font-bold mb-1">
-                        {plan.price}
-                        <span className={`text-base font-normal ml-1 ${subtext}`}>{plan.period[lang]}</span>
-                      </div>
+                      <motion.div
+                        key={isYearly ? "yearly" : "monthly"}
+                        initial={{ opacity: 0, y: -6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.25 }}
+                        className="mb-1"
+                      >
+                        <div className="text-3xl font-bold">
+                          {isYearly && plan.id !== "free" ? ANNUAL_PRICES[plan.id]?.[lang] ?? plan.price : plan.price}
+                          {isYearly && plan.id !== "free" ? (
+                            <span className={`text-base font-normal ml-1 ${subtext}`}>{lang === "hu" ? "/év" : "/yr"}</span>
+                          ) : (
+                            <span className={`text-base font-normal ml-1 ${subtext}`}>{plan.period[lang]}</span>
+                          )}
+                        </div>
+                        {isYearly && plan.id !== "free" && (
+                          <p className="text-xs mt-0.5" style={{ color: "oklch(0.65 0.18 165)" }}>
+                            {ANNUAL_MONTHLY_EQUIV[plan.id]?.[lang]} – {lang === "hu" ? "2 hónap ingyen" : "2 months free"}
+                          </p>
+                        )}
+                      </motion.div>
                       <p className={`text-sm ${subtext}`}>{plan.description[lang]}</p>
                     </div>
                     <ul className="space-y-2.5 mb-8">

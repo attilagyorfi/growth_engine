@@ -16,7 +16,7 @@ export function AiLimitBanner() {
 
   if (!aiUsage) return null;
 
-  // Pro/Agency: unlimited
+  // Super admin / unlimited plan
   if (aiUsage.limit === -1) return null;
 
   // At limit
@@ -32,7 +32,7 @@ export function AiLimitBanner() {
           <Button
             size="sm"
             variant="destructive"
-            onClick={() => navigate("/regisztracio?upgrade=true")}
+            onClick={() => navigate("/beallitasok?tab=billing")}
             className="shrink-0"
           >
             Csomag frissítése
@@ -54,7 +54,7 @@ export function AiLimitBanner() {
           <Button
             size="sm"
             variant="outline"
-            onClick={() => navigate("/regisztracio?upgrade=true")}
+            onClick={() => navigate("/beallitasok?tab=billing")}
             className="shrink-0 border-yellow-500/50 text-yellow-700 hover:bg-yellow-50"
           >
             Csomag frissítése

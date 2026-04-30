@@ -46,7 +46,7 @@ export const appAuthRouter = router({
       email: z.string().email("Érvénytelen email cím"),
       password: z.string().min(8, "A jelszó legalább 8 karakter legyen"),
       name: z.string().min(1, "Add meg a neved").optional(),
-      subscriptionPlan: z.enum(["free", "starter", "pro"]).optional().default("free"),
+      subscriptionPlan: z.enum(["free", "starter", "pro", "agency"]).optional().default("free"),
       newsletterConsent: z.boolean().optional().default(false),
     }))
     .mutation(async ({ input, ctx }) => {

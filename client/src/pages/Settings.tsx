@@ -8,7 +8,9 @@ import { useLocation } from "wouter";
 import {
   Palette, Plug, Users, ClipboardList, X, Loader2, Plus,
   Save, Globe, Mail, Check, AlertCircle, Settings2, Eye, EyeOff, PlayCircle,
+  CreditCard, Sparkles, Rocket, Building2, Crown, CheckCircle2, Zap,
 } from "lucide-react";
+import { useSubscription, PLAN_FEATURES, type SubscriptionPlan } from "@/hooks/useSubscription";
 import DashboardLayout from "@/components/DashboardLayout";
 import { trpc } from "@/lib/trpc";
 import { useProfile } from "@/contexts/ProfileContext";
@@ -16,10 +18,11 @@ import { useAppAuth } from "@/hooks/useAppAuth";
 import { useTour } from "@/hooks/useTour";
 import { toast } from "sonner";
 
-type Tab = "brand" | "integrations" | "team" | "audit" | "admin" | "fiok";
+type Tab = "brand" | "integrations" | "team" | "audit" | "admin" | "fiok" | "billing";
 
 const BASE_TABS: { id: Tab; label: string; icon: React.ReactNode; badge?: string }[] = [
   { id: "fiok", label: "Fiók", icon: <Users size={14} /> },
+  { id: "billing", label: "Előfizetés", icon: <CreditCard size={14} /> },
   { id: "brand", label: "Brand Center", icon: <Palette size={14} /> },
   { id: "integrations", label: "Integrációk", icon: <Plug size={14} /> },
   { id: "team", label: "Csapat", icon: <Users size={14} />, badge: "Hamarosan" },
@@ -35,7 +38,17 @@ export default function Settings() {
   const { activeProfile } = useProfile();
   const { user: appUser, isSuperAdmin } = useAppAuth();
   const { restartTour } = useTour();
-  const [activeTab, setActiveTab] = useState<Tab>("brand");
+  const subscription = useSubscription();
+  // Initialize tab from URL query param (?tab=billing, ?tab=fiok, etc.)
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get("tab") as Tab | null;
+      const validTabs: Tab[] = ["fiok", "billing", "brand", "integrations", "team", "audit", "admin"];
+      if (tab && validTabs.includes(tab)) return tab;
+    }
+    return "brand";
+  });
   const [linkedInCredForm, setLinkedInCredForm] = useState({ clientId: "", clientSecret: "" });
   const [showLinkedInSecret, setShowLinkedInSecret] = useState(false);
   const { data: apiConfigStatus, refetch: refetchApiConfig } = trpc.apiConfig.status.useQuery(
@@ -546,6 +559,112 @@ export default function Settings() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Előfizetés / Billing */}
+      {activeTab === "billing" && (
+        <div className="space-y-5">
+          {/* Aktív csomag */}
+          <div className="rounded-xl border p-5" style={{ background: cardBg, borderColor: border }}>
+            <h3 className="text-sm font-bold mb-4" style={{ color: "oklch(0.88 0.008 240)" }}>Aktív előfizetés</h3>
+            <div className="flex items-center gap-4 p-4 rounded-xl" style={{ background: "oklch(0.6 0.2 255 / 8%)", border: "1.5px solid oklch(0.6 0.2 255 / 25%)" }}>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: "oklch(0.6 0.2 255 / 15%)" }}>
+                {subscription.plan === "free" && <Sparkles size={22} style={{ color: "oklch(0.75 0.2 255)" }} />}
+                {subscription.plan === "starter" && <Rocket size={22} style={{ color: "oklch(0.75 0.2 255)" }} />}
+                {subscription.plan === "pro" && <Building2 size={22} style={{ color: "oklch(0.75 0.18 75)" }} />}
+                {subscription.plan === "agency" && <Crown size={22} style={{ color: "oklch(0.75 0.18 165)" }} />}
+              </div>
+              <div className="flex-1">
+                <p className="text-base font-bold" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>
+                  {PLAN_FEATURES[subscription.plan as SubscriptionPlan]?.planLabel ?? subscription.plan} csomag
+                </p>
+                <p className="text-sm" style={{ color: "oklch(0.55 0.015 240)" }}>
+                  {subscription.monthlyPrice === 0 ? "Ingyenes" : `${subscription.monthlyPrice.toLocaleString("hu-HU")} Ft/hó`}
+                </p>
+              </div>
+              {subscription.plan !== "agency" && (
+                <span className="text-xs px-2.5 py-1 rounded-full font-semibold" style={{ background: "oklch(0.75 0.18 75 / 15%)", color: "oklch(0.75 0.18 75)" }}>Frissítés elérhető</span>
+              )}
+            </div>
+          </div>
+
+          {/* Csomagok összehasonlítása */}
+          <div className="rounded-xl border p-5" style={{ background: cardBg, borderColor: border }}>
+            <h3 className="text-sm font-bold mb-4" style={{ color: "oklch(0.88 0.008 240)" }}>Csomagok</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+              {(["free", "starter", "pro", "agency"] as SubscriptionPlan[]).map(planId => {
+                const plan = PLAN_FEATURES[planId];
+                const isActive = subscription.plan === planId;
+                const icons: Record<SubscriptionPlan, React.ReactNode> = {
+                  free: <Sparkles size={16} />,
+                  starter: <Rocket size={16} />,
+                  pro: <Building2 size={16} />,
+                  agency: <Crown size={16} />,
+                };
+                const colors: Record<SubscriptionPlan, string> = {
+                  free: "oklch(0.6 0.2 255)",
+                  starter: "oklch(0.6 0.2 255)",
+                  pro: "oklch(0.75 0.18 75)",
+                  agency: "oklch(0.65 0.18 165)",
+                };
+                const featureList: string[] = [
+                  planId === "free" ? "1 AI stratégia/hó" : planId === "starter" ? "5 AI stratégia/hó" : planId === "pro" ? "20 AI stratégia/hó" : "60 AI stratégia/hó",
+                  planId === "free" ? "5 AI poszt/hó" : planId === "starter" ? "50 AI poszt/hó" : planId === "pro" ? "300 AI poszt/hó" : "1 000 AI poszt/hó",
+                  planId === "free" ? "1 SEO audit/hó" : planId === "starter" ? "3 SEO audit/hó" : planId === "pro" ? "10 SEO audit/hó" : "30 SEO audit/hó",
+                  ...(plan.aiImagePerMonth > 0 ? [`${plan.aiImagePerMonth} AI kép/hó`] : []),
+                  ...(plan.aiVideoPerMonth > 0 ? [`${plan.aiVideoPerMonth} HeyGen videó/hó`] : []),
+                  ...(plan.canUseCampaigns ? ["Kampány builder"] : []),
+                  ...(plan.canWhiteLabel ? ["White-label"] : []),
+                ];
+                return (
+                  <div key={planId} className="rounded-xl border p-4 flex flex-col gap-3"
+                    style={{ background: isActive ? `${colors[planId]}10` : "oklch(0.22 0.02 255)", borderColor: isActive ? `${colors[planId]}40` : "oklch(1 0 0 / 8%)" }}>
+                    <div className="flex items-center gap-2">
+                      <span style={{ color: colors[planId] }}>{icons[planId]}</span>
+                      <span className="text-sm font-bold" style={{ color: "oklch(0.88 0.008 240)" }}>{plan.planLabel}</span>
+                      {isActive && <span className="ml-auto text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: `${colors[planId]}20`, color: colors[planId] }}>Aktív</span>}
+                    </div>
+                    <p className="text-lg font-bold" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>
+                      {plan.monthlyPrice === 0 ? "Ingyenes" : `${plan.monthlyPrice.toLocaleString("hu-HU")} Ft`}
+                      {plan.monthlyPrice > 0 && <span className="text-xs font-normal" style={{ color: "oklch(0.55 0.015 240)" }}>/hó</span>}
+                    </p>
+                    <ul className="space-y-1.5 flex-1">
+                      {featureList.map(f => (
+                        <li key={f} className="flex items-center gap-1.5 text-xs" style={{ color: "oklch(0.7 0.015 240)" }}>
+                          <CheckCircle2 size={11} style={{ color: colors[planId], flexShrink: 0 }} />
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                    {!isActive && planId !== "free" && (
+                      <button
+                        onClick={() => toast.info("💳 Stripe fizetési integráció hamarosan elérhető! Addig lépj kapcsolatba velünk.")}
+                        className="w-full py-2 rounded-lg text-xs font-semibold"
+                        style={{ background: `${colors[planId]}20`, color: colors[planId] }}
+                      >
+                        {subscription.plan === "free" ? "Választás" : "Frissítés"}
+                      </button>
+                    )}
+                    {!isActive && planId === "free" && (
+                      <span className="text-xs text-center" style={{ color: "oklch(0.45 0.015 240)" }}>Jelenlegi csomag</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Stripe placeholder */}
+          <div className="rounded-xl border p-4" style={{ background: "oklch(0.75 0.18 75 / 8%)", borderColor: "oklch(0.75 0.18 75 / 20%)" }}>
+            <div className="flex items-start gap-3">
+              <CreditCard size={16} className="mt-0.5 flex-shrink-0" style={{ color: "oklch(0.75 0.18 75)" }} />
+              <div>
+                <p className="text-sm font-semibold mb-1" style={{ color: "oklch(0.8 0.15 75)" }}>Online fizetés hamarosan</p>
+                <p className="text-xs" style={{ color: "oklch(0.65 0.015 240)" }}>A Stripe-alapú bankkártyás fizetés fejlesztés alatt áll. Addig csomag frissítéshez írj az info@g2amarketing.hu címre.</p>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

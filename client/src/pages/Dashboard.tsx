@@ -492,7 +492,7 @@ function AiCreditsWidget({ navigate, isSuperAdmin }: { navigate: (path: string) 
         {/* CTA */}
         {(isExhausted || isWarning) && (
           <button
-            onClick={() => navigate("/beallitasok?tab=elofizetes")}
+            onClick={() => navigate("/beallitasok?tab=billing")}
             className="w-full py-2 rounded-lg text-xs font-semibold transition-all"
             style={{
               background: isExhausted ? "oklch(0.65 0.18 25 / 20%)" : "oklch(0.75 0.18 75 / 20%)",

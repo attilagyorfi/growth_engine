@@ -962,3 +962,36 @@
 - Pro 24 900 Ft (~64 EUR): Jasper Pro szintű ár, de SEO + HeyGen videó + analytics is benne
 - Agency 49 900 Ft (~128 EUR): Hootsuite Standard szintű ár, de AI-alapú, multi-client
 - API cost margin: Starter 94%, Pro 72%, Agency 57% (100% kvóta kihasználásnál)
+
+## Sprint 44 – Agency csomag + UpgradePrompt szinkronizálás + Billing tab
+
+### Landing oldal
+- [x] Agency csomag hozzáadása a Landing.tsx PLANS tömbhöz (49 900 Ft/hó)
+- [x] Register.tsx PLANS tömb: Agency csomag hozzáadása
+
+### UpgradePrompt + useSubscription szinkronizálás
+- [x] useSubscription.ts: PLAN_FEATURES frissítése per-feature kvótákra (9 900 / 24 900 / 49 900 Ft)
+- [x] UpgradePrompt.tsx: marketing copy frissítése (konkrét per-feature számok + ár megjelenítése)
+- [x] AiLimitBanner.tsx: upgrade CTA átirányítás /beallitasok?tab=billing-re
+- [x] /beallitasok?tab=billing CTA-k: egyesítés (billing vs. elofizetes)
+
+### Billing tab a Beállításokban
+- [x] Settings.tsx: "Előfizetés" tab hozzáadása (billing), URL param alapján nyílik
+- [x] Billing tab: aktív csomag megjelenítése + feature lista
+- [x] Billing tab: upgrade CTA gombok (Starter / Pro / Agency)
+- [x] Billing tab: "Stripe hamarosan" placeholder (Stripe integráció emlékeztető)
+
+## Sprint 45 – Analytics valódi adatok
+
+- [x] getAnalyticsSummary tRPC procedure – NEM szükséges: az Analytics.tsx már közvetlen trpc.leads/content/outbound query-ből számol
+- [x] Analytics oldal: KPI kártyák valódi DB adatokkal (total leads, total content, total emails sent)
+- [x] Analytics oldal: havi trend chart valódi adatokkal (leads + content volume per hónap, 6 hónapos ablak)
+- [x] Empty state kezelés ha nincs adat (hasAnyData flag + EmptyState komponens)
+
+## Sprint 46 – Éves előfizetés kapcsoló
+
+- [x] Landing.tsx: "Havi" / "Éves" kapcsoló az árazás szekció felett
+- [x] Éves ár: 10 hónap ára (2 hónap ingyen = ~17% kedvezmény)
+- [x] Éves árak: Starter 99 000 Ft/év (~8 250 Ft/hó), Pro 249 000 Ft/év (~20 750 Ft/hó), Agency 499 000 Ft/év (~41 583 Ft/hó)
+- [x] Animált ár váltás (framer-motion motion.div key-alapon)
+- [ ] Register.tsx: éves/havi választó szinkronizálása (következő sprint)
