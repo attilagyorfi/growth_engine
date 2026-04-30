@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,12 +60,26 @@ const PLANS = [
   },
 ] as const;
 
+const ANNUAL_PRICES: Record<string, string> = {
+  free:    "0 Ft",
+  starter: "99 000 Ft",
+  pro:     "249 000 Ft",
+  agency:  "499 000 Ft",
+};
+const ANNUAL_MONTHLY_EQUIV: Record<string, string> = {
+  free:    "0 Ft/hó",
+  starter: "8 250 Ft/hó",
+  pro:     "20 750 Ft/hó",
+  agency:  "41 583 Ft/hó",
+};
+
 type PlanId = typeof PLANS[number]["id"];
 
 export default function Register() {
   const [, navigate] = useLocation();
   const [step, setStep] = useState<"plan" | "form">("plan");
   const [selectedPlan, setSelectedPlan] = useState<PlanId>("starter");
+  const [isYearly, setIsYearly] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -171,7 +186,30 @@ export default function Register() {
           {step === "plan" && (
             <div>
               <h1 className="text-2xl font-bold text-white mb-2">Válassz csomagot</h1>
-              <p className="text-white/50 mb-6 text-sm">Bármikor válthat csomagot. Az ingyenes csomaggal is elindulhat.</p>
+              <p className="text-white/50 mb-4 text-sm">Bármikor válthat csomagot. Az ingyenes csomaggal is elindulhat.</p>
+
+              {/* Éves/havi kapcsoló */}
+              <div className="flex justify-center mb-6">
+                <div className="inline-flex items-center gap-1 p-1 rounded-xl" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                  <button
+                    onClick={() => setIsYearly(false)}
+                    className="px-5 py-2 rounded-lg text-sm font-semibold transition-all"
+                    style={!isYearly ? { background: "oklch(0.6 0.2 255)", color: "white" } : { color: "rgba(255,255,255,0.45)" }}
+                  >
+                    Havi
+                  </button>
+                  <button
+                    onClick={() => setIsYearly(true)}
+                    className="px-5 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2"
+                    style={isYearly ? { background: "oklch(0.6 0.2 255)", color: "white" } : { color: "rgba(255,255,255,0.45)" }}
+                  >
+                    Éves
+                    <span className="text-xs px-1.5 py-0.5 rounded-full font-bold" style={{ background: "oklch(0.65 0.18 165 / 30%)", color: "oklch(0.65 0.18 165)" }}>
+                      -17%
+                    </span>
+                  </button>
+                </div>
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 {PLANS.map((plan) => {
@@ -205,10 +243,27 @@ export default function Register() {
                       </div>
                       <p className="font-bold text-white text-base mb-0.5">{plan.name}</p>
                       <p className="text-white/40 text-xs mb-3">{plan.description}</p>
-                      <div className="flex items-baseline gap-1 mb-4">
-                        <span className="text-xl font-bold text-white">{plan.price}</span>
-                        <span className="text-white/40 text-xs">{plan.period}</span>
-                      </div>
+                      <motion.div
+                        key={isYearly ? "yearly" : "monthly"}
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="mb-4"
+                      >
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-xl font-bold text-white">
+                            {isYearly && plan.id !== "free" ? ANNUAL_PRICES[plan.id] ?? plan.price : plan.price}
+                          </span>
+                          <span className="text-white/40 text-xs">
+                            {isYearly && plan.id !== "free" ? "/év" : plan.period}
+                          </span>
+                        </div>
+                        {isYearly && plan.id !== "free" && (
+                          <p className="text-xs mt-0.5" style={{ color: "oklch(0.65 0.18 165)" }}>
+                            {ANNUAL_MONTHLY_EQUIV[plan.id]} – 2 hónap ingyen
+                          </p>
+                        )}
+                      </motion.div>
                       <ul className="space-y-1.5">
                         {plan.features.map((f) => (
                           <li key={f} className="flex items-center gap-2 text-xs text-white/60">
@@ -255,7 +310,12 @@ export default function Register() {
                 </div>
                 <div>
                   <p className="text-white font-semibold text-sm">{activePlan.name} csomag kiválasztva</p>
-                  <p className="text-white/50 text-xs">{activePlan.price}{activePlan.period} · {activePlan.description}</p>
+                  <p className="text-white/50 text-xs">
+                    {isYearly && activePlan.id !== "free"
+                      ? `${ANNUAL_PRICES[activePlan.id]}/év (${ANNUAL_MONTHLY_EQUIV[activePlan.id]} – 2 hónap ingyen)`
+                      : `${activePlan.price}${activePlan.period}`
+                    } · {activePlan.description}
+                  </p>
                 </div>
                 <button onClick={() => setStep("plan")} className="ml-auto text-xs text-violet-400 hover:text-violet-300">Módosít</button>
               </div>

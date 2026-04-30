@@ -35,6 +35,15 @@ export default function Dashboard() {
     { profileId: activeProfile.id },
     { enabled: !!activeProfile.id }
   );
+
+  // Campaigns from tRPC
+  const { data: campaigns = [] } = trpc.campaigns.list.useQuery(
+    { profileId: activeProfile.id },
+    { enabled: !!activeProfile.id }
+  );
+
+  // AI usage from tRPC
+  const { data: aiUsage } = trpc.aiUsage.status.useQuery(undefined, { enabled: true });
   const utils = trpc.useUtils();
   const updateContentMutation = trpc.content.update.useMutation({
     onSuccess: () => utils.content.list.invalidate({ profileId: activeProfile.id }),
@@ -67,11 +76,13 @@ export default function Dashboard() {
   const unansweredInbound = inbound.filter(e => e.category === "interested" && !e.read).slice(0, 3);
 
   // --- KPI Summary ---
+  const aiGeneratedCount = contentItems.filter((c: any) => c.generatedByAi || c.aiGenerated).length;
+  const activeCampaigns = (campaigns as any[]).filter(c => c.status === "active" || c.status === "draft").length;
   const kpis = [
     { label: "Aktív Leadek", value: leads.filter(l => l.status !== "closed_won" && l.status !== "closed_lost").length, icon: Users, color: "oklch(0.6 0.2 255)" },
-    { label: "Kiküldött Emailek", value: outbound.filter(e => e.status === "sent").length, icon: Mail, color: "oklch(0.65 0.18 165)" },
-    { label: "Jóváhagyásra Vár", value: totalApproval, icon: Clock, color: "oklch(0.75 0.18 75)" },
-    { label: "Ütemezett Posztok", value: contentItems.filter((c: any) => c.status === "scheduled").length, icon: Calendar, color: "oklch(0.7 0.18 300)" },
+    { label: "AI Tartalmak", value: contentItems.length, icon: Sparkles, color: "oklch(0.65 0.18 165)" },
+    { label: "Aktív Kampányok", value: activeCampaigns, icon: Zap, color: "oklch(0.75 0.18 75)" },
+    { label: "AI Kreditek", value: aiUsage ? (aiUsage.limit === -1 ? "∞" : `${aiUsage.used}/${aiUsage.limit}`) : "–", icon: Brain, color: "oklch(0.7 0.18 300)" },
   ];
 
   const handleApproveEmail = async (id: string) => {

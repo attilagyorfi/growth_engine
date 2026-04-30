@@ -34,6 +34,7 @@ import {
 import { invokeLLM } from "./_core/llm";
 import { storagePut } from "./storage";
 import { checkAiUsageLimit, recordAiUsage } from "./authDb";
+import Stripe from "stripe";
 import {
   getProjectsByOwner, getProjectById, upsertProject, setActiveProject, deleteProject, getActiveProjectByOwner,
   archiveProject, restoreProject, getArchivedProjectsByOwner,
@@ -50,6 +51,11 @@ async function assertProfileOwnership(appUserId: string, role: string, profileId
   if (profile && profile.appUserId === appUserId) return;
   throw new TRPCError({ code: "FORBIDDEN", message: "Nincs jogosultsága ehhez a profilhoz" });
 }
+
+// ─── Stripe client (singleton) ───────────────────────────────────────────────────────────────────────────────────────
+const stripeClient = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2026-04-22.dahlia" })
+  : null;
 
 export const appRouter = router({
   system: systemRouter,
@@ -2220,6 +2226,59 @@ A link mező mindig ezek egyike legyen, ne találj ki más URL-t.`,
           breakdown,
           featureLimits,
         };
+      }),
+  }),
+
+  // ─── Stripe ───────────────────────────────────────────────────────────────────────────────────────
+  stripe: router({
+    createCheckout: appUserProcedure
+      .input(z.object({
+        planId: z.enum(["starter", "pro", "agency"]),
+        billing: z.enum(["monthly", "yearly"]).default("monthly"),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (!stripeClient) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Stripe nincs konfigurálva" });
+        const { PLAN_DETAILS } = await import("./stripe/products");
+        const plan = PLAN_DETAILS[input.planId];
+        const amount = input.billing === "yearly" ? plan.yearlyPriceHuf : plan.monthlyPriceHuf;
+        const origin = ctx.req.headers.origin as string || "https://g2a-growth-engine.manus.space";
+        const session = await stripeClient.checkout.sessions.create({
+          mode: input.billing === "yearly" ? "payment" : "subscription",
+          allow_promotion_codes: true,
+          customer_email: ctx.appUser.email,
+          client_reference_id: ctx.appUser.id,
+          metadata: {
+            user_id: ctx.appUser.id,
+            plan_id: input.planId,
+            billing: input.billing,
+            customer_email: ctx.appUser.email,
+            customer_name: ctx.appUser.name ?? "",
+          },
+          line_items: [{
+            price_data: {
+              currency: "huf",
+              unit_amount: amount,
+              product_data: { name: plan.name, description: plan.description },
+              ...(input.billing === "monthly" ? { recurring: { interval: "month" } } : {}),
+            },
+            quantity: 1,
+          }],
+          success_url: `${origin}/beallitasok?tab=billing&checkout=success`,
+          cancel_url: `${origin}/beallitasok?tab=billing&checkout=cancelled`,
+        });
+        return { url: session.url };
+      }),
+
+    getPortalUrl: appUserProcedure
+      .mutation(async ({ ctx }) => {
+        if (!stripeClient) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Stripe nincs konfigurálva" });
+        if (!ctx.appUser.stripeCustomerId) throw new TRPCError({ code: "NOT_FOUND", message: "Nincs Stripe előfizetés" });
+        const origin = ctx.req.headers.origin as string || "https://g2a-growth-engine.manus.space";
+        const session = await stripeClient.billingPortal.sessions.create({
+          customer: ctx.appUser.stripeCustomerId,
+          return_url: `${origin}/beallitasok?tab=billing`,
+        });
+        return { url: session.url };
       }),
   }),
 });

@@ -995,3 +995,56 @@
 - [x] Éves árak: Starter 99 000 Ft/év (~8 250 Ft/hó), Pro 249 000 Ft/év (~20 750 Ft/hó), Agency 499 000 Ft/év (~41 583 Ft/hó)
 - [x] Animált ár váltás (framer-motion motion.div key-alapon)
 - [ ] Register.tsx: éves/havi választó szinkronizálása (következő sprint)
+
+## Sprint 47 – Register.tsx éves/havi kapcsoló
+
+- [ ] Register.tsx: isYearly state hozzáadása
+- [ ] Register.tsx: Havi/Éves toggle UI (Landing.tsx-szel azonos stílus)
+- [ ] Register.tsx: éves árak megjelenítése (99 000 / 249 000 / 499 000 Ft/év)
+- [ ] Register.tsx: havi ekvivalens + "2 hónap ingyen" felirat
+- [ ] Register.tsx: animált ár váltás (framer-motion)
+
+## Sprint 48 – Dashboard KPI kártyák frissítése
+
+- [ ] Dashboard: "Kiküldött Emailek" kártya cseréje "AI Generált Tartalmak" KPI-ra
+- [ ] Dashboard: valódi content count lekérése tRPC-ből
+- [ ] Dashboard: "Aktív Kampányok" kártya hozzáadása (campaign count)
+- [ ] Dashboard: KPI kártyák valódi adatokkal (leads, content, campaigns, AI usage)
+
+## Sprint 49 – Stripe integráció
+
+- [ ] webdev_add_feature stripe futtatása
+- [ ] Stripe termékek létrehozása (Starter 9 900 Ft/hó, Pro 24 900 Ft/hó, Agency 49 900 Ft/hó)
+- [ ] Stripe éves termékek (Starter 99 000 Ft/év, Pro 249 000 Ft/év, Agency 499 000 Ft/év)
+- [ ] Checkout session tRPC procedure
+- [ ] Webhook handler: subscriptionPlan frissítése sikeres fizetés után
+- [ ] Billing tab: "Csomag frissítése" gombok → Stripe Checkout
+- [ ] Stripe Customer Portal link a Billing tabban
+
+## Sprint 47 – Register.tsx éves/havi kapcsoló
+
+- [x] isYearly state hozzáadása Register.tsx-hez
+- [x] Éves/havi toggle UI (animált, -17% badge)
+- [x] Éves árak: ANNUAL_PRICES + ANNUAL_MONTHLY_EQUIV konstansok
+- [x] Ár megjelenítés: motion.div animált váltással
+- [x] Step 2 összefoglaló: éves/havi ár szinkronizálva
+
+## Sprint 48 – Dashboard KPI kártyák frissítése
+
+- [x] "Kiküldött Emailek" KPI eltávolítva (email integráció nincs)
+- [x] "AI Tartalmak" KPI: contentItems.length (valódi DB adat)
+- [x] "Aktív Kampányok" KPI: campaigns.list tRPC query (draft + active)
+- [x] "AI Kreditek" KPI: aiUsage.status tRPC query (used/limit megjelenítés)
+
+## Sprint 49 – Stripe integráció
+
+- [x] stripe npm csomag telepítve
+- [x] server/stripe/products.ts: plan definíciók (HUF árak, éves/havi)
+- [x] server/stripe/webhook.ts: checkout.session.completed → subscriptionPlan frissítés, subscription.deleted → free downgrade
+- [x] server/_core/index.ts: webhook route regisztrálva express.json() ELŐTT
+- [x] server/routers.ts: stripe.createCheckout + stripe.getPortalUrl tRPC procedure
+- [x] drizzle/schema.ts: stripeCustomerId, stripeSubscriptionId, subscriptionBilling mezők hozzáadva
+- [x] pnpm db:push: migráció sikeresen lefutott
+- [x] BillingPlanCards.tsx: valódi Stripe checkout + éves/havi kapcsoló + portal link
+- [x] Settings.tsx: BillingPlanCards komponens integrálva
+- [x] TypeScript: 0 hiba, 53/53 teszt zöld
