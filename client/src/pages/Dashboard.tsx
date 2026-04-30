@@ -79,10 +79,10 @@ export default function Dashboard() {
   const aiGeneratedCount = contentItems.filter((c: any) => c.generatedByAi || c.aiGenerated).length;
   const activeCampaigns = (campaigns as any[]).filter(c => c.status === "active" || c.status === "draft").length;
   const kpis = [
-    { label: "Aktív Leadek", value: leads.filter(l => l.status !== "closed_won" && l.status !== "closed_lost").length, icon: Users, color: "oklch(0.6 0.2 255)" },
-    { label: "AI Tartalmak", value: contentItems.length, icon: Sparkles, color: "oklch(0.65 0.18 165)" },
-    { label: "Aktív Kampányok", value: activeCampaigns, icon: Zap, color: "oklch(0.75 0.18 75)" },
-    { label: "AI Kreditek", value: aiUsage ? (aiUsage.limit === -1 ? "∞" : `${aiUsage.used}/${aiUsage.limit}`) : "–", icon: Brain, color: "oklch(0.7 0.18 300)" },
+    { label: "Aktív Leadek", value: leads.filter(l => l.status !== "closed_won" && l.status !== "closed_lost").length, icon: Users, color: "var(--qa-accent)" },
+    { label: "AI Tartalmak", value: contentItems.length, icon: Sparkles, color: "var(--qa-success)" },
+    { label: "Aktív Kampányok", value: activeCampaigns, icon: Zap, color: "var(--qa-warning)" },
+    { label: "AI Kreditek", value: aiUsage ? (aiUsage.limit === -1 ? "∞" : `${aiUsage.used}/${aiUsage.limit}`) : "–", icon: Brain, color: "var(--qa-accent-purple)" },
   ];
 
   const handleApproveEmail = async (id: string) => {
@@ -96,13 +96,13 @@ export default function Dashboard() {
   };
 
   const card = (children: React.ReactNode, className?: string) => (
-    <div className={`rounded-xl border p-4 ${className ?? ""}`} style={{ background: "oklch(0.17 0.022 255)", borderColor: "oklch(1 0 0 / 8%)" }}>
+    <div className={`rounded-xl border p-4 ${className ?? ""}`} style={{ background: "var(--qa-surface)", borderColor: "var(--qa-border)" }}>
       {children}
     </div>
   );
 
   const sectionTitle = (text: string) => (
-    <h2 className="text-xs font-bold uppercase tracking-wider mb-3" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.5 0.015 240)" }}>{text}</h2>
+    <h2 className="text-xs font-bold uppercase tracking-wider mb-3" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg4)" }}>{text}</h2>
   );
 
   return (
@@ -110,22 +110,22 @@ export default function Dashboard() {
       {/* Welcome bar */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>
+          <h1 className="text-xl font-bold" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>
             Jó reggelt! 👋
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: "oklch(0.55 0.015 240)" }}>
+          <p className="text-sm mt-0.5" style={{ color: "var(--qa-fg3)" }}>
             {isSuperAdmin && activeProject ? (
               <>
-                Aktív projekt: <span className="font-semibold" style={{ color: "oklch(0.75 0.18 75)" }}>{activeProject.name}</span>
-                <span className="mx-2" style={{ color: "oklch(0.35 0.015 240)" }}>·</span>
+                Aktív projekt: <span className="font-semibold" style={{ color: "var(--qa-warning)" }}>{activeProject.name}</span>
+                <span className="mx-2" style={{ color: "var(--qa-fg4)" }}>·</span>
               </>
             ) : activeProfile.name ? (
               <>
-                Aktív ügyfél: <span className="font-semibold" style={{ color: "oklch(0.75 0.18 255)" }}>{activeProfile.name}</span>
-                <span className="mx-2" style={{ color: "oklch(0.35 0.015 240)" }}>·</span>
+                Aktív ügyfél: <span className="font-semibold" style={{ color: "var(--qa-accent)" }}>{activeProfile.name}</span>
+                <span className="mx-2" style={{ color: "var(--qa-fg4)" }}>·</span>
               </>
             ) : null}
-            <span style={{ color: "oklch(0.45 0.015 240)" }}>{new Date().toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric" })}</span>
+            <span style={{ color: "var(--qa-fg4)" }}>{new Date().toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric" })}</span>
           </p>
         </div>
 
@@ -144,45 +144,45 @@ export default function Dashboard() {
             <div>
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "oklch(0.75 0.18 75 / 15%)" }}>
-                    <Clock size={16} style={{ color: "oklch(0.75 0.18 75)" }} />
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "oklch(from var(--qa-warning) l c h / 15%)" }}>
+                    <Clock size={16} style={{ color: "var(--qa-warning)" }} />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold leading-none" style={{ color: "oklch(0.92 0.008 240)", fontFamily: "Sora, sans-serif" }}>{totalApproval}</p>
-                    <p className="text-xs mt-0.5" style={{ color: "oklch(0.55 0.015 240)" }}>elem vár jóváhagyásra</p>
+                    <p className="text-2xl font-bold leading-none" style={{ color: "var(--qa-fg)", fontFamily: "Sora, sans-serif" }}>{totalApproval}</p>
+                    <p className="text-xs mt-0.5" style={{ color: "var(--qa-fg3)" }}>elem vár jóváhagyásra</p>
                   </div>
                 </div>
               </div>
               {pendingEmails.slice(0, 2).map(e => (
-                <div key={e.id} className="flex items-center justify-between py-2 border-t" style={{ borderColor: "oklch(1 0 0 / 6%)" }}>
+                <div key={e.id} className="flex items-center justify-between py-2 border-t" style={{ borderColor: "var(--qa-border)" }}>
                   <div className="flex items-center gap-2 min-w-0">
-                    <Mail size={13} style={{ color: "oklch(0.6 0.2 255)", flexShrink: 0 }} />
-                    <p className="text-xs truncate" style={{ color: "oklch(0.78 0.008 240)" }}>{e.subject}</p>
+                    <Mail size={13} style={{ color: "var(--qa-accent)", flexShrink: 0 }} />
+                    <p className="text-xs truncate" style={{ color: "var(--qa-fg2)" }}>{e.subject}</p>
                   </div>
-                  <button onClick={() => handleApproveEmail(e.id)} className="ml-2 flex-shrink-0 px-2 py-1 rounded text-xs font-semibold flex items-center gap-1" style={{ background: "oklch(0.65 0.18 165 / 15%)", color: "oklch(0.65 0.18 165)" }}>
+                  <button onClick={() => handleApproveEmail(e.id)} className="ml-2 flex-shrink-0 px-2 py-1 rounded text-xs font-semibold flex items-center gap-1" style={{ background: "oklch(from var(--qa-success) l c h / 15%)", color: "var(--qa-success)" }}>
                     <ThumbsUp size={11} />
                   </button>
                 </div>
               ))}
               {pendingContent.slice(0, 2).map((c: any) => (
-                <div key={c.id} className="flex items-center justify-between py-2 border-t" style={{ borderColor: "oklch(1 0 0 / 6%)" }}>
+                <div key={c.id} className="flex items-center justify-between py-2 border-t" style={{ borderColor: "var(--qa-border)" }}>
                   <div className="flex items-center gap-2 min-w-0">
-                    <FileText size={13} style={{ color: "oklch(0.7 0.18 300)", flexShrink: 0 }} />
-                    <p className="text-xs truncate" style={{ color: "oklch(0.78 0.008 240)" }}>{c.title}</p>
+                    <FileText size={13} style={{ color: "var(--qa-accent-purple)", flexShrink: 0 }} />
+                    <p className="text-xs truncate" style={{ color: "var(--qa-fg2)" }}>{c.title}</p>
                   </div>
-                  <button onClick={() => handleApproveContent(c.id)} className="ml-2 flex-shrink-0 px-2 py-1 rounded text-xs font-semibold flex items-center gap-1" style={{ background: "oklch(0.65 0.18 165 / 15%)", color: "oklch(0.65 0.18 165)" }}>
+                  <button onClick={() => handleApproveContent(c.id)} className="ml-2 flex-shrink-0 px-2 py-1 rounded text-xs font-semibold flex items-center gap-1" style={{ background: "oklch(from var(--qa-success) l c h / 15%)", color: "var(--qa-success)" }}>
                     <ThumbsUp size={11} />
                   </button>
                 </div>
               ))}
               {totalApproval > 4 && (
-                <button onClick={() => navigate("/sales-ops")} className="mt-2 text-xs flex items-center gap-1" style={{ color: "oklch(0.6 0.2 255)" }}>
+                <button onClick={() => navigate("/sales-ops")} className="mt-2 text-xs flex items-center gap-1" style={{ color: "var(--qa-accent)" }}>
                   +{totalApproval - 4} további <ArrowRight size={11} />
                 </button>
               )}
               {totalApproval === 0 && (
-                <p className="text-xs text-center py-3" style={{ color: "oklch(0.5 0.015 240)" }}>
-                  <CheckCircle2 size={16} className="mx-auto mb-1" style={{ color: "oklch(0.65 0.18 165)" }} />
+                <p className="text-xs text-center py-3" style={{ color: "var(--qa-fg4)" }}>
+                  <CheckCircle2 size={16} className="mx-auto mb-1" style={{ color: "var(--qa-success)" }} />
                   Nincs jóváhagyásra váró elem
                 </p>
               )}
@@ -197,27 +197,27 @@ export default function Dashboard() {
             <div className="space-y-2">
               {weekPriorities.length === 0 && (
                 <div className="text-center py-4">
-                  <CheckCircle2 size={20} className="mx-auto mb-2" style={{ color: "oklch(0.65 0.18 165)" }} />
-                  <p className="text-xs" style={{ color: "oklch(0.5 0.015 240)" }}>Nincsenek aktív prioritások</p>
+                  <CheckCircle2 size={20} className="mx-auto mb-2" style={{ color: "var(--qa-success)" }} />
+                  <p className="text-xs" style={{ color: "var(--qa-fg4)" }}>Nincsenek aktív prioritások</p>
                 </div>
               )}
               {weekPriorities.map(p => (
-                <button key={p.id} onClick={() => navigate(p.href)} className="w-full flex items-center justify-between p-2.5 rounded-lg transition-colors text-left" style={{ background: "oklch(0.22 0.02 255)" }}
-                  onMouseEnter={(e: any) => (e.currentTarget.style.background = "oklch(0.25 0.02 255)")}
-                  onMouseLeave={(e: any) => (e.currentTarget.style.background = "oklch(0.22 0.02 255)")}
+                <button key={p.id} onClick={() => navigate(p.href)} className="w-full flex items-center justify-between p-2.5 rounded-lg transition-colors text-left" style={{ background: "var(--qa-surface2)" }}
+                  onMouseEnter={(e: any) => (e.currentTarget.style.background = "var(--qa-surface3)")}
+                  onMouseLeave={(e: any) => (e.currentTarget.style.background = "var(--qa-surface2)")}
                 >
                   <div className="flex items-center gap-2.5">
-                    <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: "oklch(0.6 0.2 255 / 15%)" }}>
-                      {p.type === "email" && <Mail size={12} style={{ color: "oklch(0.6 0.2 255)" }} />}
-                      {p.type === "content" && <FileText size={12} style={{ color: "oklch(0.7 0.18 300)" }} />}
-                      {p.type === "strategy" && <BarChart3 size={12} style={{ color: "oklch(0.65 0.18 165)" }} />}
-                      {p.type === "leads" && <Users size={12} style={{ color: "oklch(0.75 0.18 75)" }} />}
+                    <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: "oklch(from var(--qa-accent) l c h / 15%)" }}>
+                      {p.type === "email" && <Mail size={12} style={{ color: "var(--qa-accent)" }} />}
+                      {p.type === "content" && <FileText size={12} style={{ color: "var(--qa-accent-purple)" }} />}
+                      {p.type === "strategy" && <BarChart3 size={12} style={{ color: "var(--qa-success)" }} />}
+                      {p.type === "leads" && <Users size={12} style={{ color: "var(--qa-warning)" }} />}
                     </div>
-                    <p className="text-xs font-medium" style={{ color: "oklch(0.85 0.008 240)" }}>{p.label}</p>
+                    <p className="text-xs font-medium" style={{ color: "var(--qa-fg2)" }}>{p.label}</p>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold px-1.5 py-0.5 rounded" style={{ background: "oklch(0.6 0.2 255 / 15%)", color: "oklch(0.75 0.18 255)" }}>{p.count}</span>
-                    <ChevronRight size={12} style={{ color: "oklch(0.45 0.015 240)" }} />
+                    <span className="text-xs font-bold px-1.5 py-0.5 rounded" style={{ background: "oklch(from var(--qa-accent) l c h / 15%)", color: "var(--qa-accent)" }}>{p.count}</span>
+                    <ChevronRight size={12} style={{ color: "var(--qa-fg4)" }} />
                   </div>
                 </button>
               ))}
@@ -232,20 +232,20 @@ export default function Dashboard() {
             <div>
               {upcomingScheduled.length === 0 ? (
                 <div className="text-center py-4">
-                  <Calendar size={24} className="mx-auto mb-2" style={{ color: "oklch(0.4 0.015 240)" }} />
-                  <p className="text-xs" style={{ color: "oklch(0.5 0.015 240)" }}>Nincs ütemezett poszt a következő 7 napban</p>
-                  <button onClick={() => navigate("/content-studio")} className="mt-2 text-xs" style={{ color: "oklch(0.6 0.2 255)" }}>
+                  <Calendar size={24} className="mx-auto mb-2" style={{ color: "var(--qa-fg4)" }} />
+                  <p className="text-xs" style={{ color: "var(--qa-fg4)" }}>Nincs ütemezett poszt a következő 7 napban</p>
+                  <button onClick={() => navigate("/content-studio")} className="mt-2 text-xs" style={{ color: "var(--qa-accent)" }}>
                     Tartalom ütemezése →
                   </button>
                 </div>
               ) : upcomingScheduled.map((c: any) => (
-                <div key={c.id} className="flex items-center gap-2.5 py-2 border-b last:border-0" style={{ borderColor: "oklch(1 0 0 / 6%)" }}>
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "oklch(0.7 0.18 300 / 15%)" }}>
-                    <Calendar size={13} style={{ color: "oklch(0.7 0.18 300)" }} />
+                <div key={c.id} className="flex items-center gap-2.5 py-2 border-b last:border-0" style={{ borderColor: "var(--qa-border)" }}>
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "oklch(from var(--qa-accent-purple) l c h / 15%)" }}>
+                    <Calendar size={13} style={{ color: "var(--qa-accent-purple)" }} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium truncate" style={{ color: "oklch(0.85 0.008 240)" }}>{c.title}</p>
-                    <p className="text-xs" style={{ color: "oklch(0.5 0.015 240)" }}>
+                    <p className="text-xs font-medium truncate" style={{ color: "var(--qa-fg2)" }}>{c.title}</p>
+                    <p className="text-xs" style={{ color: "var(--qa-fg4)" }}>
                       {c.platform} · {c.scheduledAt ? new Date(c.scheduledAt).toLocaleDateString("hu-HU", { month: "short", day: "numeric" }) : "–"}
                     </p>
                   </div>
@@ -264,24 +264,24 @@ export default function Dashboard() {
           {sectionTitle("Top Insight")}
           {card(
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(135deg, oklch(0.6 0.2 255 / 20%), oklch(0.55 0.18 165 / 20%))" }}>
-                <Lightbulb size={18} style={{ color: "oklch(0.75 0.18 75)" }} />
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(135deg, oklch(from var(--qa-accent) l c h / 20%), oklch(0.55 0.18 165 / 20%))" }}>
+                <Lightbulb size={18} style={{ color: "var(--qa-warning)" }} />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-semibold mb-1" style={{ color: "oklch(0.88 0.008 240)", fontFamily: "Sora, sans-serif" }}>
+                <p className="text-sm font-semibold mb-1" style={{ color: "var(--qa-fg2)", fontFamily: "Sora, sans-serif" }}>
                   {activeProfile.name} – Heti AI Insight
                 </p>
-                <p className="text-xs leading-relaxed" style={{ color: "oklch(0.62 0.015 240)" }}>
+                <p className="text-xs leading-relaxed" style={{ color: "var(--qa-fg3)" }}>
                   {contentItems.length > 0 || leads.length > 0
                     ? `${leads.length} aktív lead és ${contentItems.length} tartalom alapján: fókuszálj a legjobb teljesítményű csatornára és ütemezd a következő hét tartalmait előre.`
                     : "Töltsd ki az onboardingot és generálj stratégiát, hogy személyre szabott AI insight-okat kapj a vállalkozásodról."}
                 </p>
                 <div className="flex gap-2 mt-2">
-                  <button onClick={() => navigate("/strategy")} className="text-xs flex items-center gap-1" style={{ color: "oklch(0.6 0.2 255)" }}>
+                  <button onClick={() => navigate("/strategy")} className="text-xs flex items-center gap-1" style={{ color: "var(--qa-accent)" }}>
                     Stratégiában megnyitás <ArrowRight size={11} />
                   </button>
-                  <span style={{ color: "oklch(0.35 0.015 240)" }}>·</span>
-                  <button onClick={() => navigate("/clients")} className="text-xs flex items-center gap-1" style={{ color: "oklch(0.65 0.18 165)" }}>
+                  <span style={{ color: "var(--qa-fg4)" }}>·</span>
+                  <button onClick={() => navigate("/clients")} className="text-xs flex items-center gap-1" style={{ color: "var(--qa-success)" }}>
                     Intelligence megtekintése <Eye size={11} />
                   </button>
                 </div>
@@ -297,34 +297,34 @@ export default function Dashboard() {
             <div>
               {atRiskLeads.length === 0 && unansweredInbound.length === 0 ? (
                 <div className="flex items-center gap-2 py-2">
-                  <CheckCircle2 size={16} style={{ color: "oklch(0.65 0.18 165)" }} />
-                  <p className="text-xs" style={{ color: "oklch(0.65 0.18 165)" }}>Nincsenek kockázatos elemek</p>
+                  <CheckCircle2 size={16} style={{ color: "var(--qa-success)" }} />
+                  <p className="text-xs" style={{ color: "var(--qa-success)" }}>Nincsenek kockázatos elemek</p>
                 </div>
               ) : (
                 <>
                   {unansweredInbound.map(e => (
-                    <div key={e.id} className="flex items-center gap-2.5 py-2 border-b last:border-0" style={{ borderColor: "oklch(1 0 0 / 6%)" }}>
-                      <AlertTriangle size={14} style={{ color: "oklch(0.75 0.18 75)", flexShrink: 0 }} />
+                    <div key={e.id} className="flex items-center gap-2.5 py-2 border-b last:border-0" style={{ borderColor: "var(--qa-border)" }}>
+                      <AlertTriangle size={14} style={{ color: "var(--qa-warning)", flexShrink: 0 }} />
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium truncate" style={{ color: "oklch(0.85 0.008 240)" }}>
+                        <p className="text-xs font-medium truncate" style={{ color: "var(--qa-fg2)" }}>
                           Megválaszolatlan: {e.fromName}
                         </p>
-                        <p className="text-xs" style={{ color: "oklch(0.5 0.015 240)" }}>Érdeklődő – azonnali figyelmet igényel</p>
+                        <p className="text-xs" style={{ color: "var(--qa-fg4)" }}>Érdeklődő – azonnali figyelmet igényel</p>
                       </div>
                       <button onClick={() => navigate("/sales-ops")} className="flex-shrink-0">
-                        <ChevronRight size={13} style={{ color: "oklch(0.45 0.015 240)" }} />
+                        <ChevronRight size={13} style={{ color: "var(--qa-fg4)" }} />
                       </button>
                     </div>
                   ))}
                   {atRiskLeads.map(l => (
-                    <div key={l.id} className="flex items-center gap-2.5 py-2 border-b last:border-0" style={{ borderColor: "oklch(1 0 0 / 6%)" }}>
-                      <AlertTriangle size={14} style={{ color: "oklch(0.65 0.22 25)", flexShrink: 0 }} />
+                    <div key={l.id} className="flex items-center gap-2.5 py-2 border-b last:border-0" style={{ borderColor: "var(--qa-border)" }}>
+                      <AlertTriangle size={14} style={{ color: "var(--qa-danger)", flexShrink: 0 }} />
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium truncate" style={{ color: "oklch(0.85 0.008 240)" }}>{l.company}</p>
-                        <p className="text-xs" style={{ color: "oklch(0.5 0.015 240)" }}>Megkeresett – nincs visszajelzés</p>
+                        <p className="text-xs font-medium truncate" style={{ color: "var(--qa-fg2)" }}>{l.company}</p>
+                        <p className="text-xs" style={{ color: "var(--qa-fg4)" }}>Megkeresett – nincs visszajelzés</p>
                       </div>
                       <button onClick={() => navigate("/sales-ops")} className="flex-shrink-0">
-                        <ChevronRight size={13} style={{ color: "oklch(0.45 0.015 240)" }} />
+                        <ChevronRight size={13} style={{ color: "var(--qa-fg4)" }} />
                       </button>
                     </div>
                   ))}
@@ -344,14 +344,14 @@ export default function Dashboard() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: i * 0.08 }}
             className="rounded-xl border p-4"
-            style={{ background: "oklch(0.17 0.022 255)", borderColor: "oklch(1 0 0 / 8%)" }}
+            style={{ background: "var(--qa-surface)", borderColor: "var(--qa-border)" }}
           >
             <div className="flex items-center justify-between mb-2">
               <k.icon size={16} style={{ color: k.color }} />
-              <TrendingUp size={12} style={{ color: "oklch(0.45 0.015 240)" }} />
+              <TrendingUp size={12} style={{ color: "var(--qa-fg4)" }} />
             </div>
-            <p className="text-2xl font-bold" style={{ color: "oklch(0.92 0.008 240)", fontFamily: "Sora, sans-serif" }}>{k.value}</p>
-            <p className="text-xs mt-0.5" style={{ color: "oklch(0.5 0.015 240)" }}>{k.label}</p>
+            <p className="text-2xl font-bold" style={{ color: "var(--qa-fg)", fontFamily: "Sora, sans-serif" }}>{k.value}</p>
+            <p className="text-xs mt-0.5" style={{ color: "var(--qa-fg4)" }}>{k.label}</p>
           </motion.div>
         ))}
       </div>
@@ -363,23 +363,23 @@ export default function Dashboard() {
           {card(
             <div>
               {outbound.length === 0 && inbound.length === 0 ? (
-                <p className="text-xs text-center py-4" style={{ color: "oklch(0.5 0.015 240)" }}>Nincs aktivitás</p>
+                <p className="text-xs text-center py-4" style={{ color: "var(--qa-fg4)" }}>Nincs aktivitás</p>
               ) : [
                 ...outbound.slice(0, 3).map(e => ({ id: `o-${e.id}`, type: "email", label: e.subject, sub: e.toName || e.to, time: e.createdAt ? new Date(e.createdAt).toLocaleDateString("hu-HU") : "–", href: "/sales-ops" })),
                 ...inbound.slice(0, 2).map(e => ({ id: `i-${e.id}`, type: "inbound", label: e.subject, sub: e.fromName || e.from, time: e.receivedAt ? new Date(e.receivedAt).toLocaleDateString("hu-HU") : "–", href: "/sales-ops" })),
               ].slice(0, 5).map(a => (
-                <button key={a.id} onClick={() => navigate(a.href)} className="w-full flex items-center gap-3 py-2.5 border-b last:border-0 text-left" style={{ borderColor: "oklch(1 0 0 / 6%)" }}
-                  onMouseEnter={(e: any) => (e.currentTarget.style.background = "oklch(1 0 0 / 3%)")}
+                <button key={a.id} onClick={() => navigate(a.href)} className="w-full flex items-center gap-3 py-2.5 border-b last:border-0 text-left" style={{ borderColor: "var(--qa-border)" }}
+                  onMouseEnter={(e: any) => (e.currentTarget.style.background = "oklch(1 0 0 / 4%)")}
                   onMouseLeave={(e: any) => (e.currentTarget.style.background = "transparent")}
                 >
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: a.type === "email" ? "oklch(0.6 0.2 255 / 15%)" : "oklch(0.65 0.18 165 / 15%)" }}>
-                    {a.type === "email" ? <Mail size={13} style={{ color: "oklch(0.6 0.2 255)" }} /> : <MessageSquare size={13} style={{ color: "oklch(0.65 0.18 165)" }} />}
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: a.type === "email" ? "oklch(from var(--qa-accent) l c h / 15%)" : "oklch(from var(--qa-success) l c h / 15%)" }}>
+                    {a.type === "email" ? <Mail size={13} style={{ color: "var(--qa-accent)" }} /> : <MessageSquare size={13} style={{ color: "var(--qa-success)" }} />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium truncate" style={{ color: "oklch(0.85 0.008 240)" }}>{a.label}</p>
-                    <p className="text-xs" style={{ color: "oklch(0.5 0.015 240)" }}>{a.sub} · {a.time}</p>
+                    <p className="text-xs font-medium truncate" style={{ color: "var(--qa-fg2)" }}>{a.label}</p>
+                    <p className="text-xs" style={{ color: "var(--qa-fg4)" }}>{a.sub} · {a.time}</p>
                   </div>
-                  <Activity size={12} style={{ color: "oklch(0.4 0.015 240)", flexShrink: 0 }} />
+                  <Activity size={12} style={{ color: "var(--qa-fg4)", flexShrink: 0 }} />
                 </button>
               ))}
             </div>
@@ -391,23 +391,23 @@ export default function Dashboard() {
           {card(
             <div>
               {inbound.length === 0 ? (
-                <p className="text-xs text-center py-4" style={{ color: "oklch(0.5 0.015 240)" }}>Nincsenek beérkező válaszok</p>
+                <p className="text-xs text-center py-4" style={{ color: "var(--qa-fg4)" }}>Nincsenek beérkező válaszok</p>
               ) : inbound.slice(0, 5).map(e => (
-                <button key={e.id} onClick={() => navigate("/sales-ops")} className="w-full flex items-center gap-3 py-2.5 border-b last:border-0 text-left" style={{ borderColor: "oklch(1 0 0 / 6%)" }}
-                  onMouseEnter={(e2: any) => (e2.currentTarget.style.background = "oklch(1 0 0 / 3%)")}
+                <button key={e.id} onClick={() => navigate("/sales-ops")} className="w-full flex items-center gap-3 py-2.5 border-b last:border-0 text-left" style={{ borderColor: "var(--qa-border)" }}
+                  onMouseEnter={(e2: any) => (e2.currentTarget.style.background = "oklch(1 0 0 / 4%)")}
                   onMouseLeave={(e2: any) => (e2.currentTarget.style.background = "transparent")}
                 >
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "oklch(0.65 0.18 165 / 15%)" }}>
-                    <MessageSquare size={13} style={{ color: "oklch(0.65 0.18 165)" }} />
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "oklch(from var(--qa-success) l c h / 15%)" }}>
+                    <MessageSquare size={13} style={{ color: "var(--qa-success)" }} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium truncate" style={{ color: "oklch(0.85 0.008 240)" }}>{e.fromName}</p>
-                    <p className="text-xs truncate" style={{ color: "oklch(0.5 0.015 240)" }}>{e.subject}</p>
+                    <p className="text-xs font-medium truncate" style={{ color: "var(--qa-fg2)" }}>{e.fromName}</p>
+                    <p className="text-xs truncate" style={{ color: "var(--qa-fg4)" }}>{e.subject}</p>
                   </div>
-                  {!e.read && <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: "oklch(0.6 0.2 255)" }} />}
+                  {!e.read && <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: "var(--qa-accent)" }} />}
                 </button>
               ))}
-              <button onClick={() => navigate("/sales-ops")} className="mt-2 text-xs flex items-center gap-1 w-full justify-center" style={{ color: "oklch(0.6 0.2 255)" }}>
+              <button onClick={() => navigate("/sales-ops")} className="mt-2 text-xs flex items-center gap-1 w-full justify-center" style={{ color: "var(--qa-accent)" }}>
                 Összes válasz <Eye size={11} />
               </button>
             </div>
@@ -433,10 +433,10 @@ function AiCreditsWidget({ navigate, isSuperAdmin }: { navigate: (path: string) 
   const isWarning = aiUsage.warning;
   const isExhausted = aiUsage.remaining === 0;
   const barColor = isExhausted
-    ? "linear-gradient(90deg, oklch(0.65 0.18 25), oklch(0.7 0.2 30))"
+    ? "linear-gradient(90deg, var(--qa-danger), oklch(0.7 0.2 30))"
     : isWarning
-    ? "linear-gradient(90deg, oklch(0.75 0.18 75), oklch(0.7 0.2 60))"
-    : "linear-gradient(90deg, oklch(0.6 0.2 255), oklch(0.55 0.22 280))";
+    ? "linear-gradient(90deg, var(--qa-warning), oklch(0.7 0.2 60))"
+    : "linear-gradient(90deg, var(--qa-accent), var(--qa-accent))";
 
   const planLabels: Record<string, string> = {
     free: "Ingyenes",
@@ -451,39 +451,39 @@ function AiCreditsWidget({ navigate, isSuperAdmin }: { navigate: (path: string) 
   const daysLeft = Math.ceil((resetDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
   const featureRows = aiUsage.featureLimits ? [
-    { label: "Szöveges generálás", icon: Brain, used: (aiUsage.breakdown?.post ?? 0) + (aiUsage.breakdown?.strategy ?? 0) + (aiUsage.breakdown?.contentPlan ?? 0), limit: ((aiUsage.featureLimits as any).post ?? 0) + ((aiUsage.featureLimits as any).strategy ?? 0) + ((aiUsage.featureLimits as any).contentPlan ?? 0), color: "oklch(0.6 0.2 255)" },
-    { label: "Képgenerálás", icon: Image, used: aiUsage.breakdown?.image ?? 0, limit: (aiUsage.featureLimits as any).image ?? 0, color: "oklch(0.7 0.18 300)" },
-    { label: "AI videók (HeyGen)", icon: Video, used: aiUsage.breakdown?.video ?? 0, limit: (aiUsage.featureLimits as any).video ?? 0, color: "oklch(0.65 0.18 165)" },
+    { label: "Szöveges generálás", icon: Brain, used: (aiUsage.breakdown?.post ?? 0) + (aiUsage.breakdown?.strategy ?? 0) + (aiUsage.breakdown?.contentPlan ?? 0), limit: ((aiUsage.featureLimits as any).post ?? 0) + ((aiUsage.featureLimits as any).strategy ?? 0) + ((aiUsage.featureLimits as any).contentPlan ?? 0), color: "var(--qa-accent)" },
+    { label: "Képgenerálás", icon: Image, used: aiUsage.breakdown?.image ?? 0, limit: (aiUsage.featureLimits as any).image ?? 0, color: "var(--qa-accent-purple)" },
+    { label: "AI videók (HeyGen)", icon: Video, used: aiUsage.breakdown?.video ?? 0, limit: (aiUsage.featureLimits as any).video ?? 0, color: "var(--qa-success)" },
   ] : [];
 
   return (
     <div className="mb-6">
-      <h2 className="text-xs font-bold uppercase tracking-wider mb-3" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.5 0.015 240)" }}>AI Kredit</h2>
-      <div className="rounded-xl border p-4" style={{ background: "oklch(0.17 0.022 255)", borderColor: isExhausted ? "oklch(0.65 0.18 25 / 40%)" : isWarning ? "oklch(0.75 0.18 75 / 40%)" : "oklch(1 0 0 / 8%)" }}>
+      <h2 className="text-xs font-bold uppercase tracking-wider mb-3" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg4)" }}>AI Kredit</h2>
+      <div className="rounded-xl border p-4" style={{ background: "var(--qa-surface)", borderColor: isExhausted ? "oklch(0.65 0.18 25 / 40%)" : isWarning ? "oklch(0.75 0.18 75 / 40%)" : "var(--qa-border)" }}>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "oklch(0.6 0.2 255 / 15%)" }}>
-              <Brain size={16} style={{ color: "oklch(0.6 0.2 255)" }} />
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "oklch(from var(--qa-accent) l c h / 15%)" }}>
+              <Brain size={16} style={{ color: "var(--qa-accent)" }} />
             </div>
             <div>
-              <p className="text-xs font-semibold" style={{ color: "oklch(0.85 0.008 240)" }}>
+              <p className="text-xs font-semibold" style={{ color: "var(--qa-fg2)" }}>
                 {planLabels[aiUsage.plan] ?? aiUsage.plan} csomag
               </p>
-              <p className="text-xs" style={{ color: "oklch(0.5 0.015 240)" }}>
+              <p className="text-xs" style={{ color: "var(--qa-fg4)" }}>
                 Reset {daysLeft} nap múlva · {resetDate.toLocaleDateString("hu-HU", { month: "long", day: "numeric" })}
               </p>
             </div>
           </div>
           <div className="text-right">
-            <p className="text-lg font-bold leading-none" style={{ color: isExhausted ? "oklch(0.65 0.18 25)" : "oklch(0.92 0.008 240)", fontFamily: "Sora, sans-serif" }}>
-              {aiUsage.used}<span className="text-xs font-normal" style={{ color: "oklch(0.5 0.015 240)" }}>/{aiUsage.limit}</span>
+            <p className="text-lg font-bold leading-none" style={{ color: isExhausted ? "var(--qa-danger)" : "var(--qa-fg)", fontFamily: "Sora, sans-serif" }}>
+              {aiUsage.used}<span className="text-xs font-normal" style={{ color: "var(--qa-fg4)" }}>/{aiUsage.limit}</span>
             </p>
-            <p className="text-xs mt-0.5" style={{ color: "oklch(0.5 0.015 240)" }}>generálás felhasználva</p>
+            <p className="text-xs mt-0.5" style={{ color: "var(--qa-fg4)" }}>generálás felhasználva</p>
           </div>
         </div>
 
         {/* Progress bar */}
-        <div className="w-full h-2 rounded-full overflow-hidden mb-3" style={{ background: "oklch(0.25 0.02 255)" }}>
+        <div className="w-full h-2 rounded-full overflow-hidden mb-3" style={{ background: "var(--qa-surface3)" }}>
           <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: barColor }} />
         </div>
 
@@ -491,10 +491,10 @@ function AiCreditsWidget({ navigate, isSuperAdmin }: { navigate: (path: string) 
         {featureRows.length > 0 && (
           <div className="grid grid-cols-3 gap-2 mb-3">
             {featureRows.map(row => (
-              <div key={row.label} className="rounded-lg p-2 text-center" style={{ background: "oklch(0.22 0.02 255)" }}>
+              <div key={row.label} className="rounded-lg p-2 text-center" style={{ background: "var(--qa-surface2)" }}>
                 <row.icon size={14} className="mx-auto mb-1" style={{ color: row.color }} />
-                <p className="text-xs font-bold" style={{ color: "oklch(0.85 0.008 240)" }}>{row.used}/{row.limit}</p>
-                <p className="text-xs leading-tight mt-0.5" style={{ color: "oklch(0.45 0.015 240)", fontSize: "10px" }}>{row.label}</p>
+                <p className="text-xs font-bold" style={{ color: "var(--qa-fg2)" }}>{row.used}/{row.limit}</p>
+                <p className="text-xs leading-tight mt-0.5" style={{ color: "var(--qa-fg4)", fontSize: "10px" }}>{row.label}</p>
               </div>
             ))}
           </div>
@@ -506,9 +506,9 @@ function AiCreditsWidget({ navigate, isSuperAdmin }: { navigate: (path: string) 
             onClick={() => navigate("/beallitasok?tab=billing")}
             className="w-full py-2 rounded-lg text-xs font-semibold transition-all"
             style={{
-              background: isExhausted ? "oklch(0.65 0.18 25 / 20%)" : "oklch(0.75 0.18 75 / 20%)",
-              color: isExhausted ? "oklch(0.75 0.18 25)" : "oklch(0.85 0.18 75)",
-              border: `1px solid ${isExhausted ? "oklch(0.65 0.18 25 / 30%)" : "oklch(0.75 0.18 75 / 30%)"}`
+              background: isExhausted ? "oklch(from var(--qa-danger) l c h / 15%)" : "oklch(from var(--qa-warning) l c h / 15%)",
+              color: isExhausted ? "var(--qa-danger)" : "var(--qa-warning)",
+              border: `1px solid ${isExhausted ? "oklch(from var(--qa-danger) l c h / 25%)" : "oklch(from var(--qa-warning) l c h / 25%)"}`
             }}
           >
             {isExhausted ? "⚡ Csomag frissítése – több AI kredit" : "⚠️ Hamarosan elfogy a kretited – frissítsd a csomagot"}

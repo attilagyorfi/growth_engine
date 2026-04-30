@@ -23,14 +23,14 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 
 // ─── Style tokens ──────────────────────────────────────────────────────────────
-const cardBg = "oklch(0.18 0.022 255)";
-const border = "1px solid oklch(1 0 0 / 8%)";
-const textPrimary = "oklch(0.92 0.008 240)";
-const textMuted = "oklch(0.55 0.015 240)";
-const blue = "oklch(0.6 0.2 255)";
-const green = "oklch(0.65 0.18 165)";
-const amber = "oklch(0.75 0.18 75)";
-const red = "oklch(0.65 0.22 25)";
+const cardBg = "var(--qa-surface)";
+const border = "1px solid var(--qa-border)";
+const textPrimary = "var(--qa-fg)";
+const textMuted = "var(--qa-fg3)";
+const blue = "var(--qa-accent)";
+const green = "var(--qa-success)";
+const amber = "var(--qa-warning)";
+const red = "var(--qa-danger)";
 
 const PLATFORM_COLORS: Record<string, string> = {
   linkedin: blue,
@@ -52,7 +52,7 @@ const STATUS_COLORS: Record<string, string> = {
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background: "oklch(0.22 0.025 255)", border, borderRadius: "0.5rem", padding: "0.75rem 1rem" }}>
+    <div style={{ background: "var(--qa-surface2)", border, borderRadius: "0.5rem", padding: "0.75rem 1rem" }}>
       <p style={{ color: textPrimary, fontFamily: "Sora, sans-serif", fontSize: "0.75rem", fontWeight: 600, marginBottom: "0.25rem" }}>{label}</p>
       {payload.map((entry: any) => (
         <p key={entry.name} style={{ color: entry.color ?? blue, fontSize: "0.75rem" }}>
@@ -231,14 +231,14 @@ export default function Analytics() {
 
         {/* Free tier notice */}
         {!subscription.canExportData && (
-          <div className="flex items-center justify-between rounded-xl px-4 py-3 text-sm" style={{ background: "oklch(0.6 0.2 255 / 8%)", border: "1px solid oklch(0.6 0.2 255 / 20%)" }}>
-            <span style={{ color: "oklch(0.75 0.015 240)" }}>📊 Ingyenes csomag – Az analitika megtekinthető, de az export Starter csomagtól érhető el.</span>
-            <button onClick={handleExport} className="ml-4 px-3 py-1 rounded-lg text-xs font-medium" style={{ background: "oklch(0.6 0.2 255 / 20%)", color: "oklch(0.8 0.1 255)" }}>Exportálás 🔒</button>
+          <div className="flex items-center justify-between rounded-xl px-4 py-3 text-sm" style={{ background: "oklch(from var(--qa-accent) l c h / 8%)", border: "1px solid oklch(from var(--qa-accent) l c h / 20%)" }}>
+            <span style={{ color: "var(--qa-fg2)" }}>📊 Ingyenes csomag – Az analitika megtekinthető, de az export Starter csomagtól érhető el.</span>
+            <button onClick={handleExport} className="ml-4 px-3 py-1 rounded-lg text-xs font-medium" style={{ background: "oklch(from var(--qa-accent) l c h / 20%)", color: "oklch(0.8 0.1 255)" }}>Exportálás 🔒</button>
           </div>
         )}
         {subscription.canExportData && (
           <div className="flex justify-end">
-            <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium" style={{ background: "oklch(0.6 0.2 255 / 15%)", color: "oklch(0.8 0.1 255)", border: "1px solid oklch(0.6 0.2 255 / 30%)" }}>CSV exportálás</button>
+            <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium" style={{ background: "oklch(from var(--qa-accent) l c h / 15%)", color: "oklch(0.8 0.1 255)", border: "1px solid oklch(from var(--qa-accent) l c h / 30%)" }}>CSV exportálás</button>
           </div>
         )}
 
@@ -304,7 +304,7 @@ export default function Analytics() {
                 <div>
                   <ResponsiveContainer width="100%" height={200}>
                     <BarChart data={leadsByStatus} barSize={28}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 6%)" vertical={false} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--qa-border)" vertical={false} />
                       <XAxis dataKey="name" tick={{ fill: textMuted, fontSize: 11 }} axisLine={false} tickLine={false} />
                       <YAxis tick={{ fill: textMuted, fontSize: 11 }} axisLine={false} tickLine={false} />
                       <Tooltip content={<CustomTooltip />} />
@@ -318,7 +318,7 @@ export default function Analytics() {
                 </div>
                 <div className="space-y-2">
                   {leadsByStatus.map(item => (
-                    <div key={item.name} className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ background: "oklch(0.22 0.02 255)" }}>
+                    <div key={item.name} className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ background: "var(--qa-surface2)" }}>
                       <div className="flex items-center gap-2">
                         <div className="w-2.5 h-2.5 rounded-full" style={{ background: item.color }} />
                         <span className="text-xs font-medium" style={{ color: textPrimary }}>{item.name}</span>
@@ -359,7 +359,7 @@ export default function Analytics() {
               ) : (
                 <ResponsiveContainer width="100%" height={180}>
                   <BarChart data={contentByPlatform} barSize={24}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 6%)" vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--qa-border)" vertical={false} />
                     <XAxis dataKey="platform" tick={{ fill: textMuted, fontSize: 11 }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fill: textMuted, fontSize: 11 }} axisLine={false} tickLine={false} />
                     <Tooltip content={<CustomTooltip />} />
@@ -400,7 +400,7 @@ export default function Analytics() {
                           <span className="text-xs font-medium" style={{ color: textPrimary }}>{item.name}</span>
                           <span className="text-xs font-bold" style={{ color: item.color }}>{item.value}</span>
                         </div>
-                        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "oklch(0.22 0.02 255)" }}>
+                        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--qa-surface2)" }}>
                           <div
                             className="h-full rounded-full transition-all"
                             style={{ width: `${Math.round((item.value / contentItems.length) * 100)}%`, background: item.color }}
@@ -409,7 +409,7 @@ export default function Analytics() {
                       </div>
                     </div>
                   ))}
-                  <div className="mt-3 pt-3 border-t" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
+                  <div className="mt-3 pt-3 border-t" style={{ borderColor: "var(--qa-border)" }}>
                     <div className="flex items-center justify-between">
                       <span className="text-xs" style={{ color: textMuted }}>Publikálási arány</span>
                       <span className="text-sm font-bold" style={{ color: green }}>
@@ -442,7 +442,7 @@ export default function Analytics() {
             ) : (
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={monthlyTrend} barSize={14} barGap={4}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 6%)" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--qa-border)" vertical={false} />
                   <XAxis dataKey="month" tick={{ fill: textMuted, fontSize: 11 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fill: textMuted, fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
                   <Tooltip content={<CustomTooltip />} />
@@ -489,7 +489,7 @@ export default function Analytics() {
                   { label: "Válaszolt", value: repliedEmails, color: blue },
                   { label: "Válaszarány", value: `${emailReplyRate}%`, color: amber },
                 ].map(({ label, value, color }) => (
-                  <div key={label} className="rounded-xl p-3 text-center" style={{ background: "oklch(0.22 0.02 255)" }}>
+                  <div key={label} className="rounded-xl p-3 text-center" style={{ background: "var(--qa-surface2)" }}>
                     <p className="text-xl font-bold" style={{ color }}>{value}</p>
                     <p className="text-xs mt-1" style={{ color: textMuted }}>{label}</p>
                   </div>

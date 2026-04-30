@@ -145,7 +145,7 @@ export default function AIWriter() {
           {/* Left: Input Panel */}
           <div className="space-y-5">
             {/* Content Type Selector */}
-            <div className="rounded-xl p-5 border" style={{ background: "oklch(0.15 0.02 255)", borderColor: "oklch(0.28 0.03 255)" }}>
+            <div className="rounded-xl p-5 border" style={{ background: "var(--qa-bg)", borderColor: "var(--qa-surface3)" }}>
               <h3 className="text-white font-semibold mb-3">Tartalom típusa</h3>
               <div className="grid grid-cols-2 gap-2">
                 {CONTENT_TYPES.map(type => {
@@ -158,7 +158,7 @@ export default function AIWriter() {
                       className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm transition-all"
                       style={{
                         background: isSelected ? `${type.color}22` : "oklch(0.18 0.02 255)",
-                        border: `1px solid ${isSelected ? type.color : "oklch(0.25 0.02 255)"}`,
+                        border: `1px solid ${isSelected ? type.color : "var(--qa-surface3)"}`,
                         color: isSelected ? type.color : "oklch(0.65 0.05 255)",
                       }}
                     >
@@ -172,7 +172,7 @@ export default function AIWriter() {
 
             {/* Email-specific fields */}
             {isEmail && (
-              <div className="rounded-xl p-5 border space-y-3" style={{ background: "oklch(0.15 0.02 255)", borderColor: "oklch(0.28 0.03 255)" }}>
+              <div className="rounded-xl p-5 border space-y-3" style={{ background: "var(--qa-bg)", borderColor: "var(--qa-surface3)" }}>
                 <h3 className="text-white font-semibold">Címzett adatai</h3>
                 <div>
                   <label className="text-gray-400 text-sm mb-1 block">Kapcsolattartó neve</label>
@@ -181,7 +181,7 @@ export default function AIWriter() {
                     onChange={e => setRecipientName(e.target.value)}
                     placeholder="pl. Kovács Péter"
                     className="w-full px-3 py-2 rounded-lg text-white text-sm outline-none"
-                    style={{ background: "oklch(0.18 0.02 255)", border: "1px solid oklch(0.28 0.03 255)" }}
+                    style={{ background: "oklch(0.18 0.02 255)", border: "1px solid var(--qa-surface3)" }}
                   />
                 </div>
                 <div>
@@ -191,14 +191,14 @@ export default function AIWriter() {
                     onChange={e => setRecipientCompany(e.target.value)}
                     placeholder="pl. TechVision Kft."
                     className="w-full px-3 py-2 rounded-lg text-white text-sm outline-none"
-                    style={{ background: "oklch(0.18 0.02 255)", border: "1px solid oklch(0.28 0.03 255)" }}
+                    style={{ background: "oklch(0.18 0.02 255)", border: "1px solid var(--qa-surface3)" }}
                   />
                 </div>
               </div>
             )}
 
             {/* Core inputs */}
-            <div className="rounded-xl p-5 border space-y-3" style={{ background: "oklch(0.15 0.02 255)", borderColor: "oklch(0.28 0.03 255)" }}>
+            <div className="rounded-xl p-5 border space-y-3" style={{ background: "var(--qa-bg)", borderColor: "var(--qa-surface3)" }}>
               <h3 className="text-white font-semibold">Tartalom paraméterei</h3>
               <div>
                 <label className="text-gray-400 text-sm mb-1 block">Téma / Célkitűzés *</label>
@@ -207,7 +207,7 @@ export default function AIWriter() {
                   onChange={e => setTopic(e.target.value)}
                   placeholder="pl. LinkedIn marketing szolgáltatásaink bemutatása"
                   className="w-full px-3 py-2 rounded-lg text-white text-sm outline-none"
-                  style={{ background: "oklch(0.18 0.02 255)", border: "1px solid oklch(0.28 0.03 255)" }}
+                  style={{ background: "oklch(0.18 0.02 255)", border: "1px solid var(--qa-surface3)" }}
                 />
               </div>
               <div>
@@ -217,7 +217,7 @@ export default function AIWriter() {
                   onChange={e => setTargetAudience(e.target.value)}
                   placeholder={`pl. ${activeProfile?.industry ?? "KKV döntéshozók"}`}
                   className="w-full px-3 py-2 rounded-lg text-white text-sm outline-none"
-                  style={{ background: "oklch(0.18 0.02 255)", border: "1px solid oklch(0.28 0.03 255)" }}
+                  style={{ background: "oklch(0.18 0.02 255)", border: "1px solid var(--qa-surface3)" }}
                 />
               </div>
               <div>
@@ -227,7 +227,7 @@ export default function AIWriter() {
                   onChange={e => setTone(e.target.value)}
                   placeholder={`pl. ${(activeProfile?.brandVoice as { tone?: string } | undefined)?.tone ?? "professzionális, barátságos"}`}
                   className="w-full px-3 py-2 rounded-lg text-white text-sm outline-none"
-                  style={{ background: "oklch(0.18 0.02 255)", border: "1px solid oklch(0.28 0.03 255)" }}
+                  style={{ background: "oklch(0.18 0.02 255)", border: "1px solid var(--qa-surface3)" }}
                 />
               </div>
               <div>
@@ -238,7 +238,7 @@ export default function AIWriter() {
                   placeholder="pl. Nemrég díjat nyertünk, akciós ajánlat van érvényben..."
                   rows={3}
                   className="w-full px-3 py-2 rounded-lg text-white text-sm outline-none resize-none"
-                  style={{ background: "oklch(0.18 0.02 255)", border: "1px solid oklch(0.28 0.03 255)" }}
+                  style={{ background: "oklch(0.18 0.02 255)", border: "1px solid var(--qa-surface3)" }}
                 />
               </div>
             </div>
@@ -258,7 +258,7 @@ export default function AIWriter() {
           </div>
 
           {/* Right: Output Panel */}
-          <div className="rounded-xl border overflow-hidden" style={{ background: "oklch(0.15 0.02 255)", borderColor: "oklch(0.28 0.03 255)" }}>
+          <div className="rounded-xl border overflow-hidden" style={{ background: "var(--qa-bg)", borderColor: "var(--qa-surface3)" }}>
             <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: "oklch(0.22 0.03 255)" }}>
               <h3 className="text-white font-semibold flex items-center gap-2">
                 <Sparkles size={16} className="text-violet-400" />
@@ -329,7 +329,7 @@ export default function AIWriter() {
                   {generated.hashtags && generated.hashtags.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
                       {generated.hashtags.map((tag, i) => (
-                        <span key={i} className="text-xs px-2 py-1 rounded-full" style={{ background: "oklch(0.22 0.05 255)", color: "oklch(0.7 0.15 255)" }}>
+                        <span key={i} className="text-xs px-2 py-1 rounded-full" style={{ background: "oklch(0.22 0.05 255)", color: "var(--qa-accent)" }}>
                           #{tag}
                         </span>
                       ))}
@@ -349,7 +349,7 @@ export default function AIWriter() {
                     <button
                       onClick={handleCopy}
                       className="flex-1 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-all hover:bg-white/10"
-                      style={{ border: "1px solid oklch(0.28 0.03 255)", color: "oklch(0.7 0.05 255)" }}
+                      style={{ border: "1px solid var(--qa-surface3)", color: "oklch(0.7 0.05 255)" }}
                     >
                       {copied ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
                       Másolás

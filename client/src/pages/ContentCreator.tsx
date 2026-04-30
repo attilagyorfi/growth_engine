@@ -34,7 +34,7 @@ type Post = {
 };
 
 const platformConfig: Record<Platform, { label: string; icon: React.ReactNode; color: string }> = {
-  linkedin: { label: "LinkedIn", icon: <Linkedin size={14} />, color: "oklch(0.55 0.18 255)" },
+  linkedin: { label: "LinkedIn", icon: <Linkedin size={14} />, color: "var(--qa-accent)" },
   facebook: { label: "Facebook", icon: <Facebook size={14} />, color: "oklch(0.55 0.2 240)" },
   instagram: { label: "Instagram", icon: <Instagram size={14} />, color: "oklch(0.6 0.2 330)" },
 };
@@ -113,20 +113,20 @@ function CalendarView({ posts, onPostClick }: { posts: Post[]; onPostClick: (p: 
     <div className="g2a-card">
       {/* Calendar Header */}
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold" style={{ color: "oklch(0.88 0.008 240)", fontFamily: "Sora, sans-serif" }}>
+        <h3 className="text-sm font-semibold" style={{ color: "var(--qa-fg2)", fontFamily: "Sora, sans-serif" }}>
           {format(currentMonth, "yyyy. MMMM", { locale: hu })}
         </h3>
         <div className="flex items-center gap-1">
           <button onClick={() => setCurrentMonth((m) => subMonths(m, 1))}
-            className="p-1.5 rounded-lg transition-colors hover:bg-white/5" style={{ color: "oklch(0.55 0.015 240)" }}>
+            className="p-1.5 rounded-lg transition-colors hover:bg-white/5" style={{ color: "var(--qa-fg3)" }}>
             <ChevronLeft size={16} />
           </button>
           <button onClick={() => setCurrentMonth(new Date(2026, 2, 1))}
-            className="px-2 py-1 rounded-lg text-xs transition-colors hover:bg-white/5" style={{ color: "oklch(0.55 0.015 240)" }}>
+            className="px-2 py-1 rounded-lg text-xs transition-colors hover:bg-white/5" style={{ color: "var(--qa-fg3)" }}>
             Ma
           </button>
           <button onClick={() => setCurrentMonth((m) => addMonths(m, 1))}
-            className="p-1.5 rounded-lg transition-colors hover:bg-white/5" style={{ color: "oklch(0.55 0.015 240)" }}>
+            className="p-1.5 rounded-lg transition-colors hover:bg-white/5" style={{ color: "var(--qa-fg3)" }}>
             <ChevronRight size={16} />
           </button>
         </div>
@@ -135,7 +135,7 @@ function CalendarView({ posts, onPostClick }: { posts: Post[]; onPostClick: (p: 
       {/* Weekday Headers */}
       <div className="grid grid-cols-7 mb-2">
         {weekDays.map((d) => (
-          <div key={d} className="text-center text-xs py-1" style={{ color: "oklch(0.45 0.015 240)" }}>{d}</div>
+          <div key={d} className="text-center text-xs py-1" style={{ color: "var(--qa-fg4)" }}>{d}</div>
         ))}
       </div>
 
@@ -151,8 +151,8 @@ function CalendarView({ posts, onPostClick }: { posts: Post[]; onPostClick: (p: 
           const isToday = isSameDay(day, new Date());
           return (
             <div key={dateKey} className="min-h-[60px] rounded-lg p-1.5 transition-colors"
-              style={{ background: isToday ? "oklch(0.6 0.2 255 / 10%)" : "oklch(0.22 0.02 255 / 50%)", border: isToday ? "1px solid oklch(0.6 0.2 255 / 30%)" : "1px solid transparent" }}>
-              <span className="text-xs block mb-1" style={{ color: isToday ? "oklch(0.7 0.2 255)" : "oklch(0.55 0.015 240)", fontWeight: isToday ? "600" : "400" }}>
+              style={{ background: isToday ? "oklch(from var(--qa-accent) l c h / 10%)" : "oklch(0.22 0.02 255 / 50%)", border: isToday ? "1px solid oklch(from var(--qa-accent) l c h / 30%)" : "1px solid transparent" }}>
+              <span className="text-xs block mb-1" style={{ color: isToday ? "oklch(0.7 0.2 255)" : "var(--qa-fg3)", fontWeight: isToday ? "600" : "400" }}>
                 {format(day, "d")}
               </span>
               <div className="space-y-0.5">
@@ -165,7 +165,7 @@ function CalendarView({ posts, onPostClick }: { posts: Post[]; onPostClick: (p: 
                   </button>
                 ))}
                 {dayPosts.length > 2 && (
-                  <span className="text-xs" style={{ color: "oklch(0.45 0.015 240)" }}>+{dayPosts.length - 2} több</span>
+                  <span className="text-xs" style={{ color: "var(--qa-fg4)" }}>+{dayPosts.length - 2} több</span>
                 )}
               </div>
             </div>
@@ -174,11 +174,11 @@ function CalendarView({ posts, onPostClick }: { posts: Post[]; onPostClick: (p: 
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 mt-4 pt-3" style={{ borderTop: "1px solid oklch(1 0 0 / 6%)" }}>
+      <div className="flex items-center gap-4 mt-4 pt-3" style={{ borderTop: "1px solid var(--qa-border)" }}>
         {(Object.keys(platformConfig) as Platform[]).map((p) => (
           <div key={p} className="flex items-center gap-1.5">
             <span style={{ color: platformConfig[p].color }}>{platformConfig[p].icon}</span>
-            <span className="text-xs" style={{ color: "oklch(0.55 0.015 240)" }}>{platformConfig[p].label}</span>
+            <span className="text-xs" style={{ color: "var(--qa-fg3)" }}>{platformConfig[p].label}</span>
           </div>
         ))}
       </div>
@@ -262,13 +262,13 @@ export default function ContentCreator() {
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4 mb-5">
         {[
-          { label: "Összes Poszt", value: String(posts.length), color: "oklch(0.6 0.2 255)" },
-          { label: "Jóváhagyásra Vár", value: String(posts.filter((p) => p.status === "pending_approval").length), color: "oklch(0.75 0.18 75)" },
+          { label: "Összes Poszt", value: String(posts.length), color: "var(--qa-accent)" },
+          { label: "Jóváhagyásra Vár", value: String(posts.filter((p) => p.status === "pending_approval").length), color: "var(--qa-warning)" },
           { label: "Ütemezve", value: String(posts.filter((p) => p.status === "scheduled").length), color: "oklch(0.65 0.2 165)" },
           { label: "Publikálva", value: String(posts.filter((p) => p.status === "published").length), color: "oklch(0.7 0.18 140)" },
         ].map((s) => (
           <div key={s.label} className="g2a-card">
-            <p className="text-xs mb-1" style={{ color: "oklch(0.55 0.015 240)" }}>{s.label}</p>
+            <p className="text-xs mb-1" style={{ color: "var(--qa-fg3)" }}>{s.label}</p>
             <p className="text-2xl font-bold" style={{ color: s.color, fontFamily: "Sora, sans-serif" }}>{s.value}</p>
           </div>
         ))}
@@ -280,27 +280,27 @@ export default function ContentCreator() {
           {/* Platform filter */}
           <button onClick={() => setFilterPlatform("")}
             className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-            style={{ background: filterPlatform === "" ? "oklch(0.6 0.2 255)" : "oklch(0.22 0.02 255)", color: filterPlatform === "" ? "white" : "oklch(0.65 0.015 240)" }}>
+            style={{ background: filterPlatform === "" ? "var(--qa-accent)" : "var(--qa-surface2)", color: filterPlatform === "" ? "white" : "var(--qa-fg3)" }}>
             Összes
           </button>
           {(Object.keys(platformConfig) as Platform[]).map((p) => (
             <button key={p} onClick={() => setFilterPlatform(p === filterPlatform ? "" : p)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-              style={{ background: filterPlatform === p ? platformConfig[p].color + "30" : "oklch(0.22 0.02 255)", color: filterPlatform === p ? platformConfig[p].color : "oklch(0.65 0.015 240)" }}>
+              style={{ background: filterPlatform === p ? platformConfig[p].color + "30" : "var(--qa-surface2)", color: filterPlatform === p ? platformConfig[p].color : "var(--qa-fg3)" }}>
               {platformConfig[p].icon}{platformConfig[p].label}
             </button>
           ))}
         </div>
         {/* View toggle */}
-        <div className="flex items-center gap-1 p-1 rounded-lg" style={{ background: "oklch(0.22 0.02 255)" }}>
+        <div className="flex items-center gap-1 p-1 rounded-lg" style={{ background: "var(--qa-surface2)" }}>
           <button onClick={() => setViewMode("grid")}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
-            style={{ background: viewMode === "grid" ? "oklch(0.6 0.2 255)" : "transparent", color: viewMode === "grid" ? "white" : "oklch(0.55 0.015 240)" }}>
+            style={{ background: viewMode === "grid" ? "var(--qa-accent)" : "transparent", color: viewMode === "grid" ? "white" : "var(--qa-fg3)" }}>
             <LayoutGrid size={13} />Lista
           </button>
           <button onClick={() => setViewMode("calendar")}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
-            style={{ background: viewMode === "calendar" ? "oklch(0.6 0.2 255)" : "transparent", color: viewMode === "calendar" ? "white" : "oklch(0.55 0.015 240)" }}>
+            style={{ background: viewMode === "calendar" ? "var(--qa-accent)" : "transparent", color: viewMode === "calendar" ? "white" : "var(--qa-fg3)" }}>
             <CalendarDays size={13} />Naptár
           </button>
         </div>
@@ -317,7 +317,7 @@ export default function ContentCreator() {
         if (weekPosts.length === 0) return null;
         return (
           <div key={week} className="mb-6">
-            <h3 className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: "oklch(0.45 0.015 240)" }}>{week}</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: "var(--qa-fg4)" }}>{week}</h3>
             <div className="grid grid-cols-3 gap-4">
               {weekPosts.map((post) => (
                 <div key={post.id} className="g2a-card flex flex-col gap-3">
@@ -335,7 +335,7 @@ export default function ContentCreator() {
                   {/* Content */}
                   <div className="flex-1">
                     <div className="flex items-start justify-between gap-2 mb-1">
-                      <p className="text-sm font-semibold leading-tight" style={{ color: "oklch(0.88 0.008 240)", fontFamily: "Sora, sans-serif" }}>{post.title}</p>
+                      <p className="text-sm font-semibold leading-tight" style={{ color: "var(--qa-fg2)", fontFamily: "Sora, sans-serif" }}>{post.title}</p>
                       {/* Status dropdown */}
                       <div className="relative flex-shrink-0">
                         <button onClick={() => setOpenStatusId(openStatusId === post.id ? null : post.id)}
@@ -344,7 +344,7 @@ export default function ContentCreator() {
                         </button>
                         {openStatusId === post.id && (
                           <div className="absolute right-0 top-full mt-1 rounded-lg overflow-hidden z-20 min-w-[140px]"
-                            style={{ background: "oklch(0.2 0.02 255)", border: "1px solid oklch(1 0 0 / 10%)", boxShadow: "0 8px 24px oklch(0 0 0 / 40%)" }}>
+                            style={{ background: "oklch(0.2 0.02 255)", border: "1px solid var(--qa-border)", boxShadow: "0 8px 24px oklch(0 0 0 / 40%)" }}>
                             {statusOptions.map((s) => (
                               <button key={s} onClick={() => updateStatus(post.id, s)}
                                 className="w-full text-left px-3 py-2 text-xs transition-colors hover:bg-white/5"
@@ -356,7 +356,7 @@ export default function ContentCreator() {
                         )}
                       </div>
                     </div>
-                    <p className="text-xs line-clamp-2 mb-2" style={{ color: "oklch(0.55 0.015 240)" }}>{post.text.split("\n")[0]}</p>
+                    <p className="text-xs line-clamp-2 mb-2" style={{ color: "var(--qa-fg3)" }}>{post.text.split("\n")[0]}</p>
                     {post.scheduledAt && (
                       <p className="text-xs mb-2" style={{ color: "oklch(0.65 0.2 165)" }}>
                         <Calendar size={10} className="inline mr-1" />{post.scheduledAt}
@@ -364,11 +364,11 @@ export default function ContentCreator() {
                     )}
                   </div>
                   {/* Actions */}
-                  <div className="flex items-center gap-1.5 pt-2" style={{ borderTop: "1px solid oklch(1 0 0 / 6%)" }}>
-                    <button onClick={() => setViewPost(post)} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs transition-colors hover:bg-white/5" style={{ color: "oklch(0.65 0.015 240)" }}>
+                  <div className="flex items-center gap-1.5 pt-2" style={{ borderTop: "1px solid var(--qa-border)" }}>
+                    <button onClick={() => setViewPost(post)} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs transition-colors hover:bg-white/5" style={{ color: "var(--qa-fg3)" }}>
                       <Eye size={12} />Megtekint
                     </button>
-                    <button onClick={() => openEdit(post)} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs transition-colors hover:bg-white/5" style={{ color: "oklch(0.65 0.015 240)" }}>
+                    <button onClick={() => openEdit(post)} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs transition-colors hover:bg-white/5" style={{ color: "var(--qa-fg3)" }}>
                       <Edit2 size={12} />Szerkeszt
                     </button>
                     {post.status !== "approved" && post.status !== "published" && (
@@ -396,8 +396,8 @@ export default function ContentCreator() {
           subtitle={`${platformConfig[viewPost.platform].label} – ${viewPost.weekRef} – ${viewPost.pillar}`}
           footer={
             <>
-              <button onClick={() => setViewPost(null)} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.75 0.015 240)" }}>Bezárás</button>
-              <button onClick={() => openEdit(viewPost)} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "oklch(0.6 0.2 255)", color: "white" }}>
+              <button onClick={() => setViewPost(null)} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "var(--qa-surface2)", color: "var(--qa-fg2)" }}>Bezárás</button>
+              <button onClick={() => openEdit(viewPost)} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "var(--qa-accent)", color: "white" }}>
                 <Edit2 size={13} className="inline mr-1.5" />Szerkesztés
               </button>
               {viewPost.status !== "approved" && viewPost.status !== "published" && (
@@ -412,7 +412,7 @@ export default function ContentCreator() {
             {viewPost.imageUrl && (
               <img src={viewPost.imageUrl} alt={viewPost.title} className="w-full h-48 object-cover rounded-xl" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
             )}
-            <div className="rounded-lg p-4 whitespace-pre-wrap text-sm leading-relaxed" style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.82 0.008 240)" }}>
+            <div className="rounded-lg p-4 whitespace-pre-wrap text-sm leading-relaxed" style={{ background: "var(--qa-surface2)", color: "var(--qa-fg2)" }}>
               {viewPost.text}
             </div>
             {viewPost.scheduledAt && (
@@ -430,27 +430,27 @@ export default function ContentCreator() {
           subtitle={`${platformConfig[editPost.platform].label} – ${editPost.title}`}
           footer={
             <>
-              <button onClick={() => setEditPost(null)} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.75 0.015 240)" }}>Mégse</button>
-              <button onClick={handleSaveEdit} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "oklch(0.6 0.2 255)", color: "white" }}>Mentés</button>
+              <button onClick={() => setEditPost(null)} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "var(--qa-surface2)", color: "var(--qa-fg2)" }}>Mégse</button>
+              <button onClick={handleSaveEdit} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "var(--qa-accent)", color: "white" }}>Mentés</button>
             </>
           }
         >
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: "oklch(0.65 0.015 240)" }}>Szöveg</label>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--qa-fg3)" }}>Szöveg</label>
               <textarea value={editForm.text} onChange={(e) => setEditForm((p) => ({ ...p, text: e.target.value }))} rows={8}
                 className="w-full px-3 py-2.5 rounded-lg text-sm outline-none resize-none"
-                style={{ background: "oklch(0.22 0.02 255)", border: "1px solid oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)", lineHeight: "1.6" }}
+                style={{ background: "var(--qa-surface2)", border: "1px solid var(--qa-border)", color: "var(--qa-fg2)", lineHeight: "1.6" }}
               />
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: "oklch(0.65 0.015 240)" }}>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--qa-fg3)" }}>
                 <Image size={12} className="inline mr-1" />Kép URL
               </label>
               <input type="text" value={editForm.imageUrl} onChange={(e) => setEditForm((p) => ({ ...p, imageUrl: e.target.value }))}
                 placeholder="https://..."
                 className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
-                style={{ background: "oklch(0.22 0.02 255)", border: "1px solid oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }}
+                style={{ background: "var(--qa-surface2)", border: "1px solid var(--qa-border)", color: "var(--qa-fg2)" }}
               />
               {editForm.imageUrl && (
                 <img src={editForm.imageUrl} alt="preview" className="mt-2 w-full h-28 object-cover rounded-lg" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
@@ -458,14 +458,14 @@ export default function ContentCreator() {
             </div>
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-medium" style={{ color: "oklch(0.65 0.015 240)" }}>Kép prompt (AI generáláshoz)</label>
+                <label className="text-xs font-medium" style={{ color: "var(--qa-fg3)" }}>Kép prompt (AI generáláshoz)</label>
                 <button
                   onClick={handleGenerateImage}
                   disabled={generateImageMutation.isPending}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
                   style={{
-                    background: generateImageMutation.isPending ? "oklch(0.22 0.02 255)" : "oklch(0.6 0.2 290 / 20%)",
-                    color: generateImageMutation.isPending ? "oklch(0.55 0.015 240)" : "oklch(0.7 0.2 290)",
+                    background: generateImageMutation.isPending ? "var(--qa-surface2)" : "oklch(0.6 0.2 290 / 20%)",
+                    color: generateImageMutation.isPending ? "var(--qa-fg3)" : "oklch(0.7 0.2 290)",
                     cursor: generateImageMutation.isPending ? "not-allowed" : "pointer"
                   }}
                 >
@@ -476,11 +476,11 @@ export default function ContentCreator() {
               </div>
               <textarea value={editForm.imagePrompt} onChange={(e) => setEditForm((p) => ({ ...p, imagePrompt: e.target.value }))} rows={2}
                 className="w-full px-3 py-2.5 rounded-lg text-sm outline-none resize-none"
-                style={{ background: "oklch(0.22 0.02 255)", border: "1px solid oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }}
+                style={{ background: "var(--qa-surface2)", border: "1px solid var(--qa-border)", color: "var(--qa-fg2)" }}
                 placeholder="Írd le a kívánt képet angolul, pl: professional business meeting, dark background, blue accents..."
               />
               {generateImageMutation.isPending && (
-                <div className="mt-2 h-20 rounded-lg flex items-center justify-center" style={{ background: "oklch(0.22 0.02 255)", border: "1px dashed oklch(0.6 0.2 290 / 30%)" }}>
+                <div className="mt-2 h-20 rounded-lg flex items-center justify-center" style={{ background: "var(--qa-surface2)", border: "1px dashed oklch(0.6 0.2 290 / 30%)" }}>
                   <div className="flex items-center gap-2" style={{ color: "oklch(0.6 0.2 290)" }}>
                     <Loader2 size={16} className="animate-spin" />
                     <span className="text-xs">Kép generálása folyamatban... (5-20 mp)</span>
@@ -498,7 +498,7 @@ export default function ContentCreator() {
           subtitle={`${schedulePost.title} – ${platformConfig[schedulePost.platform].label}`}
           footer={
             <>
-              <button onClick={() => setSchedulePost(null)} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.75 0.015 240)" }}>Mégse</button>
+              <button onClick={() => setSchedulePost(null)} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "var(--qa-surface2)", color: "var(--qa-fg2)" }}>Mégse</button>
               <button onClick={() => handleSchedule(schedulePost)} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "oklch(0.6 0.2 290)", color: "white" }}>
                 <Calendar size={13} className="inline mr-1.5" />Ütemezés Mentése
               </button>
@@ -506,26 +506,26 @@ export default function ContentCreator() {
           }
         >
           <div className="space-y-4">
-            <div className="rounded-lg p-4" style={{ background: "oklch(0.22 0.02 255)" }}>
+            <div className="rounded-lg p-4" style={{ background: "var(--qa-surface2)" }}>
               <div className="flex items-center gap-2 mb-1">
                 <span style={{ color: platformConfig[schedulePost.platform].color }}>{platformConfig[schedulePost.platform].icon}</span>
-                <p className="text-sm font-semibold" style={{ color: "oklch(0.88 0.008 240)", fontFamily: "Sora, sans-serif" }}>{schedulePost.title}</p>
+                <p className="text-sm font-semibold" style={{ color: "var(--qa-fg2)", fontFamily: "Sora, sans-serif" }}>{schedulePost.title}</p>
               </div>
-              <p className="text-xs line-clamp-2" style={{ color: "oklch(0.55 0.015 240)" }}>{schedulePost.text.split("\n")[0]}</p>
+              <p className="text-xs line-clamp-2" style={{ color: "var(--qa-fg3)" }}>{schedulePost.text.split("\n")[0]}</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "oklch(0.65 0.015 240)" }}>Dátum *</label>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--qa-fg3)" }}>Dátum *</label>
                 <input type="date" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)}
                   className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
-                  style={{ background: "oklch(0.22 0.02 255)", border: "1px solid oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)", colorScheme: "dark" }}
+                  style={{ background: "var(--qa-surface2)", border: "1px solid var(--qa-border)", color: "var(--qa-fg2)", colorScheme: "dark" }}
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "oklch(0.65 0.015 240)" }}>Időpont</label>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--qa-fg3)" }}>Időpont</label>
                 <input type="time" value={scheduleTime} onChange={(e) => setScheduleTime(e.target.value)}
                   className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
-                  style={{ background: "oklch(0.22 0.02 255)", border: "1px solid oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)", colorScheme: "dark" }}
+                  style={{ background: "var(--qa-surface2)", border: "1px solid var(--qa-border)", color: "var(--qa-fg2)", colorScheme: "dark" }}
                 />
               </div>
             </div>

@@ -32,10 +32,10 @@ const INDUSTRIES = [
 ];
 
 const PROJECT_COLORS = [
-  { label: "Kék", value: "oklch(0.6 0.2 255)" },
-  { label: "Lila", value: "oklch(0.55 0.22 280)" },
-  { label: "Zöld", value: "oklch(0.65 0.18 165)" },
-  { label: "Sárga", value: "oklch(0.75 0.18 75)" },
+  { label: "Kék", value: "var(--qa-accent)" },
+  { label: "Lila", value: "var(--qa-accent)" },
+  { label: "Zöld", value: "var(--qa-success)" },
+  { label: "Sárga", value: "var(--qa-warning)" },
   { label: "Piros", value: "oklch(0.6 0.22 30)" },
   { label: "Narancs", value: "oklch(0.7 0.2 50)" },
   { label: "Cián", value: "oklch(0.65 0.15 200)" },
@@ -56,7 +56,7 @@ const emptyForm: ProjectFormData = {
   website: "",
   industry: "",
   description: "",
-  color: "oklch(0.6 0.2 255)",
+  color: "var(--qa-accent)",
   logoUrl: "",
 };
 
@@ -144,10 +144,10 @@ export default function ProjectsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>
+            <h1 className="text-2xl font-bold" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>
               Projektek
             </h1>
-            <p className="text-sm mt-0.5" style={{ color: "oklch(0.55 0.015 240)" }}>
+            <p className="text-sm mt-0.5" style={{ color: "var(--qa-fg3)" }}>
               Minden projekt egy izolált workspace – saját stratégiával, tartalommal és leadekkel.
             </p>
           </div>
@@ -157,8 +157,8 @@ export default function ProjectsPage() {
               onClick={() => setShowArchived(v => !v)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:opacity-80"
               style={{
-                background: showArchived ? "oklch(0.55 0.015 240 / 20%)" : "oklch(0.22 0.02 255)",
-                color: showArchived ? "oklch(0.78 0.008 240)" : "oklch(0.55 0.015 240)",
+                background: showArchived ? "oklch(0.55 0.015 240 / 20%)" : "var(--qa-surface2)",
+                color: showArchived ? "var(--qa-fg2)" : "var(--qa-fg3)",
               }}
             >
               <Archive size={13} />
@@ -167,7 +167,7 @@ export default function ProjectsPage() {
             <Button
               onClick={() => { setShowNewForm(true); setEditingProject(null); }}
               className="flex items-center gap-2"
-              style={{ background: "oklch(0.6 0.2 255)", color: "white" }}
+              style={{ background: "var(--qa-accent)", color: "white" }}
             >
               <Plus size={15} />
               Új projekt
@@ -190,15 +190,15 @@ export default function ProjectsPage() {
         {/* Project list */}
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
-            <Loader2 className="w-6 h-6 animate-spin" style={{ color: "oklch(0.6 0.2 255)" }} />
+            <Loader2 className="w-6 h-6 animate-spin" style={{ color: "var(--qa-accent)" }} />
           </div>
         ) : projects.length === 0 && !showNewForm ? (
           <div
             className="rounded-2xl border p-12 text-center"
-            style={{ background: "oklch(0.16 0.022 255)", borderColor: "oklch(1 0 0 / 8%)" }}
+            style={{ background: "var(--qa-surface)", borderColor: "var(--qa-border)" }}
           >
-            <FolderOpen size={40} className="mx-auto mb-3 opacity-30" style={{ color: "oklch(0.6 0.2 255)" }} />
-            <p className="text-sm font-medium" style={{ color: "oklch(0.55 0.015 240)" }}>
+            <FolderOpen size={40} className="mx-auto mb-3 opacity-30" style={{ color: "var(--qa-accent)" }} />
+            <p className="text-sm font-medium" style={{ color: "var(--qa-fg3)" }}>
               Még nincs projekt. Hozd létre az elsőt!
             </p>
           </div>
@@ -223,7 +223,7 @@ export default function ProjectsPage() {
                       website: p.website ?? "",
                       industry: p.industry ?? "",
                       description: p.description ?? "",
-                      color: p.color ?? "oklch(0.6 0.2 255)",
+                      color: p.color ?? "var(--qa-accent)",
                       logoUrl: p.logoUrl ?? "",
                     })}
                     onSetActive={() => setActiveMutation.mutate({ projectId: p.id })}
@@ -239,15 +239,15 @@ export default function ProjectsPage() {
             {showArchived && archivedProjects.length > 0 && (
               <>
                 <div className="flex items-center gap-2 mt-4 mb-2">
-                  <div className="h-px flex-1" style={{ background: "oklch(1 0 0 / 8%)" }} />
-                  <span className="text-xs font-medium" style={{ color: "oklch(0.45 0.015 240)" }}>Archivált projektek</span>
-                  <div className="h-px flex-1" style={{ background: "oklch(1 0 0 / 8%)" }} />
+                  <div className="h-px flex-1" style={{ background: "var(--qa-border)" }} />
+                  <span className="text-xs font-medium" style={{ color: "var(--qa-fg4)" }}>Archivált projektek</span>
+                  <div className="h-px flex-1" style={{ background: "var(--qa-border)" }} />
                 </div>
                 {archivedProjects.map((p) => (
                   <div
                     key={p.id}
                     className="rounded-2xl border p-4 flex items-center gap-4 opacity-60"
-                    style={{ background: "oklch(0.14 0.018 255)", borderColor: "oklch(1 0 0 / 6%)" }}
+                    style={{ background: "oklch(0.14 0.018 255)", borderColor: "var(--qa-border)" }}
                   >
                     <div
                       className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 text-white font-bold text-xs"
@@ -257,7 +257,7 @@ export default function ProjectsPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate" style={{ color: "oklch(0.65 0.008 240)" }}>{p.name}</p>
-                      {p.industry && <p className="text-xs" style={{ color: "oklch(0.45 0.015 240)" }}>{p.industry}</p>}
+                      {p.industry && <p className="text-xs" style={{ color: "var(--qa-fg4)" }}>{p.industry}</p>}
                     </div>
                     <button
                       type="button"
@@ -274,7 +274,7 @@ export default function ProjectsPage() {
               </>
             )}
             {showArchived && archivedProjects.length === 0 && (
-              <p className="text-xs text-center py-4" style={{ color: "oklch(0.45 0.015 240)" }}>Nincs archivált projekt.</p>
+              <p className="text-xs text-center py-4" style={{ color: "var(--qa-fg4)" }}>Nincs archivált projekt.</p>
             )}
           </div>
         )}
@@ -282,15 +282,15 @@ export default function ProjectsPage() {
 
       {/* Delete confirm dialog */}
       <AlertDialog open={!!deleteConfirmId} onOpenChange={() => setDeleteConfirmId(null)}>
-        <AlertDialogContent style={{ background: "oklch(0.16 0.022 255)", borderColor: "oklch(1 0 0 / 12%)" }}>
+        <AlertDialogContent style={{ background: "var(--qa-surface)", borderColor: "var(--qa-border-hi)" }}>
           <AlertDialogHeader>
-            <AlertDialogTitle style={{ color: "oklch(0.92 0.008 240)" }}>Projekt törlése</AlertDialogTitle>
-            <AlertDialogDescription style={{ color: "oklch(0.55 0.015 240)" }}>
+            <AlertDialogTitle style={{ color: "var(--qa-fg)" }}>Projekt törlése</AlertDialogTitle>
+            <AlertDialogDescription style={{ color: "var(--qa-fg3)" }}>
               Biztosan törölni szeretnéd ezt a projektet? Ez a művelet nem vonható vissza.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.78 0.008 240)", border: "none" }}>
+            <AlertDialogCancel style={{ background: "var(--qa-surface2)", color: "var(--qa-fg2)", border: "none" }}>
               Mégsem
             </AlertDialogCancel>
             <AlertDialogAction
@@ -334,7 +334,7 @@ function ProgressBadge({ done, icon, label, count }: { done: boolean; icon: Reac
       className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium"
       style={{
         background: done ? "oklch(0.55 0.18 145 / 15%)" : "oklch(0.55 0.015 240 / 10%)",
-        color: done ? "oklch(0.7 0.18 145)" : "oklch(0.45 0.015 240)",
+        color: done ? "oklch(0.7 0.18 145)" : "var(--qa-fg4)",
       }}
     >
       {icon}
@@ -344,7 +344,7 @@ function ProgressBadge({ done, icon, label, count }: { done: boolean; icon: Reac
 }
 
 function ProjectCard({ project, onEdit, onSetActive, onDelete, onOpen, onArchive, isSettingActive }: ProjectCardProps) {
-  const accentColor = project.color ?? "oklch(0.6 0.2 255)";
+  const accentColor = project.color ?? "var(--qa-accent)";
   const { data: progress } = trpc.projects.getProgress.useQuery(
     { projectId: project.id },
     { staleTime: 60_000 }
@@ -354,8 +354,8 @@ function ProjectCard({ project, onEdit, onSetActive, onDelete, onOpen, onArchive
     <div
       className="rounded-2xl border p-5 flex items-start gap-4 transition-all hover:border-white/15"
       style={{
-        background: "oklch(0.16 0.022 255)",
-        borderColor: project.isActive ? `${accentColor}` : "oklch(1 0 0 / 8%)",
+        background: "var(--qa-surface)",
+        borderColor: project.isActive ? `${accentColor}` : "var(--qa-border)",
         boxShadow: project.isActive ? `0 0 0 1px ${accentColor}` : "none",
       }}
     >
@@ -370,7 +370,7 @@ function ProjectCard({ project, onEdit, onSetActive, onDelete, onOpen, onArchive
       {/* Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-semibold text-base" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>
+          <span className="font-semibold text-base" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>
             {project.name}
           </span>
           {project.isActive && (
@@ -389,7 +389,7 @@ function ProjectCard({ project, onEdit, onSetActive, onDelete, onOpen, onArchive
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1 text-xs hover:underline"
-              style={{ color: "oklch(0.6 0.2 255)" }}
+              style={{ color: "var(--qa-accent)" }}
             >
               <Globe size={11} />
               {project.website.replace(/^https?:\/\//, "")}
@@ -397,14 +397,14 @@ function ProjectCard({ project, onEdit, onSetActive, onDelete, onOpen, onArchive
             </a>
           )}
           {project.industry && (
-            <span className="flex items-center gap-1 text-xs" style={{ color: "oklch(0.55 0.015 240)" }}>
+            <span className="flex items-center gap-1 text-xs" style={{ color: "var(--qa-fg3)" }}>
               <Building2 size={11} />
               {project.industry}
             </span>
           )}
         </div>
         {project.description && (
-          <p className="text-xs mt-1.5 line-clamp-2" style={{ color: "oklch(0.5 0.015 240)" }}>
+          <p className="text-xs mt-1.5 line-clamp-2" style={{ color: "var(--qa-fg4)" }}>
             {project.description}
           </p>
         )}
@@ -454,7 +454,7 @@ function ProjectCard({ project, onEdit, onSetActive, onDelete, onOpen, onArchive
             onClick={onSetActive}
             disabled={isSettingActive}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:opacity-80 disabled:opacity-40"
-            style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.6 0.015 240)" }}
+            style={{ background: "var(--qa-surface2)", color: "var(--qa-fg3)" }}
           >
             {isSettingActive ? <Loader2 size={12} className="animate-spin" /> : <Circle size={12} />}
             Aktívává tesz
@@ -470,7 +470,7 @@ function ProjectCard({ project, onEdit, onSetActive, onDelete, onOpen, onArchive
           type="button"
           onClick={onEdit}
           className="p-1.5 rounded-lg transition-all hover:bg-white/8"
-          style={{ color: "oklch(0.55 0.015 240)" }}
+          style={{ color: "var(--qa-fg3)" }}
           title="Szerkesztés"
         >
           <Pencil size={14} />
@@ -480,7 +480,7 @@ function ProjectCard({ project, onEdit, onSetActive, onDelete, onOpen, onArchive
             type="button"
             onClick={onArchive}
             className="p-1.5 rounded-lg transition-all hover:bg-yellow-500/10"
-            style={{ color: "oklch(0.55 0.015 240)" }}
+            style={{ color: "var(--qa-fg3)" }}
             title="Archiválás"
           >
             <Archive size={14} />
@@ -490,7 +490,7 @@ function ProjectCard({ project, onEdit, onSetActive, onDelete, onOpen, onArchive
           type="button"
           onClick={onDelete}
           className="p-1.5 rounded-lg transition-all hover:bg-red-500/10"
-          style={{ color: "oklch(0.55 0.015 240)" }}
+          style={{ color: "var(--qa-fg3)" }}
           title="Törlés"
         >
           <Trash2 size={14} />
@@ -517,13 +517,13 @@ function ProjectForm({ form, setForm, onSave, onCancel, isSaving, isNew }: Proje
   return (
     <div
       className="rounded-2xl border p-5 space-y-4"
-      style={{ background: "oklch(0.18 0.025 255)", borderColor: "oklch(0.6 0.2 255 / 30%)" }}
+      style={{ background: "var(--qa-surface)", borderColor: "oklch(from var(--qa-accent) l c h / 30%)" }}
     >
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold" style={{ color: "oklch(0.88 0.008 240)" }}>
+        <h3 className="text-sm font-semibold" style={{ color: "var(--qa-fg2)" }}>
           {isNew ? "Új projekt" : "Projekt szerkesztése"}
         </h3>
-        <button type="button" onClick={onCancel} className="p-1 rounded-lg hover:bg-white/8" style={{ color: "oklch(0.55 0.015 240)" }}>
+        <button type="button" onClick={onCancel} className="p-1 rounded-lg hover:bg-white/8" style={{ color: "var(--qa-fg3)" }}>
           <X size={15} />
         </button>
       </div>
@@ -531,7 +531,7 @@ function ProjectForm({ form, setForm, onSave, onCancel, isSaving, isNew }: Proje
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {/* Name */}
         <div className="sm:col-span-2">
-          <label className="block text-xs font-medium mb-1" style={{ color: "oklch(0.65 0.015 240)" }}>
+          <label className="block text-xs font-medium mb-1" style={{ color: "var(--qa-fg3)" }}>
             Projekt neve *
           </label>
           <Input
@@ -539,13 +539,13 @@ function ProjectForm({ form, setForm, onSave, onCancel, isSaving, isNew }: Proje
             onChange={e => update({ name: e.target.value })}
             placeholder="pl. G2A Marketing"
             className="bg-white/5 border-white/10 text-sm"
-            style={{ color: "oklch(0.88 0.008 240)" }}
+            style={{ color: "var(--qa-fg2)" }}
           />
         </div>
 
         {/* Website */}
         <div>
-          <label className="block text-xs font-medium mb-1" style={{ color: "oklch(0.65 0.015 240)" }}>
+          <label className="block text-xs font-medium mb-1" style={{ color: "var(--qa-fg3)" }}>
             Weboldal
           </label>
           <Input
@@ -553,22 +553,22 @@ function ProjectForm({ form, setForm, onSave, onCancel, isSaving, isNew }: Proje
             onChange={e => update({ website: e.target.value })}
             placeholder="https://pelda.hu"
             className="bg-white/5 border-white/10 text-sm"
-            style={{ color: "oklch(0.88 0.008 240)" }}
+            style={{ color: "var(--qa-fg2)" }}
           />
         </div>
 
         {/* Industry */}
         <div>
-          <label className="block text-xs font-medium mb-1" style={{ color: "oklch(0.65 0.015 240)" }}>
+          <label className="block text-xs font-medium mb-1" style={{ color: "var(--qa-fg3)" }}>
             Iparág
           </label>
           <Select value={form.industry} onValueChange={v => update({ industry: v })}>
-            <SelectTrigger className="bg-white/5 border-white/10 text-sm" style={{ color: "oklch(0.78 0.008 240)" }}>
+            <SelectTrigger className="bg-white/5 border-white/10 text-sm" style={{ color: "var(--qa-fg2)" }}>
               <SelectValue placeholder="Válassz iparágat" />
             </SelectTrigger>
-            <SelectContent style={{ background: "oklch(0.18 0.025 255)", borderColor: "oklch(1 0 0 / 12%)" }}>
+            <SelectContent style={{ background: "var(--qa-surface)", borderColor: "var(--qa-border-hi)" }}>
               {INDUSTRIES.map(ind => (
-                <SelectItem key={ind} value={ind} style={{ color: "oklch(0.78 0.008 240)" }}>{ind}</SelectItem>
+                <SelectItem key={ind} value={ind} style={{ color: "var(--qa-fg2)" }}>{ind}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -576,7 +576,7 @@ function ProjectForm({ form, setForm, onSave, onCancel, isSaving, isNew }: Proje
 
         {/* Color */}
         <div>
-          <label className="block text-xs font-medium mb-1" style={{ color: "oklch(0.65 0.015 240)" }}>
+          <label className="block text-xs font-medium mb-1" style={{ color: "var(--qa-fg3)" }}>
             Szín
           </label>
           <div className="flex gap-2 flex-wrap">
@@ -599,7 +599,7 @@ function ProjectForm({ form, setForm, onSave, onCancel, isSaving, isNew }: Proje
 
         {/* Logo URL */}
         <div>
-          <label className="block text-xs font-medium mb-1" style={{ color: "oklch(0.65 0.015 240)" }}>
+          <label className="block text-xs font-medium mb-1" style={{ color: "var(--qa-fg3)" }}>
             Logó URL (opcionális)
           </label>
           <Input
@@ -607,13 +607,13 @@ function ProjectForm({ form, setForm, onSave, onCancel, isSaving, isNew }: Proje
             onChange={e => update({ logoUrl: e.target.value })}
             placeholder="https://..."
             className="bg-white/5 border-white/10 text-sm"
-            style={{ color: "oklch(0.88 0.008 240)" }}
+            style={{ color: "var(--qa-fg2)" }}
           />
         </div>
 
         {/* Description */}
         <div className="sm:col-span-2">
-          <label className="block text-xs font-medium mb-1" style={{ color: "oklch(0.65 0.015 240)" }}>
+          <label className="block text-xs font-medium mb-1" style={{ color: "var(--qa-fg3)" }}>
             Leírás (opcionális)
           </label>
           <textarea
@@ -623,9 +623,9 @@ function ProjectForm({ form, setForm, onSave, onCancel, isSaving, isNew }: Proje
             rows={2}
             className="w-full rounded-lg px-3 py-2 text-sm resize-none border"
             style={{
-              background: "oklch(0.14 0.02 255)",
-              borderColor: "oklch(1 0 0 / 10%)",
-              color: "oklch(0.88 0.008 240)",
+              background: "var(--qa-bg)",
+              borderColor: "var(--qa-border)",
+              color: "var(--qa-fg2)",
               outline: "none",
             }}
           />
@@ -633,7 +633,7 @@ function ProjectForm({ form, setForm, onSave, onCancel, isSaving, isNew }: Proje
       </div>
 
       <div className="flex items-center gap-2 justify-end">
-        <Button variant="ghost" onClick={onCancel} size="sm" style={{ color: "oklch(0.55 0.015 240)" }}>
+        <Button variant="ghost" onClick={onCancel} size="sm" style={{ color: "var(--qa-fg3)" }}>
           Mégsem
         </Button>
         <Button
@@ -641,7 +641,7 @@ function ProjectForm({ form, setForm, onSave, onCancel, isSaving, isNew }: Proje
           disabled={isSaving || !form.name.trim()}
           size="sm"
           className="flex items-center gap-1.5"
-          style={{ background: "oklch(0.6 0.2 255)", color: "white" }}
+          style={{ background: "var(--qa-accent)", color: "white" }}
         >
           {isSaving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
           Mentés

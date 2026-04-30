@@ -49,7 +49,7 @@ const PLATFORM_ICONS: Record<Platform, React.ReactNode> = {
 };
 
 const PLATFORM_COLORS: Record<Platform, string> = {
-  linkedin: "oklch(0.55 0.18 255)",
+  linkedin: "var(--qa-accent)",
   facebook: "oklch(0.55 0.2 250)",
   instagram: "oklch(0.65 0.22 20)",
   twitter: "oklch(0.6 0.18 220)",
@@ -66,12 +66,12 @@ const STATUS_LABELS: Record<PostStatus, string> = {
 };
 
 const STATUS_COLORS: Record<PostStatus, string> = {
-  draft: "oklch(0.75 0.18 75)",
+  draft: "var(--qa-warning)",
   review: "oklch(0.7 0.2 50)",
-  approved: "oklch(0.65 0.18 165)",
-  scheduled: "oklch(0.6 0.2 255)",
-  published: "oklch(0.65 0.18 165)",
-  rejected: "oklch(0.65 0.22 25)",
+  approved: "var(--qa-success)",
+  scheduled: "var(--qa-accent)",
+  published: "var(--qa-success)",
+  rejected: "var(--qa-danger)",
 };
 
 type Tab = "javasolt" | "calendar" | "drafts" | "approval" | "published";
@@ -100,12 +100,12 @@ type ContentTemplate = {
 };
 
 const CONTENT_TEMPLATES: ContentTemplate[] = [
-  { id: "linkedin-thought", icon: <BookOpen size={16} />, label: "Thought Leadership", description: "Szakmai vélemény, iparági insight", platform: "linkedin", contentType: "Thought Leadership poszt", color: "oklch(0.55 0.18 255)" },
-  { id: "linkedin-case", icon: <TrendingUp size={16} />, label: "Sikertörténet", description: "Ügyfél eredmény, esettanulmány", platform: "linkedin", contentType: "Sikertörténet / Case Study", color: "oklch(0.55 0.18 255)" },
+  { id: "linkedin-thought", icon: <BookOpen size={16} />, label: "Thought Leadership", description: "Szakmai vélemény, iparági insight", platform: "linkedin", contentType: "Thought Leadership poszt", color: "var(--qa-accent)" },
+  { id: "linkedin-case", icon: <TrendingUp size={16} />, label: "Sikertörténet", description: "Ügyfél eredmény, esettanulmány", platform: "linkedin", contentType: "Sikertörténet / Case Study", color: "var(--qa-accent)" },
   { id: "instagram-visual", icon: <ImageIcon size={16} />, label: "Vizuális tartalom", description: "Képes poszt, infografika", platform: "instagram", contentType: "Vizuális / Infografika poszt", color: "oklch(0.65 0.22 20)" },
   { id: "instagram-reel", icon: <Video size={16} />, label: "Reel/Videó script", description: "Rövid videó szöveg, hook", platform: "instagram", contentType: "Reel / Videó script", color: "oklch(0.65 0.22 20)" },
   { id: "facebook-community", icon: <MessageSquare size={16} />, label: "Közösségi kérdés", description: "Engagement, szavazás, kérdés", platform: "facebook", contentType: "Közösségi kérdés / Poll", color: "oklch(0.55 0.2 250)" },
-  { id: "linkedin-tips", icon: <Zap size={16} />, label: "Tippek & Trükkök", description: "Praktikus tanácsok, listicle", platform: "linkedin", contentType: "Tippek & Trükkök poszt", color: "oklch(0.55 0.18 255)" },
+  { id: "linkedin-tips", icon: <Zap size={16} />, label: "Tippek & Trükkök", description: "Praktikus tanácsok, listicle", platform: "linkedin", contentType: "Tippek & Trükkök poszt", color: "var(--qa-accent)" },
   { id: "twitter-news", icon: <BarChart2 size={16} />, label: "Iparági hírek", description: "Trend kommentár, adat megosztás", platform: "twitter", contentType: "Iparági hír / Kommentár", color: "oklch(0.6 0.18 220)" },
   { id: "facebook-promo", icon: <Target size={16} />, label: "Promóció", description: "Ajánlat, akció, CTA", platform: "facebook", contentType: "Promóciós / Ajánlat poszt", color: "oklch(0.55 0.2 250)" },
 ];
@@ -255,10 +255,10 @@ export default function ContentStudio() {
         <BarChart2 size={16} />,
       ];
       const COLOR_CYCLE = [
-        "oklch(0.55 0.18 255)",
+        "var(--qa-accent)",
         "oklch(0.65 0.22 20)",
         "oklch(0.55 0.2 250)",
-        "oklch(0.55 0.18 255)",
+        "var(--qa-accent)",
         "oklch(0.6 0.18 220)",
       ];
       // If we also have strategy channels, prefer those platforms
@@ -454,12 +454,12 @@ export default function ContentStudio() {
     onError: () => toast.error("Hiba az elutasítás során"),
   });
 
-  const cardBg = "oklch(0.17 0.022 255)";
-  const border = "oklch(1 0 0 / 8%)";
+  const cardBg = "var(--qa-surface)";
+  const border = "var(--qa-border)";
 
   const PostCard = ({ post, showActions = true }: { post: Post; showActions?: boolean }) => (
     <div className="rounded-xl border p-4 transition-all" style={{ background: cardBg, borderColor: border }}
-      onMouseEnter={(e: any) => (e.currentTarget.style.borderColor = "oklch(0.6 0.2 255 / 30%)")}
+      onMouseEnter={(e: any) => (e.currentTarget.style.borderColor = "oklch(from var(--qa-accent) l c h / 30%)")}
       onMouseLeave={(e: any) => (e.currentTarget.style.borderColor = border)}
     >
       <div className="flex items-start justify-between gap-3 mb-3">
@@ -468,38 +468,38 @@ export default function ContentStudio() {
             {PLATFORM_ICONS[post.platform]}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold truncate" style={{ color: "oklch(0.88 0.008 240)", fontFamily: "Sora, sans-serif" }}>{post.title}</p>
+            <p className="text-sm font-semibold truncate" style={{ color: "var(--qa-fg2)", fontFamily: "Sora, sans-serif" }}>{post.title}</p>
             <div className="flex items-center gap-2 mt-0.5">
               <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: `${STATUS_COLORS[post.status]} / 15%`, color: STATUS_COLORS[post.status] }}>
                 {STATUS_LABELS[post.status]}
               </span>
-              {post.pillar && <span className="text-xs" style={{ color: "oklch(0.5 0.015 240)" }}>{post.pillar}</span>}
+              {post.pillar && <span className="text-xs" style={{ color: "var(--qa-fg4)" }}>{post.pillar}</span>}
             </div>
           </div>
         </div>
         {showActions && (
           <div className="flex gap-1 flex-shrink-0">
             <button onClick={() => { setSelectedPost(post); setEditForm({ title: post.title, content: post.content, imageUrl: post.imageUrl, imagePrompt: post.imagePrompt, hashtags: post.hashtags }); setEditModal(true); }}
-              className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "oklch(0.6 0.2 255 / 10%)" }}>
-              <Pencil size={12} style={{ color: "oklch(0.6 0.2 255)" }} />
+              className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "oklch(from var(--qa-accent) l c h / 10%)" }}>
+              <Pencil size={12} style={{ color: "var(--qa-accent)" }} />
             </button>
             <button onClick={() => handleDelete(post.id)} className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "oklch(0.65 0.22 25 / 10%)" }}>
-              <Trash2 size={12} style={{ color: "oklch(0.65 0.22 25)" }} />
+              <Trash2 size={12} style={{ color: "var(--qa-danger)" }} />
             </button>
           </div>
         )}
       </div>
       {post.imageUrl && <img src={post.imageUrl} alt={post.title} className="w-full h-32 object-cover rounded-lg mb-3" />}
-      <p className="text-xs leading-relaxed mb-3 line-clamp-3" style={{ color: "oklch(0.62 0.015 240)" }}>{post.content}</p>
+      <p className="text-xs leading-relaxed mb-3 line-clamp-3" style={{ color: "var(--qa-fg3)" }}>{post.content}</p>
       {post.hashtags && post.hashtags.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-3">
           {post.hashtags.slice(0, 4).map(h => (
-            <span key={h} className="text-xs px-1.5 py-0.5 rounded" style={{ background: "oklch(0.6 0.2 255 / 10%)", color: "oklch(0.6 0.2 255)" }}>#{h}</span>
+            <span key={h} className="text-xs px-1.5 py-0.5 rounded" style={{ background: "oklch(from var(--qa-accent) l c h / 10%)", color: "var(--qa-accent)" }}>#{h}</span>
           ))}
         </div>
       )}
       {post.scheduledAt && (
-        <p className="text-xs mb-3" style={{ color: "oklch(0.5 0.015 240)" }}>
+        <p className="text-xs mb-3" style={{ color: "var(--qa-fg4)" }}>
           <CalendarDays size={11} className="inline mr-1" />
           {new Date(post.scheduledAt).toLocaleString("hu-HU", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
         </p>
@@ -513,18 +513,18 @@ export default function ContentStudio() {
       {showActions && post.status === "review" && (
         <div className="flex gap-2">
           <button onClick={() => approvePostMutation.mutate({ postId: post.id })} className="flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
-            style={{ background: "oklch(0.65 0.18 165 / 15%)", color: "oklch(0.65 0.18 165)" }}>
+            style={{ background: "oklch(from var(--qa-success) l c h / 15%)", color: "var(--qa-success)" }}>
             <ThumbsUp size={12} /> Jóváhagyom
           </button>
           <button onClick={() => rejectPostMutation.mutate({ postId: post.id })} className="flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
-            style={{ background: "oklch(0.65 0.22 25 / 15%)", color: "oklch(0.65 0.22 25)" }}>
+            style={{ background: "oklch(0.65 0.22 25 / 15%)", color: "var(--qa-danger)" }}>
             <ThumbsDown size={12} /> Elutasítom
           </button>
         </div>
       )}
       {showActions && post.status === "approved" && (
         <button onClick={() => setScheduleModal(post)} className="w-full py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
-          style={{ background: "oklch(0.6 0.2 255 / 15%)", color: "oklch(0.6 0.2 255)" }}>
+          style={{ background: "oklch(from var(--qa-accent) l c h / 15%)", color: "var(--qa-accent)" }}>
           <CalendarDays size={12} /> Időzítés
         </button>
       )}
@@ -536,20 +536,20 @@ export default function ContentStudio() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>Content Studio</h1>
-          <p className="text-sm mt-0.5" style={{ color: "oklch(0.55 0.015 240)" }}>
+          <h1 className="text-xl font-bold" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>Content Studio</h1>
+          <p className="text-sm mt-0.5" style={{ color: "var(--qa-fg3)" }}>
             {activeProfile.name} · {(posts as Post[]).length} tartalom
           </p>
         </div>
         <div className="flex gap-2">
           <button onClick={openFreeCreate}
             className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all hover:opacity-80"
-            style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.65 0.015 240)" }}>
+            style={{ background: "var(--qa-surface2)", color: "var(--qa-fg3)" }}>
             <Plus size={14} /> Szabad tartalom
           </button>
           <button onClick={() => { setActiveTab("javasolt"); }}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all hover:opacity-90"
-            style={{ background: "linear-gradient(135deg, oklch(0.6 0.2 255), oklch(0.55 0.18 165))" }}>
+            style={{ background: "linear-gradient(135deg, var(--qa-accent), oklch(0.55 0.18 165))" }}>
             <Sparkles size={14} /> AI Tartalom
           </button>
         </div>
@@ -559,19 +559,19 @@ export default function ContentStudio() {
       <AiLimitBanner />
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 p-1 rounded-xl overflow-x-auto" style={{ background: "oklch(0.17 0.022 255)" }}>
+      <div className="flex gap-1 mb-6 p-1 rounded-xl overflow-x-auto" style={{ background: "var(--qa-surface)" }}>
         {TABS.map(tab => {
           const count = tab.id === "drafts" ? draftPosts.length : tab.id === "approval" ? approvalPosts.length : tab.id === "published" ? publishedPosts.length : null;
           return (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
               className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-sm font-medium transition-all whitespace-nowrap"
               style={{
-                background: activeTab === tab.id ? "oklch(0.6 0.2 255)" : "transparent",
-                color: activeTab === tab.id ? "white" : "oklch(0.55 0.015 240)",
+                background: activeTab === tab.id ? "var(--qa-accent)" : "transparent",
+                color: activeTab === tab.id ? "white" : "var(--qa-fg3)",
               }}>
               {tab.icon} {tab.label}
               {count !== null && count > 0 && (
-                <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: activeTab === tab.id ? "oklch(1 0 0 / 20%)" : "oklch(0.6 0.2 255 / 20%)", color: activeTab === tab.id ? "white" : "oklch(0.6 0.2 255)" }}>
+                <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: activeTab === tab.id ? "oklch(1 0 0 / 20%)" : "oklch(from var(--qa-accent) l c h / 20%)", color: activeTab === tab.id ? "white" : "var(--qa-accent)" }}>
                   {count}
                 </span>
               )}
@@ -582,7 +582,7 @@ export default function ContentStudio() {
 
       {isLoading && (
         <div className="flex items-center justify-center py-16">
-          <Loader2 size={24} className="animate-spin" style={{ color: "oklch(0.6 0.2 255)" }} />
+          <Loader2 size={24} className="animate-spin" style={{ color: "var(--qa-accent)" }} />
         </div>
       )}
 
@@ -591,25 +591,25 @@ export default function ContentStudio() {
         <div className="space-y-6">
           {/* Strategy context banner */}
           {activeStrategy ? (
-            <div className="rounded-xl border p-4 flex items-start gap-3" style={{ background: "oklch(0.6 0.2 255 / 8%)", borderColor: "oklch(0.6 0.2 255 / 25%)" }}>
-              <Target size={18} style={{ color: "oklch(0.6 0.2 255)", flexShrink: 0, marginTop: 2 }} />
+            <div className="rounded-xl border p-4 flex items-start gap-3" style={{ background: "oklch(from var(--qa-accent) l c h / 8%)", borderColor: "oklch(from var(--qa-accent) l c h / 25%)" }}>
+              <Target size={18} style={{ color: "var(--qa-accent)", flexShrink: 0, marginTop: 2 }} />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold mb-0.5" style={{ color: "oklch(0.88 0.008 240)" }}>
+                <p className="text-sm font-semibold mb-0.5" style={{ color: "var(--qa-fg2)" }}>
                   Aktív stratégia: {(activeStrategy as any).title}
                 </p>
-                <p className="text-xs leading-relaxed line-clamp-2" style={{ color: "oklch(0.6 0.015 240)" }}>
+                <p className="text-xs leading-relaxed line-clamp-2" style={{ color: "var(--qa-fg3)" }}>
                   {(activeStrategy as any).executiveSummary ?? "Stratégia betöltve – az alábbi javaslatok erre épülnek."}
                 </p>
               </div>
             </div>
           ) : (
-            <div className="rounded-xl border p-4 flex items-start gap-3" style={{ background: "oklch(0.75 0.18 75 / 8%)", borderColor: "oklch(0.75 0.18 75 / 25%)" }}>
-              <Lightbulb size={18} style={{ color: "oklch(0.75 0.18 75)", flexShrink: 0, marginTop: 2 }} />
+            <div className="rounded-xl border p-4 flex items-start gap-3" style={{ background: "oklch(from var(--qa-warning) l c h / 8%)", borderColor: "oklch(from var(--qa-warning) l c h / 25%)" }}>
+              <Lightbulb size={18} style={{ color: "var(--qa-warning)", flexShrink: 0, marginTop: 2 }} />
               <div>
-                <p className="text-sm font-semibold mb-0.5" style={{ color: "oklch(0.88 0.008 240)" }}>Nincs aktív stratégia</p>
-                <p className="text-xs" style={{ color: "oklch(0.6 0.015 240)" }}>
+                <p className="text-sm font-semibold mb-0.5" style={{ color: "var(--qa-fg2)" }}>Nincs aktív stratégia</p>
+                <p className="text-xs" style={{ color: "var(--qa-fg3)" }}>
                   A tartalmak pontosabbak lesznek, ha előbb generálsz egy{" "}
-                  <a href="/strategia" className="underline" style={{ color: "oklch(0.75 0.18 75)" }}>marketing stratégiát</a>.
+                  <a href="/strategia" className="underline" style={{ color: "var(--qa-warning)" }}>marketing stratégiát</a>.
                   Addig is az alábbi sablonok segítenek.
                 </p>
               </div>
@@ -620,17 +620,17 @@ export default function ContentStudio() {
           {contentPillars.length > 0 && (
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <Layers size={14} style={{ color: "oklch(0.65 0.18 165)" }} />
-                <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.65 0.015 240)" }}>Szűrés pillér szerint</p>
+                <Layers size={14} style={{ color: "var(--qa-success)" }} />
+                <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--qa-fg3)" }}>Szűrés pillér szerint</p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setActivePillarFilter(null)}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
                   style={{
-                    background: activePillarFilter === null ? "oklch(0.6 0.2 255 / 20%)" : "oklch(0.22 0.02 255)",
-                    color: activePillarFilter === null ? "oklch(0.7 0.18 255)" : "oklch(0.55 0.015 240)",
-                    border: activePillarFilter === null ? "1px solid oklch(0.6 0.2 255 / 40%)" : "1px solid oklch(0.3 0.02 255)"
+                    background: activePillarFilter === null ? "oklch(from var(--qa-accent) l c h / 20%)" : "var(--qa-surface2)",
+                    color: activePillarFilter === null ? "var(--qa-accent)" : "var(--qa-fg3)",
+                    border: activePillarFilter === null ? "1px solid oklch(from var(--qa-accent) l c h / 40%)" : "1px solid oklch(0.3 0.02 255)"
                   }}>
                   Összes
                 </button>
@@ -639,8 +639,8 @@ export default function ContentStudio() {
                     onClick={() => setActivePillarFilter(activePillarFilter === pillar ? null : pillar)}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
                     style={{
-                      background: activePillarFilter === pillar ? "oklch(0.65 0.18 165 / 20%)" : "oklch(0.22 0.02 255)",
-                      color: activePillarFilter === pillar ? "oklch(0.65 0.18 165)" : "oklch(0.55 0.015 240)",
+                      background: activePillarFilter === pillar ? "oklch(0.65 0.18 165 / 20%)" : "var(--qa-surface2)",
+                      color: activePillarFilter === pillar ? "var(--qa-success)" : "var(--qa-fg3)",
                       border: activePillarFilter === pillar ? "1px solid oklch(0.65 0.18 165 / 40%)" : "1px solid oklch(0.3 0.02 255)"
                     }}>
                     <Layers size={11} /> {pillar}
@@ -665,13 +665,13 @@ export default function ContentStudio() {
           <div>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <Sparkles size={14} style={{ color: "oklch(0.75 0.18 75)" }} />
-                <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "oklch(0.65 0.015 240)" }}>
+                <Sparkles size={14} style={{ color: "var(--qa-warning)" }} />
+                <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--qa-fg3)" }}>
                   {activePillarFilter ? `„${activePillarFilter}” pillér tartalmai` : activeStrategy ? "Stratégiára épülő tartalomtípusok" : "Javasolt tartalomtípusok"}
                 </p>
               </div>
               {activePillarFilter && (
-                <button onClick={() => setActivePillarFilter(null)} className="text-xs" style={{ color: "oklch(0.55 0.015 240)" }}>Szűrő törlése ×</button>
+                <button onClick={() => setActivePillarFilter(null)} className="text-xs" style={{ color: "var(--qa-fg3)" }}>Szűrő törlése ×</button>
               )}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -693,11 +693,11 @@ export default function ContentStudio() {
                       <div className="w-5 h-5 rounded flex items-center justify-center" style={{ background: `${PLATFORM_COLORS[template.platform]} / 15%`, color: PLATFORM_COLORS[template.platform] }}>
                         {PLATFORM_ICONS[template.platform]}
                       </div>
-                      <span className="text-xs capitalize" style={{ color: "oklch(0.5 0.015 240)" }}>{template.platform}</span>
+                      <span className="text-xs capitalize" style={{ color: "var(--qa-fg4)" }}>{template.platform}</span>
                     </div>
                   </div>
-                  <p className="text-sm font-semibold mb-1" style={{ color: "oklch(0.88 0.008 240)", fontFamily: "Sora, sans-serif" }}>{template.label}</p>
-                  <p className="text-xs mb-3" style={{ color: "oklch(0.55 0.015 240)" }}>{template.description}</p>
+                  <p className="text-sm font-semibold mb-1" style={{ color: "var(--qa-fg2)", fontFamily: "Sora, sans-serif" }}>{template.label}</p>
+                  <p className="text-xs mb-3" style={{ color: "var(--qa-fg3)" }}>{template.description}</p>
                   <div className="flex items-center gap-1 text-xs font-semibold" style={{ color: template.color }}>
                     <Wand2 size={11} /> AI generálás <ArrowRight size={11} className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
@@ -709,12 +709,12 @@ export default function ContentStudio() {
           {/* Free create CTA */}
           <div className="rounded-xl border p-4 flex items-center justify-between" style={{ background: cardBg, borderColor: border }}>
             <div>
-              <p className="text-sm font-semibold mb-0.5" style={{ color: "oklch(0.88 0.008 240)" }}>Saját ötleted van?</p>
-              <p className="text-xs" style={{ color: "oklch(0.55 0.015 240)" }}>Hozz létre teljesen szabad tartalmat – AI segítséggel vagy anélkül</p>
+              <p className="text-sm font-semibold mb-0.5" style={{ color: "var(--qa-fg2)" }}>Saját ötleted van?</p>
+              <p className="text-xs" style={{ color: "var(--qa-fg3)" }}>Hozz létre teljesen szabad tartalmat – AI segítséggel vagy anélkül</p>
             </div>
             <button onClick={openFreeCreate}
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold flex-shrink-0 ml-4"
-              style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.75 0.015 240)" }}>
+              style={{ background: "var(--qa-surface2)", color: "var(--qa-fg2)" }}>
               <Plus size={14} /> Szabad tartalom
             </button>
           </div>
@@ -725,7 +725,7 @@ export default function ContentStudio() {
       {!isLoading && activeTab === "calendar" && (
         <div className="rounded-xl border p-5" style={{ background: cardBg, borderColor: border }}>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-bold" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.88 0.008 240)" }}>
+            <h2 className="text-base font-bold" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg2)" }}>
               {MONTHS_HU[calendarMonth]} {calendarYear}
             </h2>
             <div className="flex items-center gap-2">
@@ -748,7 +748,7 @@ export default function ContentStudio() {
                   disabled={generatingMonthlyPlan}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
                   style={{
-                    background: generatingMonthlyPlan ? "oklch(0.22 0.02 255)" : "oklch(0.55 0.2 255)",
+                    background: generatingMonthlyPlan ? "var(--qa-surface2)" : "oklch(0.55 0.2 255)",
                     color: "oklch(0.95 0.005 240)",
                     cursor: generatingMonthlyPlan ? "not-allowed" : "pointer",
                     opacity: generatingMonthlyPlan ? 0.7 : 1,
@@ -762,18 +762,18 @@ export default function ContentStudio() {
                 </button>
               )}
               <button onClick={() => setCalendarDate(new Date(calendarYear, calendarMonth - 1, 1))}
-                className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "oklch(0.22 0.02 255)" }}>
+                className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "var(--qa-surface2)" }}>
                 <ChevronLeft size={14} style={{ color: "oklch(0.7 0.015 240)" }} />
               </button>
               <button onClick={() => setCalendarDate(new Date(calendarYear, calendarMonth + 1, 1))}
-                className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "oklch(0.22 0.02 255)" }}>
+                className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "var(--qa-surface2)" }}>
                 <ChevronRight size={14} style={{ color: "oklch(0.7 0.015 240)" }} />
               </button>
             </div>
           </div>
           <div className="grid grid-cols-7 gap-1 mb-2">
             {DAYS_HU.map(d => (
-              <div key={d} className="text-center text-xs font-semibold py-1" style={{ color: "oklch(0.5 0.015 240)" }}>{d}</div>
+              <div key={d} className="text-center text-xs font-semibold py-1" style={{ color: "var(--qa-fg4)" }}>{d}</div>
             ))}
           </div>
           <div className="grid grid-cols-7 gap-1">
@@ -781,21 +781,21 @@ export default function ContentStudio() {
               const isToday = day !== null && new Date().getDate() === day && new Date().getMonth() === calendarMonth && new Date().getFullYear() === calendarYear;
               const dayPosts = day !== null ? (scheduledByDay[day.toString()] ?? []) : [];
               return (
-                <div key={i} className="min-h-[72px] rounded-lg p-1.5" style={{ background: day !== null ? "oklch(0.22 0.02 255)" : "transparent", border: isToday ? "1px solid oklch(0.6 0.2 255)" : "1px solid transparent" }}>
+                <div key={i} className="min-h-[72px] rounded-lg p-1.5" style={{ background: day !== null ? "var(--qa-surface2)" : "transparent", border: isToday ? "1px solid var(--qa-accent)" : "1px solid transparent" }}>
                   {day !== null && (
                     <>
-                      <p className="text-xs font-semibold mb-1" style={{ color: isToday ? "oklch(0.6 0.2 255)" : "oklch(0.65 0.015 240)" }}>{day}</p>
+                      <p className="text-xs font-semibold mb-1" style={{ color: isToday ? "var(--qa-accent)" : "var(--qa-fg3)" }}>{day}</p>
                       {dayPosts.slice(0, 2).map(p => {
-                        const statusDot = p.status === "published" ? "oklch(0.65 0.18 165)" : p.status === "scheduled" ? "oklch(0.6 0.2 255)" : p.status === "approved" ? "oklch(0.75 0.18 75)" : "oklch(0.55 0.015 240)";
+                        const statusDot = p.status === "published" ? "var(--qa-success)" : p.status === "scheduled" ? "var(--qa-accent)" : p.status === "approved" ? "var(--qa-warning)" : "var(--qa-fg3)";
                         return (
-                          <div key={p.id} className="text-xs px-1 py-0.5 rounded mb-0.5 truncate cursor-pointer flex items-center gap-1" style={{ background: `oklch(0.25 0.02 255)`, color: "oklch(0.82 0.008 240)" }}
+                          <div key={p.id} className="text-xs px-1 py-0.5 rounded mb-0.5 truncate cursor-pointer flex items-center gap-1" style={{ background: `var(--qa-surface3)`, color: "var(--qa-fg2)" }}
                             onClick={() => setSelectedPost(p)}>
                             <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: statusDot }} />
                             <span className="truncate">{p.title}</span>
                           </div>
                         );
                       })}
-                      {dayPosts.length > 2 && <p className="text-xs" style={{ color: "oklch(0.5 0.015 240)" }}>+{dayPosts.length - 2}</p>}
+                      {dayPosts.length > 2 && <p className="text-xs" style={{ color: "var(--qa-fg4)" }}>+{dayPosts.length - 2}</p>}
                     </>
                   )}
                 </div>
@@ -864,51 +864,51 @@ export default function ContentStudio() {
       {/* Edit Modal */}
       {editModal && selectedPost && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "oklch(0 0 0 / 70%)" }}>
-          <div className="w-full max-w-2xl rounded-2xl border p-6 max-h-[90vh] overflow-y-auto" style={{ background: "oklch(0.15 0.022 255)", borderColor: "oklch(1 0 0 / 12%)" }}>
+          <div className="w-full max-w-2xl rounded-2xl border p-6 max-h-[90vh] overflow-y-auto" style={{ background: "oklch(0.15 0.022 255)", borderColor: "var(--qa-border-hi)" }}>
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-base font-bold" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>Tartalom Szerkesztése</h3>
-              <button onClick={() => { setEditModal(false); setSelectedPost(null); }} style={{ color: "oklch(0.5 0.015 240)" }}><X size={18} /></button>
+              <h3 className="text-base font-bold" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>Tartalom Szerkesztése</h3>
+              <button onClick={() => { setEditModal(false); setSelectedPost(null); }} style={{ color: "var(--qa-fg4)" }}><X size={18} /></button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="text-xs font-semibold mb-1 block" style={{ color: "oklch(0.65 0.015 240)" }}>Cím</label>
+                <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--qa-fg3)" }}>Cím</label>
                 <input value={editForm.title ?? ""} onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-lg text-sm border" style={{ background: "oklch(0.22 0.02 255)", borderColor: "oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }} />
+                  className="w-full px-3 py-2 rounded-lg text-sm border" style={{ background: "var(--qa-surface2)", borderColor: "var(--qa-border)", color: "var(--qa-fg2)" }} />
               </div>
               <div>
-                <label className="text-xs font-semibold mb-1 block" style={{ color: "oklch(0.65 0.015 240)" }}>Szöveg</label>
+                <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--qa-fg3)" }}>Szöveg</label>
                 <textarea value={editForm.content ?? ""} onChange={e => setEditForm(f => ({ ...f, content: e.target.value }))} rows={6}
-                  className="w-full px-3 py-2 rounded-lg text-sm border resize-none" style={{ background: "oklch(0.22 0.02 255)", borderColor: "oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }} />
+                  className="w-full px-3 py-2 rounded-lg text-sm border resize-none" style={{ background: "var(--qa-surface2)", borderColor: "var(--qa-border)", color: "var(--qa-fg2)" }} />
               </div>
               <div>
-                <label className="text-xs font-semibold mb-1 block" style={{ color: "oklch(0.65 0.015 240)" }}>Kép URL</label>
+                <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--qa-fg3)" }}>Kép URL</label>
                 <input value={editForm.imageUrl ?? ""} onChange={e => setEditForm(f => ({ ...f, imageUrl: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-lg text-sm border" style={{ background: "oklch(0.22 0.02 255)", borderColor: "oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }} placeholder="https://..." />
+                  className="w-full px-3 py-2 rounded-lg text-sm border" style={{ background: "var(--qa-surface2)", borderColor: "var(--qa-border)", color: "var(--qa-fg2)" }} placeholder="https://..." />
                 {editForm.imageUrl && <img src={editForm.imageUrl} alt="preview" className="mt-2 w-full h-32 object-cover rounded-lg" />}
               </div>
               <div>
-                <label className="text-xs font-semibold mb-1 block" style={{ color: "oklch(0.65 0.015 240)" }}>AI Kép Prompt</label>
+                <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--qa-fg3)" }}>AI Kép Prompt</label>
                 <div className="flex gap-2">
                   <input value={editForm.imagePrompt ?? ""} onChange={e => setEditForm(f => ({ ...f, imagePrompt: e.target.value }))}
-                    className="flex-1 px-3 py-2 rounded-lg text-sm border" style={{ background: "oklch(0.22 0.02 255)", borderColor: "oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }}
+                    className="flex-1 px-3 py-2 rounded-lg text-sm border" style={{ background: "var(--qa-surface2)", borderColor: "var(--qa-border)", color: "var(--qa-fg2)" }}
                     placeholder="Pl. modern office, professional team..." />
                   <button onClick={handleGenerateImage} disabled={generatingImage}
                     className="px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-1.5"
-                    style={{ background: "oklch(0.7 0.18 300 / 20%)", color: "oklch(0.7 0.18 300)" }}>
+                    style={{ background: "oklch(0.7 0.18 300 / 20%)", color: "var(--qa-accent-purple)" }}>
                     {generatingImage ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />} Kép
                   </button>
                 </div>
               </div>
               <div>
-                <label className="text-xs font-semibold mb-1 block" style={{ color: "oklch(0.65 0.015 240)" }}>Hashtagek (vesszővel)</label>
+                <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--qa-fg3)" }}>Hashtagek (vesszővel)</label>
                 <input value={(editForm.hashtags ?? []).join(", ")} onChange={e => setEditForm(f => ({ ...f, hashtags: e.target.value.split(",").map(h => h.trim()).filter(Boolean) }))}
-                  className="w-full px-3 py-2 rounded-lg text-sm border" style={{ background: "oklch(0.22 0.02 255)", borderColor: "oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }}
+                  className="w-full px-3 py-2 rounded-lg text-sm border" style={{ background: "var(--qa-surface2)", borderColor: "var(--qa-border)", color: "var(--qa-fg2)" }}
                   placeholder="marketing, b2b, growth" />
               </div>
             </div>
             <div className="flex gap-3 mt-6">
-              <button onClick={() => { setEditModal(false); setSelectedPost(null); }} className="flex-1 py-2.5 rounded-lg text-sm font-semibold" style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.65 0.015 240)" }}>Mégse</button>
-              <button onClick={handleSaveEdit} className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white" style={{ background: "oklch(0.6 0.2 255)" }}>Mentés</button>
+              <button onClick={() => { setEditModal(false); setSelectedPost(null); }} className="flex-1 py-2.5 rounded-lg text-sm font-semibold" style={{ background: "var(--qa-surface2)", color: "var(--qa-fg3)" }}>Mégse</button>
+              <button onClick={handleSaveEdit} className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white" style={{ background: "var(--qa-accent)" }}>Mentés</button>
             </div>
           </div>
         </div>
@@ -917,41 +917,41 @@ export default function ContentStudio() {
       {/* Schedule Modal */}
       {scheduleModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "oklch(0 0 0 / 70%)" }}>
-          <div className="w-full max-w-sm rounded-2xl border p-6" style={{ background: "oklch(0.15 0.022 255)", borderColor: "oklch(1 0 0 / 12%)" }}>
+          <div className="w-full max-w-sm rounded-2xl border p-6" style={{ background: "oklch(0.15 0.022 255)", borderColor: "var(--qa-border-hi)" }}>
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-base font-bold" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>Poszt Időzítése</h3>
-              <button onClick={() => setScheduleModal(null)} style={{ color: "oklch(0.5 0.015 240)" }}><X size={18} /></button>
+              <h3 className="text-base font-bold" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>Poszt Időzítése</h3>
+              <button onClick={() => setScheduleModal(null)} style={{ color: "var(--qa-fg4)" }}><X size={18} /></button>
             </div>
-            <p className="text-sm mb-4 font-medium truncate" style={{ color: "oklch(0.78 0.008 240)" }}>{scheduleModal.title}</p>
+            <p className="text-sm mb-4 font-medium truncate" style={{ color: "var(--qa-fg2)" }}>{scheduleModal.title}</p>
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-semibold mb-1 block" style={{ color: "oklch(0.65 0.015 240)" }}>Dátum</label>
+                <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--qa-fg3)" }}>Dátum</label>
                 <input type="date" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg text-sm border" style={{ background: "oklch(0.22 0.02 255)", borderColor: "oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }} />
+                  className="w-full px-3 py-2 rounded-lg text-sm border" style={{ background: "var(--qa-surface2)", borderColor: "var(--qa-border)", color: "var(--qa-fg2)" }} />
               </div>
               <div>
-                <label className="text-xs font-semibold mb-1 block" style={{ color: "oklch(0.65 0.015 240)" }}>Időpont</label>
+                <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--qa-fg3)" }}>Időpont</label>
                 <input type="time" value={scheduleTime} onChange={e => setScheduleTime(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg text-sm border" style={{ background: "oklch(0.22 0.02 255)", borderColor: "oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }} />
+                  className="w-full px-3 py-2 rounded-lg text-sm border" style={{ background: "var(--qa-surface2)", borderColor: "var(--qa-border)", color: "var(--qa-fg2)" }} />
               </div>
               {/* Social account selection for connected accounts */}
               {socialConnections.filter(c => c.isActive).length > 0 && (
                 <div>
-                  <label className="text-xs font-semibold mb-1 block" style={{ color: "oklch(0.65 0.015 240)" }}>Közzétevő fiók (opcionális)</label>
+                  <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--qa-fg3)" }}>Közzétevő fiók (opcionális)</label>
                   <div className="space-y-1.5">
                     <button
                       onClick={() => setSelectedConnectionId("")}
                       className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm border transition-all"
-                      style={{ background: !selectedConnectionId ? "oklch(0.6 0.2 255 / 10%)" : "oklch(0.22 0.02 255)", borderColor: !selectedConnectionId ? "oklch(0.6 0.2 255 / 40%)" : "oklch(1 0 0 / 8%)", color: "oklch(0.78 0.008 240)" }}>
+                      style={{ background: !selectedConnectionId ? "oklch(from var(--qa-accent) l c h / 10%)" : "var(--qa-surface2)", borderColor: !selectedConnectionId ? "oklch(from var(--qa-accent) l c h / 40%)" : "var(--qa-border)", color: "var(--qa-fg2)" }}>
                       <span className="text-xs">Csak ütemezés (nem publikál automatikusan)</span>
                     </button>
                     {socialConnections.filter(c => c.isActive).map(conn => (
                       <button key={conn.id} onClick={() => setSelectedConnectionId(conn.id)}
                         className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm border transition-all"
-                        style={{ background: selectedConnectionId === conn.id ? "oklch(0.6 0.2 255 / 10%)" : "oklch(0.22 0.02 255)", borderColor: selectedConnectionId === conn.id ? "oklch(0.6 0.2 255 / 40%)" : "oklch(1 0 0 / 8%)", color: "oklch(0.78 0.008 240)" }}>
-                        <Linkedin size={14} style={{ color: "oklch(0.55 0.18 255)" }} />
+                        style={{ background: selectedConnectionId === conn.id ? "oklch(from var(--qa-accent) l c h / 10%)" : "var(--qa-surface2)", borderColor: selectedConnectionId === conn.id ? "oklch(from var(--qa-accent) l c h / 40%)" : "var(--qa-border)", color: "var(--qa-fg2)" }}>
+                        <Linkedin size={14} style={{ color: "var(--qa-accent)" }} />
                         <span className="font-medium">{conn.platformUsername ?? conn.platform}</span>
-                        <span className="ml-auto text-xs" style={{ color: "oklch(0.5 0.015 240)" }}>automatikus publikálás</span>
+                        <span className="ml-auto text-xs" style={{ color: "var(--qa-fg4)" }}>automatikus publikálás</span>
                       </button>
                     ))}
                   </div>
@@ -959,8 +959,8 @@ export default function ContentStudio() {
               )}
             </div>
             <div className="flex gap-3 mt-5">
-              <button onClick={() => setScheduleModal(null)} className="flex-1 py-2.5 rounded-lg text-sm font-semibold" style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.65 0.015 240)" }}>Mégse</button>
-              <button onClick={handleSchedule} className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white flex items-center justify-center gap-1.5" style={{ background: "oklch(0.6 0.2 255)" }}>
+              <button onClick={() => setScheduleModal(null)} className="flex-1 py-2.5 rounded-lg text-sm font-semibold" style={{ background: "var(--qa-surface2)", color: "var(--qa-fg3)" }}>Mégse</button>
+              <button onClick={handleSchedule} className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white flex items-center justify-center gap-1.5" style={{ background: "var(--qa-accent)" }}>
                 <Send size={13} /> Ütemezés
               </button>
             </div>
@@ -971,31 +971,31 @@ export default function ContentStudio() {
       {/* Create / AI Content Modal */}
       {createModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "oklch(0 0 0 / 70%)" }}>
-          <div className="w-full max-w-2xl rounded-2xl border p-6 max-h-[90vh] overflow-y-auto" style={{ background: "oklch(0.15 0.022 255)", borderColor: "oklch(1 0 0 / 12%)" }}>
+          <div className="w-full max-w-2xl rounded-2xl border p-6 max-h-[90vh] overflow-y-auto" style={{ background: "oklch(0.15 0.022 255)", borderColor: "var(--qa-border-hi)" }}>
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h3 className="text-base font-bold" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>
+                <h3 className="text-base font-bold" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>
                   {selectedTemplate ? `${selectedTemplate.label} – AI Generálás` : "Új Tartalom Létrehozása"}
                 </h3>
                 {selectedTemplate && (
-                  <p className="text-xs mt-0.5" style={{ color: "oklch(0.55 0.015 240)" }}>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--qa-fg3)" }}>
                     {selectedTemplate.description} · {selectedTemplate.platform}
                   </p>
                 )}
               </div>
-              <button onClick={() => { setCreateModal(false); setSelectedTemplate(null); }} style={{ color: "oklch(0.5 0.015 240)" }}><X size={18} /></button>
+              <button onClick={() => { setCreateModal(false); setSelectedTemplate(null); }} style={{ color: "var(--qa-fg4)" }}><X size={18} /></button>
             </div>
 
             {/* Mode toggle */}
-            <div className="flex gap-1 mb-5 p-1 rounded-lg" style={{ background: "oklch(0.22 0.02 255)" }}>
+            <div className="flex gap-1 mb-5 p-1 rounded-lg" style={{ background: "var(--qa-surface2)" }}>
               <button onClick={() => setCreateMode("template")}
                 className="flex-1 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center justify-center gap-1.5"
-                style={{ background: createMode === "template" ? "oklch(0.6 0.2 255)" : "transparent", color: createMode === "template" ? "white" : "oklch(0.55 0.015 240)" }}>
+                style={{ background: createMode === "template" ? "var(--qa-accent)" : "transparent", color: createMode === "template" ? "white" : "var(--qa-fg3)" }}>
                 <Wand2 size={12} /> AI segítséggel
               </button>
               <button onClick={() => setCreateMode("free")}
                 className="flex-1 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center justify-center gap-1.5"
-                style={{ background: createMode === "free" ? "oklch(0.22 0.02 255 / 0%)" : "transparent", color: createMode === "free" ? "oklch(0.88 0.008 240)" : "oklch(0.55 0.015 240)", border: createMode === "free" ? "1px solid oklch(1 0 0 / 15%)" : "1px solid transparent" }}>
+                style={{ background: createMode === "free" ? "oklch(0.22 0.02 255 / 0%)" : "transparent", color: createMode === "free" ? "var(--qa-fg2)" : "var(--qa-fg3)", border: createMode === "free" ? "1px solid var(--qa-border-hi)" : "1px solid transparent" }}>
                 <Plus size={12} /> Saját szöveg
               </button>
             </div>
@@ -1004,14 +1004,14 @@ export default function ContentStudio() {
               <div className="space-y-4 mb-4">
                 {/* Platform selector */}
                 <div>
-                  <label className="text-xs font-semibold mb-2 block" style={{ color: "oklch(0.65 0.015 240)" }}>Platform</label>
+                  <label className="text-xs font-semibold mb-2 block" style={{ color: "var(--qa-fg3)" }}>Platform</label>
                   <div className="flex gap-2 flex-wrap">
                     {(["linkedin", "facebook", "instagram", "twitter", "tiktok"] as Platform[]).map(pl => (
                       <button key={pl} onClick={() => setNewPost(p => ({ ...p, platform: pl }))}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
                         style={{
-                          background: newPost.platform === pl ? `${PLATFORM_COLORS[pl]} / 20%` : "oklch(0.22 0.02 255)",
-                          color: newPost.platform === pl ? PLATFORM_COLORS[pl] : "oklch(0.55 0.015 240)",
+                          background: newPost.platform === pl ? `${PLATFORM_COLORS[pl]} / 20%` : "var(--qa-surface2)",
+                          color: newPost.platform === pl ? PLATFORM_COLORS[pl] : "var(--qa-fg3)",
                           border: `1px solid ${newPost.platform === pl ? PLATFORM_COLORS[pl] : "transparent"}`,
                         }}>
                         {PLATFORM_ICONS[pl]} {pl}
@@ -1023,15 +1023,15 @@ export default function ContentStudio() {
                 {/* Pillar selector */}
                 {contentPillars.length > 0 && (
                   <div>
-                    <label className="text-xs font-semibold mb-2 block" style={{ color: "oklch(0.65 0.015 240)" }}>Tartalmi pillér</label>
+                    <label className="text-xs font-semibold mb-2 block" style={{ color: "var(--qa-fg3)" }}>Tartalmi pillér</label>
                     <div className="flex gap-2 flex-wrap">
                       {contentPillars.map(pillar => (
                         <button key={pillar} onClick={() => setNewPost(p => ({ ...p, pillar }))}
                           className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
                           style={{
-                            background: newPost.pillar === pillar ? "oklch(0.65 0.18 165 / 20%)" : "oklch(0.22 0.02 255)",
-                            color: newPost.pillar === pillar ? "oklch(0.65 0.18 165)" : "oklch(0.55 0.015 240)",
-                            border: `1px solid ${newPost.pillar === pillar ? "oklch(0.65 0.18 165)" : "transparent"}`,
+                            background: newPost.pillar === pillar ? "oklch(0.65 0.18 165 / 20%)" : "var(--qa-surface2)",
+                            color: newPost.pillar === pillar ? "var(--qa-success)" : "var(--qa-fg3)",
+                            border: `1px solid ${newPost.pillar === pillar ? "var(--qa-success)" : "transparent"}`,
                           }}>
                           {pillar}
                         </button>
@@ -1042,16 +1042,16 @@ export default function ContentStudio() {
 
                 {/* Additional context */}
                 <div>
-                  <label className="text-xs font-semibold mb-1 block" style={{ color: "oklch(0.65 0.015 240)" }}>Kiegészítő instrukciók (opcionális)</label>
+                  <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--qa-fg3)" }}>Kiegészítő instrukciók (opcionális)</label>
                   <textarea value={additionalContext} onChange={e => setAdditionalContext(e.target.value)} rows={2}
-                    className="w-full px-3 py-2 rounded-lg text-sm border resize-none" style={{ background: "oklch(0.22 0.02 255)", borderColor: "oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }}
+                    className="w-full px-3 py-2 rounded-lg text-sm border resize-none" style={{ background: "var(--qa-surface2)", borderColor: "var(--qa-border)", color: "var(--qa-fg2)" }}
                     placeholder="Pl. fókuszálj a Q2-es kampányra, emeld ki az ár-érték arányt..." />
                 </div>
 
                 {/* Generate button */}
                 <button onClick={handleGenerateContent} disabled={generatingContent}
                   className="w-full py-3 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 transition-all hover:opacity-90"
-                  style={{ background: "linear-gradient(135deg, oklch(0.6 0.2 255), oklch(0.55 0.18 165))" }}>
+                  style={{ background: "linear-gradient(135deg, var(--qa-accent), oklch(0.55 0.18 165))" }}>
                   {generatingContent ? <><Loader2 size={15} className="animate-spin" /> Generálás...</> : <><Wand2 size={15} /> AI Tartalom Generálása</>}
                 </button>
               </div>
@@ -1061,26 +1061,26 @@ export default function ContentStudio() {
             {(newPost.title || newPost.content || createMode === "free") && (
               <div className="space-y-4">
                 {createMode === "template" && newPost.title && (
-                  <div className="p-3 rounded-lg flex items-center gap-2" style={{ background: "oklch(0.65 0.18 165 / 10%)", borderColor: "oklch(0.65 0.18 165 / 20%)", border: "1px solid" }}>
-                    <CheckCircle2 size={14} style={{ color: "oklch(0.65 0.18 165)" }} />
-                    <p className="text-xs font-semibold" style={{ color: "oklch(0.65 0.18 165)" }}>Tartalom generálva – szerkeszd és mentsd el!</p>
+                  <div className="p-3 rounded-lg flex items-center gap-2" style={{ background: "oklch(from var(--qa-success) l c h / 10%)", borderColor: "oklch(0.65 0.18 165 / 20%)", border: "1px solid" }}>
+                    <CheckCircle2 size={14} style={{ color: "var(--qa-success)" }} />
+                    <p className="text-xs font-semibold" style={{ color: "var(--qa-success)" }}>Tartalom generálva – szerkeszd és mentsd el!</p>
                   </div>
                 )}
                 <div>
-                  <label className="text-xs font-semibold mb-1 block" style={{ color: "oklch(0.65 0.015 240)" }}>Cím *</label>
+                  <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--qa-fg3)" }}>Cím *</label>
                   <input value={newPost.title ?? ""} onChange={e => setNewPost(p => ({ ...p, title: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-lg text-sm border" style={{ background: "oklch(0.22 0.02 255)", borderColor: "oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }} />
+                    className="w-full px-3 py-2 rounded-lg text-sm border" style={{ background: "var(--qa-surface2)", borderColor: "var(--qa-border)", color: "var(--qa-fg2)" }} />
                 </div>
                 {createMode === "free" && (
                   <div>
-                    <label className="text-xs font-semibold mb-2 block" style={{ color: "oklch(0.65 0.015 240)" }}>Platform *</label>
+                    <label className="text-xs font-semibold mb-2 block" style={{ color: "var(--qa-fg3)" }}>Platform *</label>
                     <div className="flex gap-2 flex-wrap">
                       {(["linkedin", "facebook", "instagram", "twitter", "tiktok"] as Platform[]).map(pl => (
                         <button key={pl} onClick={() => setNewPost(p => ({ ...p, platform: pl }))}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
                           style={{
-                            background: newPost.platform === pl ? `${PLATFORM_COLORS[pl]} / 20%` : "oklch(0.22 0.02 255)",
-                            color: newPost.platform === pl ? PLATFORM_COLORS[pl] : "oklch(0.55 0.015 240)",
+                            background: newPost.platform === pl ? `${PLATFORM_COLORS[pl]} / 20%` : "var(--qa-surface2)",
+                            color: newPost.platform === pl ? PLATFORM_COLORS[pl] : "var(--qa-fg3)",
                             border: `1px solid ${newPost.platform === pl ? PLATFORM_COLORS[pl] : "transparent"}`,
                           }}>
                           {PLATFORM_ICONS[pl]} {pl}
@@ -1090,28 +1090,28 @@ export default function ContentStudio() {
                   </div>
                 )}
                 <div>
-                  <label className="text-xs font-semibold mb-1 block" style={{ color: "oklch(0.65 0.015 240)" }}>Szöveg *</label>
+                  <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--qa-fg3)" }}>Szöveg *</label>
                   <textarea value={newPost.content ?? ""} onChange={e => setNewPost(p => ({ ...p, content: e.target.value }))} rows={5}
-                    className="w-full px-3 py-2 rounded-lg text-sm border resize-none" style={{ background: "oklch(0.22 0.02 255)", borderColor: "oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }} />
+                    className="w-full px-3 py-2 rounded-lg text-sm border resize-none" style={{ background: "var(--qa-surface2)", borderColor: "var(--qa-border)", color: "var(--qa-fg2)" }} />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold mb-1 block" style={{ color: "oklch(0.65 0.015 240)" }}>AI Kép Prompt</label>
+                  <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--qa-fg3)" }}>AI Kép Prompt</label>
                   <div className="flex gap-2">
                     <input value={newPost.imagePrompt ?? ""} onChange={e => setNewPost(p => ({ ...p, imagePrompt: e.target.value }))}
-                      className="flex-1 px-3 py-2 rounded-lg text-sm border" style={{ background: "oklch(0.22 0.02 255)", borderColor: "oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }}
+                      className="flex-1 px-3 py-2 rounded-lg text-sm border" style={{ background: "var(--qa-surface2)", borderColor: "var(--qa-border)", color: "var(--qa-fg2)" }}
                       placeholder="Pl. modern office, professional team..." />
                     <button onClick={handleGenerateNewImage} disabled={generatingImage}
                       className="px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-1.5"
-                      style={{ background: "oklch(0.7 0.18 300 / 20%)", color: "oklch(0.7 0.18 300)" }}>
+                      style={{ background: "oklch(0.7 0.18 300 / 20%)", color: "var(--qa-accent-purple)" }}>
                       {generatingImage ? <Loader2 size={13} className="animate-spin" /> : <ImageIcon size={13} />} Kép
                     </button>
                   </div>
                   {newPost.imageUrl && <img src={newPost.imageUrl} alt="preview" className="mt-2 w-full h-32 object-cover rounded-lg" />}
                 </div>
                 <div>
-                  <label className="text-xs font-semibold mb-1 block" style={{ color: "oklch(0.65 0.015 240)" }}>Hashtagek (vesszővel)</label>
+                  <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--qa-fg3)" }}>Hashtagek (vesszővel)</label>
                   <input value={(newPost.hashtags ?? []).join(", ")} onChange={e => setNewPost(p => ({ ...p, hashtags: e.target.value.split(",").map(h => h.trim()).filter(Boolean) }))}
-                    className="w-full px-3 py-2 rounded-lg text-sm border" style={{ background: "oklch(0.22 0.02 255)", borderColor: "oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }}
+                    className="w-full px-3 py-2 rounded-lg text-sm border" style={{ background: "var(--qa-surface2)", borderColor: "var(--qa-border)", color: "var(--qa-fg2)" }}
                     placeholder="marketing, b2b, growth" />
                 </div>
               </div>
@@ -1119,10 +1119,10 @@ export default function ContentStudio() {
 
             {(newPost.title || newPost.content || createMode === "free") && (
               <div className="flex gap-3 mt-6">
-                <button onClick={() => { setCreateModal(false); setSelectedTemplate(null); }} className="flex-1 py-2.5 rounded-lg text-sm font-semibold" style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.65 0.015 240)" }}>Mégse</button>
+                <button onClick={() => { setCreateModal(false); setSelectedTemplate(null); }} className="flex-1 py-2.5 rounded-lg text-sm font-semibold" style={{ background: "var(--qa-surface2)", color: "var(--qa-fg3)" }}>Mégse</button>
                 <button onClick={handleCreatePost} disabled={createMutation.isPending}
                   className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white flex items-center justify-center gap-1.5"
-                  style={{ background: "oklch(0.6 0.2 255)" }}>
+                  style={{ background: "var(--qa-accent)" }}>
                   {createMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />} Mentés piszkozatként
                 </button>
               </div>
@@ -1133,21 +1133,21 @@ export default function ContentStudio() {
 
       {/* Post Detail Drawer */}
       {selectedPost && !editModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" style={{ background: "oklch(0 0 0 / 60%)" }} onClick={() => setSelectedPost(null)}>
-          <div className="w-full max-w-lg rounded-2xl border p-6" style={{ background: "oklch(0.15 0.022 255)", borderColor: "oklch(1 0 0 / 12%)" }} onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)" }} onClick={() => setSelectedPost(null)}>
+          <div className="w-full max-w-lg rounded-2xl border p-6" style={{ background: "oklch(0.15 0.022 255)", borderColor: "var(--qa-border-hi)" }} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: `${PLATFORM_COLORS[selectedPost.platform]} / 15%`, color: PLATFORM_COLORS[selectedPost.platform] }}>
                   {PLATFORM_ICONS[selectedPost.platform]}
                 </div>
-                <h3 className="text-base font-bold" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>{selectedPost.title}</h3>
+                <h3 className="text-base font-bold" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>{selectedPost.title}</h3>
               </div>
-              <button onClick={() => setSelectedPost(null)} style={{ color: "oklch(0.5 0.015 240)" }}><X size={18} /></button>
+              <button onClick={() => setSelectedPost(null)} style={{ color: "var(--qa-fg4)" }}><X size={18} /></button>
             </div>
             {selectedPost.imageUrl && <img src={selectedPost.imageUrl} alt={selectedPost.title} className="w-full h-40 object-cover rounded-xl mb-4" />}
             <p className="text-sm leading-relaxed mb-4" style={{ color: "oklch(0.72 0.015 240)" }}>{selectedPost.content}</p>
             {selectedPost.scheduledAt && (
-              <p className="text-xs mb-4" style={{ color: "oklch(0.5 0.015 240)" }}>
+              <p className="text-xs mb-4" style={{ color: "var(--qa-fg4)" }}>
                 <CalendarDays size={11} className="inline mr-1" />
                 {new Date(selectedPost.scheduledAt).toLocaleString("hu-HU")}
               </p>
@@ -1155,19 +1155,19 @@ export default function ContentStudio() {
             <div className="flex gap-2 flex-wrap">
               <button onClick={() => { setEditForm({ title: selectedPost.title, content: selectedPost.content, imageUrl: selectedPost.imageUrl, imagePrompt: selectedPost.imagePrompt, hashtags: selectedPost.hashtags }); setEditModal(true); }}
                 className="flex-1 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5"
-                style={{ background: "oklch(0.6 0.2 255 / 15%)", color: "oklch(0.6 0.2 255)" }}>
+                style={{ background: "oklch(from var(--qa-accent) l c h / 15%)", color: "var(--qa-accent)" }}>
                 <Pencil size={13} /> Szerkesztés
               </button>
               {socialConnections.filter(c => c.isActive).length > 0 && (
                 <button onClick={() => { setPublishTarget(selectedPost); setSelectedConnectionId(socialConnections.filter(c => c.isActive)[0]?.id ?? ""); setPublishModal(true); setSelectedPost(null); }}
                   className="flex-1 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5"
-                  style={{ background: "oklch(0.65 0.18 165 / 15%)", color: "oklch(0.65 0.18 165)" }}>
+                  style={{ background: "oklch(from var(--qa-success) l c h / 15%)", color: "var(--qa-success)" }}>
                   <Send size={13} /> Publikálás
                 </button>
               )}
               <button onClick={() => handleDelete(selectedPost.id)}
                 className="flex-1 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5"
-                style={{ background: "oklch(0.65 0.22 25 / 15%)", color: "oklch(0.65 0.22 25)" }}>
+                style={{ background: "oklch(0.65 0.22 25 / 15%)", color: "var(--qa-danger)" }}>
                 <Trash2 size={13} /> Törlés
               </button>
             </div>
@@ -1177,31 +1177,31 @@ export default function ContentStudio() {
 
       {/* Publish Modal */}
       {publishModal && publishTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "oklch(0 0 0 / 60%)" }} onClick={() => setPublishModal(false)}>
-          <div className="w-full max-w-md rounded-2xl border p-6" style={{ background: "oklch(0.15 0.022 255)", borderColor: "oklch(1 0 0 / 12%)" }} onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)" }} onClick={() => setPublishModal(false)}>
+          <div className="w-full max-w-md rounded-2xl border p-6" style={{ background: "oklch(0.15 0.022 255)", borderColor: "var(--qa-border-hi)" }} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>Közzététel</h3>
-              <button onClick={() => setPublishModal(false)} style={{ color: "oklch(0.5 0.015 240)" }}><X size={18} /></button>
+              <h3 className="text-base font-bold" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>Közzététel</h3>
+              <button onClick={() => setPublishModal(false)} style={{ color: "var(--qa-fg4)" }}><X size={18} /></button>
             </div>
-            <p className="text-sm mb-4" style={{ color: "oklch(0.65 0.015 240)" }}>Válaszd ki, melyik fiókra szeretnéd publikálni:</p>
+            <p className="text-sm mb-4" style={{ color: "var(--qa-fg3)" }}>Válaszd ki, melyik fiókra szeretnéd publikálni:</p>
             <div className="space-y-2 mb-4">
               {socialConnections.filter(c => c.isActive).map(conn => (
                 <button key={conn.id} onClick={() => setSelectedConnectionId(conn.id)}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all"
-                  style={{ background: selectedConnectionId === conn.id ? "oklch(0.6 0.2 255 / 10%)" : "oklch(0.22 0.02 255)", borderColor: selectedConnectionId === conn.id ? "oklch(0.6 0.2 255 / 40%)" : "oklch(1 0 0 / 8%)" }}>
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "oklch(0.55 0.18 255 / 20%)", color: "oklch(0.55 0.18 255)" }}>
+                  style={{ background: selectedConnectionId === conn.id ? "oklch(from var(--qa-accent) l c h / 10%)" : "var(--qa-surface2)", borderColor: selectedConnectionId === conn.id ? "oklch(from var(--qa-accent) l c h / 40%)" : "var(--qa-border)" }}>
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "oklch(from var(--qa-accent) l c h / 20%)", color: "var(--qa-accent)" }}>
                     <Linkedin size={16} />
                   </div>
                   <div className="text-left">
-                    <p className="text-sm font-semibold" style={{ color: "oklch(0.88 0.008 240)" }}>{conn.platformUsername ?? conn.platform}</p>
-                    <p className="text-xs" style={{ color: "oklch(0.5 0.015 240)" }}>{conn.platform}</p>
+                    <p className="text-sm font-semibold" style={{ color: "var(--qa-fg2)" }}>{conn.platformUsername ?? conn.platform}</p>
+                    <p className="text-xs" style={{ color: "var(--qa-fg4)" }}>{conn.platform}</p>
                   </div>
-                  {selectedConnectionId === conn.id && <div className="ml-auto w-4 h-4 rounded-full" style={{ background: "oklch(0.6 0.2 255)" }} />}
+                  {selectedConnectionId === conn.id && <div className="ml-auto w-4 h-4 rounded-full" style={{ background: "var(--qa-accent)" }} />}
                 </button>
               ))}
             </div>
             <div className="flex gap-3">
-              <button onClick={() => setPublishModal(false)} className="flex-1 py-2.5 rounded-lg text-sm font-semibold" style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.65 0.015 240)" }}>Mégse</button>
+              <button onClick={() => setPublishModal(false)} className="flex-1 py-2.5 rounded-lg text-sm font-semibold" style={{ background: "var(--qa-surface2)", color: "var(--qa-fg3)" }}>Mégse</button>
               <button
                 onClick={() => {
                   if (!selectedConnectionId || !publishTarget) return;
@@ -1215,7 +1215,7 @@ export default function ContentStudio() {
                 }}
                 disabled={!selectedConnectionId || publishNowMutation.isPending}
                 className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white flex items-center justify-center gap-1.5"
-                style={{ background: "oklch(0.6 0.2 255)" }}>
+                style={{ background: "var(--qa-accent)" }}>
                 {publishNowMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Közzétesz most
               </button>
             </div>

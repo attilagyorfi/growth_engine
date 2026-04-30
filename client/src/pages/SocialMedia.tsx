@@ -30,7 +30,7 @@ const initialPlatforms: Platform[] = [
     name: "LinkedIn",
     handle: "",
     icon: <Linkedin size={22} />,
-    color: "oklch(0.55 0.18 255)",
+    color: "var(--qa-accent)",
     connected: false,
     authUrl: "https://www.linkedin.com/oauth/v2/authorization",
     description: "B2B lead generálás és thought leadership tartalmak publikálása.",
@@ -128,13 +128,13 @@ export default function SocialMedia() {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         {[
-          { label: "Csatlakoztatott Fiók", value: String(connected.length), color: "oklch(0.65 0.18 165)" },
-          { label: "Elérhető Platform", value: String(platforms.length), color: "oklch(0.6 0.2 255)" },
-          { label: "Ütemezett Poszt", value: "0", color: "oklch(0.75 0.18 75)" },
+          { label: "Csatlakoztatott Fiók", value: String(connected.length), color: "var(--qa-success)" },
+          { label: "Elérhető Platform", value: String(platforms.length), color: "var(--qa-accent)" },
+          { label: "Ütemezett Poszt", value: "0", color: "var(--qa-warning)" },
         ].map((s) => (
           <div key={s.label} className="g2a-stat-card p-4">
-            <p className="text-2xl font-bold mb-1" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>{s.value}</p>
-            <p className="text-xs" style={{ color: "oklch(0.55 0.015 240)" }}>{s.label}</p>
+            <p className="text-2xl font-bold mb-1" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>{s.value}</p>
+            <p className="text-xs" style={{ color: "var(--qa-fg3)" }}>{s.label}</p>
           </div>
         ))}
       </div>
@@ -142,26 +142,26 @@ export default function SocialMedia() {
       {/* Connected Accounts */}
       {connected.length > 0 && (
         <div className="g2a-card p-5 mb-5">
-          <h3 className="text-sm font-semibold mb-4" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>
+          <h3 className="text-sm font-semibold mb-4" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>
             Csatlakoztatott Fiókok
           </h3>
           <div className="space-y-3">
             {connected.map((p) => (
-              <div key={p.id} className="flex items-center gap-4 rounded-lg p-4" style={{ background: "oklch(0.22 0.02 255)", border: "1px solid oklch(0.65 0.18 165 / 20%)" }}>
+              <div key={p.id} className="flex items-center gap-4 rounded-lg p-4" style={{ background: "var(--qa-surface2)", border: "1px solid oklch(0.65 0.18 165 / 20%)" }}>
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${p.color.replace(")", " / 15%)")}`, color: p.color }}>
                   {p.icon}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>{p.name}</p>
+                    <p className="text-sm font-semibold" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>{p.name}</p>
                     <span className="flex items-center gap-1 text-xs" style={{ color: "oklch(0.75 0.15 165)" }}>
                       <CheckCircle size={11} />Csatlakoztatva
                     </span>
                   </div>
-                  <p className="text-xs" style={{ color: "oklch(0.55 0.015 240)" }}>@{p.handle} · Szinkron: {p.lastSync}</p>
+                  <p className="text-xs" style={{ color: "var(--qa-fg3)" }}>@{p.handle} · Szinkron: {p.lastSync}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => handleSync(p.id)} className="p-2 rounded-lg transition-opacity hover:opacity-80" style={{ background: "oklch(0.6 0.2 255 / 12%)", color: "oklch(0.75 0.18 255)" }}>
+                  <button onClick={() => handleSync(p.id)} className="p-2 rounded-lg transition-opacity hover:opacity-80" style={{ background: "oklch(0.6 0.2 255 / 12%)", color: "var(--qa-accent)" }}>
                     <RefreshCw size={13} />
                   </button>
                   <button onClick={() => handleDisconnect(p.id)} className="p-2 rounded-lg transition-opacity hover:opacity-80" style={{ background: "oklch(0.65 0.22 25 / 12%)", color: "oklch(0.75 0.2 25)" }}>
@@ -176,25 +176,25 @@ export default function SocialMedia() {
 
       {/* Available Platforms */}
       <div className="g2a-card p-5">
-        <h3 className="text-sm font-semibold mb-4" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>
+        <h3 className="text-sm font-semibold mb-4" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>
           Elérhető Platformok
         </h3>
         <div className="grid grid-cols-2 gap-4">
           {disconnected.map((p) => (
-            <div key={p.id} className="rounded-xl p-5" style={{ background: "oklch(0.22 0.02 255)", border: "1px solid oklch(1 0 0 / 8%)" }}>
+            <div key={p.id} className="rounded-xl p-5" style={{ background: "var(--qa-surface2)", border: "1px solid var(--qa-border)" }}>
               <div className="flex items-start justify-between mb-3">
                 <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: `${p.color.replace(")", " / 12%)")}`, color: p.color }}>
                   {p.icon}
                 </div>
-                <span className="flex items-center gap-1 text-xs px-2 py-1 rounded-md" style={{ background: "oklch(0.65 0.22 25 / 10%)", color: "oklch(0.65 0.22 25)" }}>
+                <span className="flex items-center gap-1 text-xs px-2 py-1 rounded-md" style={{ background: "oklch(0.65 0.22 25 / 10%)", color: "var(--qa-danger)" }}>
                   <AlertCircle size={10} />Nincs csatlakoztatva
                 </span>
               </div>
-              <p className="text-sm font-bold mb-1" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>{p.name}</p>
-              <p className="text-xs mb-3" style={{ color: "oklch(0.55 0.015 240)" }}>{p.description}</p>
+              <p className="text-sm font-bold mb-1" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>{p.name}</p>
+              <p className="text-xs mb-3" style={{ color: "var(--qa-fg3)" }}>{p.description}</p>
               <div className="space-y-1 mb-4">
                 {p.features.map((f) => (
-                  <div key={f} className="flex items-center gap-1.5 text-xs" style={{ color: "oklch(0.6 0.015 240)" }}>
+                  <div key={f} className="flex items-center gap-1.5 text-xs" style={{ color: "var(--qa-fg3)" }}>
                     <CheckCircle size={10} style={{ color: p.color }} />
                     {f}
                   </div>
@@ -211,7 +211,7 @@ export default function SocialMedia() {
                 <button
                   onClick={() => setSelectedPlatform(p)}
                   className="p-2 rounded-lg transition-opacity hover:opacity-80"
-                  style={{ background: "oklch(0.28 0.02 255)", color: "oklch(0.6 0.015 240)" }}
+                  style={{ background: "var(--qa-surface3)", color: "var(--qa-fg3)" }}
                 >
                   <ExternalLink size={13} />
                 </button>
@@ -230,7 +230,7 @@ export default function SocialMedia() {
           subtitle="Add meg a fiók adatait az összekapcsoláshoz"
           footer={
             <>
-              <button onClick={() => { setConnectModal(null); setHandleInput(""); }} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.75 0.015 240)" }}>
+              <button onClick={() => { setConnectModal(null); setHandleInput(""); }} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "var(--qa-surface2)", color: "var(--qa-fg2)" }}>
                 Mégse
               </button>
               <button onClick={() => handleConnect(connectModal)} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: connectModal.color, color: "white", fontFamily: "Sora, sans-serif" }}>
@@ -240,15 +240,15 @@ export default function SocialMedia() {
           }
         >
           <div className="space-y-4">
-            <div className="rounded-lg p-4" style={{ background: "oklch(0.22 0.02 255)", border: `1px solid ${connectModal.color.replace(")", " / 20%)")}` }}>
-              <p className="text-xs mb-1" style={{ color: "oklch(0.55 0.015 240)" }}>Platform</p>
+            <div className="rounded-lg p-4" style={{ background: "var(--qa-surface2)", border: `1px solid ${connectModal.color.replace(")", " / 20%)")}` }}>
+              <p className="text-xs mb-1" style={{ color: "var(--qa-fg3)" }}>Platform</p>
               <div className="flex items-center gap-2">
                 <span style={{ color: connectModal.color }}>{connectModal.icon}</span>
-                <p className="text-sm font-semibold" style={{ color: "oklch(0.88 0.008 240)", fontFamily: "Sora, sans-serif" }}>{connectModal.name}</p>
+                <p className="text-sm font-semibold" style={{ color: "var(--qa-fg2)", fontFamily: "Sora, sans-serif" }}>{connectModal.name}</p>
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: "oklch(0.65 0.015 240)" }}>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--qa-fg3)" }}>
                 Fiók neve / Handle *
               </label>
               <input
@@ -257,11 +257,11 @@ export default function SocialMedia() {
                 value={handleInput}
                 onChange={(e) => setHandleInput(e.target.value)}
                 className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
-                style={{ background: "oklch(0.22 0.02 255)", border: "1px solid oklch(1 0 0 / 10%)", color: "oklch(0.88 0.008 240)" }}
+                style={{ background: "var(--qa-surface2)", border: "1px solid var(--qa-border)", color: "var(--qa-fg2)" }}
                 onKeyDown={(e) => e.key === "Enter" && handleConnect(connectModal)}
               />
             </div>
-            <div className="rounded-lg p-3" style={{ background: "oklch(0.75 0.18 75 / 8%)", border: "1px solid oklch(0.75 0.18 75 / 20%)" }}>
+            <div className="rounded-lg p-3" style={{ background: "oklch(from var(--qa-warning) l c h / 8%)", border: "1px solid oklch(from var(--qa-warning) l c h / 15%)" }}>
               <p className="text-xs" style={{ color: "oklch(0.75 0.15 75)" }}>
                 <strong>Megjegyzés:</strong> Éles API integráció esetén a rendszer OAuth-on keresztül kéri az engedélyeket. A jelenlegi verzióban a fiók adatai manuálisan rögzíthetők.
               </p>
@@ -279,7 +279,7 @@ export default function SocialMedia() {
           subtitle={selectedPlatform.description}
           footer={
             <>
-              <button onClick={() => setSelectedPlatform(null)} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.75 0.015 240)" }}>
+              <button onClick={() => setSelectedPlatform(null)} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "var(--qa-surface2)", color: "var(--qa-fg2)" }}>
                 Bezárás
               </button>
               <button onClick={() => { setConnectModal(selectedPlatform); setSelectedPlatform(null); setHandleInput(""); }} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: selectedPlatform.color, color: "white" }}>
@@ -289,9 +289,9 @@ export default function SocialMedia() {
           }
         >
           <div className="space-y-3">
-            <p className="text-sm font-semibold" style={{ color: "oklch(0.75 0.015 240)", fontFamily: "Sora, sans-serif" }}>Elérhető funkciók:</p>
+            <p className="text-sm font-semibold" style={{ color: "var(--qa-fg2)", fontFamily: "Sora, sans-serif" }}>Elérhető funkciók:</p>
             {selectedPlatform.features.map((f) => (
-              <div key={f} className="flex items-center gap-2 rounded-lg p-3" style={{ background: "oklch(0.22 0.02 255)" }}>
+              <div key={f} className="flex items-center gap-2 rounded-lg p-3" style={{ background: "var(--qa-surface2)" }}>
                 <CheckCircle size={14} style={{ color: selectedPlatform.color }} />
                 <p className="text-sm" style={{ color: "oklch(0.78 0.01 240)" }}>{f}</p>
               </div>

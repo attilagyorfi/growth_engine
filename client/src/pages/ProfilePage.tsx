@@ -17,14 +17,14 @@ import { toast } from "sonner";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const cardBg = "oklch(0.18 0.022 255)";
-const border = "1px solid oklch(1 0 0 / 8%)";
-const textPrimary = "oklch(0.92 0.008 240)";
-const textMuted = "oklch(0.55 0.015 240)";
-const blue = "oklch(0.6 0.2 255)";
-const green = "oklch(0.65 0.18 165)";
-const amber = "oklch(0.75 0.18 75)";
-const red = "oklch(0.65 0.22 25)";
+const cardBg = "var(--qa-surface)";
+const border = "1px solid var(--qa-border)";
+const textPrimary = "var(--qa-fg)";
+const textMuted = "var(--qa-fg3)";
+const blue = "var(--qa-accent)";
+const green = "var(--qa-success)";
+const amber = "var(--qa-warning)";
+const red = "var(--qa-danger)";
 
 const platformIcons: Record<string, any> = {
   linkedin: Linkedin,
@@ -38,7 +38,7 @@ const platformColors: Record<string, string> = {
   linkedin: "oklch(0.55 0.18 240)",
   facebook: "oklch(0.55 0.2 260)",
   instagram: "oklch(0.65 0.2 20)",
-  twitter: "oklch(0.6 0.015 240)",
+  twitter: "var(--qa-fg3)",
   tiktok: "oklch(0.65 0.22 5)",
 };
 
@@ -59,7 +59,7 @@ const emptyProfile = (): ClientProfile => ({
   id: `client_${Date.now()}`,
   name: "",
   initials: "",
-  color: "oklch(0.6 0.2 255)",
+  color: "var(--qa-accent)",
   website: "",
   industry: "",
   description: "",
@@ -200,7 +200,7 @@ export default function ProfilePage() {
         {/* Left: Client Switcher */}
         <div className="w-56 flex-shrink-0">
           <div className="rounded-xl overflow-hidden" style={{ background: cardBg, border }}>
-            <div className="px-4 py-3 border-b" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
+            <div className="px-4 py-3 border-b" style={{ borderColor: "var(--qa-border)" }}>
               <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: textMuted }}>Ügyfelek</p>
             </div>
             <div className="py-1">
@@ -210,10 +210,10 @@ export default function ProfilePage() {
                   onClick={() => handleSwitchProfile(profile.id)}
                   className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors"
                   style={{
-                    background: activeProfile.id === profile.id ? "oklch(0.6 0.2 255 / 10%)" : "transparent",
+                    background: activeProfile.id === profile.id ? "oklch(from var(--qa-accent) l c h / 10%)" : "transparent",
                     borderLeft: activeProfile.id === profile.id ? `3px solid ${blue}` : "3px solid transparent",
                   }}
-                  onMouseEnter={(e) => { if (activeProfile.id !== profile.id) e.currentTarget.style.background = "oklch(1 0 0 / 4%)"; }}
+                  onMouseEnter={(e) => { if (activeProfile.id !== profile.id) e.currentTarget.style.background = "var(--qa-border)"; }}
                   onMouseLeave={(e) => { if (activeProfile.id !== profile.id) e.currentTarget.style.background = "transparent"; }}
                 >
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style={{ background: profile.color }}>
@@ -227,13 +227,13 @@ export default function ProfilePage() {
                 </button>
               ))}
             </div>
-            <div className="px-3 py-3 border-t" style={{ borderColor: "oklch(1 0 0 / 8%)" }}>
+            <div className="px-3 py-3 border-t" style={{ borderColor: "var(--qa-border)" }}>
               <button
                 onClick={() => setShowNewClient(true)}
                 className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors"
-                style={{ background: "oklch(0.6 0.2 255 / 10%)", color: blue }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "oklch(0.6 0.2 255 / 20%)")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "oklch(0.6 0.2 255 / 10%)")}
+                style={{ background: "oklch(from var(--qa-accent) l c h / 10%)", color: blue }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "oklch(from var(--qa-accent) l c h / 20%)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "oklch(from var(--qa-accent) l c h / 10%)")}
               >
                 <Plus size={13} /> Új ügyfél
               </button>
@@ -275,13 +275,13 @@ export default function ProfilePage() {
                     <button onClick={handleSaveEdit} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium" style={{ background: green, color: "white" }}>
                       <Check size={12} /> Mentés
                     </button>
-                    <button onClick={handleCancelEdit} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium" style={{ background: "oklch(1 0 0 / 8%)", color: textMuted }}>
+                    <button onClick={handleCancelEdit} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium" style={{ background: "var(--qa-border)", color: textMuted }}>
                       <X size={12} /> Mégse
                     </button>
                   </>
                 ) : (
                   <>
-                    <button onClick={handleStartEdit} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors" style={{ background: "oklch(0.6 0.2 255 / 15%)", color: blue }}>
+                    <button onClick={handleStartEdit} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors" style={{ background: "oklch(from var(--qa-accent) l c h / 15%)", color: blue }}>
                       <Edit2 size={12} /> Szerkesztés
                     </button>
                     {profiles.length > 1 && (
@@ -299,7 +299,7 @@ export default function ProfilePage() {
                 onChange={(e) => setEditData((p) => ({ ...p, description: e.target.value }))}
                 rows={2}
                 className="w-full mt-3 text-sm bg-transparent border rounded-lg p-2 outline-none resize-none"
-                style={{ color: textMuted, borderColor: "oklch(1 0 0 / 15%)" }}
+                style={{ color: textMuted, borderColor: "var(--qa-border-hi)" }}
               />
             ) : (
               <p className="text-sm mt-3" style={{ color: textMuted }}>{data.description}</p>
@@ -315,7 +315,7 @@ export default function ProfilePage() {
                 <div>
                   <p className="text-xs mb-1.5" style={{ color: textMuted }}>Weboldal</p>
                   {editMode ? (
-                    <input value={editData.website} onChange={(e) => setEditData((p) => ({ ...p, website: e.target.value }))} className="w-full text-xs bg-transparent border rounded-lg px-3 py-2 outline-none" style={{ color: textPrimary, borderColor: "oklch(1 0 0 / 15%)" }} placeholder="https://..." />
+                    <input value={editData.website} onChange={(e) => setEditData((p) => ({ ...p, website: e.target.value }))} className="w-full text-xs bg-transparent border rounded-lg px-3 py-2 outline-none" style={{ color: textPrimary, borderColor: "var(--qa-border-hi)" }} placeholder="https://..." />
                   ) : (
                     <p className="text-xs" style={{ color: textPrimary }}>{data.website || "–"}</p>
                   )}
@@ -348,7 +348,7 @@ export default function ProfilePage() {
                   <div>
                     <p className="text-xs mb-1.5" style={{ color: textMuted }}>Cím betűtípus</p>
                     {editMode ? (
-                      <input value={editData.fontHeading} onChange={(e) => setEditData((p) => ({ ...p, fontHeading: e.target.value }))} className="w-full text-xs bg-transparent border rounded-lg px-2 py-1.5 outline-none" style={{ color: textPrimary, borderColor: "oklch(1 0 0 / 15%)" }} />
+                      <input value={editData.fontHeading} onChange={(e) => setEditData((p) => ({ ...p, fontHeading: e.target.value }))} className="w-full text-xs bg-transparent border rounded-lg px-2 py-1.5 outline-none" style={{ color: textPrimary, borderColor: "var(--qa-border-hi)" }} />
                     ) : (
                       <p className="text-xs" style={{ color: textPrimary }}>{data.fontHeading}</p>
                     )}
@@ -356,7 +356,7 @@ export default function ProfilePage() {
                   <div>
                     <p className="text-xs mb-1.5" style={{ color: textMuted }}>Szöveg betűtípus</p>
                     {editMode ? (
-                      <input value={editData.fontBody} onChange={(e) => setEditData((p) => ({ ...p, fontBody: e.target.value }))} className="w-full text-xs bg-transparent border rounded-lg px-2 py-1.5 outline-none" style={{ color: textPrimary, borderColor: "oklch(1 0 0 / 15%)" }} />
+                      <input value={editData.fontBody} onChange={(e) => setEditData((p) => ({ ...p, fontBody: e.target.value }))} className="w-full text-xs bg-transparent border rounded-lg px-2 py-1.5 outline-none" style={{ color: textPrimary, borderColor: "var(--qa-border-hi)" }} />
                     ) : (
                       <p className="text-xs" style={{ color: textPrimary }}>{data.fontBody}</p>
                     )}
@@ -365,7 +365,7 @@ export default function ProfilePage() {
                 {editMode && (
                   <div>
                     <p className="text-xs mb-1.5" style={{ color: textMuted }}>Arculati kézikönyv URL</p>
-                    <input value={editData.brandGuidelineUrl ?? ""} onChange={(e) => setEditData((p) => ({ ...p, brandGuidelineUrl: e.target.value }))} className="w-full text-xs bg-transparent border rounded-lg px-3 py-2 outline-none" style={{ color: textPrimary, borderColor: "oklch(1 0 0 / 15%)" }} placeholder="https://..." />
+                    <input value={editData.brandGuidelineUrl ?? ""} onChange={(e) => setEditData((p) => ({ ...p, brandGuidelineUrl: e.target.value }))} className="w-full text-xs bg-transparent border rounded-lg px-3 py-2 outline-none" style={{ color: textPrimary, borderColor: "var(--qa-border-hi)" }} placeholder="https://..." />
                   </div>
                 )}
               </div>
@@ -381,7 +381,7 @@ export default function ProfilePage() {
                     <div key={field}>
                       <p className="text-xs mb-1.5" style={{ color: textMuted }}>{labels[field]}</p>
                       {editMode ? (
-                        <input value={editData.brandVoice[field]} onChange={(e) => setEditData((p) => ({ ...p, brandVoice: { ...p.brandVoice, [field]: e.target.value } }))} className="w-full text-xs bg-transparent border rounded-lg px-3 py-2 outline-none" style={{ color: textPrimary, borderColor: "oklch(1 0 0 / 15%)" }} />
+                        <input value={editData.brandVoice[field]} onChange={(e) => setEditData((p) => ({ ...p, brandVoice: { ...p.brandVoice, [field]: e.target.value } }))} className="w-full text-xs bg-transparent border rounded-lg px-3 py-2 outline-none" style={{ color: textPrimary, borderColor: "var(--qa-border-hi)" }} />
                       ) : (
                         <p className="text-xs" style={{ color: textPrimary }}>{data.brandVoice[field] || "–"}</p>
                       )}
@@ -400,7 +400,7 @@ export default function ProfilePage() {
                   </div>
                   {editMode && (
                     <div className="flex gap-2">
-                      <input value={newKeyword} onChange={(e) => setNewKeyword(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addKeyword(true)} className="flex-1 text-xs bg-transparent border rounded-lg px-2 py-1.5 outline-none" style={{ color: textPrimary, borderColor: "oklch(1 0 0 / 15%)" }} placeholder="Kulcsszó hozzáadása..." />
+                      <input value={newKeyword} onChange={(e) => setNewKeyword(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addKeyword(true)} className="flex-1 text-xs bg-transparent border rounded-lg px-2 py-1.5 outline-none" style={{ color: textPrimary, borderColor: "var(--qa-border-hi)" }} placeholder="Kulcsszó hozzáadása..." />
                       <button onClick={() => addKeyword(true)} className="px-2 py-1.5 rounded-lg text-xs" style={{ background: `${blue.replace(")", " / 20%)")}`, color: blue }}><Plus size={12} /></button>
                     </div>
                   )}
@@ -414,23 +414,23 @@ export default function ProfilePage() {
             <SectionHeader icon={LayoutList} title="Tartalmi Irányok (Pillérek)" />
             <div className="space-y-2 mb-3">
               {data.contentPillars.map((cp) => (
-                <div key={cp.id} className="flex items-center gap-3 p-3 rounded-lg" style={{ background: "oklch(0.22 0.02 255)" }}>
+                <div key={cp.id} className="flex items-center gap-3 p-3 rounded-lg" style={{ background: "var(--qa-surface2)" }}>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <p className="text-xs font-semibold" style={{ color: textPrimary }}>{cp.name}</p>
-                      <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: cp.active ? `${green.replace(")", " / 15%)")}` : "oklch(1 0 0 / 8%)", color: cp.active ? green : textMuted }}>
+                      <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: cp.active ? `${green.replace(")", " / 15%)")}` : "var(--qa-border)", color: cp.active ? green : textMuted }}>
                         {cp.active ? "Aktív" : "Inaktív"}
                       </span>
                       <span className="text-xs ml-auto" style={{ color: amber }}>{cp.percentage}%</span>
                     </div>
                     <p className="text-xs" style={{ color: textMuted }}>{cp.description}</p>
-                    <div className="h-1.5 rounded-full mt-2 overflow-hidden" style={{ background: "oklch(1 0 0 / 8%)" }}>
+                    <div className="h-1.5 rounded-full mt-2 overflow-hidden" style={{ background: "var(--qa-border)" }}>
                       <div className="h-full rounded-full" style={{ width: `${cp.percentage}%`, background: blue }} />
                     </div>
                   </div>
                   {editMode && (
                     <div className="flex items-center gap-1.5">
-                      <button onClick={() => togglePillar(cp.id)} className="p-1.5 rounded-lg text-xs" style={{ background: "oklch(1 0 0 / 8%)", color: textMuted }}>
+                      <button onClick={() => togglePillar(cp.id)} className="p-1.5 rounded-lg text-xs" style={{ background: "var(--qa-border)", color: textMuted }}>
                         {cp.active ? <X size={12} /> : <Check size={12} />}
                       </button>
                       <button onClick={() => removePillar(cp.id)} className="p-1.5 rounded-lg" style={{ background: `${red.replace(")", " / 10%)")}`, color: red }}>
@@ -445,14 +445,14 @@ export default function ProfilePage() {
               )}
             </div>
             {editMode && (
-              <div className="flex gap-2 items-end p-3 rounded-lg" style={{ background: "oklch(0.22 0.02 255)" }}>
+              <div className="flex gap-2 items-end p-3 rounded-lg" style={{ background: "var(--qa-surface2)" }}>
                 <div className="flex-1">
-                  <input value={newPillar.name} onChange={(e) => setNewPillar((p) => ({ ...p, name: e.target.value }))} className="w-full text-xs bg-transparent border rounded-lg px-2 py-1.5 outline-none mb-1.5" style={{ color: textPrimary, borderColor: "oklch(1 0 0 / 15%)" }} placeholder="Pillér neve..." />
-                  <input value={newPillar.description} onChange={(e) => setNewPillar((p) => ({ ...p, description: e.target.value }))} className="w-full text-xs bg-transparent border rounded-lg px-2 py-1.5 outline-none" style={{ color: textPrimary, borderColor: "oklch(1 0 0 / 15%)" }} placeholder="Leírás..." />
+                  <input value={newPillar.name} onChange={(e) => setNewPillar((p) => ({ ...p, name: e.target.value }))} className="w-full text-xs bg-transparent border rounded-lg px-2 py-1.5 outline-none mb-1.5" style={{ color: textPrimary, borderColor: "var(--qa-border-hi)" }} placeholder="Pillér neve..." />
+                  <input value={newPillar.description} onChange={(e) => setNewPillar((p) => ({ ...p, description: e.target.value }))} className="w-full text-xs bg-transparent border rounded-lg px-2 py-1.5 outline-none" style={{ color: textPrimary, borderColor: "var(--qa-border-hi)" }} placeholder="Leírás..." />
                 </div>
                 <div className="w-16">
                   <p className="text-xs mb-1" style={{ color: textMuted }}>Arány %</p>
-                  <input type="number" min={1} max={100} value={newPillar.percentage} onChange={(e) => setNewPillar((p) => ({ ...p, percentage: Number(e.target.value) }))} className="w-full text-xs bg-transparent border rounded-lg px-2 py-1.5 outline-none" style={{ color: textPrimary, borderColor: "oklch(1 0 0 / 15%)" }} />
+                  <input type="number" min={1} max={100} value={newPillar.percentage} onChange={(e) => setNewPillar((p) => ({ ...p, percentage: Number(e.target.value) }))} className="w-full text-xs bg-transparent border rounded-lg px-2 py-1.5 outline-none" style={{ color: textPrimary, borderColor: "var(--qa-border-hi)" }} />
                 </div>
                 <button onClick={addPillar} className="flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-medium" style={{ background: `${blue.replace(")", " / 20%)")}`, color: blue }}>
                   <Plus size={12} /> Hozzáad
@@ -468,7 +468,7 @@ export default function ProfilePage() {
               {!editingSocial ? (
                 <button onClick={() => { setSocialDraft([...activeProfile.socialAccounts]); setEditingSocial(true); }}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                  style={{ background: "oklch(0.6 0.2 255 / 15%)", color: blue }}>
+                  style={{ background: "oklch(from var(--qa-accent) l c h / 15%)", color: blue }}>
                   <Edit2 size={12} /> Szerkesztés
                 </button>
               ) : (
@@ -476,7 +476,7 @@ export default function ProfilePage() {
                   <button onClick={handleSaveSocial} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium" style={{ background: blue, color: "white" }}>
                     <Check size={12} /> Mentés
                   </button>
-                  <button onClick={() => setEditingSocial(false)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs" style={{ background: "oklch(1 0 0 / 8%)", color: textMuted }}>
+                  <button onClick={() => setEditingSocial(false)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs" style={{ background: "var(--qa-border)", color: textMuted }}>
                     <X size={12} /> Mégse
                   </button>
                 </div>
@@ -487,7 +487,7 @@ export default function ProfilePage() {
                 const Icon = platformIcons[acc.platform] ?? Share2;
                 const color = platformColors[acc.platform];
                 return (
-                  <div key={acc.platform} className="flex items-center gap-3 p-3 rounded-lg" style={{ background: "oklch(0.22 0.02 255)" }}>
+                  <div key={acc.platform} className="flex items-center gap-3 p-3 rounded-lg" style={{ background: "var(--qa-surface2)" }}>
                     <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${color.replace(")", " / 15%)")}`, color }}>
                       <Icon size={16} />
                     </div>
@@ -495,13 +495,13 @@ export default function ProfilePage() {
                       <>
                         <input type="text" value={acc.handle} onChange={(e) => updateSocialAccount(acc.platform, "handle", e.target.value)}
                           placeholder="@felhasználónév" className="flex-1 text-xs bg-transparent border rounded-lg px-2 py-1.5 outline-none"
-                          style={{ color: textPrimary, borderColor: "oklch(1 0 0 / 15%)" }} />
+                          style={{ color: textPrimary, borderColor: "var(--qa-border-hi)" }} />
                         <input type="number" value={acc.followers ?? 0} onChange={(e) => updateSocialAccount(acc.platform, "followers", Number(e.target.value))}
                           placeholder="Követők" className="w-20 text-xs bg-transparent border rounded-lg px-2 py-1.5 outline-none text-center"
-                          style={{ color: textPrimary, borderColor: "oklch(1 0 0 / 15%)" }} />
+                          style={{ color: textPrimary, borderColor: "var(--qa-border-hi)" }} />
                         <button onClick={() => updateSocialAccount(acc.platform, "connected", !acc.connected)}
                           className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs"
-                          style={{ background: acc.connected ? `${green.replace(")", " / 15%)")}` : "oklch(1 0 0 / 8%)", color: acc.connected ? green : textMuted }}>
+                          style={{ background: acc.connected ? `${green.replace(")", " / 15%)")}` : "var(--qa-border)", color: acc.connected ? green : textMuted }}>
                           {acc.connected ? <><Check size={10} />Csatlakozva</> : <><Link size={10} />Nincs csatlakoztatva</>}
                         </button>
                         <button onClick={() => removeSocialAccount(acc.platform)} className="p-1.5 rounded-lg" style={{ background: `${red.replace(")", " / 10%)")}`, color: red }}>
@@ -515,7 +515,7 @@ export default function ProfilePage() {
                           <p className="text-xs truncate" style={{ color: textMuted }}>@{acc.handle || "–"}</p>
                           {acc.followers && <p className="text-xs" style={{ color: green }}>{acc.followers.toLocaleString()} követő</p>}
                         </div>
-                        <span className="text-xs px-2 py-0.5 rounded-full flex-shrink-0" style={{ background: acc.connected ? `${green.replace(")", " / 15%)")}` : "oklch(1 0 0 / 8%)", color: acc.connected ? green : textMuted }}>
+                        <span className="text-xs px-2 py-0.5 rounded-full flex-shrink-0" style={{ background: acc.connected ? `${green.replace(")", " / 15%)")}` : "var(--qa-border)", color: acc.connected ? green : textMuted }}>
                           {acc.connected ? "Csatlakozva" : "Nincs"}
                         </span>
                       </>
@@ -529,9 +529,9 @@ export default function ProfilePage() {
               {editingSocial && (
                 <button onClick={addSocialAccount}
                   className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs transition-colors"
-                  style={{ border: "1px dashed oklch(1 0 0 / 15%)", color: textMuted }}
+                  style={{ border: "1px dashed var(--qa-border-hi)", color: textMuted }}
                   onMouseEnter={(e) => { e.currentTarget.style.borderColor = `${blue.replace(")", " / 40%)")}` ; e.currentTarget.style.color = blue; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = "oklch(1 0 0 / 15%)"; e.currentTarget.style.color = textMuted; }}>
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--qa-border-hi)"; e.currentTarget.style.color = textMuted; }}>
                   <Plus size={13} />Fiók hozzáadása
                 </button>
               )}
@@ -544,7 +544,7 @@ export default function ProfilePage() {
       <DetailModal isOpen={showNewClient} onClose={() => setShowNewClient(false)} title="Új Ügyfél Profil" subtitle="Töltsd ki az alapadatokat az induláshoz"
         footer={
           <div className="flex gap-2 justify-end">
-            <button onClick={() => setShowNewClient(false)} className="px-4 py-2 rounded-lg text-sm" style={{ background: "oklch(1 0 0 / 8%)", color: textMuted }}>Mégse</button>
+            <button onClick={() => setShowNewClient(false)} className="px-4 py-2 rounded-lg text-sm" style={{ background: "var(--qa-border)", color: textMuted }}>Mégse</button>
             <button onClick={handleAddClient} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ background: blue, color: "white" }}>Profil létrehozása</button>
           </div>
         }
@@ -553,24 +553,24 @@ export default function ProfilePage() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs block mb-1" style={{ color: textMuted }}>Cég neve *</label>
-              <input value={newClient.name} onChange={(e) => setNewClient((p) => ({ ...p, name: e.target.value }))} className="w-full text-sm bg-transparent border rounded-lg px-3 py-2 outline-none" style={{ color: textPrimary, borderColor: "oklch(1 0 0 / 15%)" }} placeholder="pl. Nexus Solutions Zrt." />
+              <input value={newClient.name} onChange={(e) => setNewClient((p) => ({ ...p, name: e.target.value }))} className="w-full text-sm bg-transparent border rounded-lg px-3 py-2 outline-none" style={{ color: textPrimary, borderColor: "var(--qa-border-hi)" }} placeholder="pl. Nexus Solutions Zrt." />
             </div>
             <div>
               <label className="text-xs block mb-1" style={{ color: textMuted }}>Iparág</label>
-              <input value={newClient.industry} onChange={(e) => setNewClient((p) => ({ ...p, industry: e.target.value }))} className="w-full text-sm bg-transparent border rounded-lg px-3 py-2 outline-none" style={{ color: textPrimary, borderColor: "oklch(1 0 0 / 15%)" }} placeholder="pl. Manufacturing" />
+              <input value={newClient.industry} onChange={(e) => setNewClient((p) => ({ ...p, industry: e.target.value }))} className="w-full text-sm bg-transparent border rounded-lg px-3 py-2 outline-none" style={{ color: textPrimary, borderColor: "var(--qa-border-hi)" }} placeholder="pl. Manufacturing" />
             </div>
           </div>
           <div>
             <label className="text-xs block mb-1" style={{ color: textMuted }}>Weboldal</label>
-            <input value={newClient.website} onChange={(e) => setNewClient((p) => ({ ...p, website: e.target.value }))} className="w-full text-sm bg-transparent border rounded-lg px-3 py-2 outline-none" style={{ color: textPrimary, borderColor: "oklch(1 0 0 / 15%)" }} placeholder="https://..." />
+            <input value={newClient.website} onChange={(e) => setNewClient((p) => ({ ...p, website: e.target.value }))} className="w-full text-sm bg-transparent border rounded-lg px-3 py-2 outline-none" style={{ color: textPrimary, borderColor: "var(--qa-border-hi)" }} placeholder="https://..." />
           </div>
           <div>
             <label className="text-xs block mb-1" style={{ color: textMuted }}>Rövid leírás</label>
-            <textarea value={newClient.description} onChange={(e) => setNewClient((p) => ({ ...p, description: e.target.value }))} rows={2} className="w-full text-sm bg-transparent border rounded-lg px-3 py-2 outline-none resize-none" style={{ color: textPrimary, borderColor: "oklch(1 0 0 / 15%)" }} placeholder="Mivel foglalkozik a cég?" />
+            <textarea value={newClient.description} onChange={(e) => setNewClient((p) => ({ ...p, description: e.target.value }))} rows={2} className="w-full text-sm bg-transparent border rounded-lg px-3 py-2 outline-none resize-none" style={{ color: textPrimary, borderColor: "var(--qa-border-hi)" }} placeholder="Mivel foglalkozik a cég?" />
           </div>
           <div>
             <label className="text-xs block mb-1" style={{ color: textMuted }}>Márkahangg – Hangnem</label>
-            <input value={newClient.brandVoice.tone} onChange={(e) => setNewClient((p) => ({ ...p, brandVoice: { ...p.brandVoice, tone: e.target.value } }))} className="w-full text-sm bg-transparent border rounded-lg px-3 py-2 outline-none" style={{ color: textPrimary, borderColor: "oklch(1 0 0 / 15%)" }} placeholder="pl. Szakmai, hiteles, közvetlen" />
+            <input value={newClient.brandVoice.tone} onChange={(e) => setNewClient((p) => ({ ...p, brandVoice: { ...p.brandVoice, tone: e.target.value } }))} className="w-full text-sm bg-transparent border rounded-lg px-3 py-2 outline-none" style={{ color: textPrimary, borderColor: "var(--qa-border-hi)" }} placeholder="pl. Szakmai, hiteles, közvetlen" />
           </div>
           <div>
             <label className="text-xs block mb-1" style={{ color: textMuted }}>Kulcsszavak</label>
@@ -582,7 +582,7 @@ export default function ProfilePage() {
               ))}
             </div>
             <div className="flex gap-2">
-              <input value={newKeyword} onChange={(e) => setNewKeyword(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addKeyword(false)} className="flex-1 text-sm bg-transparent border rounded-lg px-3 py-2 outline-none" style={{ color: textPrimary, borderColor: "oklch(1 0 0 / 15%)" }} placeholder="Kulcsszó + Enter" />
+              <input value={newKeyword} onChange={(e) => setNewKeyword(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addKeyword(false)} className="flex-1 text-sm bg-transparent border rounded-lg px-3 py-2 outline-none" style={{ color: textPrimary, borderColor: "var(--qa-border-hi)" }} placeholder="Kulcsszó + Enter" />
               <button onClick={() => addKeyword(false)} className="px-3 py-2 rounded-lg text-sm" style={{ background: `${blue.replace(")", " / 20%)")}`, color: blue }}><Plus size={14} /></button>
             </div>
           </div>
@@ -593,7 +593,7 @@ export default function ProfilePage() {
       <DetailModal isOpen={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)} title="Profil törlése" subtitle={`Biztosan törlöd a(z) ${activeProfile.name} profilt?`}
         footer={
           <div className="flex gap-2 justify-end">
-            <button onClick={() => setShowDeleteConfirm(false)} className="px-4 py-2 rounded-lg text-sm" style={{ background: "oklch(1 0 0 / 8%)", color: textMuted }}>Mégse</button>
+            <button onClick={() => setShowDeleteConfirm(false)} className="px-4 py-2 rounded-lg text-sm" style={{ background: "var(--qa-border)", color: textMuted }}>Mégse</button>
             <button onClick={handleDeleteProfile} className="px-4 py-2 rounded-lg text-sm font-medium" style={{ background: red, color: "white" }}>Törlés</button>
           </div>
         }

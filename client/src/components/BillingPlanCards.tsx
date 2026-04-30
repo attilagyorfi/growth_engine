@@ -18,10 +18,10 @@ const PLAN_ICONS: Record<SubscriptionPlan, React.ReactNode> = {
 };
 
 const PLAN_COLORS: Record<SubscriptionPlan, string> = {
-  free: "oklch(0.6 0.2 255)",
-  starter: "oklch(0.6 0.2 255)",
-  pro: "oklch(0.75 0.18 75)",
-  agency: "oklch(0.65 0.18 165)",
+  free: "var(--qa-accent)",
+  starter: "var(--qa-accent)",
+  pro: "var(--qa-warning)",
+  agency: "var(--qa-success)",
 };
 
 const ANNUAL_PRICES: Record<SubscriptionPlan, number> = {
@@ -90,10 +90,10 @@ export default function BillingPlanCards({ currentPlan }: Props) {
   };
 
   return (
-    <div className="rounded-xl border p-5 space-y-4" style={{ background: "oklch(0.17 0.022 255)", borderColor: "oklch(1 0 0 / 8%)" }}>
+    <div className="rounded-xl border p-5 space-y-4" style={{ background: "oklch(0.17 0.022 255)", borderColor: "var(--qa-border)" }}>
       {/* Header + toggle */}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h3 className="text-sm font-bold" style={{ color: "oklch(0.88 0.008 240)" }}>Csomagok</h3>
+        <h3 className="text-sm font-bold" style={{ color: "var(--qa-fg2)" }}>Csomagok</h3>
         <div className="flex items-center gap-3">
           {/* Manage subscription button (only if has Stripe sub) */}
           {currentPlan !== "free" && (
@@ -108,21 +108,21 @@ export default function BillingPlanCards({ currentPlan }: Props) {
             </button>
           )}
           {/* Yearly/Monthly toggle */}
-          <div className="inline-flex items-center gap-0.5 p-1 rounded-xl" style={{ background: "oklch(1 0 0 / 5%)", border: "1px solid oklch(1 0 0 / 8%)" }}>
+          <div className="inline-flex items-center gap-0.5 p-1 rounded-xl" style={{ background: "oklch(1 0 0 / 5%)", border: "1px solid var(--qa-border)" }}>
             <button
               onClick={() => setIsYearly(false)}
               className="px-3 py-1 rounded-lg text-xs font-semibold transition-all"
-              style={!isYearly ? { background: "oklch(0.6 0.2 255)", color: "white" } : { color: "oklch(0.5 0.015 240)" }}
+              style={!isYearly ? { background: "var(--qa-accent)", color: "white" } : { color: "var(--qa-fg4)" }}
             >
               Havi
             </button>
             <button
               onClick={() => setIsYearly(true)}
               className="px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5"
-              style={isYearly ? { background: "oklch(0.6 0.2 255)", color: "white" } : { color: "oklch(0.5 0.015 240)" }}
+              style={isYearly ? { background: "var(--qa-accent)", color: "white" } : { color: "var(--qa-fg4)" }}
             >
               Éves
-              <span className="text-xs px-1 py-0.5 rounded-full font-bold" style={{ background: "oklch(0.65 0.18 165 / 25%)", color: "oklch(0.65 0.18 165)" }}>-17%</span>
+              <span className="text-xs px-1 py-0.5 rounded-full font-bold" style={{ background: "oklch(0.65 0.18 165 / 25%)", color: "var(--qa-success)" }}>-17%</span>
             </button>
           </div>
         </div>
@@ -148,13 +148,13 @@ export default function BillingPlanCards({ currentPlan }: Props) {
               key={planId}
               className="rounded-xl border p-4 flex flex-col gap-3"
               style={{
-                background: isActive ? `${color}10` : "oklch(0.22 0.02 255)",
-                borderColor: isActive ? `${color}40` : "oklch(1 0 0 / 8%)",
+                background: isActive ? `${color}10` : "var(--qa-surface2)",
+                borderColor: isActive ? `${color}40` : "var(--qa-border)",
               }}
             >
               <div className="flex items-center gap-2">
                 <span style={{ color }}>{PLAN_ICONS[planId]}</span>
-                <span className="text-sm font-bold" style={{ color: "oklch(0.88 0.008 240)" }}>{plan.planLabel}</span>
+                <span className="text-sm font-bold" style={{ color: "var(--qa-fg2)" }}>{plan.planLabel}</span>
                 {isActive && (
                   <span className="ml-auto text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: `${color}20`, color }}>Aktív</span>
                 )}
@@ -162,12 +162,12 @@ export default function BillingPlanCards({ currentPlan }: Props) {
 
               {/* Price with animation */}
               <motion.div key={isYearly ? "yearly" : "monthly"} initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
-                <p className="text-lg font-bold" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>
+                <p className="text-lg font-bold" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>
                   {displayPrice === 0 ? "Ingyenes" : `${displayPrice.toLocaleString("hu-HU")} Ft`}
-                  {displayPrice > 0 && <span className="text-xs font-normal" style={{ color: "oklch(0.55 0.015 240)" }}>/hó</span>}
+                  {displayPrice > 0 && <span className="text-xs font-normal" style={{ color: "var(--qa-fg3)" }}>/hó</span>}
                 </p>
                 {priceLabel && (
-                  <p className="text-xs mt-0.5" style={{ color: "oklch(0.65 0.18 165)" }}>{priceLabel} – 2 hónap ingyen</p>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--qa-success)" }}>{priceLabel} – 2 hónap ingyen</p>
                 )}
               </motion.div>
 
@@ -201,10 +201,10 @@ export default function BillingPlanCards({ currentPlan }: Props) {
                 </button>
               )}
               {isActive && planId === "free" && (
-                <span className="text-xs text-center" style={{ color: "oklch(0.45 0.015 240)" }}>Jelenlegi csomag</span>
+                <span className="text-xs text-center" style={{ color: "var(--qa-fg4)" }}>Jelenlegi csomag</span>
               )}
               {!isActive && planId === "free" && (
-                <span className="text-xs text-center" style={{ color: "oklch(0.45 0.015 240)" }}>Ingyenes szintre visszalépés</span>
+                <span className="text-xs text-center" style={{ color: "var(--qa-fg4)" }}>Ingyenes szintre visszalépés</span>
               )}
             </div>
           );
@@ -213,9 +213,9 @@ export default function BillingPlanCards({ currentPlan }: Props) {
 
       {/* Stripe info */}
       <div className="flex items-center gap-2 p-3 rounded-lg" style={{ background: "oklch(1 0 0 / 3%)", border: "1px solid oklch(1 0 0 / 6%)" }}>
-        <CreditCard size={13} style={{ color: "oklch(0.55 0.015 240)", flexShrink: 0 }} />
-        <p className="text-xs" style={{ color: "oklch(0.5 0.015 240)" }}>
-          Biztonságos fizetés Stripe-on keresztül. Teszteléshez használd a <span className="font-mono" style={{ color: "oklch(0.65 0.015 240)" }}>4242 4242 4242 4242</span> kártyaszámot.
+        <CreditCard size={13} style={{ color: "var(--qa-fg3)", flexShrink: 0 }} />
+        <p className="text-xs" style={{ color: "var(--qa-fg4)" }}>
+          Biztonságos fizetés Stripe-on keresztül. Teszteléshez használd a <span className="font-mono" style={{ color: "var(--qa-fg3)" }}>4242 4242 4242 4242</span> kártyaszámot.
         </p>
       </div>
     </div>

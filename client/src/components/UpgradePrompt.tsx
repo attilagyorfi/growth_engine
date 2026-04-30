@@ -34,12 +34,12 @@ const PLAN_COLORS: Record<string, { bg: string; text: string; border: string }> 
   },
   pro: {
     bg: "oklch(0.75 0.18 75 / 10%)",
-    text: "oklch(0.75 0.18 75)",
+    text: "var(--qa-warning)",
     border: "oklch(0.75 0.18 75 / 30%)",
   },
   agency: {
     bg: "oklch(0.65 0.18 165 / 10%)",
-    text: "oklch(0.65 0.18 165)",
+    text: "var(--qa-success)",
     border: "oklch(0.65 0.18 165 / 30%)",
   },
 };
@@ -109,15 +109,15 @@ export default function UpgradePrompt({
       </div>
       <h3
         className="text-lg font-bold mb-1"
-        style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}
+        style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}
       >
         {feature} – {planLabel} csomag szükséges
       </h3>
-      <p className="text-xs mb-4" style={{ color: "oklch(0.55 0.015 240)" }}>
+      <p className="text-xs mb-4" style={{ color: "var(--qa-fg3)" }}>
         {planPrice}
       </p>
       {description && (
-        <p className="text-sm mb-4 max-w-md" style={{ color: "oklch(0.6 0.015 240)" }}>
+        <p className="text-sm mb-4 max-w-md" style={{ color: "var(--qa-fg3)" }}>
           {description}
         </p>
       )}

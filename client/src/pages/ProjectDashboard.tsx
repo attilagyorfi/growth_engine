@@ -46,7 +46,7 @@ function StatusBadge({ done, label }: { done: boolean; label: string }) {
   ) : (
     <span
       className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium"
-      style={{ background: "oklch(0.55 0.015 240 / 15%)", color: "oklch(0.55 0.015 240)" }}
+      style={{ background: "oklch(0.55 0.015 240 / 15%)", color: "var(--qa-fg3)" }}
     >
       <Clock size={11} />
       Nem kész
@@ -110,7 +110,7 @@ export default function ProjectDashboard() {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
-          <Loader2 className="w-8 h-8 animate-spin" style={{ color: "oklch(0.6 0.2 255)" }} />
+          <Loader2 className="w-8 h-8 animate-spin" style={{ color: "var(--qa-accent)" }} />
         </div>
       </DashboardLayout>
     );
@@ -131,7 +131,7 @@ export default function ProjectDashboard() {
     );
   }
 
-  const accentColor = project.color ?? "oklch(0.6 0.2 255)";
+  const accentColor = project.color ?? "var(--qa-accent)";
   const hasProfile = !!project.profileId;
 
   return (
@@ -139,7 +139,7 @@ export default function ProjectDashboard() {
       <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
 
         {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm" style={{ color: "oklch(0.55 0.015 240)" }}>
+        <div className="flex items-center gap-2 text-sm" style={{ color: "var(--qa-fg3)" }}>
           <button
             onClick={() => navigate("/projektek")}
             className="hover:text-white transition-colors flex items-center gap-1"
@@ -165,7 +165,7 @@ export default function ProjectDashboard() {
                 {project.name}
               </h1>
               {project.industry && (
-                <p className="text-sm mt-0.5" style={{ color: "oklch(0.55 0.015 240)" }}>
+                <p className="text-sm mt-0.5" style={{ color: "var(--qa-fg3)" }}>
                   {project.industry}
                 </p>
               )}
@@ -192,18 +192,18 @@ export default function ProjectDashboard() {
         {/* Project Info */}
         <div
           className="rounded-2xl p-5 space-y-3"
-          style={{ background: "oklch(0.16 0.022 255)", border: "1px solid oklch(1 0 0 / 8%)" }}
+          style={{ background: "var(--qa-surface)", border: "1px solid var(--qa-border)" }}
         >
           <h2 className="text-sm font-semibold text-white mb-3">Projekt adatok</h2>
           {project.website && (
             <div className="flex items-center gap-3 text-sm">
-              <Globe className="w-4 h-4 flex-shrink-0" style={{ color: "oklch(0.55 0.015 240)" }} />
+              <Globe className="w-4 h-4 flex-shrink-0" style={{ color: "var(--qa-fg3)" }} />
               <a
                 href={project.website.startsWith("http") ? project.website : `https://${project.website}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:underline truncate"
-                style={{ color: "oklch(0.6 0.2 255)" }}
+                style={{ color: "var(--qa-accent)" }}
               >
                 {project.website}
               </a>
@@ -211,18 +211,18 @@ export default function ProjectDashboard() {
           )}
           {project.industry && (
             <div className="flex items-center gap-3 text-sm">
-              <Building2 className="w-4 h-4 flex-shrink-0" style={{ color: "oklch(0.55 0.015 240)" }} />
+              <Building2 className="w-4 h-4 flex-shrink-0" style={{ color: "var(--qa-fg3)" }} />
               <span className="text-gray-300">{project.industry}</span>
             </div>
           )}
           {project.description && (
             <div className="flex items-start gap-3 text-sm">
-              <FileText className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: "oklch(0.55 0.015 240)" }} />
+              <FileText className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: "var(--qa-fg3)" }} />
               <span className="text-gray-300">{project.description}</span>
             </div>
           )}
           {!project.website && !project.industry && !project.description && (
-            <p className="text-sm" style={{ color: "oklch(0.45 0.015 240)" }}>
+            <p className="text-sm" style={{ color: "var(--qa-fg4)" }}>
               Nincsenek megadott projekt adatok.
             </p>
           )}
@@ -234,27 +234,27 @@ export default function ProjectDashboard() {
           {/* Onboarding Card */}
           <div
             className="rounded-2xl p-5 flex flex-col gap-3"
-            style={{ background: "oklch(0.16 0.022 255)", border: `1px solid ${hasProfile ? "oklch(0.55 0.18 145 / 30%)" : "oklch(1 0 0 / 8%)"}` }}
+            style={{ background: "var(--qa-surface)", border: `1px solid ${hasProfile ? "oklch(0.55 0.18 145 / 30%)" : "var(--qa-border)"}` }}
           >
             <div className="flex items-center justify-between">
               <div
                 className="w-8 h-8 rounded-lg flex items-center justify-center"
                 style={{ background: hasProfile ? "oklch(0.55 0.18 145 / 20%)" : "oklch(0.55 0.015 240 / 15%)" }}
               >
-                <Sparkles size={16} style={{ color: hasProfile ? "oklch(0.7 0.18 145)" : "oklch(0.55 0.015 240)" }} />
+                <Sparkles size={16} style={{ color: hasProfile ? "oklch(0.7 0.18 145)" : "var(--qa-fg3)" }} />
               </div>
               <StatusBadge done={!!progress?.onboarding.completed} label={progress?.onboarding.completed ? "Kész" : hasProfile ? "Folyamatban" : "Nem indult"} />
             </div>
             <div>
               <p className="text-xs font-semibold text-white mb-0.5">Onboarding</p>
               {progressLoading ? (
-                <div className="h-3 w-24 rounded animate-pulse" style={{ background: "oklch(0.25 0.02 255)" }} />
+                <div className="h-3 w-24 rounded animate-pulse" style={{ background: "var(--qa-surface3)" }} />
               ) : hasProfile ? (
                 <>
-                  <p className="text-xs mb-2" style={{ color: "oklch(0.5 0.015 240)" }}>
+                  <p className="text-xs mb-2" style={{ color: "var(--qa-fg4)" }}>
                     {progress?.onboarding.currentStep ?? 1}/{progress?.onboarding.totalSteps ?? 6} lépés kitöltve
                   </p>
-                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "oklch(0.25 0.02 255)" }}>
+                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--qa-surface3)" }}>
                     <div
                       className="h-full rounded-full transition-all"
                       style={{
@@ -265,7 +265,7 @@ export default function ProjectDashboard() {
                   </div>
                 </>
               ) : (
-                <p className="text-xs" style={{ color: "oklch(0.5 0.015 240)" }}>Nincs elíndítva</p>
+                <p className="text-xs" style={{ color: "var(--qa-fg4)" }}>Nincs elíndítva</p>
               )}
             </div>
             <button
@@ -289,27 +289,27 @@ export default function ProjectDashboard() {
           {/* Strategy Card */}
           <div
             className="rounded-2xl p-5 flex flex-col gap-3"
-            style={{ background: "oklch(0.16 0.022 255)", border: `1px solid ${progress?.strategy.done ? "oklch(0.6 0.2 255 / 30%)" : "oklch(1 0 0 / 8%)"}` }}
+            style={{ background: "var(--qa-surface)", border: `1px solid ${progress?.strategy.done ? "oklch(from var(--qa-accent) l c h / 30%)" : "var(--qa-border)"}` }}
           >
             <div className="flex items-center justify-between">
               <div
                 className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ background: progress?.strategy.done ? "oklch(0.6 0.2 255 / 20%)" : "oklch(0.55 0.015 240 / 15%)" }}
+                style={{ background: progress?.strategy.done ? "oklch(from var(--qa-accent) l c h / 20%)" : "oklch(0.55 0.015 240 / 15%)" }}
               >
-                <TrendingUp size={16} style={{ color: progress?.strategy.done ? "oklch(0.7 0.18 255)" : "oklch(0.55 0.015 240)" }} />
+                <TrendingUp size={16} style={{ color: progress?.strategy.done ? "var(--qa-accent)" : "var(--qa-fg3)" }} />
               </div>
               <StatusBadge done={!!progress?.strategy.done} label={`${progress?.strategy.count ?? 0} verzió`} />
             </div>
             <div>
               <p className="text-xs font-semibold text-white mb-0.5">Stratégia</p>
               {progressLoading ? (
-                <div className="h-3 w-24 rounded animate-pulse" style={{ background: "oklch(0.25 0.02 255)" }} />
+                <div className="h-3 w-24 rounded animate-pulse" style={{ background: "var(--qa-surface3)" }} />
               ) : progress?.strategy.latest ? (
-                <p className="text-xs truncate" style={{ color: "oklch(0.5 0.015 240)" }}>
+                <p className="text-xs truncate" style={{ color: "var(--qa-fg4)" }}>
                   {progress.strategy.latest.title}
                 </p>
               ) : (
-                <p className="text-xs" style={{ color: "oklch(0.5 0.015 240)" }}>
+                <p className="text-xs" style={{ color: "var(--qa-fg4)" }}>
                   {hasProfile ? "Még nincs generálva" : "Onboarding szükséges"}
                 </p>
               )}
@@ -320,7 +320,7 @@ export default function ProjectDashboard() {
                 onClick={handleOpenDashboard}
                 disabled={setActive.isPending}
                 className="mt-auto flex items-center gap-1.5 text-xs font-medium transition-all hover:opacity-80 disabled:opacity-40 px-2.5 py-1.5 rounded-lg"
-                style={{ background: "oklch(0.6 0.2 255 / 20%)", color: "oklch(0.7 0.18 255)" }}
+                style={{ background: "oklch(from var(--qa-accent) l c h / 20%)", color: "var(--qa-accent)" }}
               >
                 <Sparkles size={12} />
                 Stratégia generálása
@@ -331,7 +331,7 @@ export default function ProjectDashboard() {
                 onClick={handleOpenDashboard}
                 disabled={!hasProfile || setActive.isPending}
                 className="mt-auto flex items-center gap-1.5 text-xs font-medium transition-all hover:opacity-80 disabled:opacity-40"
-                style={{ color: progress?.strategy.done ? "oklch(0.7 0.18 255)" : "oklch(0.45 0.015 240)" }}
+                style={{ color: progress?.strategy.done ? "var(--qa-accent)" : "var(--qa-fg4)" }}
               >
                 <LayoutDashboard size={12} />
                 Megnyitás
@@ -343,31 +343,31 @@ export default function ProjectDashboard() {
           {/* Content Calendar Card */}
           <div
             className="rounded-2xl p-5 flex flex-col gap-3"
-            style={{ background: "oklch(0.16 0.022 255)", border: `1px solid ${progress?.content.done ? "oklch(0.55 0.18 165 / 30%)" : "oklch(1 0 0 / 8%)"}` }}
+            style={{ background: "var(--qa-surface)", border: `1px solid ${progress?.content.done ? "oklch(0.55 0.18 165 / 30%)" : "var(--qa-border)"}` }}
           >
             <div className="flex items-center justify-between">
               <div
                 className="w-8 h-8 rounded-lg flex items-center justify-center"
                 style={{ background: progress?.content.done ? "oklch(0.55 0.18 165 / 20%)" : "oklch(0.55 0.015 240 / 15%)" }}
               >
-                <Calendar size={16} style={{ color: progress?.content.done ? "oklch(0.7 0.18 165)" : "oklch(0.55 0.015 240)" }} />
+                <Calendar size={16} style={{ color: progress?.content.done ? "oklch(0.7 0.18 165)" : "var(--qa-fg3)" }} />
               </div>
               <StatusBadge done={!!progress?.content.done} label={`${progress?.content.count ?? 0} poszt`} />
             </div>
             <div>
               <p className="text-xs font-semibold text-white mb-0.5">Tartalom naptár</p>
               {progressLoading ? (
-                <div className="h-3 w-24 rounded animate-pulse" style={{ background: "oklch(0.25 0.02 255)" }} />
+                <div className="h-3 w-24 rounded animate-pulse" style={{ background: "var(--qa-surface3)" }} />
               ) : progress?.content.upcoming.length ? (
                 <div className="space-y-1">
                   {progress.content.upcoming.slice(0, 2).map(p => (
-                    <p key={p.id} className="text-xs truncate" style={{ color: "oklch(0.5 0.015 240)" }}>
+                    <p key={p.id} className="text-xs truncate" style={{ color: "var(--qa-fg4)" }}>
                       {PLATFORM_LABELS[p.platform] ?? p.platform}: {p.title}
                     </p>
                   ))}
                 </div>
               ) : (
-                <p className="text-xs" style={{ color: "oklch(0.5 0.015 240)" }}>
+                <p className="text-xs" style={{ color: "var(--qa-fg4)" }}>
                   {hasProfile ? "Nincs ütemezett poszt" : "Onboarding szükséges"}
                 </p>
               )}
@@ -376,7 +376,7 @@ export default function ProjectDashboard() {
               onClick={handleOpenDashboard}
               disabled={!hasProfile || setActive.isPending}
               className="mt-auto flex items-center gap-1.5 text-xs font-medium transition-all hover:opacity-80 disabled:opacity-40"
-              style={{ color: progress?.content.done ? "oklch(0.7 0.18 165)" : "oklch(0.45 0.015 240)" }}
+              style={{ color: progress?.content.done ? "oklch(0.7 0.18 165)" : "var(--qa-fg4)" }}
             >
               <LayoutDashboard size={12} />
               Megnyitás
@@ -387,27 +387,27 @@ export default function ProjectDashboard() {
           {/* Leads Card */}
           <div
             className="rounded-2xl p-5 flex flex-col gap-3"
-            style={{ background: "oklch(0.16 0.022 255)", border: `1px solid ${progress?.leads.done ? "oklch(0.7 0.2 50 / 30%)" : "oklch(1 0 0 / 8%)"}` }}
+            style={{ background: "var(--qa-surface)", border: `1px solid ${progress?.leads.done ? "oklch(0.7 0.2 50 / 30%)" : "var(--qa-border)"}` }}
           >
             <div className="flex items-center justify-between">
               <div
                 className="w-8 h-8 rounded-lg flex items-center justify-center"
                 style={{ background: progress?.leads.done ? "oklch(0.7 0.2 50 / 20%)" : "oklch(0.55 0.015 240 / 15%)" }}
               >
-                <Users size={16} style={{ color: progress?.leads.done ? "oklch(0.8 0.18 50)" : "oklch(0.55 0.015 240)" }} />
+                <Users size={16} style={{ color: progress?.leads.done ? "oklch(0.8 0.18 50)" : "var(--qa-fg3)" }} />
               </div>
               <StatusBadge done={!!progress?.leads.done} label={`${progress?.leads.count ?? 0} lead`} />
             </div>
             <div>
               <p className="text-xs font-semibold text-white mb-0.5">Leadek</p>
               {progressLoading ? (
-                <div className="h-3 w-24 rounded animate-pulse" style={{ background: "oklch(0.25 0.02 255)" }} />
+                <div className="h-3 w-24 rounded animate-pulse" style={{ background: "var(--qa-surface3)" }} />
               ) : progress?.leads.latest ? (
-                <p className="text-xs truncate" style={{ color: "oklch(0.5 0.015 240)" }}>
+                <p className="text-xs truncate" style={{ color: "var(--qa-fg4)" }}>
                   {progress.leads.latest.company} – {progress.leads.latest.contact}
                 </p>
               ) : (
-                <p className="text-xs" style={{ color: "oklch(0.5 0.015 240)" }}>
+                <p className="text-xs" style={{ color: "var(--qa-fg4)" }}>
                   {hasProfile ? "Még nincs lead" : "Onboarding szükséges"}
                 </p>
               )}
@@ -416,7 +416,7 @@ export default function ProjectDashboard() {
               onClick={handleOpenDashboard}
               disabled={!hasProfile || setActive.isPending}
               className="mt-auto flex items-center gap-1.5 text-xs font-medium transition-all hover:opacity-80 disabled:opacity-40"
-              style={{ color: progress?.leads.done ? "oklch(0.8 0.18 50)" : "oklch(0.45 0.015 240)" }}
+              style={{ color: progress?.leads.done ? "oklch(0.8 0.18 50)" : "var(--qa-fg4)" }}
             >
               <LayoutDashboard size={12} />
               Megnyitás
@@ -435,7 +435,7 @@ export default function ProjectDashboard() {
             <h3 className="text-white font-semibold mb-1" style={{ fontFamily: "Sora, sans-serif" }}>
               Indítsd el az onboardingot
             </h3>
-            <p className="text-sm mb-4" style={{ color: "oklch(0.55 0.015 240)" }}>
+            <p className="text-sm mb-4" style={{ color: "var(--qa-fg3)" }}>
               Az onboarding kitöltésével AI-alapú stratégia, tartalom naptár és lead generálás válik elérhetővé.
             </p>
             <Button

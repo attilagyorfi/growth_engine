@@ -42,7 +42,7 @@ function SwotCard({ title, items, color, icon: Icon }: {
   title: string; items: SwotItem[]; color: string; icon: React.ElementType
 }) {
   return (
-    <div className="rounded-xl p-4 border" style={{ background: "oklch(0.15 0.02 255)", borderColor: "oklch(0.28 0.03 255)" }}>
+    <div className="rounded-xl p-4 border" style={{ background: "var(--qa-bg)", borderColor: "var(--qa-surface3)" }}>
       <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color }}>
         <Icon size={16} /> {title}
       </h3>
@@ -62,13 +62,13 @@ function SwotCard({ title, items, color, icon: Icon }: {
 function PersonaCard({ persona }: { persona: Persona }) {
   const [expanded, setExpanded] = useState(false);
   return (
-    <div className="rounded-xl border overflow-hidden" style={{ background: "oklch(0.15 0.02 255)", borderColor: "oklch(0.28 0.03 255)" }}>
+    <div className="rounded-xl border overflow-hidden" style={{ background: "var(--qa-bg)", borderColor: "var(--qa-surface3)" }}>
       <div
         className="p-4 flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold" style={{ background: "linear-gradient(135deg, oklch(0.6 0.2 255), oklch(0.55 0.18 165))" }}>
+          <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold" style={{ background: "linear-gradient(135deg, var(--qa-accent), oklch(0.55 0.18 165))" }}>
             {persona.name?.[0] ?? "?"}
           </div>
           <div>
@@ -108,7 +108,7 @@ function PersonaCard({ persona }: { persona: Persona }) {
             <h4 className="text-gray-400 text-xs uppercase tracking-wider mb-2">Preferált csatornák</h4>
             <div className="flex flex-wrap gap-2">
               {(persona.channels ?? []).map((c, i) => (
-                <span key={i} className="text-xs px-2 py-1 rounded-full" style={{ background: "oklch(0.22 0.03 255)", color: "oklch(0.7 0.15 255)" }}>{c}</span>
+                <span key={i} className="text-xs px-2 py-1 rounded-full" style={{ background: "oklch(0.22 0.03 255)", color: "var(--qa-accent)" }}>{c}</span>
               ))}
             </div>
           </div>
@@ -217,13 +217,13 @@ export default function Intelligence() {
           <div className="space-y-6">
             {/* Company Summary + UVP */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="rounded-xl p-5 border" style={{ background: "oklch(0.15 0.02 255)", borderColor: "oklch(0.28 0.03 255)" }}>
+              <div className="rounded-xl p-5 border" style={{ background: "var(--qa-bg)", borderColor: "var(--qa-surface3)" }}>
                 <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
                   <Building2 size={18} className="text-blue-400" /> Cégprofil összefoglaló
                 </h3>
                 <p className="text-gray-300 text-sm leading-relaxed">{intelData.companySummary ?? "–"}</p>
               </div>
-              <div className="rounded-xl p-5 border" style={{ background: "oklch(0.15 0.02 255)", borderColor: "oklch(0.28 0.03 255)" }}>
+              <div className="rounded-xl p-5 border" style={{ background: "var(--qa-bg)", borderColor: "var(--qa-surface3)" }}>
                 <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
                   <Zap size={18} className="text-yellow-400" /> Egyedi értékajánlat (UVP)
                 </h3>
@@ -239,7 +239,7 @@ export default function Intelligence() {
 
             {/* Key Messages */}
             {intelData.keyMessages && intelData.keyMessages.length > 0 && (
-              <div className="rounded-xl p-5 border" style={{ background: "oklch(0.15 0.02 255)", borderColor: "oklch(0.28 0.03 255)" }}>
+              <div className="rounded-xl p-5 border" style={{ background: "var(--qa-bg)", borderColor: "var(--qa-surface3)" }}>
                 <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
                   <MessageSquare size={18} className="text-cyan-400" /> Kulcsüzenetek
                 </h3>
@@ -291,12 +291,12 @@ export default function Intelligence() {
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {intelData.contentPillars.map((pillar, i) => (
-                    <div key={i} className="rounded-xl p-4 border" style={{ background: "oklch(0.15 0.02 255)", borderColor: "oklch(0.28 0.03 255)" }}>
+                    <div key={i} className="rounded-xl p-4 border" style={{ background: "var(--qa-bg)", borderColor: "var(--qa-surface3)" }}>
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="text-white font-medium">{pillar.name}</h3>
                         <span className="text-sm font-bold" style={{ color: `hsl(${i * 60}, 70%, 60%)` }}>{pillar.percentage}%</span>
                       </div>
-                      <div className="h-1.5 rounded-full mb-3 overflow-hidden" style={{ background: "oklch(0.22 0.02 255)" }}>
+                      <div className="h-1.5 rounded-full mb-3 overflow-hidden" style={{ background: "var(--qa-surface2)" }}>
                         <div className="h-full rounded-full" style={{ width: `${pillar.percentage}%`, background: `hsl(${i * 60}, 70%, 60%)` }} />
                       </div>
                       <p className="text-gray-400 text-xs mb-2">{pillar.description}</p>
@@ -321,7 +321,7 @@ export default function Intelligence() {
                 </h2>
                 <div className="space-y-3">
                   {intelData.competitors.map((comp, i) => (
-                    <div key={i} className="rounded-xl p-4 border" style={{ background: "oklch(0.15 0.02 255)", borderColor: "oklch(0.28 0.03 255)" }}>
+                    <div key={i} className="rounded-xl p-4 border" style={{ background: "var(--qa-bg)", borderColor: "var(--qa-surface3)" }}>
                       <h3 className="text-white font-medium mb-3">{comp.name}</h3>
                       <div className="grid grid-cols-3 gap-4">
                         <div>
@@ -349,7 +349,7 @@ export default function Intelligence() {
 
             {/* Tone Guidelines */}
             {intelData.toneGuidelines && (
-              <div className="rounded-xl p-5 border" style={{ background: "oklch(0.15 0.02 255)", borderColor: "oklch(0.28 0.03 255)" }}>
+              <div className="rounded-xl p-5 border" style={{ background: "var(--qa-bg)", borderColor: "var(--qa-surface3)" }}>
                 <h3 className="text-white font-semibold mb-2 flex items-center gap-2">
                   <Edit3 size={18} className="text-violet-400" /> Kommunikációs irányelvek
                 </h3>

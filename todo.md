@@ -1059,3 +1059,57 @@
 - [x] index.css: Shadcn/ui CSS változók szinkronizálása az új palettával (--background, --foreground, --primary, --accent stb.)
 - [x] index.html: Sora font betöltés ellenőrzése (már megvan, de weight-ek ellenőrzése)
 - [x] Vizuális ellenőrzés: Dashboard, Landing, Settings oldalak
+
+## Quiet Authority – Fázis 02: Komponens-réteg
+
+- [ ] DashboardLayout.tsx: sidebar nav-item stílus QA tokenekre, aktív állapot accent kék
+- [ ] DashboardLayout.tsx: demo banner info-strip (halvány, nem sárga)
+- [ ] shadcn Button: primary = qa-accent, secondary = qa-surface2, outline = border only
+- [ ] shadcn Badge: monokróm chip stílus (FG_3 szöveg + finom border)
+- [ ] shadcn Card: qa-surface háttér, qa-border keret, 10px radius
+- [ ] shadcn Input/Textarea: qa-surface2 háttér, qa-border keret, focus ring = accent
+- [ ] shadcn Tabs: egységes tab stílus (aktív = accent, inaktív = FG_3)
+- [ ] shadcn Dialog/Modal: qa-surface2 háttér, qa-border keret
+
+## Quiet Authority – Fázis 03: Kulcs-képernyők
+
+- [ ] Dashboard.tsx: KPI kártyák QA tokenekre, hierarchia helyrerakása
+- [ ] Dashboard.tsx: "Mi a dolgom ma?" szekció vizuális frissítése
+- [ ] CRM/Leads.tsx: lista layout, státusz badge-ek QA-ra
+- [ ] ContentStudio.tsx: generátor panel, kártya grid QA-ra
+- [ ] Strategy.tsx: stratégia kártyák, timeline QA-ra
+- [ ] SalesOps.tsx: kampány kártyák, státusz QA-ra
+- [ ] Campaigns.tsx: kampány lista QA-ra
+- [ ] Analytics.tsx: chart szín paletta QA-ra (accent, success, warning)
+- [ ] SEO.tsx: audit kártyák QA-ra
+- [ ] VideoStudio.tsx: sidebar visszahozatala, demo banner info-strip
+- [ ] Settings.tsx (Brand Center): kétoszlopos form, sticky mentés sáv
+
+## Quiet Authority – Fázis 04: Polírozás
+
+- [ ] Üres állapot komponens: egységes EmptyState (ikon + cím + CTA)
+- [ ] Hover microinterakciók: kártyák subtle shadow (nem transform)
+- [ ] Loading skeleton: QA tokenekre (qa-surface2 shimmer)
+- [ ] Focus ring: accent kék, 2px offset
+
+## Quiet Authority – Fázis 02–04 (KÉSZ)
+
+### Fázis 02 – Komponens-réteg
+- [x] DashboardLayout.tsx: teljes QA token átírás (sidebar, header, nav-item, user badge)
+- [x] button.tsx: hover opacity, active state, 2px focus ring, disabled opacity 40%
+- [x] badge.tsx: rounded-full, tinted bg (primary/15, destructive/15), quieter secondary
+- [x] input.tsx: QA accent focus ring (2px, 25% opacity), text-sm egységesítés
+- [x] tabs.tsx: TabsList QA surface2 háttér + border, TabsTrigger QA fg3→fg2→fg átmenet
+- [x] skeleton.tsx: qa-surface2 shimmer (nem accent szín)
+- [x] DashboardLayoutSkeleton.tsx: teljes QA surface token átírás, KPI card skeleton struktúra
+
+### Fázis 03 – Kulcs-képernyők (token csere)
+- [x] Dashboard.tsx, Settings.tsx, ContentStudio.tsx, SalesOps.tsx, SeoAudit.tsx, Intelligence.tsx, Analytics.tsx, Leads.tsx, Outbound.tsx, Inbound.tsx, AIWriter.tsx, SocialMedia.tsx, Content.tsx, ContentCreator.tsx, ProfilePage.tsx, ProjectDashboard.tsx, ProjectsPage.tsx, Clients.tsx, AdminUsers.tsx: mind átírva QA tokenekre
+- [x] Platform-specifikus színek (Instagram, Facebook, Twitter, CRM státuszok) megtartva
+
+### Fázis 04 – Polírozás
+- [x] EmptyState.tsx v2: QA surface2 ikon háttér, Sora font, compact prop
+- [x] Hover microinterakciók: button active state, ghost/outline hover bg white/5
+- [x] Loading skeleton: qa-surface2 shimmer, strukturált KPI card skeleton
+- [x] Focus ring: 2px QA accent (nem 3px), konzisztens minden interaktív elemen
+- [x] Tesztek: 53/53 zöld, TypeScript: 0 hiba

@@ -10,13 +10,13 @@ import { toast } from "sonner";
 import { useData, InboundEmail, InboundCategory } from "@/contexts/DataContext";
 
 const categoryConfig: Record<InboundCategory, { label: string; color: string; cls: string; description: string }> = {
-  meeting_request: { label: "Meeting kérés", color: "oklch(0.65 0.18 165)", cls: "status-replied", description: "Az érdeklődő időpontot szeretne egyeztetni." },
-  interested: { label: "Érdeklődő", color: "oklch(0.6 0.2 255)", cls: "status-sent", description: "Pozitív visszajelzés, de konkrét lépés nélkül." },
-  question: { label: "Kérdés", color: "oklch(0.75 0.18 75)", cls: "status-pending", description: "Több információt kér a szolgáltatásról." },
-  not_interested: { label: "Nem érdekli", color: "oklch(0.65 0.22 25)", cls: "status-rejected", description: "Visszautasítás, nem érdekli az ajánlat." },
-  out_of_office: { label: "Irodán kívül", color: "oklch(0.55 0.015 240)", cls: "status-new", description: "Automatikus távolléti üzenet." },
+  meeting_request: { label: "Meeting kérés", color: "var(--qa-success)", cls: "status-replied", description: "Az érdeklődő időpontot szeretne egyeztetni." },
+  interested: { label: "Érdeklődő", color: "var(--qa-accent)", cls: "status-sent", description: "Pozitív visszajelzés, de konkrét lépés nélkül." },
+  question: { label: "Kérdés", color: "var(--qa-warning)", cls: "status-pending", description: "Több információt kér a szolgáltatásról." },
+  not_interested: { label: "Nem érdekli", color: "var(--qa-danger)", cls: "status-rejected", description: "Visszautasítás, nem érdekli az ajánlat." },
+  out_of_office: { label: "Irodán kívül", color: "var(--qa-fg3)", cls: "status-new", description: "Automatikus távolléti üzenet." },
   unsubscribe: { label: "Leiratkozás", color: "oklch(0.55 0.18 25)", cls: "status-rejected", description: "Leiratkozási kérés." },
-  other: { label: "Egyéb", color: "oklch(0.5 0.015 240)", cls: "status-new", description: "Egyéb kategória." },
+  other: { label: "Egyéb", color: "var(--qa-fg4)", cls: "status-new", description: "Egyéb kategória." },
 };
 
 const categoryOptions: InboundCategory[] = ["meeting_request", "interested", "question", "not_interested", "out_of_office", "unsubscribe", "other"];
@@ -57,13 +57,13 @@ export default function Inbound() {
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4 mb-6">
         {[
-          { label: "Összes Válasz", value: String(inbound.length), color: "oklch(0.6 0.2 255)" },
-          { label: "Olvasatlan", value: String(unread), color: "oklch(0.75 0.18 75)" },
-          { label: "Meeting Kérés", value: String(categoryCounts.meeting_request ?? 0), color: "oklch(0.65 0.18 165)" },
-          { label: "Érdeklődő", value: String(categoryCounts.interested ?? 0), color: "oklch(0.65 0.22 25)" },
+          { label: "Összes Válasz", value: String(inbound.length), color: "var(--qa-accent)" },
+          { label: "Olvasatlan", value: String(unread), color: "var(--qa-warning)" },
+          { label: "Meeting Kérés", value: String(categoryCounts.meeting_request ?? 0), color: "var(--qa-success)" },
+          { label: "Érdeklődő", value: String(categoryCounts.interested ?? 0), color: "var(--qa-danger)" },
         ].map((s) => (
           <div key={s.label} className="g2a-stat-card p-4">
-            <p className="text-2xl font-bold mb-0.5" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>{s.value}</p>
+            <p className="text-2xl font-bold mb-0.5" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>{s.value}</p>
             <p className="text-xs" style={{ color: s.color }}>{s.label}</p>
           </div>
         ))}
@@ -74,7 +74,7 @@ export default function Inbound() {
         <button
           onClick={() => setFilterCategory("")}
           className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filterCategory === "" ? "text-white" : "text-gray-400 hover:text-gray-200"}`}
-          style={{ background: filterCategory === "" ? "oklch(0.6 0.2 255)" : "oklch(0.22 0.02 255)" }}
+          style={{ background: filterCategory === "" ? "var(--qa-accent)" : "var(--qa-surface2)" }}
         >
           Összes ({inbound.length})
         </button>
@@ -84,8 +84,8 @@ export default function Inbound() {
             onClick={() => setFilterCategory(cat)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors`}
             style={{
-              background: filterCategory === cat ? categoryConfig[cat].color : "oklch(0.22 0.02 255)",
-              color: filterCategory === cat ? "white" : "oklch(0.65 0.015 240)",
+              background: filterCategory === cat ? categoryConfig[cat].color : "var(--qa-surface2)",
+              color: filterCategory === cat ? "white" : "var(--qa-fg3)",
             }}
           >
             {categoryConfig[cat].label} ({categoryCounts[cat] ?? 0})
@@ -108,12 +108,12 @@ export default function Inbound() {
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3 flex-1 min-w-0">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: catCfg ? `color-mix(in oklch, ${catCfg.color} 15%, transparent)` : "oklch(0.22 0.02 255)", color: catCfg?.color ?? "oklch(0.55 0.015 240)" }}>
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: catCfg ? `color-mix(in oklch, ${catCfg.color} 15%, transparent)` : "var(--qa-surface2)", color: catCfg?.color ?? "var(--qa-fg3)" }}>
                     <Mail size={14} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
-                      {!email.read && <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: "oklch(0.6 0.2 255)" }} />}
+                      {!email.read && <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: "var(--qa-accent)" }} />}
                       <span className="text-white font-medium text-sm truncate">{email.subject}</span>
                     </div>
                     <div className="text-gray-400 text-xs">

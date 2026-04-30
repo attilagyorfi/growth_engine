@@ -147,7 +147,7 @@ export default function Leads() {
             <button onClick={() => setShowCsvModal(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700 text-sm transition-colors">
               <Upload size={16} /> CSV Import
             </button>
-            <button onClick={() => setShowAddModal(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors" style={{ background: "oklch(0.6 0.2 255)", color: "white" }}>
+            <button onClick={() => setShowAddModal(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors" style={{ background: "var(--qa-accent)", color: "white" }}>
               <UserPlus size={16} /> Lead Hozzáadása
             </button>
           </div>
@@ -304,7 +304,7 @@ export default function Leads() {
               </div>
               <div className="flex gap-3 pt-2">
                 <button onClick={() => { setShowAddModal(false); setFormError(""); }} className="flex-1 py-2 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700 text-sm">Mégse</button>
-                <button onClick={handleAdd} disabled={saving} className="flex-1 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50" style={{ background: "oklch(0.6 0.2 255)" }}>
+                <button onClick={handleAdd} disabled={saving} className="flex-1 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50" style={{ background: "var(--qa-accent)" }}>
                   {saving ? "Mentés..." : "Hozzáadás"}
                 </button>
               </div>
@@ -386,7 +386,7 @@ export default function Leads() {
                   </div>
                   <div className="flex gap-3 mt-3">
                     <button onClick={() => { setCsvPreview([]); setCsvError(""); }} className="flex-1 py-2 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700 text-sm">Mégse</button>
-                    <button onClick={handleCsvImport} disabled={saving} className="flex-1 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50" style={{ background: "oklch(0.6 0.2 255)" }}>
+                    <button onClick={handleCsvImport} disabled={saving} className="flex-1 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50" style={{ background: "var(--qa-accent)" }}>
                       {saving ? "Importálás..." : `${csvPreview.length} lead importálása`}
                     </button>
                   </div>

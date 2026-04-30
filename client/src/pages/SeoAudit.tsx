@@ -17,15 +17,15 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 
 // ─── Style tokens ──────────────────────────────────────────────────────────────
-const cardBg = "oklch(0.18 0.022 255)";
-const border = "oklch(1 0 0 / 8%)";
-const textPrimary = "oklch(0.92 0.008 240)";
-const textMuted = "oklch(0.55 0.015 240)";
+const cardBg = "var(--qa-surface)";
+const border = "var(--qa-border)";
+const textPrimary = "var(--qa-fg)";
+const textMuted = "var(--qa-fg3)";
 const accent = "oklch(0.65 0.22 290)";
-const green = "oklch(0.65 0.18 165)";
+const green = "var(--qa-success)";
 const yellow = "oklch(0.78 0.18 75)";
-const red = "oklch(0.65 0.22 25)";
-const blue = "oklch(0.6 0.2 255)";
+const red = "var(--qa-danger)";
+const blue = "var(--qa-accent)";
 
 // ─── Score ring ────────────────────────────────────────────────────────────────
 function ScoreRing({ score }: { score: number }) {
@@ -36,7 +36,7 @@ function ScoreRing({ score }: { score: number }) {
   return (
     <div className="relative flex items-center justify-center" style={{ width: 96, height: 96 }}>
       <svg width={96} height={96} style={{ transform: "rotate(-90deg)" }}>
-        <circle cx={48} cy={48} r={r} fill="none" stroke="oklch(1 0 0 / 8%)" strokeWidth={8} />
+        <circle cx={48} cy={48} r={r} fill="none" stroke="var(--qa-border)" strokeWidth={8} />
         <circle cx={48} cy={48} r={r} fill="none" stroke={color} strokeWidth={8}
           strokeDasharray={`${dash} ${circ - dash}`} strokeLinecap="round"
           style={{ transition: "stroke-dasharray 0.8s ease" }} />
@@ -72,7 +72,7 @@ function IssueCard({ issue }: { issue: { severity: "critical" | "warning" | "inf
       <button className="w-full flex items-center gap-3 p-3 text-left" style={{ background: cardBg }} onClick={() => setOpen(o => !o)}>
         <SeverityBadge severity={issue.severity} />
         <span className="text-xs font-semibold flex-1" style={{ color: textPrimary }}>{issue.title}</span>
-        <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "oklch(1 0 0 / 5%)", color: textMuted }}>{issue.category}</span>
+        <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "var(--qa-border)", color: textMuted }}>{issue.category}</span>
         {open ? <ChevronUp size={14} style={{ color: textMuted }} /> : <ChevronDown size={14} style={{ color: textMuted }} />}
       </button>
       <AnimatePresence>
@@ -152,7 +152,7 @@ export default function SeoAudit() {
         {/* URL input + run */}
         <div className="rounded-2xl border p-5" style={{ background: cardBg, borderColor: border }}>
           <div className="flex gap-3">
-            <div className="flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl border" style={{ background: "oklch(0.22 0.02 255)", borderColor: border }}>
+            <div className="flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl border" style={{ background: "var(--qa-surface2)", borderColor: border }}>
               <Globe size={15} style={{ color: textMuted, flexShrink: 0 }} />
               <input
                 value={url}
@@ -188,7 +188,7 @@ export default function SeoAudit() {
                 onClick={() => setExpandedAudit(a.id === expandedAudit ? null : a.id)}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap border"
                 style={{
-                  background: a.id === (expandedAudit ?? latestAudit?.id) ? "oklch(0.65 0.22 290 / 15%)" : "oklch(0.22 0.02 255)",
+                  background: a.id === (expandedAudit ?? latestAudit?.id) ? "oklch(0.65 0.22 290 / 15%)" : "var(--qa-surface2)",
                   borderColor: a.id === (expandedAudit ?? latestAudit?.id) ? "oklch(0.65 0.22 290 / 40%)" : border,
                   color: a.id === (expandedAudit ?? latestAudit?.id) ? accent : textMuted,
                 }}>
@@ -230,7 +230,7 @@ export default function SeoAudit() {
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => { setUrl(expanded.url); runAudit.mutate({ profileId: activeProfile.id, url: expanded.url }); }}
-                    className="p-2 rounded-lg" style={{ background: "oklch(0.22 0.02 255)", color: textMuted }} title="Újrafuttatás">
+                    className="p-2 rounded-lg" style={{ background: "var(--qa-surface2)", color: textMuted }} title="Újrafuttatás">
                     <RefreshCw size={14} />
                   </button>
                   <button onClick={() => deleteAudit.mutate({ id: expanded.id })}
@@ -254,7 +254,7 @@ export default function SeoAudit() {
                   onClick={() => setActiveTab(tab.id as typeof activeTab)}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap"
                   style={{
-                    background: activeTab === tab.id ? "oklch(0.65 0.22 290 / 15%)" : "oklch(0.22 0.02 255)",
+                    background: activeTab === tab.id ? "oklch(0.65 0.22 290 / 15%)" : "var(--qa-surface2)",
                     color: activeTab === tab.id ? accent : textMuted,
                   }}>
                   {tab.icon} {tab.label}
@@ -335,7 +335,7 @@ export default function SeoAudit() {
                       <p className="text-sm font-bold" style={{ color: textPrimary }}>AI Elemzés</p>
                     </div>
                     {expanded.report.aiInsights ? (
-                      <div className="text-sm leading-relaxed" style={{ color: "oklch(0.78 0.008 240)" }}>
+                      <div className="text-sm leading-relaxed" style={{ color: "var(--qa-fg2)" }}>
                         <Streamdown>{expanded.report.aiInsights}</Streamdown>
                       </div>
                     ) : (
@@ -348,7 +348,7 @@ export default function SeoAudit() {
                         <CheckCircle size={14} style={{ color: green }} />
                         <p className="text-sm font-bold" style={{ color: textPrimary }}>Cselekvési terv</p>
                       </div>
-                      <div className="text-sm leading-relaxed" style={{ color: "oklch(0.78 0.008 240)" }}>
+                      <div className="text-sm leading-relaxed" style={{ color: "var(--qa-fg2)" }}>
                         <Streamdown>{expanded.report.aiRecommendations}</Streamdown>
                       </div>
                     </div>
@@ -362,8 +362,8 @@ export default function SeoAudit() {
         {/* Empty state */}
         {audits.length === 0 && !runAudit.isPending && (
           <div className="rounded-2xl border p-12 text-center" style={{ background: cardBg, borderColor: border }}>
-            <Globe size={40} className="mx-auto mb-3" style={{ color: "oklch(0.35 0.015 240)" }} />
-            <p className="text-base font-semibold mb-1" style={{ color: "oklch(0.65 0.015 240)" }}>Még nincs SEO audit</p>
+            <Globe size={40} className="mx-auto mb-3" style={{ color: "var(--qa-fg4)" }} />
+            <p className="text-base font-semibold mb-1" style={{ color: "var(--qa-fg3)" }}>Még nincs SEO audit</p>
             <p className="text-sm" style={{ color: textMuted }}>Add meg a weboldal URL-jét fent, és indítsd el az elemzést.</p>
           </div>
         )}

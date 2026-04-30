@@ -176,7 +176,7 @@ export default function Outbound() {
               <option value="">Összes státusz</option>
               {statusOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
-            <button onClick={() => setShowNewModal(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white" style={{ background: "oklch(0.6 0.2 255)" }}>
+            <button onClick={() => setShowNewModal(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white" style={{ background: "var(--qa-accent)" }}>
               <Plus size={16} /> Új Email
             </button>
           </div>
@@ -225,7 +225,7 @@ export default function Outbound() {
                     </button>
                   )}
                   {(email.status === "approved" || email.status === "draft") && (
-                    <button onClick={() => setShowSendModal(email)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs text-white transition-colors" style={{ background: "oklch(0.6 0.2 255)" }}>
+                    <button onClick={() => setShowSendModal(email)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs text-white transition-colors" style={{ background: "var(--qa-accent)" }}>
                       <Send size={12} /> Küldés
                     </button>
                   )}
@@ -286,7 +286,7 @@ export default function Outbound() {
                 {editMode ? (
                   <>
                     <button onClick={() => setEditMode(false)} className="flex-1 py-2 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700 text-sm">Mégse</button>
-                    <button onClick={handleSaveEdit} disabled={saving} className="flex-1 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50" style={{ background: "oklch(0.6 0.2 255)" }}>
+                    <button onClick={handleSaveEdit} disabled={saving} className="flex-1 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50" style={{ background: "var(--qa-accent)" }}>
                       {saving ? "Mentés..." : "Mentés"}
                     </button>
                   </>
@@ -298,7 +298,7 @@ export default function Outbound() {
                       </button>
                     )}
                     {(selected.status === "approved" || selected.status === "draft") && (
-                      <button onClick={() => { setShowSendModal(selected); setSelected(null); }} className="flex-1 py-2 rounded-lg text-sm font-medium text-white" style={{ background: "oklch(0.6 0.2 255)" }}>
+                      <button onClick={() => { setShowSendModal(selected); setSelected(null); }} className="flex-1 py-2 rounded-lg text-sm font-medium text-white" style={{ background: "var(--qa-accent)" }}>
                         Küldés
                       </button>
                     )}
@@ -350,7 +350,7 @@ export default function Outbound() {
                   <div className="space-y-2 bg-gray-800 rounded-lg p-3">
                     <div className="flex gap-2">
                       {(["gmail", "outlook"] as const).map(p => (
-                        <button key={p} onClick={() => setSmtpConfig(c => ({ ...c, provider: p }))} className={`px-3 py-1 rounded text-xs font-medium ${smtpConfig.provider === p ? "text-white" : "text-gray-400 bg-gray-700"}`} style={smtpConfig.provider === p ? { background: "oklch(0.6 0.2 255)" } : {}}>
+                        <button key={p} onClick={() => setSmtpConfig(c => ({ ...c, provider: p }))} className={`px-3 py-1 rounded text-xs font-medium ${smtpConfig.provider === p ? "text-white" : "text-gray-400 bg-gray-700"}`} style={smtpConfig.provider === p ? { background: "var(--qa-accent)" } : {}}>
                           {p === "gmail" ? "Gmail" : "Outlook"}
                         </button>
                       ))}
@@ -374,7 +374,7 @@ export default function Outbound() {
               </div>
               <div className="flex gap-3">
                 <button onClick={() => setShowSendModal(null)} className="flex-1 py-2 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700 text-sm">Mégse</button>
-                <button onClick={() => handleSend(showSendModal)} disabled={saving || !smtpConfig.user || !smtpConfig.password} className="flex-1 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50" style={{ background: "oklch(0.6 0.2 255)" }}>
+                <button onClick={() => handleSend(showSendModal)} disabled={saving || !smtpConfig.user || !smtpConfig.password} className="flex-1 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50" style={{ background: "var(--qa-accent)" }}>
                   {saving ? "Küldés..." : "Küldés"}
                 </button>
               </div>
@@ -409,7 +409,7 @@ export default function Outbound() {
               </div>
               <div className="flex gap-3">
                 <button onClick={() => setShowNewModal(false)} className="flex-1 py-2 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700 text-sm">Mégse</button>
-                <button onClick={handleNewEmail} disabled={saving} className="flex-1 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50" style={{ background: "oklch(0.6 0.2 255)" }}>
+                <button onClick={handleNewEmail} disabled={saving} className="flex-1 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50" style={{ background: "var(--qa-accent)" }}>
                   {saving ? "Mentés..." : "Piszkozat Mentése"}
                 </button>
               </div>

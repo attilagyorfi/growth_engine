@@ -6,24 +6,50 @@ interface EmptyStateProps {
   description?: string;
   action?: React.ReactNode;
   className?: string;
+  /** Compact variant for inline use inside cards */
+  compact?: boolean;
 }
 
-export function EmptyState({ icon, title, description, action, className }: EmptyStateProps) {
+/**
+ * Quiet Authority – EmptyState v2
+ * Unified empty state component used across all dashboard pages.
+ * Uses QA CSS variables for consistent theming.
+ */
+export function EmptyState({ icon, title, description, action, className, compact }: EmptyStateProps) {
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center py-16 px-4 text-center",
+        "flex flex-col items-center justify-center text-center",
+        compact ? "py-8 px-4" : "py-16 px-6",
         className
       )}
     >
       {icon && (
-        <div className="mb-4 opacity-40">{icon}</div>
+        <div
+          className={cn(
+            "flex items-center justify-center rounded-xl mb-4",
+            compact ? "w-10 h-10" : "w-14 h-14"
+          )}
+          style={{ background: "var(--qa-surface2)", color: "var(--qa-fg4)" }}
+        >
+          {icon}
+        </div>
       )}
-      <h3 className="text-lg font-semibold mb-2">{title}</h3>
+      <h3
+        className={cn("font-semibold mb-1", compact ? "text-sm" : "text-base")}
+        style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg2)" }}
+      >
+        {title}
+      </h3>
       {description && (
-        <p className="text-sm text-muted-foreground max-w-sm mb-6">{description}</p>
+        <p
+          className={cn("max-w-xs leading-relaxed", compact ? "text-xs" : "text-sm")}
+          style={{ color: "var(--qa-fg4)" }}
+        >
+          {description}
+        </p>
       )}
-      {action && <div>{action}</div>}
+      {action && <div className="mt-5">{action}</div>}
     </div>
   );
 }
