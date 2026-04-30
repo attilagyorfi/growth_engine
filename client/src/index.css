@@ -1,8 +1,9 @@
 /*
  * G2A Growth Engine – Dashboard
- * Design: "Dark Ops Dashboard" – Premium SaaS Dark Mode / Data Intelligence Interface
- * Color: Deep blue-grey background (#0F172A), card (#1E293B), electric blue (#3B82F6), green (#10B981)
- * Typography: Sora (headings), Inter (body)
+ * Design System: "Quiet Authority" – Stripe/Mercury-inspired premium SaaS dark mode
+ * Palette: 5 surface levels, 4 text levels, 1 accent, 3 status colors
+ * Typography: Sora (display/headings), Inter (body) — tabular numbers throughout
+ * Spacing: 8px grid
  */
 
 @import "tailwindcss";
@@ -49,62 +50,208 @@
   --color-sidebar-ring: var(--sidebar-ring);
   --font-sans: 'Inter', sans-serif;
   --font-heading: 'Sora', sans-serif;
+
+  /* ── Quiet Authority Surface Scale ───────────────────────────── */
+  --color-qa-bg:        var(--qa-bg);        /* #0A0B0F – deepest background */
+  --color-qa-surface:   var(--qa-surface);   /* #13151B – card / panel */
+  --color-qa-surface2:  var(--qa-surface2);  /* #1A1D26 – elevated card */
+  --color-qa-border:    var(--qa-border);    /* #23262F – default border */
+  --color-qa-border-hi: var(--qa-border-hi); /* #2E323D – prominent border */
+
+  /* ── Quiet Authority Text Scale ──────────────────────────────── */
+  --color-qa-fg:    var(--qa-fg);    /* #F5F6F8 – titles, KPI values */
+  --color-qa-fg2:   var(--qa-fg2);   /* #B4B7C0 – secondary text */
+  --color-qa-fg3:   var(--qa-fg3);   /* #7C8089 – labels, metadata */
+  --color-qa-fg4:   var(--qa-fg4);   /* #4A4E58 – disabled/muted */
+
+  /* ── Quiet Authority Accent & Status ─────────────────────────── */
+  --color-qa-accent:   var(--qa-accent);   /* #3D7BFD – primary action, focus */
+  --color-qa-success:  var(--qa-success);  /* #22C55E – positive, approved */
+  --color-qa-warning:  var(--qa-warning);  /* #F59E0B – caution, in-progress */
+  --color-qa-danger:   var(--qa-danger);   /* #EF4444 – error, critical */
+
+  /* ── Spacing tokens (8px grid) ───────────────────────────────── */
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-12: 48px;
+  --spacing-16: 64px;
 }
 
 :root {
-  --radius: 0.5rem;
-  --background: oklch(0.13 0.025 255);
-  --foreground: oklch(0.92 0.008 240);
-  --card: oklch(0.18 0.022 255);
-  --card-foreground: oklch(0.92 0.008 240);
-  --popover: oklch(0.18 0.022 255);
-  --popover-foreground: oklch(0.92 0.008 240);
-  --primary: oklch(0.6 0.2 255);
-  --primary-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.22 0.02 255);
-  --secondary-foreground: oklch(0.75 0.01 240);
-  --muted: oklch(0.22 0.02 255);
-  --muted-foreground: oklch(0.6 0.015 240);
-  --accent: oklch(0.22 0.02 255);
-  --accent-foreground: oklch(0.92 0.008 240);
-  --destructive: oklch(0.65 0.22 25);
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(1 0 0 / 8%);
-  --input: oklch(1 0 0 / 10%);
-  --ring: oklch(0.6 0.2 255);
-  --chart-1: oklch(0.6 0.2 255);
-  --chart-2: oklch(0.65 0.18 165);
-  --chart-3: oklch(0.7 0.15 60);
-  --chart-4: oklch(0.55 0.22 300);
-  --chart-5: oklch(0.6 0.2 30);
-  --sidebar: oklch(0.16 0.022 255);
-  --sidebar-foreground: oklch(0.92 0.008 240);
-  --sidebar-primary: oklch(0.6 0.2 255);
-  --sidebar-primary-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.22 0.02 255);
-  --sidebar-accent-foreground: oklch(0.92 0.008 240);
-  --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: oklch(0.6 0.2 255);
+  /* ── Border radius ──────────────────────────────────────────── */
+  --radius: 0.5rem;   /* 8px base */
 
-  /* Custom G2A colors */
-  --g2a-blue: oklch(0.6 0.2 255);
-  --g2a-green: oklch(0.65 0.18 165);
-  --g2a-amber: oklch(0.75 0.18 75);
-  --g2a-red: oklch(0.65 0.22 25);
-  --g2a-purple: oklch(0.6 0.2 290);
+  /* ── Quiet Authority palette (hex → OKLCH approximations) ───── */
+  /* Surface scale */
+  --qa-bg:        oklch(0.09 0.012 258);   /* #0A0B0F */
+  --qa-surface:   oklch(0.12 0.015 258);   /* #13151B */
+  --qa-surface2:  oklch(0.15 0.018 258);   /* #1A1D26 */
+  --qa-border:    oklch(0.19 0.018 258);   /* #23262F */
+  --qa-border-hi: oklch(0.23 0.018 258);   /* #2E323D */
+
+  /* Text scale */
+  --qa-fg:   oklch(0.96 0.005 240);        /* #F5F6F8 */
+  --qa-fg2:  oklch(0.74 0.010 240);        /* #B4B7C0 */
+  --qa-fg3:  oklch(0.54 0.010 240);        /* #7C8089 */
+  --qa-fg4:  oklch(0.36 0.010 240);        /* #4A4E58 */
+
+  /* Accent & status */
+  --qa-accent:  oklch(0.58 0.19 258);      /* #3D7BFD */
+  --qa-success: oklch(0.72 0.19 145);      /* #22C55E */
+  --qa-warning: oklch(0.76 0.17 68);       /* #F59E0B */
+  --qa-danger:  oklch(0.63 0.22 25);       /* #EF4444 */
+
+  /* ── shadcn/ui semantic tokens → mapped to Quiet Authority ───── */
+  --background:           var(--qa-bg);
+  --foreground:           var(--qa-fg);
+  --card:                 var(--qa-surface);
+  --card-foreground:      var(--qa-fg);
+  --popover:              var(--qa-surface2);
+  --popover-foreground:   var(--qa-fg);
+  --primary:              var(--qa-accent);
+  --primary-foreground:   oklch(0.98 0 0);
+  --secondary:            var(--qa-surface2);
+  --secondary-foreground: var(--qa-fg2);
+  --muted:                var(--qa-surface2);
+  --muted-foreground:     var(--qa-fg3);
+  --accent:               var(--qa-surface2);
+  --accent-foreground:    var(--qa-fg);
+  --destructive:          var(--qa-danger);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border:               oklch(1 0 0 / 7%);
+  --input:                oklch(1 0 0 / 8%);
+  --ring:                 var(--qa-accent);
+
+  /* ── Chart palette ───────────────────────────────────────────── */
+  --chart-1: var(--qa-accent);
+  --chart-2: var(--qa-success);
+  --chart-3: var(--qa-warning);
+  --chart-4: var(--qa-danger);
+  --chart-5: oklch(0.65 0.15 290);
+
+  /* ── Sidebar ─────────────────────────────────────────────────── */
+  --sidebar:                    var(--qa-surface);
+  --sidebar-foreground:         var(--qa-fg);
+  --sidebar-primary:            var(--qa-accent);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent:             var(--qa-surface2);
+  --sidebar-accent-foreground:  var(--qa-fg);
+  --sidebar-border:             oklch(1 0 0 / 7%);
+  --sidebar-ring:               var(--qa-accent);
+
+  /* ── Legacy G2A aliases (backward compat) ────────────────────── */
+  --g2a-blue:   var(--qa-accent);
+  --g2a-green:  var(--qa-success);
+  --g2a-amber:  var(--qa-warning);
+  --g2a-red:    var(--qa-danger);
+  --g2a-purple: oklch(0.60 0.18 290);
 }
+
+/* ── Typography scale ─────────────────────────────────────────────
+   Display  32px / Sora 700  – page titles, empty state hero
+   H1       24px / Sora 700  – section titles, modal titles
+   H2       18px / Sora 600  – card titles, list headers
+   Body Lg  15px / Inter 400 – intro paragraphs
+   Body     13px / Inter 400 – default text
+   Caption  12px / Inter 400 – secondary info, metadata
+   Micro    10px / Inter 400 – labels, breadcrumbs
+   Label     8px / Inter 700 – section eyebrows (tracking +2)
+   ─────────────────────────────────────────────────────────────── */
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    /* Tabular numbers everywhere for aligned KPI values */
+    font-variant-numeric: tabular-nums;
   }
+
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
+
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Sora', sans-serif;
+    font-variant-numeric: tabular-nums;
   }
+
+  /* Typography utility classes */
+  .text-display {
+    font-family: 'Sora', sans-serif;
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    color: var(--qa-fg);
+  }
+
+  .text-h1 {
+    font-family: 'Sora', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+    color: var(--qa-fg);
+  }
+
+  .text-h2 {
+    font-family: 'Sora', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--qa-fg);
+  }
+
+  .text-body-lg {
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    font-weight: 400;
+    line-height: 1.6;
+    color: var(--qa-fg2);
+  }
+
+  .text-body {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.6;
+    color: var(--qa-fg2);
+  }
+
+  .text-caption {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.5;
+    color: var(--qa-fg3);
+  }
+
+  .text-micro {
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 400;
+    line-height: 1.4;
+    color: var(--qa-fg3);
+  }
+
+  .text-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 8px;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--qa-fg3);
+  }
+
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
   [type="button"]:not(:disabled),
@@ -119,6 +266,7 @@
 }
 
 @layer components {
+  /* ── Layout ──────────────────────────────────────────────────── */
   .container {
     width: 100%;
     margin-left: auto;
@@ -147,23 +295,35 @@
     }
   }
 
-  /* G2A Custom Components */
+  /* ── Quiet Authority Card ─────────────────────────────────────── */
+  .qa-card {
+    background: var(--qa-surface);
+    border: 1px solid var(--qa-border);
+    border-radius: 10px;
+  }
+
+  .qa-card-elevated {
+    background: var(--qa-surface2);
+    border: 1px solid var(--qa-border);
+    border-radius: 10px;
+  }
+
+  /* Legacy g2a-card alias – kept for backward compat */
   .g2a-card {
-    background: var(--card);
-    border: 1px solid oklch(1 0 0 / 8%);
-    border-radius: 0.75rem;
-    transition: box-shadow 0.2s ease, transform 0.2s ease;
+    background: var(--qa-surface);
+    border: 1px solid oklch(1 0 0 / 7%);
+    border-radius: 10px;
+    transition: box-shadow 0.15s ease;
   }
 
   .g2a-card:hover {
-    box-shadow: 0 4px 24px oklch(0.6 0.2 255 / 15%);
-    transform: translateY(-1px);
+    box-shadow: 0 2px 16px oklch(0 0 0 / 30%);
   }
 
   .g2a-stat-card {
-    background: linear-gradient(135deg, oklch(0.18 0.022 255), oklch(0.22 0.025 255));
-    border: 1px solid oklch(1 0 0 / 8%);
-    border-radius: 0.75rem;
+    background: var(--qa-surface);
+    border: 1px solid oklch(1 0 0 / 7%);
+    border-radius: 10px;
     position: relative;
     overflow: hidden;
   }
@@ -174,50 +334,97 @@
     top: 0;
     left: 0;
     right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, var(--g2a-blue), var(--g2a-green));
+    height: 1px;
+    background: oklch(1 0 0 / 10%);
   }
 
+  /* ── Status badges (Quiet Authority) ─────────────────────────── */
   .status-badge {
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
-    padding: 0.25rem 0.75rem;
+    padding: 0.2rem 0.6rem;
     border-radius: 9999px;
-    font-size: 0.75rem;
+    font-size: 11px;
     font-weight: 500;
     font-family: 'Inter', sans-serif;
   }
 
-  .status-new { background: oklch(0.6 0.2 255 / 15%); color: oklch(0.75 0.18 255); }
-  .status-pending { background: oklch(0.75 0.18 75 / 15%); color: oklch(0.8 0.15 75); }
-  .status-sent { background: oklch(0.65 0.18 165 / 15%); color: oklch(0.75 0.15 165); }
-  .status-replied { background: oklch(0.65 0.18 165 / 25%); color: oklch(0.8 0.18 165); }
-  .status-rejected { background: oklch(0.65 0.22 25 / 15%); color: oklch(0.75 0.2 25); }
+  /* Semantic status: use dot + tinted background, not loud colors */
+  .status-new      { background: oklch(0.58 0.19 258 / 12%); color: oklch(0.72 0.15 258); }
+  .status-pending  { background: oklch(0.76 0.17 68 / 12%);  color: oklch(0.76 0.17 68); }
+  .status-sent     { background: oklch(0.72 0.19 145 / 12%); color: oklch(0.72 0.19 145); }
+  .status-replied  { background: oklch(0.72 0.19 145 / 18%); color: oklch(0.78 0.18 145); }
+  .status-rejected { background: oklch(0.63 0.22 25 / 12%);  color: oklch(0.70 0.18 25); }
 
+  /* ── Navigation items ────────────────────────────────────────── */
   .nav-item {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    padding: 0.625rem 0.875rem;
-    border-radius: 0.5rem;
-    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 13px;
     font-weight: 500;
-    color: oklch(0.6 0.015 240);
-    transition: all 0.15s ease;
+    color: var(--qa-fg3);
+    transition: color 0.12s ease, background 0.12s ease;
     text-decoration: none;
   }
 
   .nav-item:hover {
-    background: oklch(1 0 0 / 5%);
-    color: oklch(0.92 0.008 240);
+    background: oklch(1 0 0 / 4%);
+    color: var(--qa-fg2);
   }
 
   .nav-item.active {
-    background: oklch(0.6 0.2 255 / 15%);
-    color: oklch(0.75 0.18 255);
+    background: oklch(0.58 0.19 258 / 10%);
+    color: var(--qa-accent);
   }
 
-  .glow-blue { box-shadow: 0 0 20px oklch(0.6 0.2 255 / 30%); }
-  .glow-green { box-shadow: 0 0 20px oklch(0.65 0.18 165 / 30%); }
+  /* ── Quiet Authority accent button ───────────────────────────── */
+  .qa-btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    background: var(--qa-accent);
+    color: #fff;
+    border: none;
+    transition: opacity 0.12s ease, box-shadow 0.12s ease;
+  }
+
+  .qa-btn-primary:hover:not(:disabled) {
+    opacity: 0.88;
+    box-shadow: 0 2px 12px oklch(0.58 0.19 258 / 35%);
+  }
+
+  .qa-btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: 'Inter', sans-serif;
+    background: var(--qa-surface2);
+    color: var(--qa-fg2);
+    border: 1px solid var(--qa-border);
+    transition: background 0.12s ease, color 0.12s ease;
+  }
+
+  .qa-btn-secondary:hover:not(:disabled) {
+    background: var(--qa-border);
+    color: var(--qa-fg);
+  }
+
+  /* ── Glow helpers (subtle, not electric) ─────────────────────── */
+  .glow-blue  { box-shadow: 0 0 16px oklch(0.58 0.19 258 / 20%); }
+  .glow-green { box-shadow: 0 0 16px oklch(0.72 0.19 145 / 20%); }
 }

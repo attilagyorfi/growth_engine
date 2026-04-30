@@ -1048,3 +1048,14 @@
 - [x] BillingPlanCards.tsx: valódi Stripe checkout + éves/havi kapcsoló + portal link
 - [x] Settings.tsx: BillingPlanCards komponens integrálva
 - [x] TypeScript: 0 hiba, 53/53 teszt zöld
+
+## Quiet Authority – Fázis 01: Design Tokens
+
+- [x] index.css: Quiet Authority színrendszer (5 felület, 4 szöveg, 1 akcens, 3 státusz)
+- [x] index.css: OKLCH → hex/rgb konverzió a Quiet Authority palettára (#0A0B0F, #13151B stb.)
+- [x] index.css: Tipográfiai skála (Display 32px Sora, H1 24px, H2 18px, Body 15/13px, Caption 12px, Micro 10px, Label 8px)
+- [x] index.css: 8px-alapú spacing rendszer CSS változókként
+- [x] index.css: Border-radius rendszer egységesítése
+- [x] index.css: Shadcn/ui CSS változók szinkronizálása az új palettával (--background, --foreground, --primary, --accent stb.)
+- [x] index.html: Sora font betöltés ellenőrzése (már megvan, de weight-ek ellenőrzése)
+- [x] Vizuális ellenőrzés: Dashboard, Landing, Settings oldalak
