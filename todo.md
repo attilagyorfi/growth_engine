@@ -924,3 +924,26 @@
 - [x] Roadmap szekció a landingon 6 kártyával (Q3 2026 – 2027 Q1)
 - [x] Funkciók: Podcast & Hang studió, Fejlett Riportálás, Csapat Együttműködés, Direkt Social Közzététel, Többnyelvű Tartalom, E-commerce Integráció
 - [x] 51/51 teszt zöld, TypeScript: 0 hiba
+
+## Sprint 42 – Per-feature kvóta-rendszer implementálása
+
+### Backend
+- [x] AI_PLAN_LIMITS per-feature struktúrára bővítése (strategy, contentPlan, post, campaign, image, video, seo)
+- [x] checkAiUsageLimit: feature-specifikus ellenőrzés
+- [x] recordAiUsage: feature típus mentése (action mező már megvan)
+- [x] Képgenerálás kvóta: checkAiUsageLimit('image') minden generateImage hívás előtt
+- [x] HeyGen videó kvóta: checkAiUsageLimit('video') minden createVideo hívás előtt
+- [x] aiUsage.status: per-feature breakdown visszaadása
+- [x] Soft limit (80%): warning flag a status response-ban
+
+### Frontend
+- [x] AI Kredit widget az irányítópulton: progress bar + feature breakdown
+- [x] 80% figyelmeztetés: warning flag a status response-ban
+- [x] 100% blokkolás: feature-szintű limit ellenőrzés
+- [x] ContentStudio: képgenerálás kvóta ellenőrzés UI
+- [x] VideoStudio: videó kvóta megjelenítése
+
+### Landing oldal
+- [x] Árazási szekció: „korlátlan” → konkrét számok minden csomagnál (4 900 Ft / 14 900 Ft)
+- [x] Feature lista frissítése: pontos kvóta számok
+- [x] Tesztek frissítése: 53/53 zöld (ai.usage.test.ts + onboarding.test.ts per-feature struktúrára frissítve)

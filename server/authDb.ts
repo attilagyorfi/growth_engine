@@ -124,14 +124,109 @@ export async function markResetTokenUsed(id: string): Promise<void> {
   await db.update(passwordResetTokens).set({ usedAt: new Date() }).where(eq(passwordResetTokens.id, id));
 }
 
-// ─── AI Usage Tracking ────────────────────────────────────────────────────────
+// ─── AI Usage Tracking – Per-Feature Quota System ────────────────────────────
 
-/** Plan limits (monthly AI generation counts). -1 = unlimited */
-export const AI_PLAN_LIMITS: Record<string, number> = {
-  free: 3,
-  starter: 20,
-  pro: -1,
-  agency: -1,
+/**
+ * Feature categories for AI usage tracking.
+ * Each feature has its own monthly limit per plan.
+ *
+ * Cost reference (HUF, Gemini 2.5 Flash pricing):
+ *   text (strategy/post/campaign): ~1–8 Ft/call
+ *   image (HD generation):         ~14.8 Ft/call
+ *   video (HeyGen 1 min):          ~366 Ft/call
+ */
+export type AiFeature =
+  | "strategy"       // Stratégia generálás
+  | "contentPlan"    // Havi tartalom terv (30 poszt)
+  | "post"           // Egyedi poszt generálás
+  | "campaign"       // Kampány brief generálás
+  | "intelligence"   // Company Intelligence generálás
+  | "dailyTasks"     // Napi feladatok generálás
+  | "seo"            // SEO audit AI elemzés
+  | "image"          // Képgenerálás (HD)
+  | "video"          // HeyGen videó generálás
+  | "other";         // Egyéb AI hívás
+
+/**
+ * Per-feature monthly limits per plan.
+ * -1 = unlimited (not used in new system – all plans have finite limits)
+ *
+ * Pricing logic:
+ *   Ingyenes:  csak kipróbálásra, nagyon szűk limitek
+ *   Starter:   kis vállalkozás, havi normál használat
+ *   Pro:       aktív marketing csapat, intenzív használat
+ *   Agency:    ügynökség, több ügyfél, nagy volumen
+ */
+export interface FeatureLimits {
+  strategy: number;
+  contentPlan: number;
+  post: number;
+  campaign: number;
+  intelligence: number;
+  dailyTasks: number;
+  seo: number;
+  image: number;
+  video: number;
+  other: number;
+}
+
+export const AI_PLAN_LIMITS: Record<string, FeatureLimits> = {
+  free: {
+    strategy: 1,
+    contentPlan: 1,
+    post: 5,
+    campaign: 1,
+    intelligence: 1,
+    dailyTasks: 5,
+    seo: 1,
+    image: 0,
+    video: 0,
+    other: 3,
+  },
+  starter: {
+    strategy: 5,
+    contentPlan: 2,
+    post: 50,
+    campaign: 3,
+    intelligence: 3,
+    dailyTasks: 30,
+    seo: 3,
+    image: 5,
+    video: 0,
+    other: 20,
+  },
+  pro: {
+    strategy: 20,
+    contentPlan: 6,
+    post: 300,
+    campaign: 15,
+    intelligence: 10,
+    dailyTasks: 90,
+    seo: 10,
+    image: 30,
+    video: 5,
+    other: 100,
+  },
+  agency: {
+    strategy: 60,
+    contentPlan: 20,
+    post: 1000,
+    campaign: 50,
+    intelligence: 30,
+    dailyTasks: 300,
+    seo: 30,
+    image: 100,
+    video: 15,
+    other: 300,
+  },
+};
+
+/** Legacy compatibility: total monthly limit (sum of all features) */
+export const AI_PLAN_TOTAL_LIMITS: Record<string, number> = {
+  free: 17,
+  starter: 121,
+  pro: 556,
+  agency: 1808,
 };
 
 /** Returns the current month as 'YYYY-MM' */
@@ -140,22 +235,62 @@ export function getCurrentMonth(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
-/** Count AI usages for a user in the current month */
-export async function getMonthlyAiUsageCount(appUserId: string, month?: string): Promise<number> {
+/** Count AI usages for a user in the current month, optionally filtered by feature */
+export async function getMonthlyAiUsageCount(
+  appUserId: string,
+  month?: string,
+  feature?: AiFeature
+): Promise<number> {
   const db = await requireDb();
   const m = month ?? getCurrentMonth();
+  const conditions = [
+    eq(aiUsage.appUserId, appUserId),
+    eq(aiUsage.month, m),
+  ];
+  if (feature) {
+    conditions.push(eq(aiUsage.action, feature));
+  }
   const rows = await db
     .select({ count: count() })
     .from(aiUsage)
-    .where(and(eq(aiUsage.appUserId, appUserId), eq(aiUsage.month, m)));
+    .where(and(...conditions));
   return rows[0]?.count ?? 0;
 }
 
+/** Get per-feature usage breakdown for the current month */
+export async function getMonthlyUsageBreakdown(
+  appUserId: string,
+  month?: string
+): Promise<Record<AiFeature, number>> {
+  const db = await requireDb();
+  const m = month ?? getCurrentMonth();
+  const rows = await db
+    .select({ action: aiUsage.action, count: count() })
+    .from(aiUsage)
+    .where(and(eq(aiUsage.appUserId, appUserId), eq(aiUsage.month, m)));
+
+  const breakdown: Record<string, number> = {};
+  for (const row of rows) {
+    breakdown[row.action] = row.count;
+  }
+
+  const features: AiFeature[] = ["strategy", "contentPlan", "post", "campaign", "intelligence", "dailyTasks", "seo", "image", "video", "other"];
+  const result = {} as Record<AiFeature, number>;
+  for (const f of features) {
+    result[f] = breakdown[f] ?? 0;
+  }
+  return result;
+}
+
 /** Record an AI usage event (skipped for super_admin and onboarding flow) */
-export async function recordAiUsage(appUserId: string, action: string, role?: string, isOnboarding?: boolean): Promise<void> {
-  // Super admins and onboarding flow don't consume AI usage quota
+export async function recordAiUsage(
+  appUserId: string,
+  action: string,
+  role?: string,
+  isOnboarding?: boolean
+): Promise<void> {
   if (role === "super_admin") return;
-  if (isOnboarding) return; // Onboarding AI calls are always free
+  if (isOnboarding) return;
   const db = await requireDb();
   await db.insert(aiUsage).values({
     appUserId,
@@ -164,30 +299,44 @@ export async function recordAiUsage(appUserId: string, action: string, role?: st
   });
 }
 
-/** Check if a user can perform an AI action (within plan limits) */
-export async function checkAiUsageLimit(appUserId: string, plan: string, role?: string, isOnboarding?: boolean): Promise<{
+/** Check if a user can perform an AI action for a specific feature */
+export async function checkAiUsageLimit(
+  appUserId: string,
+  plan: string,
+  role?: string,
+  isOnboarding?: boolean,
+  feature?: AiFeature
+): Promise<{
   allowed: boolean;
   used: number;
   limit: number;
   plan: string;
+  warning: boolean; // true when >= 80% of limit used
 }> {
-  // Super admins always have unlimited AI access regardless of subscription plan
   if (role === "super_admin") {
-    return { allowed: true, used: 0, limit: -1, plan: "super_admin" };
+    return { allowed: true, used: 0, limit: -1, plan: "super_admin", warning: false };
   }
-  // Onboarding flow is always allowed regardless of plan
   if (isOnboarding) {
-    return { allowed: true, used: 0, limit: -1, plan: `${plan}_onboarding` };
+    return { allowed: true, used: 0, limit: -1, plan: `${plan}_onboarding`, warning: false };
   }
-  const limit = AI_PLAN_LIMITS[plan] ?? 3;
-  if (limit === -1) {
-    return { allowed: true, used: 0, limit: -1, plan };
+
+  const planLimits = AI_PLAN_LIMITS[plan] ?? AI_PLAN_LIMITS.free;
+  const f = feature ?? "other";
+  const limit = planLimits[f] ?? 0;
+
+  if (limit === 0) {
+    // Feature not available on this plan
+    return { allowed: false, used: 0, limit: 0, plan, warning: false };
   }
-  const used = await getMonthlyAiUsageCount(appUserId);
+
+  const used = await getMonthlyAiUsageCount(appUserId, undefined, f);
+  const warning = used >= Math.floor(limit * 0.8);
+
   return {
     allowed: used < limit,
     used,
     limit,
     plan,
+    warning,
   };
 }

@@ -2186,18 +2186,39 @@ A link mező mindig ezek egyike legyen, ne találj ki más URL-t.`,
       .query(async ({ ctx }) => {
         // Super admins always have unlimited AI access
         if (ctx.appUser.role === "super_admin") {
-          return { plan: "super_admin", used: 0, limit: -1, unlimited: true, remaining: Infinity };
+          return {
+            plan: "super_admin",
+            used: 0,
+            limit: -1,
+            unlimited: true,
+            remaining: Infinity,
+            warning: false,
+            breakdown: null as null,
+            featureLimits: null as null,
+          };
         }
         const plan = ctx.appUser.subscriptionPlan ?? "free";
-        const { AI_PLAN_LIMITS, getMonthlyAiUsageCount, getCurrentMonth } = await import("./authDb");
-        const limit = AI_PLAN_LIMITS[plan] ?? 3;
-        const used = limit === -1 ? 0 : await getMonthlyAiUsageCount(ctx.appUser.id, getCurrentMonth());
+        const {
+          AI_PLAN_TOTAL_LIMITS,
+          AI_PLAN_LIMITS,
+          getMonthlyAiUsageCount,
+          getMonthlyUsageBreakdown,
+          getCurrentMonth,
+        } = await import("./authDb");
+        const totalLimit = AI_PLAN_TOTAL_LIMITS[plan] ?? 17;
+        const used = await getMonthlyAiUsageCount(ctx.appUser.id, getCurrentMonth());
+        const breakdown = await getMonthlyUsageBreakdown(ctx.appUser.id, getCurrentMonth());
+        const featureLimits = AI_PLAN_LIMITS[plan] ?? AI_PLAN_LIMITS.free;
+        const warning = used >= Math.floor(totalLimit * 0.8);
         return {
           plan,
           used,
-          limit,
-          unlimited: limit === -1,
-          remaining: limit === -1 ? Infinity : Math.max(0, limit - used),
+          limit: totalLimit,
+          unlimited: false,
+          remaining: Math.max(0, totalLimit - used),
+          warning,
+          breakdown,
+          featureLimits,
         };
       }),
   }),

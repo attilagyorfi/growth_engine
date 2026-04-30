@@ -19,7 +19,7 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { useState } from "react";
-import { Sparkles, RefreshCw } from "lucide-react";
+import { Sparkles, RefreshCw, Brain, Image, Video } from "lucide-react";
 import DailyTasksBlock from "@/components/DailyTasksBlock";
 
 export default function Dashboard() {
@@ -403,6 +403,107 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* AI Kredit Widget – csak nem-super_admin felhasználóknak */}
+      <AiCreditsWidget navigate={navigate} isSuperAdmin={isSuperAdmin} />
+
     </DashboardLayout>
+  );
+}
+
+function AiCreditsWidget({ navigate, isSuperAdmin }: { navigate: (path: string) => void; isSuperAdmin: boolean }) {
+  const { data: aiUsage, isLoading } = trpc.aiUsage.status.useQuery(undefined, {
+    refetchInterval: 60_000,
+  });
+
+  if (isSuperAdmin || isLoading || !aiUsage || aiUsage.unlimited) return null;
+
+  const pct = Math.min(100, Math.round((aiUsage.used / aiUsage.limit) * 100));
+  const isWarning = aiUsage.warning;
+  const isExhausted = aiUsage.remaining === 0;
+  const barColor = isExhausted
+    ? "linear-gradient(90deg, oklch(0.65 0.18 25), oklch(0.7 0.2 30))"
+    : isWarning
+    ? "linear-gradient(90deg, oklch(0.75 0.18 75), oklch(0.7 0.2 60))"
+    : "linear-gradient(90deg, oklch(0.6 0.2 255), oklch(0.55 0.22 280))";
+
+  const planLabels: Record<string, string> = {
+    free: "Ingyenes",
+    starter: "Starter",
+    pro: "Pro",
+    agency: "Agency",
+  };
+
+  // Reset: first day of next month
+  const now = new Date();
+  const resetDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const daysLeft = Math.ceil((resetDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+  const featureRows = aiUsage.featureLimits ? [
+    { label: "Szöveges generálás", icon: Brain, used: (aiUsage.breakdown?.post ?? 0) + (aiUsage.breakdown?.strategy ?? 0) + (aiUsage.breakdown?.contentPlan ?? 0), limit: ((aiUsage.featureLimits as any).post ?? 0) + ((aiUsage.featureLimits as any).strategy ?? 0) + ((aiUsage.featureLimits as any).contentPlan ?? 0), color: "oklch(0.6 0.2 255)" },
+    { label: "Képgenerálás", icon: Image, used: aiUsage.breakdown?.image ?? 0, limit: (aiUsage.featureLimits as any).image ?? 0, color: "oklch(0.7 0.18 300)" },
+    { label: "AI videók (HeyGen)", icon: Video, used: aiUsage.breakdown?.video ?? 0, limit: (aiUsage.featureLimits as any).video ?? 0, color: "oklch(0.65 0.18 165)" },
+  ] : [];
+
+  return (
+    <div className="mb-6">
+      <h2 className="text-xs font-bold uppercase tracking-wider mb-3" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.5 0.015 240)" }}>AI Kredit</h2>
+      <div className="rounded-xl border p-4" style={{ background: "oklch(0.17 0.022 255)", borderColor: isExhausted ? "oklch(0.65 0.18 25 / 40%)" : isWarning ? "oklch(0.75 0.18 75 / 40%)" : "oklch(1 0 0 / 8%)" }}>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "oklch(0.6 0.2 255 / 15%)" }}>
+              <Brain size={16} style={{ color: "oklch(0.6 0.2 255)" }} />
+            </div>
+            <div>
+              <p className="text-xs font-semibold" style={{ color: "oklch(0.85 0.008 240)" }}>
+                {planLabels[aiUsage.plan] ?? aiUsage.plan} csomag
+              </p>
+              <p className="text-xs" style={{ color: "oklch(0.5 0.015 240)" }}>
+                Reset {daysLeft} nap múlva · {resetDate.toLocaleDateString("hu-HU", { month: "long", day: "numeric" })}
+              </p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-lg font-bold leading-none" style={{ color: isExhausted ? "oklch(0.65 0.18 25)" : "oklch(0.92 0.008 240)", fontFamily: "Sora, sans-serif" }}>
+              {aiUsage.used}<span className="text-xs font-normal" style={{ color: "oklch(0.5 0.015 240)" }}>/{aiUsage.limit}</span>
+            </p>
+            <p className="text-xs mt-0.5" style={{ color: "oklch(0.5 0.015 240)" }}>generálás felhasználva</p>
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <div className="w-full h-2 rounded-full overflow-hidden mb-3" style={{ background: "oklch(0.25 0.02 255)" }}>
+          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: barColor }} />
+        </div>
+
+        {/* Per-feature breakdown */}
+        {featureRows.length > 0 && (
+          <div className="grid grid-cols-3 gap-2 mb-3">
+            {featureRows.map(row => (
+              <div key={row.label} className="rounded-lg p-2 text-center" style={{ background: "oklch(0.22 0.02 255)" }}>
+                <row.icon size={14} className="mx-auto mb-1" style={{ color: row.color }} />
+                <p className="text-xs font-bold" style={{ color: "oklch(0.85 0.008 240)" }}>{row.used}/{row.limit}</p>
+                <p className="text-xs leading-tight mt-0.5" style={{ color: "oklch(0.45 0.015 240)", fontSize: "10px" }}>{row.label}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* CTA */}
+        {(isExhausted || isWarning) && (
+          <button
+            onClick={() => navigate("/beallitasok?tab=elofizetes")}
+            className="w-full py-2 rounded-lg text-xs font-semibold transition-all"
+            style={{
+              background: isExhausted ? "oklch(0.65 0.18 25 / 20%)" : "oklch(0.75 0.18 75 / 20%)",
+              color: isExhausted ? "oklch(0.75 0.18 25)" : "oklch(0.85 0.18 75)",
+              border: `1px solid ${isExhausted ? "oklch(0.65 0.18 25 / 30%)" : "oklch(0.75 0.18 75 / 30%)"}`
+            }}
+          >
+            {isExhausted ? "⚡ Csomag frissítése – több AI kredit" : "⚠️ Hamarosan elfogy a kretited – frissítsd a csomagot"}
+          </button>
+        )}
+      </div>
+    </div>
   );
 }

@@ -124,35 +124,38 @@ describe("Feature Gating – AI Limit Bypass for Super Admin", () => {
     expect(result.plan).toBe("super_admin");
   });
 
-  it("free plan user is limited to 3 AI generations", () => {
-    expect(AI_PLAN_LIMITS.free).toBe(3);
+  it("free plan user is limited to 5 AI posts per month", () => {
+    // Per-feature struktúra: AI_PLAN_LIMITS.free egy objektum
+    expect(AI_PLAN_LIMITS.free.post).toBe(5);
+    expect(AI_PLAN_LIMITS.free.strategy).toBe(1);
   });
 
-  it("free plan user with 3 usages is blocked", async () => {
-    // We can't easily mock DB here, but we can test the limit logic directly
-    const limit = AI_PLAN_LIMITS.free;
-    const used = 3;
+  it("free plan user with 5 post usages is blocked (post limit)", async () => {
+    // Teszteli a limit logikát a per-feature struktúrával
+    const limit = AI_PLAN_LIMITS.free.post;
+    const used = 5;
     const allowed = used < limit;
     expect(allowed).toBe(false);
   });
 
-  it("free plan user with 2 usages is allowed", () => {
-    const limit = AI_PLAN_LIMITS.free;
-    const used = 2;
+  it("free plan user with 4 post usages is allowed", () => {
+    const limit = AI_PLAN_LIMITS.free.post;
+    const used = 4;
     const allowed = used < limit;
     expect(allowed).toBe(true);
   });
 
-  it("pro plan is unlimited", async () => {
-    const result = await checkAiUsageLimit("any-user-id", "pro", "user");
-    expect(result.allowed).toBe(true);
-    expect(result.limit).toBe(-1);
+  it("pro plan has high limits (not unlimited in per-feature model)", async () => {
+    // Pro csomag: 300 poszt/hó, 20 stratégia/hó – nem -1, de magas limit
+    expect(AI_PLAN_LIMITS.pro.post).toBe(300);
+    expect(AI_PLAN_LIMITS.pro.strategy).toBe(20);
+    expect(AI_PLAN_LIMITS.pro.video).toBe(5);
   });
 
-  it("agency plan is unlimited", async () => {
-    const result = await checkAiUsageLimit("any-user-id", "agency", "user");
-    expect(result.allowed).toBe(true);
-    expect(result.limit).toBe(-1);
+  it("agency plan has the highest limits", async () => {
+    expect(AI_PLAN_LIMITS.agency.post).toBe(1000);
+    expect(AI_PLAN_LIMITS.agency.strategy).toBe(60);
+    expect(AI_PLAN_LIMITS.agency.video).toBe(15);
   });
 });
 
