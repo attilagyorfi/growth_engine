@@ -57,6 +57,23 @@ export default function Settings() {
     { enabled: isSuperAdmin }
   );
   const [, navigate] = useLocation();
+  const [checkoutSuccess, setCheckoutSuccess] = useState(false);
+
+  // Detect checkout=success URL param and show banner
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("checkout") === "success") {
+        setCheckoutSuccess(true);
+        // Clean URL without reload
+        const newUrl = window.location.pathname + "?tab=billing";
+        window.history.replaceState({}, "", newUrl);
+        // Auto-dismiss after 8 seconds
+        setTimeout(() => setCheckoutSuccess(false), 8000);
+      }
+    }
+  }, []);
+
   const resetMyOnboarding = trpc.appAuth.resetMyOnboarding.useMutation({
     onSuccess: () => {
       toast.success("Onboarding állapot visszaállítva. Az onboarding oldal most betöltődik...");
@@ -566,6 +583,31 @@ export default function Settings() {
       {/* Előfizetés / Billing */}
       {activeTab === "billing" && (
         <div className="space-y-5">
+          {/* Checkout success banner */}
+          {checkoutSuccess && (
+            <div
+              className="flex items-center gap-4 rounded-xl border px-5 py-4"
+              style={{
+                background: "oklch(from var(--qa-success) l c h / 12%)",
+                borderColor: "oklch(from var(--qa-success) l c h / 35%)",
+              }}
+            >
+              <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "oklch(from var(--qa-success) l c h / 20%)" }}>
+                <CheckCircle2 size={20} style={{ color: "var(--qa-success)" }} />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-bold" style={{ color: "var(--qa-success)" }}>Csomag sikeresen aktiválva!</p>
+                <p className="text-xs mt-0.5" style={{ color: "var(--qa-fg3)" }}>Az előfizetésed aktív. Az összes funkció most már elérhető számodra.</p>
+              </div>
+              <button
+                onClick={() => setCheckoutSuccess(false)}
+                className="flex-shrink-0 p-1 rounded-lg transition-colors"
+                style={{ color: "var(--qa-fg4)" }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+          )}
           {/* Aktív csomag */}
           <div className="rounded-xl border p-5" style={{ background: cardBg, borderColor: border }}>
             <h3 className="text-sm font-bold mb-4" style={{ color: "var(--qa-fg2)" }}>Aktív előfizetés</h3>

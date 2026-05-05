@@ -130,6 +130,8 @@ export default function ContentStudio() {
   const [additionalContext, setAdditionalContext] = useState("");
   const [generatingContent, setGeneratingContent] = useState(false);
   const [activePillarFilter, setActivePillarFilter] = useState<string | null>(null);
+  const [aiVisualBrief, setAiVisualBrief] = useState<string | null>(null);
+  const [aiCtaText, setAiCtaText] = useState<string | null>(null);
 
   const utils = trpc.useUtils();
   const { data: posts = [], isLoading } = trpc.content.list.useQuery(
@@ -366,6 +368,8 @@ export default function ContentStudio() {
         imagePrompt: result.imagePrompt ?? p.imagePrompt,
         platform: template?.platform ?? p.platform,
       }));
+      if ((result as any).visualBrief) setAiVisualBrief((result as any).visualBrief);
+      if ((result as any).ctaText) setAiCtaText((result as any).ctaText);
       toast.success("Tartalom generálva! Szerkesztheted és mentheted.");
     } catch (err: unknown) {
       const cause = (err as { data?: { cause?: { code?: string; used?: number; limit?: number } } })?.data?.cause;
@@ -1109,11 +1113,29 @@ export default function ContentStudio() {
                   {newPost.imageUrl && <img src={newPost.imageUrl} alt="preview" className="mt-2 w-full h-32 object-cover rounded-lg" />}
                 </div>
                 <div>
-                  <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--qa-fg3)" }}>Hashtagek (vesszővel)</label>
+                  <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--qa-fg3)" }}>Hashtagek (vessővel)</label>
                   <input value={(newPost.hashtags ?? []).join(", ")} onChange={e => setNewPost(p => ({ ...p, hashtags: e.target.value.split(",").map(h => h.trim()).filter(Boolean) }))}
                     className="w-full px-3 py-2 rounded-lg text-sm border" style={{ background: "var(--qa-surface2)", borderColor: "var(--qa-border)", color: "var(--qa-fg2)" }}
                     placeholder="marketing, b2b, growth" />
                 </div>
+                {/* AI Visual Brief + CTA javaslat */}
+                {(aiVisualBrief || aiCtaText) && (
+                  <div className="rounded-xl border p-4 space-y-3" style={{ background: "oklch(from var(--qa-accent) l c h / 6%)", borderColor: "oklch(from var(--qa-accent) l c h / 20%)" }}>
+                    <p className="text-xs font-bold" style={{ color: "var(--qa-accent)" }}>AI javaslatok</p>
+                    {aiVisualBrief && (
+                      <div>
+                        <p className="text-xs font-semibold mb-1" style={{ color: "var(--qa-fg3)" }}>Vizuális brief</p>
+                        <p className="text-xs" style={{ color: "var(--qa-fg2)" }}>{aiVisualBrief}</p>
+                      </div>
+                    )}
+                    {aiCtaText && (
+                      <div>
+                        <p className="text-xs font-semibold mb-1" style={{ color: "var(--qa-fg3)" }}>CTA javaslat</p>
+                        <p className="text-xs font-medium px-3 py-2 rounded-lg" style={{ background: "oklch(from var(--qa-accent) l c h / 12%)", color: "var(--qa-accent)" }}>{aiCtaText}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 

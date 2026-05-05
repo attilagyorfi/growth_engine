@@ -15,10 +15,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { Link } from "wouter";
 import {
   Target, Zap, Calendar, TrendingUp, Loader2, CheckCircle2,
   Clock, AlertCircle, ChevronRight, BarChart2, Lightbulb, Archive,
-  Star
+  Star, CalendarPlus
 } from "lucide-react";
 
 const URGENCY_CONFIG = {
@@ -88,6 +89,23 @@ export default function Strategy() {
       toast.success("Stratégia archiválva.");
     },
   });
+
+  const generateTasksMutation = trpc.strategyVersions.generateTasks.useMutation({
+    onSuccess: (data) => {
+      toast.success(`${data.count} feladat létrehozva a stratégiából!`);
+    },
+    onError: () => toast.error("Feladatok létrehozása sikertelen."),
+  });
+
+  const handleGenerateTasks = () => {
+    if (!current) return;
+    generateTasksMutation.mutate({
+      profileId: activeProfile.id,
+      strategyVersionId: current.id,
+      quickWins: Array.isArray(current.quickWins) ? current.quickWins as any[] : [],
+      nextActions: Array.isArray(current.nextActions) ? current.nextActions as any[] : [],
+    });
+  };
 
   // Auto-open generate dialog when coming from onboarding with ?autoGenerate=true
   useEffect(() => {
@@ -240,6 +258,16 @@ export default function Strategy() {
                     Aktívvá tétel
                   </Button>
                 )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={handleGenerateTasks}
+                  disabled={generateTasksMutation.isPending}
+                >
+                  {generateTasksMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
+                  Feladatokká alakítás
+                </Button>
                 <Button
                     variant="ghost"
                     size="sm"
@@ -403,6 +431,17 @@ export default function Strategy() {
                 <div className="text-center py-8 text-muted-foreground">
                   <BarChart2 className="w-8 h-8 mx-auto mb-2" />
                   <p>Havi prioritások nem állnak rendelkezésre.</p>
+                </div>
+              )}
+              {/* Content Calendar CTA */}
+              {current.monthlyPriorities && Array.isArray(current.monthlyPriorities) && (current.monthlyPriorities as any[]).length > 0 && (
+                <div className="flex justify-end mt-2">
+                  <Link href="/content-studio">
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <CalendarPlus className="w-3 h-3" />
+                      Tartalomnaptár feltöltése stratégiából
+                    </Button>
+                  </Link>
                 </div>
               )}
             </TabsContent>

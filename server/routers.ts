@@ -1208,6 +1208,49 @@ export const appRouter = router({
           ...parsed,
         });
       }),
+
+    generateTasks: appUserProcedure
+      .input(z.object({
+        profileId: z.string(),
+        strategyVersionId: z.string(),
+        quickWins: z.array(z.any()).optional(),
+        nextActions: z.array(z.any()).optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        const tasks: Array<{ id: string; profileId: string; strategyId: string; title: string; description?: string; funnelStage: "awareness" | "consideration" | "decision" | "retention"; status: "todo" | "in_progress" | "done" | "skipped" }> = [];
+        // Convert quickWins to tasks
+        for (const win of (input.quickWins ?? [])) {
+          tasks.push({
+            id: nanoid(),
+            profileId: input.profileId,
+            strategyId: input.strategyVersionId,
+            title: win.title ?? "Gyors győzelem",
+            description: `${win.description ?? ""} | Hatás: ${win.impact ?? ""} | Erőfeszítés: ${win.effort ?? ""}`,
+            funnelStage: "awareness",
+            status: "todo",
+          });
+        }
+        // Convert nextActions to tasks
+        for (const action of (input.nextActions ?? [])) {
+          tasks.push({
+            id: nanoid(),
+            profileId: input.profileId,
+            strategyId: input.strategyVersionId,
+            title: action.title ?? "Következő lépés",
+            description: action.description ?? "",
+            funnelStage: "consideration",
+            status: "todo",
+          });
+        }
+        // Persist all tasks
+        const saved = [];
+        for (const task of tasks) {
+          const result = await upsertStrategyTask(task);
+          saved.push(result);
+        }
+        return { count: saved.length, tasks: saved };
+      }),
   }),
 
   // ─── Campaigns ──────────────────────────────────────────────────────────────
@@ -1431,10 +1474,10 @@ export const appRouter = router({
         const currentDateStr = now.toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric" });
         const response = await invokeLLM({
           messages: [
-            { role: "system", content: `Te egy tapasztalt közösségi média tartalomkészítő vagy. KIZÁRÓLAG MAGYARUL írj. A mai dátum: ${currentDateStr}. Adj vissza JSON-t a következő mezőkkel: title (rövid, figyelemfelkeltő cím), content (teljes poszt szöveg a platformnak megfelelő stílusban, max 280 karakter Twitter/TikTok esetén, max 3000 LinkedIn esetén), hashtags (string tömb, max 8 hashtag), imagePrompt (angol nyelvű képgenerálási prompt, részletes, vizuálisan leíró).` },
+            { role: "system", content: `Te egy tapasztalt közösségi média tartalomkészítő vagy. KIZÁRÓLAG MAGYARUL írj. A mai dátum: ${currentDateStr}. Adj vissza JSON-t a következő mezőkkel: title (rövid, figyelemfelkeltő cím), content (teljes poszt szöveg a platformnak megfelelő stílusban, max 280 karakter Twitter/TikTok esetén, max 3000 LinkedIn esetén), hashtags (string tömb, max 8 hashtag), imagePrompt (angol nyelvű képgenerálási prompt, részletes, vizuálisan leíró), visualBrief (vizuális brief: mit ábrázoljon a kép/videó, milyen stílusban, milyen elemekkel – magyarul), ctaText (cselekvésre szólítás szövege a poszthoz – rövid, konkrét, magyarul).` },
             { role: "user", content: `Cég: ${input.companyName ?? "ismeretlen"}\nIparág: ${input.industry ?? "általános"}\nPlatform: ${input.platform}\nTartalom típusa: ${input.contentType}\nTartalmi pillér: ${input.pillar ?? "általános"}\nHang/Tone: ${input.tone ?? "professzionális, barátságos"}\n${input.intelligenceSummary ? `Cég összefoglaló: ${input.intelligenceSummary}` : ""}\n${input.strategyContext ? `Stratégiai kontextus: ${input.strategyContext}` : ""}\n${input.additionalContext ? `Kiegészítő instrukciók: ${input.additionalContext}` : ""}\n\nGenerálj egy ${input.platform} posztot.` },
           ],
-          response_format: { type: "json_schema", json_schema: { name: "post_content", strict: true, schema: { type: "object", properties: { title: { type: "string" }, content: { type: "string" }, hashtags: { type: "array", items: { type: "string" } }, imagePrompt: { type: "string" } }, required: ["title", "content", "hashtags", "imagePrompt"], additionalProperties: false } } },
+          response_format: { type: "json_schema", json_schema: { name: "post_content", strict: true, schema: { type: "object", properties: { title: { type: "string" }, content: { type: "string" }, hashtags: { type: "array", items: { type: "string" } }, imagePrompt: { type: "string" }, visualBrief: { type: "string" }, ctaText: { type: "string" } }, required: ["title", "content", "hashtags", "imagePrompt", "visualBrief", "ctaText"], additionalProperties: false } } },
         });
         const raw = response.choices[0]?.message?.content ?? "{}";
         // Record AI usage

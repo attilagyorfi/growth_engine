@@ -1113,3 +1113,41 @@
 - [x] Loading skeleton: qa-surface2 shimmer, strukturált KPI card skeleton
 - [x] Focus ring: 2px QA accent (nem 3px), konzisztens minden interaktív elemen
 - [x] Tesztek: 53/53 zöld, TypeScript: 0 hiba
+
+## Sprint 50 – Magyar-only interfész + Audit
+
+- [ ] Nyelvváltó (i18n kapcsoló) eltávolítása a DashboardLayout-ból és minden oldalról
+- [ ] i18n context megtartása de EN opció elrejtése (csak HU aktív)
+- [ ] Teljes szöveg audit: minden oldal, minden felirat, toast, hibaüzenet magyarul
+- [ ] Programból kivágott képeken megjelenő szövegek ellenőrzése (AI-generált tartalmak)
+
+## Sprint 51 – Checkout success banner
+
+- [ ] Billing tab: checkout=success URL param detektálása
+- [ ] Zöld „Csomag aktiválva!" banner / toast a Billing tab tetején
+- [ ] Animált konfetti vagy checkmark animáció
+- [ ] Banner automatikus eltűnése 8 másodperc után
+
+## Sprint 52 – AI engine: Visual brief + CTA javaslat
+
+- [ ] Visual brief tRPC procedure (brandVoice + offer + célcsoport alapján)
+- [ ] Visual brief UI: ContentStudio-ban „Vizuális Brief" tab vagy drawer
+- [ ] CTA javaslat tRPC procedure (offer + platform + cél alapján)
+- [ ] CTA javaslat UI: ContentStudio AI drawer-ben „CTA javaslatok" szekció
+
+## Sprint 53 – Strategy task breakdown + Content calendar feltöltése
+
+- [ ] Strategy → task breakdown tRPC procedure (havi prioritások → heti feladatok)
+- [ ] Task breakdown UI: Strategy oldalon „Feladatok generálása" gomb
+- [ ] Content calendar feltöltése stratégiából tRPC procedure
+- [ ] Content calendar UI: „Naptár feltöltése stratégiából" CTA gomb
+
+## Sprint 50-54 – Magyar-only + AI engine bővítés (KÉSZ)
+
+- [x] Nyelvváltó eltávolítása: LanguageContext mindig "hu", LanguageSwitcher no-op badge
+- [x] Landing.tsx: összes lang ternáris eltávolítva, HU-only adatstruktúrák
+- [x] Magyar szöveg audit: minden oldal, toast üzenet, felirat – 0 angol UI szöveg
+- [x] Checkout success banner: Settings billing tab ?checkout=success URL param alapján zöld banner
+- [x] Visual brief + CTA javaslat: ai.generatePostContent backend + ContentStudio UI (kék kártya AI javaslatok szekció)
+- [x] Strategy → task breakdown: generateTasks procedure (quickWins + nextActions → strategyTasks DB), "Feladatokká alakítás" gomb
+- [x] Content calendar feltöltése stratégiából: "Tartalomnaptár feltöltése stratégiából" gomb a havi tervnél → /content-studio
