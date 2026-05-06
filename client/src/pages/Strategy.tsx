@@ -19,8 +19,9 @@ import { Link } from "wouter";
 import {
   Target, Zap, Calendar, TrendingUp, Loader2, CheckCircle2,
   Clock, AlertCircle, ChevronRight, BarChart2, Lightbulb, Archive,
-  Star, CalendarPlus
+  Star, CalendarPlus, ListChecks
 } from "lucide-react";
+import TasksTab from "@/components/strategy/TasksTab";
 
 const URGENCY_CONFIG = {
   high: { label: "Sürgős", color: "text-red-600 bg-red-50", icon: AlertCircle },
@@ -40,6 +41,10 @@ export default function Strategy() {
   const [autoGenerateTriggered, setAutoGenerateTriggered] = useState(false);
   const [showCompare, setShowCompare] = useState(false);
   const [compareVersionId, setCompareVersionId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
+    return params.get("tab") === "feladatok" ? "tasks" : "summary";
+  });
 
   const { data: versions = [], isLoading } = trpc.strategyVersions.list.useQuery(
     { profileId: activeProfile.id },
@@ -92,7 +97,13 @@ export default function Strategy() {
 
   const generateTasksMutation = trpc.strategyVersions.generateTasks.useMutation({
     onSuccess: (data) => {
-      toast.success(`${data.count} feladat létrehozva a stratégiából!`);
+      utils.strategyVersions.listTasks.invalidate({ profileId: activeProfile.id });
+      toast.success(`${data.count} feladat létrehozva a stratégiából!`, {
+        action: {
+          label: "Megnyitom",
+          onClick: () => setActiveTab("tasks"),
+        },
+      });
     },
     onError: () => toast.error("Feladatok létrehozása sikertelen."),
   });
@@ -119,6 +130,12 @@ export default function Strategy() {
       }
     }
   }, [search, isLoading, activeVersion, autoGenerateTriggered]);
+
+  // Sync activeTab with ?tab=feladatok deep link
+  useEffect(() => {
+    const params = new URLSearchParams(search);
+    if (params.get("tab") === "feladatok") setActiveTab("tasks");
+  }, [search]);
 
   const current = selectedVersionId
     ? versions.find(v => v.id === selectedVersionId)
@@ -237,7 +254,7 @@ export default function Strategy() {
             </CardContent>
           </Card>
         ) : (
-          <Tabs defaultValue="summary">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
             <div className="flex items-center justify-between mb-4">
               <TabsList>
                 <TabsTrigger value="summary">Összefoglaló</TabsTrigger>
@@ -245,6 +262,10 @@ export default function Strategy() {
                 <TabsTrigger value="monthly">Havi</TabsTrigger>
                 <TabsTrigger value="actions">Következő lépések</TabsTrigger>
                 <TabsTrigger value="channels">Csatornák</TabsTrigger>
+                <TabsTrigger value="tasks" className="gap-1.5">
+                  <ListChecks className="w-3.5 h-3.5" />
+                  Feladatok
+                </TabsTrigger>
               </TabsList>
               <div className="flex gap-2">
                 {!current.isActive && (
@@ -518,6 +539,11 @@ export default function Strategy() {
                   <p>Csatorna stratégia nem áll rendelkezésre.</p>
                 </div>
               )}
+            </TabsContent>
+
+            {/* Tasks Tab */}
+            <TabsContent value="tasks" className="space-y-4">
+              <TasksTab profileId={activeProfile.id} strategyId={current.id} />
             </TabsContent>
           </Tabs>
         )}

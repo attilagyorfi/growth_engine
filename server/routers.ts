@@ -22,7 +22,7 @@ import {
   getCompanyIntelligence, upsertCompanyIntelligence,
   getCompetitors, upsertCompetitor, deleteCompetitor,
   getPersonas, upsertPersona, deletePersona,
-  getStrategyTasks, upsertStrategyTask,
+  getStrategyTasks, upsertStrategyTask, getStrategyTaskById, updateStrategyTaskStatus,
   getAiMemories, createAiMemory,
   createAuditLog, getAuditLogs,
   getStrategyVersionsByProfile, getActiveStrategyVersion, upsertStrategyVersion, setActiveStrategyVersion, archiveStrategyVersion,
@@ -1250,6 +1250,34 @@ export const appRouter = router({
           saved.push(result);
         }
         return { count: saved.length, tasks: saved };
+      }),
+
+    listTasks: appUserProcedure
+      .input(z.object({
+        profileId: z.string(),
+        strategyId: z.string().optional(),
+        status: z.enum(["todo", "in_progress", "done", "skipped"]).optional(),
+        funnelStage: z.enum(["awareness", "consideration", "decision", "retention"]).optional(),
+      }))
+      .query(async ({ input, ctx }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        return getStrategyTasks(input.profileId, {
+          strategyId: input.strategyId,
+          status: input.status,
+          funnelStage: input.funnelStage,
+        });
+      }),
+
+    updateTaskStatus: appUserProcedure
+      .input(z.object({
+        taskId: z.string(),
+        status: z.enum(["todo", "in_progress", "done", "skipped"]),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const task = await getStrategyTaskById(input.taskId);
+        if (!task) throw new TRPCError({ code: "NOT_FOUND", message: "A feladat nem található" });
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, task.profileId, ctx.appUser.profileId);
+        return updateStrategyTaskStatus(input.taskId, input.status);
       }),
   }),
 

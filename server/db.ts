@@ -448,14 +448,22 @@ export async function deletePersona(id: string) {
 
 // ─── Strategy Tasks ───────────────────────────────────────────────────────────
 
-export async function getStrategyTasks(profileId: string, strategyId?: string) {
+export type StrategyTaskStatus = "todo" | "in_progress" | "done" | "skipped";
+export type StrategyTaskFunnelStage = "awareness" | "consideration" | "decision" | "retention";
+
+export async function getStrategyTasks(
+  profileId: string,
+  opts: { strategyId?: string; status?: StrategyTaskStatus; funnelStage?: StrategyTaskFunnelStage } = {},
+) {
   const db = await getDb();
   if (!db) return [];
-  if (strategyId) {
-    return db.select().from(strategyTasks)
-      .where(eq(strategyTasks.strategyId, strategyId));
-  }
-  return db.select().from(strategyTasks).where(eq(strategyTasks.profileId, profileId));
+  const filters = [eq(strategyTasks.profileId, profileId)];
+  if (opts.strategyId) filters.push(eq(strategyTasks.strategyId, opts.strategyId));
+  if (opts.status) filters.push(eq(strategyTasks.status, opts.status));
+  if (opts.funnelStage) filters.push(eq(strategyTasks.funnelStage, opts.funnelStage));
+  return db.select().from(strategyTasks)
+    .where(and(...filters))
+    .orderBy(desc(strategyTasks.createdAt));
 }
 
 export async function upsertStrategyTask(data: InsertStrategyTask) {
@@ -464,6 +472,23 @@ export async function upsertStrategyTask(data: InsertStrategyTask) {
   await db.insert(strategyTasks).values(data).onDuplicateKeyUpdate({ set: { ...data, updatedAt: new Date() } });
   const result = await db.select().from(strategyTasks).where(eq(strategyTasks.id, data.id)).limit(1);
   return result[0];
+}
+
+export async function getStrategyTaskById(taskId: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(strategyTasks).where(eq(strategyTasks.id, taskId)).limit(1);
+  return result[0] ?? null;
+}
+
+export async function updateStrategyTaskStatus(taskId: string, status: StrategyTaskStatus) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(strategyTasks)
+    .set({ status, updatedAt: new Date() })
+    .where(eq(strategyTasks.id, taskId));
+  const result = await db.select().from(strategyTasks).where(eq(strategyTasks.id, taskId)).limit(1);
+  return result[0] ?? null;
 }
 
 // ─── AI Memories ──────────────────────────────────────────────────────────────
