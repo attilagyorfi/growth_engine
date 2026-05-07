@@ -22,7 +22,8 @@ import {
   getCompanyIntelligence, upsertCompanyIntelligence,
   getCompetitors, upsertCompetitor, deleteCompetitor,
   getPersonas, upsertPersona, deletePersona,
-  getStrategyTasks, upsertStrategyTask, getStrategyTaskById, updateStrategyTaskStatus,
+  getStrategyTasks, upsertStrategyTask,
+  getCalendarItemsByProfile, bulkCreateCalendarItems, getStrategyTaskById, updateStrategyTaskStatus,
   getAiMemories, createAiMemory,
   createAuditLog, getAuditLogs,
   getStrategyVersionsByProfile, getActiveStrategyVersion, upsertStrategyVersion, setActiveStrategyVersion, archiveStrategyVersion,
@@ -1382,8 +1383,17 @@ export const appRouter = router({
           twitter: "twitter", tiktok: "tiktok",
         };
         const created: string[] = [];
+        const calendarItems: Array<{
+          id: string; profileId: string; contentPostId: string; title: string;
+          platform: string; format?: string; pillar?: string; campaignTag?: string;
+          scheduledAt: Date; status: "planned";
+        }> = [];
         const ideasToProcess = input.brief.contentIdeas.slice(0, 5);
-        for (const idea of ideasToProcess) {
+        // Heti stagger: minden ötlet a következő hetekre kerül (most + 1 hét, +2 hét, …)
+        const baseDate = new Date();
+        const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+        for (let i = 0; i < ideasToProcess.length; i++) {
+          const idea = ideasToProcess[i];
           const response = await invokeLLM({
             messages: [
               { role: "system", content: "Te egy marketing tartalomíró vagy. Kizárólag MAGYARUL írj." },
@@ -1407,9 +1417,40 @@ export const appRouter = router({
             pillar: input.campaignId,
           });
           created.push(contentId);
+          // Naptár bejegyzés a content posthoz, heti staggerrel (most + (i+1) hét)
+          calendarItems.push({
+            id: nanoid(),
+            profileId: input.profileId,
+            contentPostId: contentId,
+            title: parsed.title ?? idea.title,
+            platform,
+            format: idea.format,
+            campaignTag: input.campaignId,
+            scheduledAt: new Date(baseDate.getTime() + (i + 1) * WEEK_MS),
+            status: "planned",
+          });
+        }
+        // Naptár bejegyzések tömeges létrehozása (non-fatal — a content posztok már megvannak)
+        try {
+          await bulkCreateCalendarItems(calendarItems);
+        } catch (err) {
+          console.error("[Campaign] Calendar items bulk create failed:", err);
         }
         await recordAiUsage(ctx.appUser.id, "campaign_content_generation", ctx.appUser.role);
-        return { created: created.length, contentIds: created };
+        return { created: created.length, contentIds: created, calendarItemsCreated: calendarItems.length };
+      }),
+  }),
+
+  // ─── Content Calendar ──────────────────────────────────────────────────────
+  calendar: router({
+    list: appUserProcedure
+      .input(z.object({
+        profileId: z.string(),
+        campaignTag: z.string().optional(),
+      }))
+      .query(async ({ input, ctx }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        return getCalendarItemsByProfile(input.profileId, { campaignTag: input.campaignTag });
       }),
   }),
 
