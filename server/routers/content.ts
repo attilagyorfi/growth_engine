@@ -15,7 +15,7 @@ import { invokeLLM } from "../_core/llm";
 import { assertProfileOwnership } from "../_core/ownership";
 import { checkAiUsageLimit, recordAiUsage } from "../authDb";
 import {
-  getContentByProfile, createContent, updateContent, deleteContent,
+  getContentByProfile, getContentById, createContent, updateContent, deleteContent,
 } from "../db";
 
 export const contentRouter = router({
@@ -57,14 +57,22 @@ export const contentRouter = router({
       pillar: z.string().optional(),
       weekNumber: z.number().optional(),
     }))
-    .mutation(({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      const post = await getContentById(input.id);
+      if (!post) throw new TRPCError({ code: "NOT_FOUND", message: "A poszt nem található" });
+      await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, post.profileId, ctx.appUser.profileId);
       const { id, ...updates } = input;
       return updateContent(id, updates);
     }),
 
   delete: appUserProcedure
     .input(z.object({ id: z.string() }))
-    .mutation(({ input }) => deleteContent(input.id)),
+    .mutation(async ({ input, ctx }) => {
+      const post = await getContentById(input.id);
+      if (!post) throw new TRPCError({ code: "NOT_FOUND", message: "A poszt nem található" });
+      await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, post.profileId, ctx.appUser.profileId);
+      return deleteContent(input.id);
+    }),
 
   generateMonthlyPlan: appUserProcedure
     .input(z.object({

@@ -16,7 +16,7 @@ import { invokeLLM } from "../_core/llm";
 import { assertProfileOwnership } from "../_core/ownership";
 import { checkAiUsageLimit, recordAiUsage } from "../authDb";
 import {
-  getStrategyVersionsByProfile, getActiveStrategyVersion, upsertStrategyVersion,
+  getStrategyVersionsByProfile, getStrategyVersionById, getActiveStrategyVersion, upsertStrategyVersion,
   setActiveStrategyVersion, archiveStrategyVersion,
   upsertStrategyTask, getStrategyTasks, getStrategyTaskById, updateStrategyTaskStatus,
 } from "../db";
@@ -66,7 +66,12 @@ export const strategyVersionsRouter = router({
 
   archive: appUserProcedure
     .input(z.object({ id: z.string() }))
-    .mutation(({ input }) => archiveStrategyVersion(input.id)),
+    .mutation(async ({ input, ctx }) => {
+      const version = await getStrategyVersionById(input.id);
+      if (!version) throw new TRPCError({ code: "NOT_FOUND", message: "A stratégia verzió nem található" });
+      await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, version.profileId, ctx.appUser.profileId);
+      return archiveStrategyVersion(input.id);
+    }),
 
   generate: appUserProcedure
     .input(z.object({
