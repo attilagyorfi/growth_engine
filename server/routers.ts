@@ -1252,6 +1252,101 @@ export const appRouter = router({
         return { count: saved.length, tasks: saved };
       }),
 
+    // ─── 90 napos (negyedéves) terv ─────────────────────────────────────────
+    // A meglévő strategy.generate egész éves stratégiát készít (q1-q4 + 12 hónap).
+    // Ez a procedure egy fókuszáltabb 90 napos kimenetet ad: a következő 3 hónapra
+    // generál havi prioritásokat, KPI-okat és kockázatokat. Read-only — nem ír
+    // DB-be, a frontend dönti el használja-e az eredményt.
+    generateQuarterlyPlan: appUserProcedure
+      .input(z.object({
+        profileId: z.string(),
+        intelligenceData: z.any(),
+        strategyContext: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        // Ugyanaz az AI usage bucket mint a strategy generate-é
+        const usageCheck = await checkAiUsageLimit(ctx.appUser.id, ctx.appUser.subscriptionPlan ?? "free", ctx.appUser.role);
+        if (!usageCheck.allowed) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: `AI generálási limit elérve (${usageCheck.used}/${usageCheck.limit} ebben a hónapban). Frissítsd az előfizetésed a folytatáshoz.`,
+            cause: { code: "AI_LIMIT_REACHED", used: usageCheck.used, limit: usageCheck.limit, plan: usageCheck.plan },
+          });
+        }
+
+        // Következő 3 hónap előállítása YYYY-MM formátumban (most + 0/+1/+2 hónap)
+        const now = new Date();
+        const months: string[] = [];
+        for (let i = 0; i < 3; i++) {
+          const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+          months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+        }
+        const monthsStr = months.join(", ");
+        const todayStr = now.toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric" });
+
+        const response = await invokeLLM({
+          messages: [
+            { role: "system", content: `Te egy tapasztalt marketing stratéga vagy. 90 napos (negyedéves) operatív tervet készítesz. Kizárólag érvényes JSON-t adj vissza. MINDEN szöveges értéket KIZÁRÓLAG MAGYARUL írj meg. A mai dátum: ${todayStr}. A monthlyBreakdown tömbnél PONTOSAN ezt a 3 hónapot használd: ${monthsStr}.` },
+            { role: "user", content: `A következő vállalati intelligencia alapján készíts 90 napos (3 hónapos) operatív marketing tervet:\n${JSON.stringify(input.intelligenceData)}\n\n${input.strategyContext ? `További kontextus: ${input.strategyContext}` : ""}\n\nAdj vissza JSON-t: quarterFocus (1-2 mondatos fő üzenet a 3 hónapra magyarul), expectedOutcomes (3-5 várt eredmény string[] magyarul), monthlyBreakdown (tömb pontosan 3 elemmel: {month: ${monthsStr.split(", ").map(m => `"${m}"`).join("|")}, theme (rövid hónaptéma magyarul), priorities (3-5 prioritás string[] magyarul), kpis (3-5 KPI: {label, target, current?} - mind magyarul), risks (1-3 kockázat string[] magyarul)})` },
+          ],
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "quarterly_plan",
+              strict: true,
+              schema: {
+                type: "object",
+                properties: {
+                  quarterFocus: { type: "string" },
+                  expectedOutcomes: { type: "array", items: { type: "string" } },
+                  monthlyBreakdown: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        month: { type: "string" },
+                        theme: { type: "string" },
+                        priorities: { type: "array", items: { type: "string" } },
+                        kpis: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            properties: {
+                              label: { type: "string" },
+                              target: { type: "string" },
+                              current: { type: "string" },
+                            },
+                            required: ["label", "target"],
+                            additionalProperties: false,
+                          },
+                        },
+                        risks: { type: "array", items: { type: "string" } },
+                      },
+                      required: ["month", "theme", "priorities", "kpis", "risks"],
+                      additionalProperties: false,
+                    },
+                  },
+                },
+                required: ["quarterFocus", "expectedOutcomes", "monthlyBreakdown"],
+                additionalProperties: false,
+              },
+            },
+          },
+        });
+        const content = response.choices[0]?.message?.content ?? "{}";
+        const parsed = JSON.parse(typeof content === "string" ? content : JSON.stringify(content));
+
+        // AI usage record — ugyanaz a "strategy" feature bucket
+        await recordAiUsage(ctx.appUser.id, "strategy", ctx.appUser.role);
+
+        return {
+          generatedAt: now.toISOString(),
+          months,
+          plan: parsed,
+        };
+      }),
+
     listTasks: appUserProcedure
       .input(z.object({
         profileId: z.string(),
