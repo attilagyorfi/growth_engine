@@ -11,25 +11,25 @@ import { nanoid } from "nanoid";
 import { TRPCError } from "@trpc/server";
 import {
   getAllProfiles, getProfileById, getProfilesByAppUser, upsertProfile, deleteProfile,
-  getLeadsByProfile, createLead, updateLead, deleteLead,
-  getOutboundByProfile, createOutbound, updateOutbound, deleteOutbound,
-  getInboundByProfile, createInbound, markInboundRead, updateInboundCategory,
-  getContentByProfile, createContent, updateContent, deleteContent,
-  getStrategiesByProfile, createStrategy, updateStrategy,
+  getLeadsByProfile, getLeadById, createLead, updateLead, deleteLead,
+  getOutboundByProfile, getOutboundById, createOutbound, updateOutbound, deleteOutbound,
+  getInboundByProfile, getInboundById, createInbound, markInboundRead, updateInboundCategory,
+  getContentByProfile, getContentById, createContent, updateContent, deleteContent,
+  getStrategiesByProfile, getStrategyById, createStrategy, updateStrategy,
   getEmailIntegration, upsertEmailIntegration,
   getOnboardingSession, upsertOnboardingSession, saveOnboardingAnswers, getOnboardingAnswers,
-  getBrandAssets, createBrandAsset, updateBrandAssetParsed, deleteBrandAsset,
+  getBrandAssets, getBrandAssetById, createBrandAsset, updateBrandAssetParsed, deleteBrandAsset,
   getCompanyIntelligence, upsertCompanyIntelligence,
   getCompetitors, upsertCompetitor, deleteCompetitor,
   getPersonas, upsertPersona, deletePersona,
   getStrategyTasks, upsertStrategyTask, getStrategyTaskById, updateStrategyTaskStatus,
   getAiMemories, createAiMemory,
   createAuditLog, getAuditLogs,
-  getStrategyVersionsByProfile, getActiveStrategyVersion, upsertStrategyVersion, setActiveStrategyVersion, archiveStrategyVersion,
+  getStrategyVersionsByProfile, getStrategyVersionById, getActiveStrategyVersion, upsertStrategyVersion, setActiveStrategyVersion, archiveStrategyVersion,
   getCampaignsByProfile, getCampaignById, upsertCampaign, deleteCampaign,
   getCampaignAssets, upsertCampaignAsset,
-  getRecommendationsByProfile, createRecommendation, dismissRecommendation,
-  getNotificationsByUser, createNotification, markNotificationRead, markAllNotificationsRead,
+  getRecommendationsByProfile, getRecommendationById, createRecommendation, dismissRecommendation,
+  getNotificationsByUser, getNotificationById, createNotification, markNotificationRead, markAllNotificationsRead,
 } from "./db";
 import { invokeLLM } from "./_core/llm";
 import { storagePut } from "./storage";
@@ -181,14 +181,22 @@ export const appRouter = router({
         score: z.number().optional(),
         notes: z.string().optional(),
       }))
-      .mutation(({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        const lead = await getLeadById(input.id);
+        if (!lead) throw new TRPCError({ code: "NOT_FOUND", message: "A lead nem található" });
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, lead.profileId, ctx.appUser.profileId);
         const { id, ...updates } = input;
         return updateLead(id, updates);
       }),
 
     delete: appUserProcedure
       .input(z.object({ id: z.string() }))
-      .mutation(({ input }) => deleteLead(input.id)),
+      .mutation(async ({ input, ctx }) => {
+        const lead = await getLeadById(input.id);
+        if (!lead) throw new TRPCError({ code: "NOT_FOUND", message: "A lead nem található" });
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, lead.profileId, ctx.appUser.profileId);
+        return deleteLead(input.id);
+      }),
   }),
 
   // ─── Outbound Emails ────────────────────────────────────────────────────────
@@ -223,14 +231,22 @@ export const appRouter = router({
         status: z.enum(["draft", "approved", "sent", "opened", "replied", "bounced"]).optional(),
         sentAt: z.date().optional(),
       }))
-      .mutation(({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        const outbound = await getOutboundById(input.id);
+        if (!outbound) throw new TRPCError({ code: "NOT_FOUND", message: "Az email nem található" });
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, outbound.profileId, ctx.appUser.profileId);
         const { id, ...updates } = input;
         return updateOutbound(id, updates);
       }),
 
     delete: appUserProcedure
       .input(z.object({ id: z.string() }))
-      .mutation(({ input }) => deleteOutbound(input.id)),
+      .mutation(async ({ input, ctx }) => {
+        const outbound = await getOutboundById(input.id);
+        if (!outbound) throw new TRPCError({ code: "NOT_FOUND", message: "Az email nem található" });
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, outbound.profileId, ctx.appUser.profileId);
+        return deleteOutbound(input.id);
+      }),
 
     sendViaResend: appUserProcedure
       .input(z.object({
@@ -281,14 +297,24 @@ export const appRouter = router({
 
     markRead: appUserProcedure
       .input(z.object({ id: z.string() }))
-      .mutation(({ input }) => markInboundRead(input.id)),
+      .mutation(async ({ input, ctx }) => {
+        const inbound = await getInboundById(input.id);
+        if (!inbound) throw new TRPCError({ code: "NOT_FOUND", message: "Az inbox bejegyzés nem található" });
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, inbound.profileId, ctx.appUser.profileId);
+        return markInboundRead(input.id);
+      }),
 
     updateCategory: appUserProcedure
       .input(z.object({
         id: z.string(),
         category: z.enum(["interested", "not_interested", "question", "meeting_request", "out_of_office", "unsubscribe", "other"]),
       }))
-      .mutation(({ input }) => updateInboundCategory(input.id, input.category)),
+      .mutation(async ({ input, ctx }) => {
+        const inbound = await getInboundById(input.id);
+        if (!inbound) throw new TRPCError({ code: "NOT_FOUND", message: "Az inbox bejegyzés nem található" });
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, inbound.profileId, ctx.appUser.profileId);
+        return updateInboundCategory(input.id, input.category);
+      }),
   }),
 
   // ─── Content Posts ──────────────────────────────────────────────────────────
@@ -331,14 +357,22 @@ export const appRouter = router({
         pillar: z.string().optional(),
         weekNumber: z.number().optional(),
       }))
-      .mutation(({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        const post = await getContentById(input.id);
+        if (!post) throw new TRPCError({ code: "NOT_FOUND", message: "A poszt nem található" });
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, post.profileId, ctx.appUser.profileId);
         const { id, ...updates } = input;
         return updateContent(id, updates);
       }),
 
     delete: appUserProcedure
       .input(z.object({ id: z.string() }))
-      .mutation(({ input }) => deleteContent(input.id)),
+      .mutation(async ({ input, ctx }) => {
+        const post = await getContentById(input.id);
+        if (!post) throw new TRPCError({ code: "NOT_FOUND", message: "A poszt nem található" });
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, post.profileId, ctx.appUser.profileId);
+        return deleteContent(input.id);
+      }),
 
     generateMonthlyPlan: appUserProcedure
       .input(z.object({
@@ -587,7 +621,10 @@ export const appRouter = router({
           current: z.string().optional(),
         })).optional(),
       }))
-      .mutation(({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        const strategy = await getStrategyById(input.id);
+        if (!strategy) throw new TRPCError({ code: "NOT_FOUND", message: "A stratégia nem található" });
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, strategy.profileId, ctx.appUser.profileId);
         const { id, ...updates } = input;
         return updateStrategy(id, updates);
       }),
@@ -828,7 +865,12 @@ export const appRouter = router({
 
     deleteBrandAsset: appUserProcedure
       .input(z.object({ id: z.string() }))
-      .mutation(({ input }) => deleteBrandAsset(input.id)),
+      .mutation(async ({ input, ctx }) => {
+        const asset = await getBrandAssetById(input.id);
+        if (!asset) throw new TRPCError({ code: "NOT_FOUND", message: "A brand asset nem található" });
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, asset.profileId, ctx.appUser.profileId);
+        return deleteBrandAsset(input.id);
+      }),
 
     scrapeSocialProfile: appUserProcedure
       .input(z.object({
@@ -1167,7 +1209,12 @@ export const appRouter = router({
 
     archive: appUserProcedure
       .input(z.object({ id: z.string() }))
-      .mutation(({ input }) => archiveStrategyVersion(input.id)),
+      .mutation(async ({ input, ctx }) => {
+        const version = await getStrategyVersionById(input.id);
+        if (!version) throw new TRPCError({ code: "NOT_FOUND", message: "A stratégia verzió nem található" });
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, version.profileId, ctx.appUser.profileId);
+        return archiveStrategyVersion(input.id);
+      }),
 
     generate: appUserProcedure
       .input(z.object({
@@ -1316,7 +1363,12 @@ export const appRouter = router({
 
     delete: appUserProcedure
       .input(z.object({ id: z.string() }))
-      .mutation(({ input }) => deleteCampaign(input.id)),
+      .mutation(async ({ input, ctx }) => {
+        const campaign = await getCampaignById(input.id);
+        if (!campaign) throw new TRPCError({ code: "NOT_FOUND", message: "A kampány nem található" });
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, campaign.profileId, ctx.appUser.profileId);
+        return deleteCampaign(input.id);
+      }),
 
     generateBrief: appUserProcedure
       .input(z.object({
@@ -1356,7 +1408,17 @@ export const appRouter = router({
         platform: z.string().optional(),
         status: z.enum(["draft", "review", "approved", "published"]).optional(),
       }))
-      .mutation(({ input }) => upsertCampaignAsset({ ...input, id: input.id ?? nanoid(), status: input.status ?? "draft" })),
+      .mutation(async ({ input, ctx }) => {
+        // Ellenőrizzük: a megadott profile a userhez tartozik
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        // És hogy a kampány is ehhez a profilhoz tartozik (nem lehet más profilba beleírni)
+        const campaign = await getCampaignById(input.campaignId);
+        if (!campaign) throw new TRPCError({ code: "NOT_FOUND", message: "A kampány nem található" });
+        if (campaign.profileId !== input.profileId) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "A kampány nem ehhez a profilhoz tartozik" });
+        }
+        return upsertCampaignAsset({ ...input, id: input.id ?? nanoid(), status: input.status ?? "draft" });
+      }),
 
     generateContentFromBrief: appUserProcedure
       .input(z.object({
@@ -1424,7 +1486,12 @@ export const appRouter = router({
 
     dismiss: appUserProcedure
       .input(z.object({ id: z.string() }))
-      .mutation(({ input }) => dismissRecommendation(input.id)),
+      .mutation(async ({ input, ctx }) => {
+        const rec = await getRecommendationById(input.id);
+        if (!rec) throw new TRPCError({ code: "NOT_FOUND", message: "Az ajánlás nem található" });
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, rec.profileId, ctx.appUser.profileId);
+        return dismissRecommendation(input.id);
+      }),
 
     generate: appUserProcedure
       .input(z.object({
@@ -1457,7 +1524,15 @@ export const appRouter = router({
 
     markRead: appUserProcedure
       .input(z.object({ id: z.string() }))
-      .mutation(({ input }) => markNotificationRead(input.id)),
+      .mutation(async ({ input, ctx }) => {
+        // Notification user-bound (nem profile-bound), tehát appUserId-t ellenőrzünk
+        const notif = await getNotificationById(input.id);
+        if (!notif) throw new TRPCError({ code: "NOT_FOUND", message: "Az értesítés nem található" });
+        if (ctx.appUser.role !== "super_admin" && notif.appUserId !== ctx.appUser.id) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Nincs jogosultsága ehhez az értesítéshez" });
+        }
+        return markNotificationRead(input.id);
+      }),
 
     markAllRead: appUserProcedure
       .mutation(({ ctx }) => markAllNotificationsRead(ctx.appUser.id)),
