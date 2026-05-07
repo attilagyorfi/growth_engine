@@ -185,6 +185,104 @@ export async function sendWelcomeEmail(params: {
 }
 
 /**
+ * Approval workflow értesítés – a profil tulajdonosa kap emailt,
+ * amikor egy poszt review státuszba kerül
+ */
+export async function sendPostReviewNotificationEmail(params: {
+  to: string;
+  name: string | null;
+  postTitle: string;
+  postPlatform: string;
+  postPreview?: string;
+  reviewUrl: string;
+}): Promise<boolean> {
+  try {
+    const { to, name, postTitle, postPlatform, postPreview, reviewUrl } = params;
+    const displayName = name || "Felhasználó";
+    // Először 200 karakterre vágjuk a tartalom-előnézetet
+    const preview = postPreview && postPreview.length > 200
+      ? postPreview.slice(0, 200) + "…"
+      : postPreview ?? "";
+    const platformLabel = postPlatform.charAt(0).toUpperCase() + postPlatform.slice(1);
+
+    const { error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to,
+      subject: `${APP_NAME} – Új poszt vár jóváhagyásra: ${postTitle}`,
+      html: `
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Új poszt jóváhagyásra vár</title>
+</head>
+<body style="margin:0;padding:0;background:#0f0f1a;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f0f1a;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="560" cellpadding="0" cellspacing="0" style="background:#1a1a2e;border-radius:16px;overflow:hidden;border:1px solid rgba(139,92,246,0.2);">
+          <tr>
+            <td style="background:linear-gradient(135deg,#7c3aed,#4f46e5);padding:32px 40px;text-align:center;">
+              <span style="color:#fff;font-size:20px;font-weight:700;">⚡ ${APP_NAME}</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:40px;">
+              <h1 style="color:#fff;font-size:22px;font-weight:700;margin:0 0 12px;letter-spacing:-0.5px;">Új poszt vár jóváhagyásra</h1>
+              <p style="color:#a1a1aa;font-size:15px;line-height:1.6;margin:0 0 24px;">
+                Szia <strong style="color:#e4e4e7;">${displayName}</strong>! Egy új tartalom került review státuszba és vár a jóváhagyásodra.
+              </p>
+              <div style="background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.18);border-radius:12px;padding:20px;margin:0 0 28px;">
+                <div style="display:inline-block;background:rgba(124,58,237,0.25);color:#c4b5fd;font-size:11px;font-weight:600;letter-spacing:0.5px;padding:3px 10px;border-radius:999px;margin-bottom:10px;">${platformLabel.toUpperCase()}</div>
+                <h2 style="color:#fff;font-size:17px;font-weight:600;margin:0 0 10px;">${postTitle}</h2>
+                ${preview ? `<p style="color:#a1a1aa;font-size:14px;line-height:1.6;margin:0;white-space:pre-wrap;">${preview}</p>` : ""}
+              </div>
+              <table cellpadding="0" cellspacing="0" style="margin:0 auto 16px;">
+                <tr>
+                  <td style="background:linear-gradient(135deg,#7c3aed,#4f46e5);border-radius:10px;">
+                    <a href="${reviewUrl}" style="display:block;color:#fff;text-decoration:none;font-size:15px;font-weight:600;padding:13px 30px;text-align:center;">
+                      Áttekintem és jóváhagyom →
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="color:#71717a;font-size:12px;line-height:1.6;margin:0;text-align:center;">
+                Ha a gomb nem működik:<br>
+                <span style="color:#a78bfa;word-break:break-all;">${reviewUrl}</span>
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#111827;padding:24px 40px;border-top:1px solid rgba(139,92,246,0.1);">
+              <p style="color:#4b5563;font-size:12px;text-align:center;margin:0;">
+                © ${new Date().getFullYear()} G2A Marketing – ${APP_NAME}<br>
+                Ezt az értesítést a content approval workflow generálta.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+      `.trim(),
+      text: `Szia ${displayName}!\n\nEgy új poszt került jóváhagyásra a ${APP_NAME} platformon.\n\nCím: ${postTitle}\nPlatform: ${platformLabel}\n${preview ? `\nElőnézet:\n${preview}\n` : ""}\nÁttekintés és jóváhagyás:\n${reviewUrl}\n\n– ${APP_NAME}`,
+    });
+
+    if (error) {
+      console.error("[Email] Post review notification error:", error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("[Email] Post review unexpected error:", err);
+    return false;
+  }
+}
+
+/**
  * Outbound marketing email küldése Resend API-val
  * A platform Resend kulcsát használja – nincs szükség saját SMTP konfigurációra
  */
