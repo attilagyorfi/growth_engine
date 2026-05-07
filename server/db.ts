@@ -217,6 +217,13 @@ export async function createInbound(email: InsertInboundEmail) {
   await db.insert(inboundEmails).values(email);
 }
 
+export async function getInboundById(id: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(inboundEmails).where(eq(inboundEmails.id, id)).limit(1);
+  return result[0];
+}
+
 export async function markInboundRead(id: string) {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
@@ -378,6 +385,13 @@ export async function updateBrandAssetParsed(id: string, parsedContent: string) 
   const db = await getDb();
   if (!db) throw new Error("DB not available");
   await db.update(uploadedBrandAssets).set({ parsedContent, parsedAt: new Date() }).where(eq(uploadedBrandAssets.id, id));
+}
+
+export async function getBrandAssetById(id: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(uploadedBrandAssets).where(eq(uploadedBrandAssets.id, id)).limit(1);
+  return result[0];
 }
 
 export async function deleteBrandAsset(id: string) {
@@ -567,6 +581,13 @@ export async function setActiveStrategyVersion(profileId: string, versionId: str
   await db.update(strategyVersions).set({ isActive: true }).where(eq(strategyVersions.id, versionId));
 }
 
+export async function getStrategyVersionById(id: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(strategyVersions).where(eq(strategyVersions.id, id)).limit(1);
+  return result[0];
+}
+
 export async function archiveStrategyVersion(id: string) {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
@@ -636,6 +657,13 @@ export async function createRecommendation(data: InsertRecommendation) {
   await db.insert(recommendations).values(data);
 }
 
+export async function getRecommendationById(id: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(recommendations).where(eq(recommendations.id, id)).limit(1);
+  return result[0];
+}
+
 export async function dismissRecommendation(id: string) {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
@@ -657,6 +685,13 @@ export async function createNotification(data: InsertAppNotification) {
   const db = await getDb();
   if (!db) return;
   await db.insert(appNotifications).values(data);
+}
+
+export async function getNotificationById(id: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(appNotifications).where(eq(appNotifications.id, id)).limit(1);
+  return result[0];
 }
 
 export async function markNotificationRead(id: string) {
