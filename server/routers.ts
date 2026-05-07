@@ -427,7 +427,7 @@ export const appRouter = router({
     submitForReview: appUserProcedure
       .input(z.object({ postId: z.string() }))
       .mutation(async ({ input, ctx }) => {
-        const { contentPosts } = await import("../drizzle/schema");
+        const { contentPosts, clientProfiles, appUsers } = await import("../drizzle/schema");
         const { getDb } = await import("./db");
         const { eq } = await import("drizzle-orm");
         const db = await getDb();
@@ -438,6 +438,33 @@ export const appRouter = router({
         await db.update(contentPosts)
           .set({ status: "review", updatedAt: new Date() })
           .where(eq(contentPosts.id, input.postId));
+
+        // Email értesítés a profil tulajdonosának (non-fatal — nem blokkolja a state változást)
+        try {
+          const [profile] = await db.select().from(clientProfiles).where(eq(clientProfiles.id, post.profileId)).limit(1);
+          if (profile?.appUserId) {
+            const [owner] = await db.select().from(appUsers).where(eq(appUsers.id, profile.appUserId)).limit(1);
+            if (owner?.email) {
+              const { sendPostReviewNotificationEmail } = await import("./email");
+              const appUrl = process.env.APP_URL || "https://g2a-growth-engine.manus.space";
+              const reviewUrl = `${appUrl}/content-studio?postId=${post.id}`;
+              const sent = await sendPostReviewNotificationEmail({
+                to: owner.email,
+                name: owner.name,
+                postTitle: post.title,
+                postPlatform: post.platform,
+                postPreview: post.content,
+                reviewUrl,
+              });
+              if (!sent) console.error(`[Approval Email] Failed for post ${post.id}`);
+              else console.log(`[Approval Email] Sent to ${owner.email} for post ${post.id}`);
+            }
+          }
+        } catch (err) {
+          // Email küldés bármilyen hibája nem akadályozhatja meg a state változást
+          console.error("[Approval Email] Unexpected error:", err);
+        }
+
         return { success: true };
       }),
 
