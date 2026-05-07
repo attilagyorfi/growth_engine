@@ -9,8 +9,9 @@ import confetti from "canvas-confetti";
 import {
   Palette, Plug, Users, ClipboardList, X, Loader2, Plus,
   Save, Globe, Mail, Check, AlertCircle, Settings2, Eye, EyeOff, PlayCircle,
-  CreditCard, Sparkles, Rocket, Building2, Crown, CheckCircle2, Zap,
+  CreditCard, Sparkles, Rocket, Building2, Crown, CheckCircle2, Zap, Brain,
 } from "lucide-react";
+import AiMemorySection from "@/components/settings/AiMemorySection";
 import { useSubscription, PLAN_FEATURES, type SubscriptionPlan } from "@/hooks/useSubscription";
 import BillingPlanCards from "@/components/BillingPlanCards";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -20,13 +21,14 @@ import { useAppAuth } from "@/hooks/useAppAuth";
 import { useTour } from "@/hooks/useTour";
 import { toast } from "sonner";
 
-type Tab = "brand" | "integrations" | "team" | "audit" | "admin" | "fiok" | "billing";
+type Tab = "brand" | "integrations" | "team" | "audit" | "admin" | "fiok" | "billing" | "ai-memory";
 
 const BASE_TABS: { id: Tab; label: string; icon: React.ReactNode; badge?: string }[] = [
   { id: "fiok", label: "Fiók", icon: <Users size={14} /> },
   { id: "billing", label: "Előfizetés", icon: <CreditCard size={14} /> },
   { id: "brand", label: "Brand Center", icon: <Palette size={14} /> },
   { id: "integrations", label: "Integrációk", icon: <Plug size={14} /> },
+  { id: "ai-memory", label: "AI Memória", icon: <Brain size={14} /> },
   { id: "team", label: "Csapat", icon: <Users size={14} />, badge: "Hamarosan" },
   { id: "audit", label: "Audit Log", icon: <ClipboardList size={14} /> },
 ];
@@ -46,7 +48,7 @@ export default function Settings() {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get("tab") as Tab | null;
-      const validTabs: Tab[] = ["fiok", "billing", "brand", "integrations", "team", "audit", "admin"];
+      const validTabs: Tab[] = ["fiok", "billing", "brand", "integrations", "ai-memory", "team", "audit", "admin"];
       if (tab && validTabs.includes(tab)) return tab;
     }
     return "brand";
@@ -522,6 +524,11 @@ export default function Settings() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* AI Memory */}
+      {activeTab === "ai-memory" && activeProfile.id && (
+        <AiMemorySection profileId={activeProfile.id} />
       )}
 
       {/* Team */}

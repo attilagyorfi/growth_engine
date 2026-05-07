@@ -493,16 +493,41 @@ export async function updateStrategyTaskStatus(taskId: string, status: StrategyT
 
 // ─── AI Memories ──────────────────────────────────────────────────────────────
 
-export async function getAiMemories(profileId: string) {
+export type AiMemoryType =
+  | "approved_pattern"
+  | "rejected_pattern"
+  | "style_preference"
+  | "cta_preference"
+  | "content_preference"
+  | "client_correction";
+
+export async function getAiMemories(profileId: string, opts: { memoryType?: AiMemoryType } = {}) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(aiMemories).where(eq(aiMemories.profileId, profileId));
+  const filters = [eq(aiMemories.profileId, profileId)];
+  if (opts.memoryType) filters.push(eq(aiMemories.memoryType, opts.memoryType));
+  return db.select().from(aiMemories)
+    .where(and(...filters))
+    .orderBy(desc(aiMemories.createdAt));
+}
+
+export async function getAiMemoryById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(aiMemories).where(eq(aiMemories.id, id)).limit(1);
+  return result[0] ?? null;
 }
 
 export async function createAiMemory(data: InsertAiMemory) {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
   await db.insert(aiMemories).values(data);
+}
+
+export async function deleteAiMemory(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(aiMemories).where(eq(aiMemories.id, id));
 }
 
 // ─── Audit Logs ───────────────────────────────────────────────────────────────
