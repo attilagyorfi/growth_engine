@@ -29,9 +29,9 @@ import {
   getCompanyIntelligence, upsertCompanyIntelligence,
   getCompetitors, upsertCompetitor, deleteCompetitor,
   getPersonas, upsertPersona, deletePersona,
-  getStrategyTasks, upsertStrategyTask,
-  getCalendarItemsByProfile, bulkCreateCalendarItems, getStrategyTaskById, updateStrategyTaskStatus,
-  getAiMemories, createAiMemory,
+  getStrategyTasks, upsertStrategyTask, getStrategyTaskById, updateStrategyTaskStatus,
+  getCalendarItemsByProfile, bulkCreateCalendarItems,
+  getAiMemories, createAiMemory, getAiMemoryById, deleteAiMemory,
   createAuditLog, getAuditLogs,
   getStrategyVersionsByProfile, getActiveStrategyVersion, upsertStrategyVersion, setActiveStrategyVersion, archiveStrategyVersion,
   getCampaignsByProfile, getCampaignById, upsertCampaign, deleteCampaign,
@@ -808,6 +808,36 @@ export const appRouter = router({
   }),
 
   // ─── Recommendations ────────────────────────────────────────────────────────
+  // ─── AI Memory ──────────────────────────────────────────────────────────────
+  aiMemory: router({
+    list: appUserProcedure
+      .input(z.object({
+        profileId: z.string(),
+        memoryType: z.enum([
+          "approved_pattern",
+          "rejected_pattern",
+          "style_preference",
+          "cta_preference",
+          "content_preference",
+          "client_correction",
+        ]).optional(),
+      }))
+      .query(async ({ input, ctx }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        return getAiMemories(input.profileId, { memoryType: input.memoryType });
+      }),
+
+    delete: appUserProcedure
+      .input(z.object({ memoryId: z.number().int().positive() }))
+      .mutation(async ({ input, ctx }) => {
+        const memory = await getAiMemoryById(input.memoryId);
+        if (!memory) throw new TRPCError({ code: "NOT_FOUND", message: "Az AI memória bejegyzés nem található" });
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, memory.profileId, ctx.appUser.profileId);
+        await deleteAiMemory(input.memoryId);
+        return { ok: true as const };
+      }),
+  }),
+
   recommendations: router({
     list: appUserProcedure
       .input(z.object({ profileId: z.string() }))
