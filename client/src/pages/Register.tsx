@@ -109,7 +109,14 @@ export default function Register() {
       setError("A két jelszó nem egyezik meg.");
       return;
     }
-    register.mutate({ email, password, name: name || undefined, subscriptionPlan: selectedPlan, newsletterConsent });
+    register.mutate({
+      email,
+      password,
+      name: name || undefined,
+      subscriptionPlan: selectedPlan,
+      subscriptionBilling: isYearly && selectedPlan !== "free" ? "yearly" : "monthly",
+      newsletterConsent,
+    });
   };
 
   const passwordStrength = password.length >= 8 ? (
@@ -438,7 +445,7 @@ export default function Register() {
                   {register.isPending ? (
                     <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Regisztráció...</>
                   ) : (
-                    `${activePlan.name} fiók létrehozása`
+                    `${activePlan.name}${isYearly && activePlan.id !== "free" ? " (éves)" : ""} fiók létrehozása`
                   )}
                 </Button>
 

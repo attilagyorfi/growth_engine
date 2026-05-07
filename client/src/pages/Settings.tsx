@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
+import confetti from "canvas-confetti";
 import {
   Palette, Plug, Users, ClipboardList, X, Loader2, Plus,
   Save, Globe, Mail, Check, AlertCircle, Settings2, Eye, EyeOff, PlayCircle,
@@ -68,6 +69,20 @@ export default function Settings() {
         // Clean URL without reload
         const newUrl = window.location.pathname + "?tab=billing";
         window.history.replaceState({}, "", newUrl);
+        // Konfetti — Quiet Authority paletta színeivel
+        const fire = (ratio: number, opts: confetti.Options) =>
+          confetti({
+            particleCount: Math.floor(180 * ratio),
+            spread: 70,
+            origin: { y: 0.7 },
+            colors: ["#3D7BFD", "#22C55E", "#F0F2F8", "#9BA3B8"],
+            ...opts,
+          });
+        fire(0.25, { spread: 26, startVelocity: 55 });
+        fire(0.2, { spread: 60 });
+        fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 });
+        fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 });
+        fire(0.1, { spread: 120, startVelocity: 45 });
         // Auto-dismiss after 8 seconds
         setTimeout(() => setCheckoutSuccess(false), 8000);
       }

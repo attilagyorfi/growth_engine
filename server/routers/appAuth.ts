@@ -47,6 +47,7 @@ export const appAuthRouter = router({
       password: z.string().min(8, "A jelszó legalább 8 karakter legyen"),
       name: z.string().min(1, "Add meg a neved").optional(),
       subscriptionPlan: z.enum(["free", "starter", "pro", "agency"]).optional().default("free"),
+      subscriptionBilling: z.enum(["monthly", "yearly"]).optional().default("monthly"),
       newsletterConsent: z.boolean().optional().default(false),
     }))
     .mutation(async ({ input, ctx }) => {
@@ -57,6 +58,8 @@ export const appAuthRouter = router({
       const passwordHash = await bcrypt.hash(input.password, 12);
       const id = nanoid();
       const role = input.email.toLowerCase() === SUPER_ADMIN_EMAIL ? "super_admin" : "user";
+      // Free plan ignorálja a billing periódust – csak fizetős csomagnál releváns
+      const billing = input.subscriptionPlan === "free" ? "monthly" : (input.subscriptionBilling ?? "monthly");
       const user = await createAppUser({
         id,
         email: input.email.toLowerCase(),
@@ -67,6 +70,7 @@ export const appAuthRouter = router({
         profileId: null,
         active: true,
         subscriptionPlan: input.subscriptionPlan ?? "free",
+        subscriptionBilling: billing,
       });
       if (!user) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Regisztráció sikertelen" });
 
@@ -100,7 +104,7 @@ export const appAuthRouter = router({
 
       const token = await signToken(user.id, user.role);
       ctx.res.setHeader("Set-Cookie", `app_token=${token}; HttpOnly; Path=/; Max-Age=${30 * 24 * 3600}; SameSite=Lax`);
-      return { success: true, user: { id: user.id, email: user.email, name: user.name, role: user.role, onboardingCompleted: user.onboardingCompleted } };
+      return { success: true, user: { id: user.id, email: user.email, name: user.name, role: user.role, onboardingCompleted: user.onboardingCompleted, subscriptionPlan: user.subscriptionPlan, subscriptionBilling: user.subscriptionBilling } };
     }),
 
   // ─── Bejelentkezés ───────────────────────────────────────────────────────────
@@ -121,7 +125,7 @@ export const appAuthRouter = router({
       await updateLastSignedIn(user.id);
       const token = await signToken(user.id, user.role);
       ctx.res.setHeader("Set-Cookie", `app_token=${token}; HttpOnly; Path=/; Max-Age=${30 * 24 * 3600}; SameSite=Lax`);
-      return { success: true, user: { id: user.id, email: user.email, name: user.name, role: user.role, onboardingCompleted: user.onboardingCompleted, profileId: user.profileId } };
+      return { success: true, user: { id: user.id, email: user.email, name: user.name, role: user.role, onboardingCompleted: user.onboardingCompleted, profileId: user.profileId, subscriptionPlan: user.subscriptionPlan, subscriptionBilling: user.subscriptionBilling } };
     }),
 
   // ─── Kijelentkezés ───────────────────────────────────────────────────────────
@@ -138,7 +142,7 @@ export const appAuthRouter = router({
       //    közvetlenül visszaadjuk – ez kezeli az OAuth-on bejelentkezett felhasználókat is.
       if (ctx.appUser && ctx.appUser.active) {
         const u = ctx.appUser;
-        return { id: u.id, email: u.email, name: u.name, role: u.role, onboardingCompleted: u.onboardingCompleted, profileId: u.profileId, subscriptionPlan: u.subscriptionPlan };
+        return { id: u.id, email: u.email, name: u.name, role: u.role, onboardingCompleted: u.onboardingCompleted, profileId: u.profileId, subscriptionPlan: u.subscriptionPlan, subscriptionBilling: u.subscriptionBilling };
       }
       // 2. Fallback: közvetlen cookie ellenőrzés (ha a context nem töltötte be)
       const cookieHeader = ctx.req.headers.cookie ?? "";
@@ -148,7 +152,7 @@ export const appAuthRouter = router({
       if (!payload) return null;
       const user = await getAppUserById(payload.userId);
       if (!user || !user.active) return null;
-      return { id: user.id, email: user.email, name: user.name, role: user.role, onboardingCompleted: user.onboardingCompleted, profileId: user.profileId, subscriptionPlan: user.subscriptionPlan };
+      return { id: user.id, email: user.email, name: user.name, role: user.role, onboardingCompleted: user.onboardingCompleted, profileId: user.profileId, subscriptionPlan: user.subscriptionPlan, subscriptionBilling: user.subscriptionBilling };
     }),
 
   // ─── Saját profil frissítése (normál felhasználó) ─────────────────────────
