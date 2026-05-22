@@ -19,9 +19,10 @@ import { Link } from "wouter";
 import {
   Target, Zap, Calendar, TrendingUp, Loader2, CheckCircle2,
   Clock, AlertCircle, ChevronRight, BarChart2, Lightbulb, Archive,
-  Star, CalendarPlus, ListChecks
+  Star, CalendarPlus, ListChecks, CalendarRange
 } from "lucide-react";
 import TasksTab from "@/components/strategy/TasksTab";
+import QuarterlyPlanDialog, { type QuarterlyPlanResult } from "@/components/strategy/QuarterlyPlanDialog";
 
 const URGENCY_CONFIG = {
   high: { label: "Sürgős", color: "text-red-600 bg-red-50", icon: AlertCircle },
@@ -107,6 +108,32 @@ export default function Strategy() {
     },
     onError: () => toast.error("Feladatok létrehozása sikertelen."),
   });
+
+  // Negyedéves (90 napos) terv – AI generálja, dialog-ban mutatjuk, nem ír DB-be
+  const [quarterlyResult, setQuarterlyResult] = useState<QuarterlyPlanResult | null>(null);
+  const [showQuarterly, setShowQuarterly] = useState(false);
+  const generateQuarterlyMutation = trpc.strategyVersions.generateQuarterlyPlan.useMutation({
+    onSuccess: (data) => {
+      setQuarterlyResult(data as QuarterlyPlanResult);
+      setShowQuarterly(true);
+      toast.success("Negyedéves terv elkészült!");
+    },
+    onError: (err) => {
+      const cause = (err as { data?: { cause?: { code?: string; used?: number; limit?: number } } })?.data?.cause;
+      if (cause?.code === "AI_LIMIT_REACHED") {
+        toast.error(`AI limit elérve (${cause.used}/${cause.limit} ebben a hónapban). Frissítsd az előfizetésed a folytatáshoz!`, { duration: 7000 });
+      } else {
+        toast.error("A negyedéves terv generálása nem sikerült. Próbáld újra!");
+      }
+    },
+  });
+
+  const handleGenerateQuarterly = () => {
+    generateQuarterlyMutation.mutate({
+      profileId: activeProfile.id,
+      intelligenceData: intelligence ?? {},
+    });
+  };
 
   const handleGenerateTasks = () => {
     if (!current) return;
@@ -288,6 +315,16 @@ export default function Strategy() {
                 >
                   {generateTasksMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
                   Feladatokká alakítás
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={handleGenerateQuarterly}
+                  disabled={generateQuarterlyMutation.isPending}
+                >
+                  {generateQuarterlyMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <CalendarRange className="w-3 h-3" />}
+                  Negyedéves terv
                 </Button>
                 <Button
                     variant="ghost"
@@ -770,6 +807,13 @@ export default function Strategy() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Negyedéves terv preview Dialog */}
+      <QuarterlyPlanDialog
+        open={showQuarterly}
+        onOpenChange={setShowQuarterly}
+        result={quarterlyResult}
+      />
     </DashboardLayout>
   );
 }
