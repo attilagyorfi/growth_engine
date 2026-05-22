@@ -8,12 +8,14 @@
  */
 import { z } from "zod";
 import { nanoid } from "nanoid";
+import { TRPCError } from "@trpc/server";
 import { appUserProcedure, router } from "../_core/trpc";
 import { invokeLLM } from "../_core/llm";
+import { assertProfileOwnership } from "../_core/ownership";
 import { storagePut } from "../storage";
 import {
   getOnboardingSession, upsertOnboardingSession, saveOnboardingAnswers, getOnboardingAnswers,
-  getBrandAssets, createBrandAsset, updateBrandAssetParsed, deleteBrandAsset,
+  getBrandAssets, getBrandAssetById, createBrandAsset, updateBrandAssetParsed, deleteBrandAsset,
 } from "../db";
 import {
   getSocialProfileCache, upsertSocialProfileCache,
@@ -183,7 +185,12 @@ export const onboardingRouter = router({
 
   deleteBrandAsset: appUserProcedure
     .input(z.object({ id: z.string() }))
-    .mutation(({ input }) => deleteBrandAsset(input.id)),
+    .mutation(async ({ input, ctx }) => {
+      const asset = await getBrandAssetById(input.id);
+      if (!asset) throw new TRPCError({ code: "NOT_FOUND", message: "A brand asset nem található" });
+      await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, asset.profileId, ctx.appUser.profileId);
+      return deleteBrandAsset(input.id);
+    }),
 
   scrapeSocialProfile: appUserProcedure
     .input(z.object({
