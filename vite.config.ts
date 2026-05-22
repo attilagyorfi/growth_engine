@@ -150,7 +150,14 @@ function vitePluginManusDebugCollector(): Plugin {
   };
 }
 
-const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector()];
+// Manus-specifikus pluginok (runtime + debug log collector) csak dev-ben futnak.
+// Vercel / más platform production buildjéhez nem kellenek és gondot okozhatnak.
+const isDev = process.env.NODE_ENV !== "production";
+const manusPlugins: Plugin[] = isDev
+  ? [vitePluginManusRuntime() as Plugin, vitePluginManusDebugCollector()]
+  : [];
+
+const plugins = [react(), tailwindcss(), jsxLocPlugin(), ...manusPlugins];
 
 export default defineConfig({
   plugins,
