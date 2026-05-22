@@ -491,6 +491,29 @@ export async function updateStrategyTaskStatus(taskId: string, status: StrategyT
   return result[0] ?? null;
 }
 
+// ─── Content Calendar Items ───────────────────────────────────────────────────
+
+export async function getCalendarItemsByProfile(
+  profileId: string,
+  opts: { campaignTag?: string; from?: Date; to?: Date } = {},
+) {
+  const db = await getDb();
+  if (!db) return [];
+  const filters = [eq(contentCalendarItems.profileId, profileId)];
+  if (opts.campaignTag) filters.push(eq(contentCalendarItems.campaignTag, opts.campaignTag));
+  return db.select().from(contentCalendarItems)
+    .where(and(...filters))
+    .orderBy(contentCalendarItems.scheduledAt);
+}
+
+export async function bulkCreateCalendarItems(items: InsertContentCalendarItem[]) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  if (items.length === 0) return { count: 0 };
+  await db.insert(contentCalendarItems).values(items);
+  return { count: items.length };
+}
+
 // ─── AI Memories ──────────────────────────────────────────────────────────────
 
 export async function getAiMemories(profileId: string) {
