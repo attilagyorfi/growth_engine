@@ -539,7 +539,9 @@ export default function Register() {
             A regisztrációval elfogadod az{" "}
             <span className="text-white/40">Általános Szerződési Feltételeket</span>{" "}
             és az{" "}
-            <span className="text-white/40">Adatvédelmi Szabályzatot</span>.
+            <Link href="/adatvedelem" className="text-white/40 underline hover:text-violet-400 transition-colors">
+              Adatvédelmi Szabályzatot
+            </Link>.
           </p>
         </div>
       </div>

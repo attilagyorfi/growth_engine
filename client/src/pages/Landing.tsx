@@ -16,11 +16,62 @@ import {
 } from "lucide-react";
 
 // ─── Shared Plans (synced with Register.tsx) ──────────────────────────────────
+// Színkódok minden csomaghoz — vizuális különbségtétel a választás megkönnyítésére.
+// A Tailwind classes string-ek a tartós (build-time) stílusokhoz, az accent
+// objektum CSS color literal-ekkel a finomabb alkalmazáshoz (badge, border, glow).
 const PLANS = [
-  { id: "free", name: "Ingyenes", price: "0 Ft", period: "/hó", icon: Sparkles, description: "Ismerkedj meg a platformmal — bankkártya nélkül", features: ["1 vállalkozás profil", "1 stratégia generálása / hó", "5 poszt generálása / hó", "1 SEO audit / hó", "Alapanalitika (export nélkül)"], cta: "Kezdd el ingyen", popular: false, highlight: false, disabled: false },
-  { id: "starter", name: "Starter", price: "9 900 Ft", period: "/hó", icon: Rocket, description: "Kis vállalkozásoknak", features: ["1 vállalkozás profil", "5 stratégia generálása / hó", "50 poszt generálása / hó", "3 SEO audit / hó", "Lead & kampány kezelés", "Analitika export"], cta: "Starter indítása", popular: true, highlight: true, disabled: false },
-  { id: "pro", name: "Pro", price: "24 900 Ft", period: "/hó", icon: Building2, description: "Növekvő vállalkozásoknak", features: ["3 vállalkozás profil", "300 szöveg generálása / hó", "30 kép generálása / hó", "5 HeyGen videó / hó", "10 SEO audit / hó", "Prioritásos támogatás"], cta: "Pro indítása", popular: false, highlight: false, disabled: false },
-  { id: "agency", name: "Agency", price: "49 900 Ft", period: "/hó", icon: Crown, description: "Marketing ügynökségeknek — egyedi elbírálással", features: ["Korlátlan projekt", "1 000 szöveg generálása / hó", "100 kép generálása / hó", "15 HeyGen videó / hó", "30 SEO audit / hó", "White-label lehetőség", "Dedikált támogatás"], cta: "Vedd fel a kapcsolatot", popular: false, highlight: false, disabled: true },
+  {
+    id: "free",
+    name: "Ingyenes",
+    price: "0 Ft",
+    period: "/hó",
+    icon: Sparkles,
+    description: "Ismerkedj meg a platformmal — bankkártya nélkül",
+    features: ["1 vállalkozás profil", "1 stratégia generálása / hó", "5 poszt generálása / hó", "1 SEO audit / hó", "Alapanalitika (export nélkül)"],
+    cta: "Kezdd el ingyen",
+    popular: false,
+    disabled: false,
+    accent: { color: "#60a5fa", glow: "rgba(96,165,250,0.12)" }, // blue-400
+  },
+  {
+    id: "starter",
+    name: "Starter",
+    price: "9 900 Ft",
+    period: "/hó",
+    icon: Rocket,
+    description: "Kis vállalkozásoknak",
+    features: ["1 vállalkozás profil", "5 stratégia generálása / hó", "50 poszt generálása / hó", "3 SEO audit / hó", "Lead & kampány kezelés", "Analitika export"],
+    cta: "Starter indítása",
+    popular: true,
+    disabled: false,
+    accent: { color: "#a78bfa", glow: "rgba(167,139,250,0.18)" }, // violet-400
+  },
+  {
+    id: "pro",
+    name: "Pro",
+    price: "24 900 Ft",
+    period: "/hó",
+    icon: Building2,
+    description: "Növekvő vállalkozásoknak",
+    features: ["3 vállalkozás profil", "300 szöveg generálása / hó", "30 kép generálása / hó", "5 HeyGen videó / hó", "10 SEO audit / hó", "Prioritásos támogatás"],
+    cta: "Pro indítása",
+    popular: false,
+    disabled: false,
+    accent: { color: "#34d399", glow: "rgba(52,211,153,0.15)" }, // emerald-400
+  },
+  {
+    id: "agency",
+    name: "Agency",
+    price: "49 900 Ft",
+    period: "/hó",
+    icon: Crown,
+    description: "Marketing ügynökségeknek — egyedi elbírálással",
+    features: ["Korlátlan projekt", "1 000 szöveg generálása / hó", "100 kép generálása / hó", "15 HeyGen videó / hó", "30 SEO audit / hó", "White-label lehetőség", "Dedikált támogatás"],
+    cta: "Vedd fel a kapcsolatot",
+    popular: false,
+    disabled: true,
+    accent: { color: "#fbbf24", glow: "rgba(251,191,36,0.15)" }, // amber-400
+  },
 ] as const;
 
 // ─── Animation helpers ────────────────────────────────────────────────────────
@@ -176,12 +227,12 @@ export default function Landing() {
           >
             <Link href="/regisztracio">
               <Button size="lg" className="bg-violet-600 hover:bg-violet-500 text-white border-0 px-8 h-12 text-base">
-                Kezdj el ingyen <ArrowRight className="ml-2 w-4 h-4" />
+                Kezdd el ingyen! <ArrowRight className="ml-2 w-4 h-4" />
               </Button>
             </Link>
             <a href="#features">
               <Button size="lg" variant="outline" className="px-8 h-12 text-base bg-transparent border-white/10 text-white/70 hover:text-white hover:bg-white/5">
-                Tudj meg többet
+                Tudj meg többet!
               </Button>
             </a>
           </motion.div>
@@ -238,8 +289,7 @@ export default function Landing() {
               Minden, amire szükséged van
             </h2>
             <p className={`text-lg max-w-2xl mx-auto ${subtext}`}>
-              Egy platform, amely lefedi a teljes marketing és értékesítési folyamatot – az ötlettől az eredményig."
-               
+              Egy platform, amely lefedi a teljes marketing és értékesítési folyamatot – az ötlettől az eredményig.
             </p>
           </FadeIn>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -308,8 +358,7 @@ export default function Landing() {
               A platform folyamatosan bővül
             </h2>
             <p className={`text-lg max-w-2xl mx-auto ${subtext}`}>
-              A G2A Growth Engine egy élő termék – folyamatosan új funkciókkal bővítjük az ügyfelek visszajelzései alapján."
-               
+              A G2A Growth Engine egy élő termék – folyamatosan új funkciókkal bővítjük az ügyfelek visszajelzései alapján.
             </p>
           </FadeIn>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -379,7 +428,7 @@ export default function Landing() {
               Egyszerű árazás
             </h2>
             <p className={`text-lg mb-8 ${subtext}`}>
-              Kezdj el ingyen, fejlődj velünk
+              Kezdd el ingyen, fejlődj velünk!
             </p>
             {/* Éves/havi kapcsoló */}
             <div className="inline-flex items-center gap-1 p-1 rounded-xl" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
@@ -402,90 +451,99 @@ export default function Landing() {
               </button>
             </div>
           </FadeIn>
-          {/* Ingyenes csomag — külön kiemelt sor */}
+          {/* Ingyenes csomag — vertikális kártya, max-width center-elve, accent színnel */}
           {(() => {
             const freePlan = PLANS.find(p => p.id === "free")!;
             return (
               <FadeIn>
-                <Card className={`relative overflow-hidden mb-4 ${cardBg}`}>
-                  <CardContent className="p-6 md:p-8">
-                    <div className="flex flex-col md:flex-row md:items-center gap-5">
-                      <div className="w-14 h-14 rounded-xl bg-violet-500/10 flex items-center justify-center shrink-0">
-                        <freePlan.icon className="w-7 h-7 text-violet-400" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-baseline gap-3 mb-1">
-                          <h3 className="text-2xl font-bold">{freePlan.name}</h3>
-                          <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold" style={{ background: "oklch(0.65 0.18 165 / 25%)", color: "oklch(0.65 0.18 165)" }}>
-                            Bankkártya nélkül
-                          </span>
-                        </div>
-                        <p className={`text-sm ${subtext} mb-3`}>{freePlan.description}</p>
-                        <ul className="flex flex-wrap gap-x-5 gap-y-1.5">
-                          {freePlan.features.map((item) => (
-                            <li key={item} className="flex items-center gap-2 text-sm">
-                              <CheckCircle2 className="w-4 h-4 text-violet-400 shrink-0" />
-                              <span className={subtext}>{item}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                      <div className="flex flex-row md:flex-col items-center md:items-end gap-4 md:gap-2 shrink-0">
-                        <div className="text-right">
-                          <div className="text-3xl font-bold">{freePlan.price}</div>
-                          <div className={`text-sm ${subtext}`}>{freePlan.period}</div>
-                        </div>
-                        <Link href="/regisztracio">
-                          <Button className="bg-violet-600 hover:bg-violet-500 text-white border-0">
-                            {freePlan.cta}
-                          </Button>
-                        </Link>
-                      </div>
+                <div className="max-w-md mx-auto mb-2">
+                  <Card
+                    className="h-full relative overflow-hidden transition-transform duration-300 hover:scale-[1.03]"
+                    style={{
+                      background: `${freePlan.accent.glow}`,
+                      borderColor: `${freePlan.accent.color}50`,
+                    }}
+                  >
+                    <div className="absolute top-4 right-4">
+                      <Badge className="border-0 text-xs" style={{ background: freePlan.accent.color, color: "#0A0A0F" }}>
+                        Bankkártya nélkül
+                      </Badge>
                     </div>
-                  </CardContent>
-                </Card>
+                    <CardContent className="p-8">
+                      <div className="mb-6">
+                        <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3" style={{ background: `${freePlan.accent.color}1f` }}>
+                          <freePlan.icon className="w-5 h-5" style={{ color: freePlan.accent.color }} />
+                        </div>
+                        <h3 className="text-xl font-bold mb-1">{freePlan.name}</h3>
+                        <div className="mb-1">
+                          <div className="text-3xl font-bold">
+                            {freePlan.price}
+                            <span className={`text-base font-normal ml-1 ${subtext}`}>{freePlan.period}</span>
+                          </div>
+                        </div>
+                        <p className={`text-sm ${subtext}`}>{freePlan.description}</p>
+                      </div>
+                      <ul className="space-y-2.5 mb-8">
+                        {freePlan.features.map((item) => (
+                          <li key={item} className="flex items-center gap-2 text-sm">
+                            <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: freePlan.accent.color }} />
+                            <span className={subtext}>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      <Link href="/regisztracio">
+                        <Button
+                          className="w-full border-0 text-white"
+                          style={{ background: freePlan.accent.color, color: "#0A0A0F" }}
+                        >
+                          {freePlan.cta}
+                        </Button>
+                      </Link>
+                    </CardContent>
+                  </Card>
+                </div>
               </FadeIn>
             );
           })()}
 
           {/* "VAGY VÁLASSZ FIZETŐS CSOMAGOT" elválasztó */}
-          <div className="flex items-center gap-3 my-6">
+          <div className="flex items-center gap-3 my-8">
             <div className="flex-1 h-px bg-white/10" />
             <span className="text-xs uppercase tracking-wider text-white/40">vagy válassz fizetős csomagot</span>
             <div className="flex-1 h-px bg-white/10" />
           </div>
 
-          {/* 3 fizetős csomag */}
+          {/* 3 fizetős csomag — egyedi színkóddal mindegyik */}
           <div className="grid md:grid-cols-3 gap-6">
             {PLANS.filter(p => p.id !== "free").map((plan, i) => (
               <FadeIn key={plan.id} delay={i * 0.1}>
-                <Card className={`h-full relative overflow-hidden transition-transform duration-300 ${
-                  plan.disabled
-                    ? "opacity-60 grayscale"
-                    : "hover:scale-[1.03]"
-                } ${
-                  plan.highlight && !plan.disabled
-                    ? "bg-violet-600/10 border-violet-500/40"
-                    : cardBg
-                }`}>
+                <Card
+                  className={`h-full relative overflow-hidden transition-transform duration-300 ${
+                    plan.disabled ? "opacity-60" : "hover:scale-[1.03]"
+                  }`}
+                  style={{
+                    background: plan.accent.glow,
+                    borderColor: `${plan.accent.color}50`,
+                  }}
+                >
                   {plan.popular && !plan.disabled && (
                     <div className="absolute top-4 right-4">
-                      <Badge className="bg-violet-500 text-white border-0 text-xs">
+                      <Badge className="border-0 text-xs" style={{ background: plan.accent.color, color: "#0A0A0F" }}>
                         Legnépszerűbb
                       </Badge>
                     </div>
                   )}
                   {plan.disabled && (
                     <div className="absolute top-4 right-4">
-                      <Badge className="bg-white/10 text-white/80 border border-white/20 text-xs">
+                      <Badge className="border-0 text-xs" style={{ background: `${plan.accent.color}40`, color: plan.accent.color }}>
                         Hamarosan
                       </Badge>
                     </div>
                   )}
                   <CardContent className="p-8">
                     <div className="mb-6">
-                      <div className="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center mb-3">
-                        <plan.icon className="w-5 h-5 text-violet-400" />
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3" style={{ background: `${plan.accent.color}1f` }}>
+                        <plan.icon className="w-5 h-5" style={{ color: plan.accent.color }} />
                       </div>
                       <h3 className="text-xl font-bold mb-1">{plan.name}</h3>
                       <motion.div
@@ -514,7 +572,7 @@ export default function Landing() {
                     <ul className="space-y-2.5 mb-8">
                       {plan.features.map((item) => (
                         <li key={item} className="flex items-center gap-2 text-sm">
-                          <CheckCircle2 className="w-4 h-4 text-violet-400 shrink-0" />
+                          <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: plan.accent.color }} />
                           <span className={subtext}>{item}</span>
                         </li>
                       ))}
@@ -525,7 +583,10 @@ export default function Landing() {
                       </Button>
                     ) : (
                       <Link href="/regisztracio">
-                        <Button className={`w-full ${plan.highlight ? "bg-violet-600 hover:bg-violet-500 text-white border-0" : "bg-white/10 hover:bg-white/15 text-white border-0"}`}>
+                        <Button
+                          className="w-full border-0 text-white"
+                          style={{ background: plan.accent.color, color: "#0A0A0F" }}
+                        >
                           {plan.cta}
                         </Button>
                       </Link>
@@ -577,9 +638,11 @@ export default function Landing() {
             </div>
           </Link>
           <div className="flex items-center gap-6 text-sm text-white/30">
-            <span>© 2026 G2A Marketing</span>
+            <span>© {new Date().getFullYear()} G2A Marketing</span>
             <span>·</span>
-            <span className="flex items-center gap-1"><Shield className="w-3 h-3" /> Adatvédelem</span>
+            <Link href="/adatvedelem" className="flex items-center gap-1 transition-colors hover:text-white/60">
+              <Shield className="w-3 h-3" /> Adatvédelem
+            </Link>
           </div>
           <div className="flex items-center gap-4 text-sm text-white/30">
             <Link href="/bejelentkezes" className="transition-colors hover:text-white/60">
