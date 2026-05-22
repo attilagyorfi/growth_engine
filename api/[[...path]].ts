@@ -5,9 +5,13 @@
  * (tRPC, OAuth callbacks, Stripe webhook, LinkedIn OAuth, storage proxy) work
  * without per-route refactoring.
  *
- * Vercel hívja minden /api/* URL-re a vercel.json rewrites alapján. Az Express
- * app singleton-ként init-elődik (cold start), majd a meleg invocation-ök
- * újrahasznosítják.
+ * A fájl neve `[[...path]].ts` — ez Vercel catch-all routing pattern:
+ * minden /api/* URL erre a function-re kerül, ÉS a req.url megőrzi az
+ * eredeti path-et (pl. /api/trpc/appAuth.register). Így az Express
+ * middleware tovább tud routolni saját maga belül.
+ *
+ * Az Express app singleton-ként init-elődik (cold start), majd a meleg
+ * invocation-ök újrahasznosítják.
  */
 import express from "express";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";

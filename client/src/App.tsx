@@ -17,6 +17,7 @@ const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Privacy = lazy(() => import("./pages/Privacy"));
 
 // App pages (protected)
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -93,6 +94,7 @@ function Router() {
       <Route path="/elfelejtett-jelszo" component={ForgotPassword} />
       <Route path="/jelszo-visszaallitas" component={ResetPassword} />
       <Route path="/reset-password" component={ResetPassword} />
+      <Route path="/adatvedelem" component={Privacy} />
 
       {/* Onboarding */}
       <Route path="/onboarding" component={() => <OnboardingRoute component={OnboardingWizard} />} />
