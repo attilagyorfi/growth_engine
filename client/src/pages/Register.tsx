@@ -160,7 +160,7 @@ export default function Register() {
             ))}
           </div>
         </div>
-        <p className="text-white/30 text-sm">© 2025 G2A Marketing · Minden jog fenntartva</p>
+        <p className="text-white/30 text-sm">© {new Date().getFullYear()} G2A Marketing · Minden jog fenntartva</p>
       </div>
 
       {/* Right panel */}
