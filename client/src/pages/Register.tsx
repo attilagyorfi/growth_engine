@@ -17,10 +17,11 @@ const PLANS = [
     period: "/hó",
     icon: Sparkles,
     color: "oklch(0.65 0.15 240)",
-    description: "Ismerkedj meg a platformmal",
-    features: ["1 vállalkozás profil", "1 AI stratégia/hó", "5 AI poszt/hó", "1 SEO audit/hó", "Alapanalitika"],
+    description: "Ismerkedj meg a platformmal — bankkártya nélkül",
+    features: ["1 vállalkozás profil", "1 stratégia generálása / hó", "5 poszt generálása / hó", "1 SEO audit / hó", "Alapanalitika"],
     cta: "Ingyenes próba",
     popular: false,
+    disabled: false,
   },
   {
     id: "starter",
@@ -30,9 +31,10 @@ const PLANS = [
     icon: Rocket,
     color: "oklch(0.6 0.2 255)",
     description: "Kis vállalkozásoknak",
-    features: ["1 vállalkozás profil", "5 AI stratégia/hó", "50 AI poszt/hó", "3 SEO audit/hó", "Lead & kampány kezelés", "Analitika export"],
+    features: ["1 vállalkozás profil", "5 stratégia generálása / hó", "50 poszt generálása / hó", "3 SEO audit / hó", "Lead & kampány kezelés", "Analitika export"],
     cta: "Starter indítása",
     popular: true,
+    disabled: false,
   },
   {
     id: "pro",
@@ -42,9 +44,10 @@ const PLANS = [
     icon: Building2,
     color: "oklch(0.7 0.18 165)",
     description: "Növekvő vállalkozásoknak",
-    features: ["3 vállalkozás profil", "300 AI szöveges/hó", "30 AI kép/hó", "5 HeyGen AI videó/hó", "10 SEO audit/hó", "Prioritásos támogatás"],
+    features: ["3 vállalkozás profil", "300 szöveg generálása / hó", "30 kép generálása / hó", "5 HeyGen videó / hó", "10 SEO audit / hó", "Prioritásos támogatás"],
     cta: "Pro indítása",
     popular: false,
+    disabled: false,
   },
   {
     id: "agency",
@@ -53,10 +56,11 @@ const PLANS = [
     period: "/hó",
     icon: Crown,
     color: "oklch(0.75 0.18 75)",
-    description: "Marketing ügynökségeknek",
-    features: ["Korlátlan projekt", "1 000 AI szöveges/hó", "100 AI kép/hó", "15 HeyGen AI videó/hó", "30 SEO audit/hó", "White-label lehetőség", "Dedikált támogatás"],
-    cta: "Agency indítása",
+    description: "Marketing ügynökségeknek — egyedi elbírálással",
+    features: ["Korlátlan projekt", "1 000 szöveg generálása / hó", "100 kép generálása / hó", "15 HeyGen videó / hó", "30 SEO audit / hó", "White-label lehetőség", "Dedikált támogatás"],
+    cta: "Vedd fel a kapcsolatot",
     popular: false,
+    disabled: true,
   },
 ] as const;
 
@@ -218,31 +222,100 @@ export default function Register() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                {PLANS.map((plan) => {
-                  const Icon = plan.icon;
-                  const isSelected = selectedPlan === plan.id;
+              {/* Ingyenes csomag — külön kiemelt sorban */}
+              <div className="mb-3">
+                {(() => {
+                  const freePlan = PLANS.find(p => p.id === "free")!;
+                  const Icon = freePlan.icon;
+                  const isSelected = selectedPlan === "free";
                   return (
                     <button
-                      key={plan.id}
-                      onClick={() => setSelectedPlan(plan.id)}
+                      onClick={() => setSelectedPlan("free")}
                       className={cn(
-                        "relative text-left p-5 rounded-xl border transition-all",
+                        "relative w-full text-left p-5 rounded-xl border transition-all",
                         isSelected
                           ? "border-violet-500/60 bg-violet-500/10"
                           : "border-white/[0.08] bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.04]"
                       )}
                     >
-                      {plan.popular && (
+                      <div className="flex items-start gap-5">
+                        <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${freePlan.color}22` }}>
+                          <Icon className="w-6 h-6" style={{ color: freePlan.color }} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-baseline gap-3 mb-1">
+                            <p className="font-bold text-white text-lg">{freePlan.name}</p>
+                            <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: "oklch(0.65 0.18 165 / 25%)", color: "oklch(0.65 0.18 165)" }}>
+                              Bankkártya nélkül
+                            </span>
+                          </div>
+                          <p className="text-white/50 text-sm mb-2">{freePlan.description}</p>
+                          <ul className="flex flex-wrap gap-x-4 gap-y-1">
+                            {freePlan.features.map((f) => (
+                              <li key={f} className="flex items-center gap-1.5 text-xs text-white/60">
+                                <Check className="w-3 h-3 text-violet-400 shrink-0" />
+                                {f}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <div className="text-2xl font-bold text-white">{freePlan.price}</div>
+                          <div className="text-white/40 text-xs">{freePlan.period}</div>
+                        </div>
+                        {isSelected && (
+                          <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-violet-600 flex items-center justify-center">
+                            <Check className="w-4 h-4 text-white" />
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })()}
+              </div>
+
+              {/* "VAGY VÁLASSZ FIZETŐS CSOMAGOT" elválasztó */}
+              <div className="flex items-center gap-3 my-4">
+                <div className="flex-1 h-px bg-white/10" />
+                <span className="text-xs uppercase tracking-wider text-white/30">vagy válassz fizetős csomagot</span>
+                <div className="flex-1 h-px bg-white/10" />
+              </div>
+
+              {/* 3 fizetős csomag egy sorban */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                {PLANS.filter(p => p.id !== "free").map((plan) => {
+                  const Icon = plan.icon;
+                  const isSelected = selectedPlan === plan.id;
+                  const isDisabled = plan.disabled;
+                  return (
+                    <button
+                      key={plan.id}
+                      onClick={() => !isDisabled && setSelectedPlan(plan.id)}
+                      disabled={isDisabled}
+                      className={cn(
+                        "relative text-left p-5 rounded-xl border transition-all",
+                        isDisabled
+                          ? "border-white/[0.05] bg-white/[0.01] opacity-50 cursor-not-allowed"
+                          : isSelected
+                            ? "border-violet-500/60 bg-violet-500/10"
+                            : "border-white/[0.08] bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.04]"
+                      )}
+                    >
+                      {plan.popular && !isDisabled && (
                         <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-xs font-bold text-white bg-gradient-to-r from-violet-600 to-indigo-600">
                           Legnépszerűbb
+                        </div>
+                      )}
+                      {isDisabled && (
+                        <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-xs font-bold text-white/80 bg-white/10 border border-white/20">
+                          Hamarosan
                         </div>
                       )}
                       <div className="flex items-center justify-between mb-3">
                         <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${plan.color}22` }}>
                           <Icon className="w-4 h-4" style={{ color: plan.color }} />
                         </div>
-                        {isSelected && (
+                        {isSelected && !isDisabled && (
                           <div className="w-5 h-5 rounded-full bg-violet-600 flex items-center justify-center">
                             <Check className="w-3 h-3 text-white" />
                           </div>
@@ -259,13 +332,13 @@ export default function Register() {
                       >
                         <div className="flex items-baseline gap-1">
                           <span className="text-xl font-bold text-white">
-                            {isYearly && plan.id !== "free" ? ANNUAL_PRICES[plan.id] ?? plan.price : plan.price}
+                            {isYearly ? ANNUAL_PRICES[plan.id] ?? plan.price : plan.price}
                           </span>
                           <span className="text-white/40 text-xs">
-                            {isYearly && plan.id !== "free" ? "/év" : plan.period}
+                            {isYearly ? "/év" : plan.period}
                           </span>
                         </div>
-                        {isYearly && plan.id !== "free" && (
+                        {isYearly && (
                           <p className="text-xs mt-0.5" style={{ color: "oklch(0.65 0.18 165)" }}>
                             {ANNUAL_MONTHLY_EQUIV[plan.id]} – 2 hónap ingyen
                           </p>
@@ -286,9 +359,12 @@ export default function Register() {
 
               <Button
                 onClick={() => setStep("form")}
-                className="w-full bg-violet-600 hover:bg-violet-500 text-white border-0 h-11"
+                disabled={activePlan.disabled}
+                className="w-full bg-violet-600 hover:bg-violet-500 text-white border-0 h-11 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Folytatás: {activePlan.name} csomag →
+                {activePlan.disabled
+                  ? "Az Agency csomag csak egyedi elbírálással elérhető"
+                  : `Folytatás: ${activePlan.name} csomag →`}
               </Button>
 
               <p className="text-center text-sm text-white/40 mt-4">

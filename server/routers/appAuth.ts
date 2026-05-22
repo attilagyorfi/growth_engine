@@ -18,7 +18,10 @@ import { getProfilesByAppUser } from "../db";
 import { SignJWT, jwtVerify } from "jose";
 import { ENV } from "../_core/env";
 
-const SUPER_ADMIN_EMAIL = "admin@g2a.hu"; // G2A super admin email
+// G2A super admin emails — ezek automatikusan super_admin szerepet kapnak
+// regisztráció során. Konzisztens a server/authDb.ts OAuth bridge-jével.
+const SUPER_ADMIN_EMAILS = ["admin@g2a.hu", "info@g2amarketing.hu"];
+const isSuperAdminEmail = (email: string) => SUPER_ADMIN_EMAILS.includes(email.toLowerCase());
 const JWT_SECRET = new TextEncoder().encode(ENV.cookieSecret);
 const TOKEN_EXPIRY = "30d";
 
@@ -57,7 +60,7 @@ export const appAuthRouter = router({
       }
       const passwordHash = await bcrypt.hash(input.password, 12);
       const id = nanoid();
-      const role = input.email.toLowerCase() === SUPER_ADMIN_EMAIL ? "super_admin" : "user";
+      const role = isSuperAdminEmail(input.email) ? "super_admin" : "user";
       // Free plan ignorálja a billing periódust – csak fizetős csomagnál releváns
       const billing = input.subscriptionPlan === "free" ? "monthly" : (input.subscriptionBilling ?? "monthly");
       const user = await createAppUser({

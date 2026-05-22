@@ -17,10 +17,10 @@ import {
 
 // ─── Shared Plans (synced with Register.tsx) ──────────────────────────────────
 const PLANS = [
-  { id: "free", name: "Ingyenes", price: "0 Ft", period: "/hó", icon: Sparkles, description: "Ismerkedj meg a platformmal", features: ["1 vállalkozás profil", "1 AI stratégia/hó", "5 AI poszt/hó", "1 SEO audit/hó", "Alapanalitika (export nélkül)"], cta: "Kezdd el ingyen", popular: false, highlight: false },
-  { id: "starter", name: "Starter", price: "9 900 Ft", period: "/hó", icon: Rocket, description: "Kis vállalkozásoknak", features: ["1 vállalkozás profil", "5 AI stratégia/hó", "50 AI poszt/hó", "3 SEO audit/hó", "Lead & kampány kezelés", "Analitika export"], cta: "Starter indítása", popular: true, highlight: true },
-  { id: "pro", name: "Pro", price: "24 900 Ft", period: "/hó", icon: Building2, description: "Növekvő vállalkozásoknak", features: ["3 vállalkozás profil", "300 AI szöveges/hó", "30 AI kép/hó", "5 HeyGen AI videó/hó", "10 SEO audit/hó", "Prioritásos támogatás"], cta: "Pro indítása", popular: false, highlight: false },
-  { id: "agency", name: "Agency", price: "49 900 Ft", period: "/hó", icon: Crown, description: "Marketing ügynökségeknek", features: ["Korlátlan projekt", "1 000 AI szöveges/hó", "100 AI kép/hó", "15 HeyGen AI videó/hó", "30 SEO audit/hó", "White-label lehetőség", "Dedikált támogatás"], cta: "Agency indítása", popular: false, highlight: false },
+  { id: "free", name: "Ingyenes", price: "0 Ft", period: "/hó", icon: Sparkles, description: "Ismerkedj meg a platformmal — bankkártya nélkül", features: ["1 vállalkozás profil", "1 stratégia generálása / hó", "5 poszt generálása / hó", "1 SEO audit / hó", "Alapanalitika (export nélkül)"], cta: "Kezdd el ingyen", popular: false, highlight: false, disabled: false },
+  { id: "starter", name: "Starter", price: "9 900 Ft", period: "/hó", icon: Rocket, description: "Kis vállalkozásoknak", features: ["1 vállalkozás profil", "5 stratégia generálása / hó", "50 poszt generálása / hó", "3 SEO audit / hó", "Lead & kampány kezelés", "Analitika export"], cta: "Starter indítása", popular: true, highlight: true, disabled: false },
+  { id: "pro", name: "Pro", price: "24 900 Ft", period: "/hó", icon: Building2, description: "Növekvő vállalkozásoknak", features: ["3 vállalkozás profil", "300 szöveg generálása / hó", "30 kép generálása / hó", "5 HeyGen videó / hó", "10 SEO audit / hó", "Prioritásos támogatás"], cta: "Pro indítása", popular: false, highlight: false, disabled: false },
+  { id: "agency", name: "Agency", price: "49 900 Ft", period: "/hó", icon: Crown, description: "Marketing ügynökségeknek — egyedi elbírálással", features: ["Korlátlan projekt", "1 000 szöveg generálása / hó", "100 kép generálása / hó", "15 HeyGen videó / hó", "30 SEO audit / hó", "White-label lehetőség", "Dedikált támogatás"], cta: "Vedd fel a kapcsolatot", popular: false, highlight: false, disabled: true },
 ] as const;
 
 // ─── Animation helpers ────────────────────────────────────────────────────────
@@ -402,18 +402,83 @@ export default function Landing() {
               </button>
             </div>
           </FadeIn>
+          {/* Ingyenes csomag — külön kiemelt sor */}
+          {(() => {
+            const freePlan = PLANS.find(p => p.id === "free")!;
+            return (
+              <FadeIn>
+                <Card className={`relative overflow-hidden mb-4 ${cardBg}`}>
+                  <CardContent className="p-6 md:p-8">
+                    <div className="flex flex-col md:flex-row md:items-center gap-5">
+                      <div className="w-14 h-14 rounded-xl bg-violet-500/10 flex items-center justify-center shrink-0">
+                        <freePlan.icon className="w-7 h-7 text-violet-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-baseline gap-3 mb-1">
+                          <h3 className="text-2xl font-bold">{freePlan.name}</h3>
+                          <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold" style={{ background: "oklch(0.65 0.18 165 / 25%)", color: "oklch(0.65 0.18 165)" }}>
+                            Bankkártya nélkül
+                          </span>
+                        </div>
+                        <p className={`text-sm ${subtext} mb-3`}>{freePlan.description}</p>
+                        <ul className="flex flex-wrap gap-x-5 gap-y-1.5">
+                          {freePlan.features.map((item) => (
+                            <li key={item} className="flex items-center gap-2 text-sm">
+                              <CheckCircle2 className="w-4 h-4 text-violet-400 shrink-0" />
+                              <span className={subtext}>{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="flex flex-row md:flex-col items-center md:items-end gap-4 md:gap-2 shrink-0">
+                        <div className="text-right">
+                          <div className="text-3xl font-bold">{freePlan.price}</div>
+                          <div className={`text-sm ${subtext}`}>{freePlan.period}</div>
+                        </div>
+                        <Link href="/regisztracio">
+                          <Button className="bg-violet-600 hover:bg-violet-500 text-white border-0">
+                            {freePlan.cta}
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </FadeIn>
+            );
+          })()}
+
+          {/* "VAGY VÁLASSZ FIZETŐS CSOMAGOT" elválasztó */}
+          <div className="flex items-center gap-3 my-6">
+            <div className="flex-1 h-px bg-white/10" />
+            <span className="text-xs uppercase tracking-wider text-white/40">vagy válassz fizetős csomagot</span>
+            <div className="flex-1 h-px bg-white/10" />
+          </div>
+
+          {/* 3 fizetős csomag */}
           <div className="grid md:grid-cols-3 gap-6">
-            {PLANS.map((plan, i) => (
+            {PLANS.filter(p => p.id !== "free").map((plan, i) => (
               <FadeIn key={plan.id} delay={i * 0.1}>
-                <Card className={`h-full relative overflow-hidden transition-transform duration-300 hover:scale-[1.03] ${
-                  plan.highlight
+                <Card className={`h-full relative overflow-hidden transition-transform duration-300 ${
+                  plan.disabled
+                    ? "opacity-60 grayscale"
+                    : "hover:scale-[1.03]"
+                } ${
+                  plan.highlight && !plan.disabled
                     ? "bg-violet-600/10 border-violet-500/40"
                     : cardBg
                 }`}>
-                  {plan.popular && (
+                  {plan.popular && !plan.disabled && (
                     <div className="absolute top-4 right-4">
                       <Badge className="bg-violet-500 text-white border-0 text-xs">
                         Legnépszerűbb
+                      </Badge>
+                    </div>
+                  )}
+                  {plan.disabled && (
+                    <div className="absolute top-4 right-4">
+                      <Badge className="bg-white/10 text-white/80 border border-white/20 text-xs">
+                        Hamarosan
                       </Badge>
                     </div>
                   )}
@@ -431,14 +496,14 @@ export default function Landing() {
                         className="mb-1"
                       >
                         <div className="text-3xl font-bold">
-                          {isYearly && plan.id !== "free" ? ANNUAL_PRICES[plan.id] ?? plan.price : plan.price}
-                          {isYearly && plan.id !== "free" ? (
+                          {isYearly ? ANNUAL_PRICES[plan.id] ?? plan.price : plan.price}
+                          {isYearly ? (
                             <span className={`text-base font-normal ml-1 ${subtext}`}>/év</span>
                           ) : (
                             <span className={`text-base font-normal ml-1 ${subtext}`}>{plan.period}</span>
                           )}
                         </div>
-                        {isYearly && plan.id !== "free" && (
+                        {isYearly && (
                           <p className="text-xs mt-0.5" style={{ color: "oklch(0.65 0.18 165)" }}>
                             {ANNUAL_MONTHLY_EQUIV[plan.id]} – 2 hónap ingyen
                           </p>
@@ -454,11 +519,17 @@ export default function Landing() {
                         </li>
                       ))}
                     </ul>
-                    <Link href="/regisztracio">
-                      <Button className={`w-full ${plan.highlight ? "bg-violet-600 hover:bg-violet-500 text-white border-0" : "bg-white/10 hover:bg-white/15 text-white border-0"}`}>
+                    {plan.disabled ? (
+                      <Button disabled className="w-full bg-white/5 text-white/40 border-0 cursor-not-allowed">
                         {plan.cta}
                       </Button>
-                    </Link>
+                    ) : (
+                      <Link href="/regisztracio">
+                        <Button className={`w-full ${plan.highlight ? "bg-violet-600 hover:bg-violet-500 text-white border-0" : "bg-white/10 hover:bg-white/15 text-white border-0"}`}>
+                          {plan.cta}
+                        </Button>
+                      </Link>
+                    )}
                   </CardContent>
                 </Card>
               </FadeIn>
