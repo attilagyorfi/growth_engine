@@ -209,15 +209,53 @@ const normalizeToolChoice = (
   return toolChoice;
 };
 
-const resolveApiUrl = () =>
-  ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
-    ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`
-    : "https://forge.manus.im/v1/chat/completions";
+// ─── Provider routing ────────────────────────────────────────────────────────
+// A Manus Forge `/v1/chat/completions` séma OpenAI-kompatibilis, ezért
+// lényegében csak a base URL + Bearer token + default model változik a két
+// provider között. Az Anthropic más API formátumot (/v1/messages) használ,
+// ezért ahhoz külön adapter kell — egyelőre nincs implementálva.
 
-const assertApiKey = () => {
-  if (!ENV.forgeApiKey) {
-    throw new Error("OPENAI_API_KEY is not configured");
+export type LlmProvider = "manus" | "openai" | "anthropic";
+
+type ResolvedProvider = {
+  provider: LlmProvider;
+  url: string;
+  authHeader: string;
+  defaultModel: string;
+};
+
+const resolveProvider = (): ResolvedProvider => {
+  const provider = ENV.llmProvider;
+  if (provider === "openai") {
+    if (!ENV.openaiApiKey) {
+      throw new Error("LLM_PROVIDER=openai but OPENAI_API_KEY is not configured");
+    }
+    const base = ENV.openaiApiUrl.trim().replace(/\/$/, "");
+    return {
+      provider: "openai",
+      url: `${base}/v1/chat/completions`,
+      authHeader: `Bearer ${ENV.openaiApiKey}`,
+      defaultModel: ENV.llmModel || "gpt-4o-mini",
+    };
   }
+  if (provider === "anthropic") {
+    throw new Error(
+      "LLM_PROVIDER=anthropic is not yet implemented — Anthropic uses a different API (/v1/messages) and needs a dedicated adapter. Use 'manus' or 'openai' for now.",
+    );
+  }
+  // Default: Manus Forge (OpenAI-kompatibilis proxy)
+  if (!ENV.forgeApiKey) {
+    throw new Error("LLM_PROVIDER=manus (default) but BUILT_IN_FORGE_API_KEY is not configured");
+  }
+  const base = ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
+    ? ENV.forgeApiUrl.replace(/\/$/, "")
+    : "https://forge.manus.im";
+  return {
+    provider: "manus",
+    url: `${base}/v1/chat/completions`,
+    authHeader: `Bearer ${ENV.forgeApiKey}`,
+    defaultModel: ENV.llmModel || "gemini-2.5-flash",
+  };
 };
 
 const normalizeResponseFormat = ({
@@ -266,7 +304,7 @@ const normalizeResponseFormat = ({
 };
 
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
-  assertApiKey();
+  const target = resolveProvider();
 
   const {
     messages,
@@ -280,7 +318,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   } = params;
 
   const payload: Record<string, unknown> = {
-    model: "gemini-2.5-flash",
+    model: target.defaultModel,
     messages: messages.map(normalizeMessage),
   };
 
@@ -296,9 +334,11 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     payload.tool_choice = normalizedToolChoice;
   }
 
-  payload.max_tokens = 32768
-  payload.thinking = {
-    "budget_tokens": 128
+  payload.max_tokens = params.maxTokens ?? params.max_tokens ?? 32768;
+  // A Manus Forge proxy specifikus thinking budget paraméter — más providereknél
+  // ignorált vagy hibát adhat, ezért csak Manus esetén küldjük
+  if (target.provider === "manus") {
+    payload.thinking = { budget_tokens: 128 };
   }
 
   const normalizedResponseFormat = normalizeResponseFormat({
@@ -312,11 +352,11 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     payload.response_format = normalizedResponseFormat;
   }
 
-  const response = await fetch(resolveApiUrl(), {
+  const response = await fetch(target.url, {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      authorization: `Bearer ${ENV.forgeApiKey}`,
+      authorization: target.authHeader,
     },
     body: JSON.stringify(payload),
   });
@@ -324,7 +364,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   if (!response.ok) {
     const errorText = await response.text();
     throw new Error(
-      `LLM invoke failed: ${response.status} ${response.statusText} – ${errorText}`
+      `LLM invoke failed (provider=${target.provider}): ${response.status} ${response.statusText} – ${errorText}`
     );
   }
 
