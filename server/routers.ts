@@ -902,24 +902,114 @@ export const appRouter = router({
     generate: appUserProcedure
       .input(z.object({
         profileId: z.string(),
+        // Opcionális kontextus: ha a frontend tudja a friss adatokat, átadhatja;
+        // egyébként az AI Memóriából dolgozunk (a tárolt tanulási minták alapján)
         recentContent: z.any().optional(),
         recentLeads: z.any().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+
+        // AI usage limit check (ugyanaz a "strategy" bucket, nem külön kvóta)
+        const usageCheck = await checkAiUsageLimit(ctx.appUser.id, ctx.appUser.subscriptionPlan ?? "free", ctx.appUser.role);
+        if (!usageCheck.allowed) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: `AI generálási limit elérve (${usageCheck.used}/${usageCheck.limit} ebben a hónapban). Frissítsd az előfizetésed a folytatáshoz.`,
+            cause: { code: "AI_LIMIT_REACHED", used: usageCheck.used, limit: usageCheck.limit, plan: usageCheck.plan },
+          });
+        }
+
+        // AI Memória olvasás: a profilhoz tartozó tárolt tanulási minták. Ezek
+        // tartalmazzák a korábbi jóváhagyásokat, elutasításokat, stílus/CTA/tartalom
+        // preferenciákat és kliens javításokat. Az ajánlások ezekből tanulnak.
+        const memories = await getAiMemories(input.profileId);
+        const groupedMemories = {
+          approved: memories.filter(m => m.memoryType === "approved_pattern").slice(0, 10),
+          rejected: memories.filter(m => m.memoryType === "rejected_pattern").slice(0, 10),
+          stylePrefs: memories.filter(m => m.memoryType === "style_preference").slice(0, 5),
+          ctaPrefs: memories.filter(m => m.memoryType === "cta_preference").slice(0, 5),
+          contentPrefs: memories.filter(m => m.memoryType === "content_preference").slice(0, 5),
+          clientCorrections: memories.filter(m => m.memoryType === "client_correction").slice(0, 5),
+        };
+        const memoryContext = Object.entries(groupedMemories)
+          .filter(([_, items]) => items.length > 0)
+          .map(([key, items]) => `${key} (${items.length} db):\n${items.map(m => `  - ${m.content}${m.platform ? ` [${m.platform}]` : ""}${m.pillar ? ` [${m.pillar}]` : ""}`).join("\n")}`)
+          .join("\n\n");
+
         const response = await invokeLLM({
           messages: [
-            { role: "system", content: "Te egy marketing AI tanácsadó vagy. Cselekvhető javaslatokat generálsz. Kizárólag érvényes JSON-t adj vissza. MINDEN szöveges értéket KIZÁRÓLAG MAGYARUL írj meg." },
-            { role: "user", content: `Generalj 5 cselekvhető marketing javaslatot a következők alapján (MINDEN szöveg magyarul):\nLegutolsó tartalmak: ${JSON.stringify(input.recentContent ?? [])}\nLegutolsó leadek: ${JSON.stringify(input.recentLeads ?? [])}\n\nAdj vissza JSON-t items tömbbel: {type: strategy|content|campaign|lead|analytics, title (magyarul), description (magyarul), urgency: magas|közepes|alacsony}` },
+            { role: "system", content: "Te egy marketing AI tanácsadó vagy, aki a profil korábbi tanulási mintáira építve cselekvhető javaslatokat generál. A jóváhagyott minták mutatják mit szeretnek, az elutasítottak mit ne tegyél, a preferenciák irányt adnak. Kizárólag érvényes JSON-t adj vissza. MINDEN szöveges értéket KIZÁRÓLAG MAGYARUL írj meg." },
+            { role: "user", content: `Generálj 5 cselekvhető marketing javaslatot a következő profilkontextus alapján.\n\n=== AI Memória (tárolt tanulási minták) ===\n${memoryContext || "(még nincs tárolt minta — adj általános best practice javaslatokat)"}\n\n=== Friss adatok ===\nLegutolsó tartalmak: ${JSON.stringify(input.recentContent ?? [])}\nLegutolsó leadek: ${JSON.stringify(input.recentLeads ?? [])}\n\nAdj vissza JSON-t items tömbbel (PONTOSAN 5 elem):\n- type: pontosan ezek egyike: "strategy" | "content" | "campaign" | "lead" | "analytics"\n- title: rövid, cselekvésre szólító cím magyarul (max 80 karakter)\n- description: 2-3 mondatos magyarázat magyarul, ami konkrét lépést javasol és (ha releváns) hivatkozik a tárolt mintákra\n- urgency: pontosan ezek egyike: "high" | "medium" | "low"` },
           ],
-          response_format: { type: "json_schema", json_schema: { name: "recommendations", strict: true, schema: { type: "object", properties: { items: { type: "array", items: { type: "object", properties: { type: { type: "string" }, title: { type: "string" }, description: { type: "string" }, urgency: { type: "string" } }, required: ["type", "title", "description", "urgency"], additionalProperties: false } } }, required: ["items"], additionalProperties: false } } },
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "recommendations",
+              strict: true,
+              schema: {
+                type: "object",
+                properties: {
+                  items: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        type: { type: "string", enum: ["strategy", "content", "campaign", "lead", "analytics"] },
+                        title: { type: "string" },
+                        description: { type: "string" },
+                        urgency: { type: "string", enum: ["high", "medium", "low"] },
+                      },
+                      required: ["type", "title", "description", "urgency"],
+                      additionalProperties: false,
+                    },
+                  },
+                },
+                required: ["items"],
+                additionalProperties: false,
+              },
+            },
+          },
         });
         const content = response.choices[0]?.message?.content ?? "{}";
         const parsed = JSON.parse(typeof content === "string" ? content : JSON.stringify(content));
+
+        // Mappelés a régi magyar urgency stringekre is, ha az AI mégis azokat adná vissza
+        const urgencyMap: Record<string, "high" | "medium" | "low"> = {
+          high: "high", medium: "medium", low: "low",
+          magas: "high", közepes: "medium", kozepes: "medium", alacsony: "low",
+        };
+        const typeAllow = new Set(["strategy", "content", "campaign", "lead", "analytics"]);
+
+        // 30 napos lejárati idő — utána új generálással friss ajánlások kellenek
+        const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+        const saved: Array<{ id: string; type: string; title: string; description: string; urgency: string }> = [];
         for (const item of (parsed.items ?? [])) {
-          await createRecommendation({ id: nanoid(), profileId: input.profileId, type: item.type, title: item.title, description: item.description, urgency: item.urgency });
+          const itemType = typeof item.type === "string" ? item.type.toLowerCase() : "";
+          const type = typeAllow.has(itemType) ? itemType as "strategy" | "content" | "campaign" | "lead" | "analytics" : "content";
+          const urgency = urgencyMap[(item.urgency ?? "medium").toString().toLowerCase()] ?? "medium";
+          const id = nanoid();
+          await createRecommendation({
+            id,
+            profileId: input.profileId,
+            type,
+            title: item.title ?? "Ajánlás",
+            description: item.description ?? null,
+            urgency,
+            expiresAt,
+          });
+          saved.push({ id, type, title: item.title, description: item.description, urgency });
         }
-        return parsed.items ?? [];
+
+        // AI usage record
+        await recordAiUsage(ctx.appUser.id, "strategy", ctx.appUser.role);
+
+        return {
+          count: saved.length,
+          items: saved,
+          memoriesUsed: memories.length,
+        };
       }),
   }),
 
