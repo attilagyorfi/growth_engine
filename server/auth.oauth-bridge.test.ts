@@ -2,11 +2,23 @@
  * OAuth Bridge Test
  * Verifies that a Manus OAuth user automatically gets an appUser record
  * and that the g2amarketing admin email gets super_admin role.
+ *
+ * NOTE: ezek INTEGRÁCIÓS tesztek — valódi DATABASE_URL-t igényelnek,
+ * mert közvetlenül írnak a appUsers táblába a getOrCreateAppUserFromOAuth-on
+ * keresztül. Lokális dev környezetben (DB nélkül) skip-elődnek; CI-ben
+ * vagy egy testcontainer-es runben futnak le.
+ *
+ * A skip a `describe.skipIf` vitest helper-rel történik, így a futtatás
+ * automatikus a DATABASE_URL jelenlététől függően. Egy mock-os refaktor
+ * (authDb.ts-be DB instance injektálás) későbbi PR-be kerülhet, ha
+ * unit-tesztelni szeretnénk a logikát DB nélkül.
  */
-import { describe, expect, it, beforeAll } from "vitest";
+import { describe, expect, it } from "vitest";
 import { getOrCreateAppUserFromOAuth } from "./authDb";
 
-describe("OAuth Bridge – getOrCreateAppUserFromOAuth", () => {
+const HAS_DB = !!process.env.DATABASE_URL;
+
+describe.skipIf(!HAS_DB)("OAuth Bridge – getOrCreateAppUserFromOAuth (integration)", () => {
   const testEmail = `oauth-bridge-test-${Date.now()}@test.example.com`;
 
   it("creates a new appUser for an unknown OAuth user", async () => {
