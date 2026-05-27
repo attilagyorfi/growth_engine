@@ -16,7 +16,6 @@
 import express from "express";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "../server/_core/oauth";
-import { registerStorageProxy } from "../server/_core/storageProxy";
 import { registerLinkedInOAuthRoutes } from "../server/linkedinOAuth";
 import { appRouter } from "../server/routers";
 import { createContext } from "../server/_core/context";
@@ -36,10 +35,8 @@ function getApp(): express.Express {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-  // S3 storage signed URL proxy (under /api/storage/*).
-  registerStorageProxy(app);
-
-  // Manus OAuth callback (under /api/oauth/callback).
+  // Manus OAuth callback (under /api/oauth/callback) — graceful skip ha
+  // OAUTH_SERVER_URL nincs beállítva (Manus-leválasztás után).
   registerOAuthRoutes(app);
 
   // LinkedIn OAuth callback (under /api/oauth/linkedin/callback).
