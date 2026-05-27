@@ -1,6 +1,7 @@
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import type { Express, Request, Response } from "express";
 import * as db from "../db";
+import { ENV } from "./env";
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
 
@@ -10,6 +11,14 @@ function getQueryParam(req: Request, key: string): string | undefined {
 }
 
 export function registerOAuthRoutes(app: Express) {
+  // Manus OAuth bridge — csak akkor regisztráljuk, ha OAUTH_SERVER_URL be
+  // van állítva. A Manus-leválasztás után (info: ez nem érintette az
+  // email+jelszó auth flow-t, ami a fő használat) az endpoint egyszerűen
+  // nem létezik, így 404-et ad bármilyen hívásra.
+  if (!ENV.oAuthServerUrl) {
+    return;
+  }
+
   app.get("/api/oauth/callback", async (req: Request, res: Response) => {
     const code = getQueryParam(req, "code");
     const state = getQueryParam(req, "state");

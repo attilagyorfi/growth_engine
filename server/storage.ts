@@ -1,102 +1,70 @@
-// Preconfigured storage helpers for Manus WebDev templates
-// Uses the Biz-provided storage proxy (Authorization: Bearer <token>)
-
-import { ENV } from './_core/env';
-
-type StorageConfig = { baseUrl: string; apiKey: string };
-
-function getStorageConfig(): StorageConfig {
-  const baseUrl = ENV.forgeApiUrl;
-  const apiKey = ENV.forgeApiKey;
-
-  if (!baseUrl || !apiKey) {
-    throw new Error(
-      "Storage proxy credentials missing: set BUILT_IN_FORGE_API_URL and BUILT_IN_FORGE_API_KEY"
-    );
-  }
-
-  return { baseUrl: baseUrl.replace(/\/+$/, ""), apiKey };
-}
-
-function buildUploadUrl(baseUrl: string, relKey: string): URL {
-  const url = new URL("v1/storage/upload", ensureTrailingSlash(baseUrl));
-  url.searchParams.set("path", normalizeKey(relKey));
-  return url;
-}
-
-async function buildDownloadUrl(
-  baseUrl: string,
-  relKey: string,
-  apiKey: string
-): Promise<string> {
-  const downloadApiUrl = new URL(
-    "v1/storage/downloadUrl",
-    ensureTrailingSlash(baseUrl)
-  );
-  downloadApiUrl.searchParams.set("path", normalizeKey(relKey));
-  const response = await fetch(downloadApiUrl, {
-    method: "GET",
-    headers: buildAuthHeaders(apiKey),
-  });
-  return (await response.json()).url;
-}
-
-function ensureTrailingSlash(value: string): string {
-  return value.endsWith("/") ? value : `${value}/`;
-}
+/**
+ * G2A Growth Engine – Storage helper (Vercel Blob)
+ *
+ * Korábban a Manus Forge S3 proxy-t használta. Mostantól Vercel Blob —
+ * a Vercel saját asset storage szolgáltatása, amely:
+ * - Vercel deploy-okon automatikusan elérhető
+ * - Publikus URL-t ad vissza (CDN-en keresztül szolgáltatva)
+ * - BLOB_READ_WRITE_TOKEN env változót használ (Vercel UI állítja be)
+ *
+ * Ha a BLOB_READ_WRITE_TOKEN nincs beállítva (pl. lokális dev DB nélkül),
+ * a put() értelmes hibát dob a hívási helyen.
+ *
+ * API kompatibilitás: a storagePut() ugyanazt a { key, url } shape-et
+ * adja vissza mint korábban, így a hívók (image generation, brand asset
+ * upload) változatlanul működnek.
+ */
+import { put } from "@vercel/blob";
 
 function normalizeKey(relKey: string): string {
   return relKey.replace(/^\/+/, "");
 }
 
-function toFormData(
-  data: Buffer | Uint8Array | string,
-  contentType: string,
-  fileName: string
-): FormData {
-  const blob =
-    typeof data === "string"
-      ? new Blob([data], { type: contentType })
-      : new Blob([data as any], { type: contentType });
-  const form = new FormData();
-  form.append("file", blob, fileName || "file");
-  return form;
-}
-
-function buildAuthHeaders(apiKey: string): HeadersInit {
-  return { Authorization: `Bearer ${apiKey}` };
-}
-
+/**
+ * Feltölt egy fájlt Vercel Blob-ra publikus elérési URL-lel.
+ *
+ * @param relKey  Logikai elérési útvonal (pl. "brand-assets/profile-1/abc.pdf")
+ * @param data    Buffer / Uint8Array / string
+ * @param contentType  MIME type, default application/octet-stream
+ * @returns { key, url } — a key megegyezik a normalizált input-tal,
+ *          az url egy publikus Vercel Blob URL
+ */
 export async function storagePut(
   relKey: string,
   data: Buffer | Uint8Array | string,
-  contentType = "application/octet-stream"
+  contentType = "application/octet-stream",
 ): Promise<{ key: string; url: string }> {
-  const { baseUrl, apiKey } = getStorageConfig();
   const key = normalizeKey(relKey);
-  const uploadUrl = buildUploadUrl(baseUrl, key);
-  const formData = toFormData(data, contentType, key.split("/").pop() ?? key);
-  const response = await fetch(uploadUrl, {
-    method: "POST",
-    headers: buildAuthHeaders(apiKey),
-    body: formData,
+  // Vercel Blob put() expects Buffer, Blob, ReadableStream, or File —
+  // a Uint8Array-t Buffer.from-mal Buffer-ré alakítjuk.
+  const body: Buffer | string =
+    typeof data === "string"
+      ? data
+      : Buffer.isBuffer(data)
+        ? data
+        : Buffer.from(data);
+  const blob = await put(key, body, {
+    access: "public",
+    contentType,
+    // addRandomSuffix=false: a felhasználó által megadott útvonal stabil maradjon
+    // (egyébként Vercel Blob -<random> sufflixet ad minden uploadhoz)
+    addRandomSuffix: false,
+    // allowOverwrite: ugyanazzal a key-jel újra feltöltve felülír
+    allowOverwrite: true,
   });
-
-  if (!response.ok) {
-    const message = await response.text().catch(() => response.statusText);
-    throw new Error(
-      `Storage upload failed (${response.status} ${response.statusText}): ${message}`
-    );
-  }
-  const url = (await response.json()).url;
-  return { key, url };
+  return { key, url: blob.url };
 }
 
-export async function storageGet(relKey: string): Promise<{ key: string; url: string; }> {
-  const { baseUrl, apiKey } = getStorageConfig();
-  const key = normalizeKey(relKey);
-  return {
-    key,
-    url: await buildDownloadUrl(baseUrl, key, apiKey),
-  };
+/**
+ * Vercel Blob URLs publikusak — nincs külön "get" hívás, a fenti
+ * storagePut() return-jében kapott URL-t lehet közvetlenül használni.
+ * Backward compatibility: az eddigi callers (ha volt) megkapják ugyanazt
+ * a key + URL párt, de a key alapján csak a feltöltéskor érhető el az
+ * URL — ezt frissíteni kell a hívóknak (jelenleg csak storagePut van
+ * használva a kódbázisban).
+ */
+export async function storageGet(_relKey: string): Promise<{ key: string; url: string }> {
+  throw new Error(
+    "storageGet() not supported with Vercel Blob — use the URL returned by storagePut() and store it in your DB.",
+  );
 }

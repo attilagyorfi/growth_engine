@@ -1,5 +1,13 @@
+/**
+ * G2A Growth Engine – Owner notification
+ *
+ * Korábban a Manus WebDev notification service-t hívta. Mostantól emailt
+ * küld a platform owner-nek (info@g2amarketing.hu) Resend-en keresztül.
+ *
+ * Ha a Resend nincs konfigurálva, akkor log-and-skip — a hívó nem
+ * borul fel, csak nem érkezik értesítés.
+ */
 import { TRPCError } from "@trpc/server";
-import { ENV } from "./env";
 
 export type NotificationPayload = {
   title: string;
@@ -8,20 +16,11 @@ export type NotificationPayload = {
 
 const TITLE_MAX_LENGTH = 1200;
 const CONTENT_MAX_LENGTH = 20000;
+const OWNER_EMAIL = process.env.OWNER_EMAIL || "info@g2amarketing.hu";
 
 const trimValue = (value: string): string => value.trim();
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length > 0;
-
-const buildEndpointUrl = (baseUrl: string): string => {
-  const normalizedBase = baseUrl.endsWith("/")
-    ? baseUrl
-    : `${baseUrl}/`;
-  return new URL(
-    "webdevtoken.v1.WebDevService/SendNotification",
-    normalizedBase
-  ).toString();
-};
 
 const validatePayload = (input: NotificationPayload): NotificationPayload => {
   if (!isNonEmptyString(input.title)) {
@@ -58,57 +57,47 @@ const validatePayload = (input: NotificationPayload): NotificationPayload => {
 };
 
 /**
- * Dispatches a project-owner notification through the Manus Notification Service.
- * Returns `true` if the request was accepted, `false` when the upstream service
- * cannot be reached (callers can fall back to email/slack). Validation errors
- * bubble up as TRPC errors so callers can fix the payload.
+ * Az owner-nek küld emailt (Resend). Visszaad `true` ha sikerült,
+ * `false` ha Resend nincs konfigurálva vagy hiba történt — a hívó nem
+ * crashe, csak nem érkezik értesítés.
  */
 export async function notifyOwner(
-  payload: NotificationPayload
+  payload: NotificationPayload,
 ): Promise<boolean> {
   const { title, content } = validatePayload(payload);
 
-  if (!ENV.forgeApiUrl) {
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Notification service URL is not configured.",
-    });
+  // Ha Resend nincs konfigurálva (lokális dev DB nélkül stb.), csak
+  // logoljuk a notification-t és visszaadjuk a false-t.
+  if (!process.env.RESEND_API_KEY) {
+    console.log(`[Notification] (no Resend) Skipped owner notify: ${title}`);
+    return false;
   }
-
-  if (!ENV.forgeApiKey) {
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Notification service API key is not configured.",
-    });
-  }
-
-  const endpoint = buildEndpointUrl(ENV.forgeApiUrl);
 
   try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        accept: "application/json",
-        authorization: `Bearer ${ENV.forgeApiKey}`,
-        "content-type": "application/json",
-        "connect-protocol-version": "1",
-      },
-      body: JSON.stringify({ title, content }),
+    // Dinamikus import, hogy a Resend modul csak akkor töltődjön be,
+    // amikor szükséges (és ne crash-eljen import-time-on ha a kulcs hiányos).
+    const { Resend } = await import("resend");
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const fromEmail = process.env.EMAIL_FROM || "G2A Growth Engine <onboarding@resend.dev>";
+
+    const { error } = await resend.emails.send({
+      from: fromEmail,
+      to: OWNER_EMAIL,
+      subject: `[G2A Growth Engine] ${title}`,
+      text: content,
+      html: `<p style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6;white-space:pre-wrap;">${
+        content.replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      }</p>`,
     });
 
-    if (!response.ok) {
-      const detail = await response.text().catch(() => "");
-      console.warn(
-        `[Notification] Failed to notify owner (${response.status} ${response.statusText})${
-          detail ? `: ${detail}` : ""
-        }`
-      );
+    if (error) {
+      console.warn(`[Notification] Resend error for owner notify:`, error);
       return false;
     }
 
     return true;
   } catch (error) {
-    console.warn("[Notification] Error calling notification service:", error);
+    console.warn("[Notification] Failed to send owner notification:", error);
     return false;
   }
 }
