@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM"],
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "noEmit": false,
+    "isolatedModules": true,
+    "types": ["node"],
+    "baseUrl": "..",
+    "paths": {
+      "@/*": ["./client/src/*"],
+      "@shared/*": ["./shared/*"]
+    }
+  },
+  "include": [
+    "./**/*.ts",
+    "../server/**/*.ts",
+    "../shared/**/*.ts",
+    "../drizzle/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/*.test.ts",
+    "../server/**/*.test.ts",
+    "../shared/**/*.test.ts",
+    "../client/**/*",
+    "../vite.config.ts",
+    "../drizzle.config.ts"
+  ]
+}
