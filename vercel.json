@@ -6,7 +6,7 @@
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
   "functions": {
-    "api/[[...path]].ts": {
+    "api/[...path].ts": {
       "maxDuration": 60
     }
   }
