@@ -5,13 +5,5 @@
   "outputDirectory": "dist/public",
   "rewrites": [
     { "source": "/((?!api/).*)", "destination": "/index.html" }
-  ],
-  "functions": {
-    "api/[...path].js": {
-      "maxDuration": 60
-    },
-    "api/trpc/[trpc].js": {
-      "maxDuration": 60
-    }
-  }
+  ]
 }
