@@ -15,11 +15,14 @@
  */
 import express from "express";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { registerOAuthRoutes } from "../server/_core/oauth";
-import { registerLinkedInOAuthRoutes } from "../server/linkedinOAuth";
-import { appRouter } from "../server/routers";
-import { createContext } from "../server/_core/context";
-import { handleStripeWebhook } from "../server/stripe/webhook";
+// NOTE: a Vercel Node.js ESM runtime strict directory-import védelmet alkalmaz.
+// Explicit .js extension az imports-ban → egyértelmű fájl-resolution
+// (no ERR_UNSUPPORTED_DIR_IMPORT). TS bundler mode compile-time .ts-re mappeli.
+import { registerOAuthRoutes } from "../server/_core/oauth.js";
+import { registerLinkedInOAuthRoutes } from "../server/linkedinOAuth.js";
+import { appRouter } from "../server/routers.js";
+import { createContext } from "../server/_core/context.js";
+import { handleStripeWebhook } from "../server/stripe/webhook.js";
 
 let appInstance: express.Express | null = null;
 

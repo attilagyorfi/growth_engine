@@ -23,8 +23,13 @@
  */
 import express from "express";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { appRouter } from "../../server/routers";
-import { createContext } from "../../server/_core/context";
+// NOTE: a Vercel Node.js ESM runtime strict directory-import védelmet alkalmaz.
+// A "../../server/routers" (extension nélkül) directory-importnak minősül,
+// és ERR_UNSUPPORTED_DIR_IMPORT-tal exit-el cold start-on. Az explicit .js
+// extension egyértelműen a server/routers.ts fájlra mutat (TS bundler mode
+// compile-time .ts-re mappeli, runtime a compile-olt .js-re).
+import { appRouter } from "../../server/routers.js";
+import { createContext } from "../../server/_core/context.js";
 
 let appInstance: express.Express | null = null;
 
