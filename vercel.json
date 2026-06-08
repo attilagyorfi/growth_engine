@@ -7,7 +7,10 @@
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
   "functions": {
-    "api/[...path].ts": {
+    "api/[...path].js": {
+      "maxDuration": 60
+    },
+    "api/trpc/[trpc].js": {
       "maxDuration": 60
     }
   }
