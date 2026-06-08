@@ -56,10 +56,12 @@ function getApp(): express.Express {
 }
 
 // Vercel serverless function entry point. The Express app is callable with
-// the standard (req, res) signature, so we just delegate.
+// the standard (req, res) signature. Az any cast szükséges, mert a
+// @types/express Application type-jában nincs callable signature explicit
+// definiálva (TS2349: "Express not callable") — bár runtime-on működik.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default function handler(req: any, res: any) {
-  const app = getApp();
+  const app = getApp() as any;
   return app(req, res);
 }
 
