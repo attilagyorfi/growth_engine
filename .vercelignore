@@ -1,0 +1,8 @@
+# Vercel ignore: ne deployolja a .ts forrásokat az api/ mappából,
+# mert mi esbuild-del bundle-eljük .js-fé a build során
+# (scripts/build-api.mjs). Csak a bundle-elt .js fájlok kerülnek a
+# /var/task/api/-be, így minden import resolved compile-time-on
+# (no ERR_UNSUPPORTED_DIR_IMPORT vagy ERR_MODULE_NOT_FOUND runtime).
+api/**/*.ts
+# Kivéve a tsconfig.json — kell a Vercel TypeScript validation-hez
+!api/tsconfig.json
