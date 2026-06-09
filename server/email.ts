@@ -1,11 +1,24 @@
 /**
  * G2A Growth Engine – Email Helper
  * Resend API-val küld tranzakciós emaileket
+ *
+ * LAZY INIT: a Resend kliens csak akkor példányosul, ha tényleg küldünk
+ * emailt — így a server elindul akkor is, ha a RESEND_API_KEY env var
+ * nincs beállítva (graceful degradation).
  */
 import { Resend } from "resend";
 import { ENV } from "./_core/env";
 
-const resend = new Resend(ENV.resendApiKey);
+let _resend: Resend | null = null;
+function getResend(): Resend | null {
+  if (_resend) return _resend;
+  if (!ENV.resendApiKey) {
+    console.warn("[Email] RESEND_API_KEY nincs beállítva — email küldés letiltva (graceful skip).");
+    return null;
+  }
+  _resend = new Resend(ENV.resendApiKey);
+  return _resend;
+}
 const FROM_EMAIL = ENV.emailFrom || "G2A Growth Engine <onboarding@resend.dev>";
 const APP_NAME = "G2A Growth Engine";
 
@@ -15,6 +28,8 @@ export async function sendPasswordResetEmail(params: {
   resetUrl: string;
 }): Promise<boolean> {
   try {
+    const resend = getResend();
+    if (!resend) return false;
     const { to, name, resetUrl } = params;
     const displayName = name || "Felhasználó";
 
@@ -115,6 +130,8 @@ export async function sendWelcomeEmail(params: {
   loginUrl: string;
 }): Promise<boolean> {
   try {
+    const resend = getResend();
+    if (!resend) return false;
     const { to, name, loginUrl } = params;
     const displayName = name || "Felhasználó";
 
@@ -197,6 +214,8 @@ export async function sendPostReviewNotificationEmail(params: {
   reviewUrl: string;
 }): Promise<boolean> {
   try {
+    const resend = getResend();
+    if (!resend) return false;
     const { to, name, postTitle, postPlatform, postPreview, reviewUrl } = params;
     const displayName = name || "Felhasználó";
     // Először 200 karakterre vágjuk a tartalom-előnézetet
@@ -293,6 +312,10 @@ export async function sendOutboundEmail(params: {
   body: string;
 }): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
+    const resend = getResend();
+    if (!resend) {
+      return { success: false, error: "RESEND_API_KEY nincs beállítva a szerveren" };
+    }
     const { to, toName, subject, body } = params;
 
     // Convert plain text body to simple HTML paragraphs
