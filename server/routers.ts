@@ -52,10 +52,18 @@ import {
 // Profile ownership helper moved to ./_core/ownership for cross-router reuse
 import { assertProfileOwnership } from "./_core/ownership";
 
-// ─── Stripe client (singleton) ───────────────────────────────────────────────────────────────────────────────────────
-const stripeClient = process.env.STRIPE_SECRET_KEY
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2026-04-22.dahlia" })
-  : null;
+// ─── Stripe client (LAZY singleton) ───────────────────────────────────────────────────────────────────────────────────
+// Lazy init: a Stripe kliens csak akkor példányosul, amikor egy fizetési flow
+// procedure tényleg meghívódik. Ez biztosítja, hogy a server import-time-on
+// NEM crash-eljen, ha a STRIPE_SECRET_KEY env var hiányzik (még nincs Stripe
+// bekötve a deployment-en — graceful degradation).
+let _stripeClient: Stripe | null = null;
+function getStripeClient(): Stripe | null {
+  if (_stripeClient) return _stripeClient;
+  if (!process.env.STRIPE_SECRET_KEY) return null;
+  _stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2026-04-22.dahlia" });
+  return _stripeClient;
+}
 
 export const appRouter = router({
   system: systemRouter,
@@ -1263,7 +1271,7 @@ A link mező mindig ezek egyike legyen, ne találj ki más URL-t.`,
         billing: z.enum(["monthly", "yearly"]).default("monthly"),
       }))
       .mutation(async ({ input, ctx }) => {
-        if (!stripeClient) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Stripe nincs konfigurálva" });
+        const stripeClient = getStripeClient(); if (!stripeClient) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Stripe nincs konfigurálva" });
         const { PLAN_DETAILS } = await import("./stripe/products");
         const plan = PLAN_DETAILS[input.planId];
         const amount = input.billing === "yearly" ? plan.yearlyPriceHuf : plan.monthlyPriceHuf;
@@ -1297,7 +1305,7 @@ A link mező mindig ezek egyike legyen, ne találj ki más URL-t.`,
 
     getPortalUrl: appUserProcedure
       .mutation(async ({ ctx }) => {
-        if (!stripeClient) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Stripe nincs konfigurálva" });
+        const stripeClient = getStripeClient(); if (!stripeClient) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Stripe nincs konfigurálva" });
         if (!ctx.appUser.stripeCustomerId) throw new TRPCError({ code: "NOT_FOUND", message: "Nincs Stripe előfizetés" });
         const origin = ctx.req.headers.origin as string || "https://g2a-growth-engine.manus.space";
         const session = await stripeClient.billingPortal.sessions.create({
