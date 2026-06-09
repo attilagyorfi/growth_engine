@@ -3,10 +3,20 @@ import fs from "fs";
 import { type Server } from "http";
 import { nanoid } from "nanoid";
 import path from "path";
-import { createServer as createViteServer } from "vite";
-import viteConfig from "../../vite.config";
+import { fileURLToPath } from "node:url";
+
+// __dirname equivalent für ESM — Node 12+ compatible, NOT __dirname
+// (ami csak Node 20.11+-tól elérhető és Node 18-on undefined-ot ad).
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export async function setupVite(app: Express, server: Server) {
+  // DYNAMIC IMPORT: vite és vite.config csak dev mode-ban töltődik be.
+  // Production bundle-ben (Railway/Render) ne legyen import-time dependency
+  // a vite.config-tól, mert az __dirname-et használ ami régebbi
+  // Node verziókon undefined-ot ad és import-time-on crash-el.
+  const { createServer: createViteServer } = await import("vite");
+  const { default: viteConfig } = await import("../../vite.config.js");
+
   const serverOptions = {
     middlewareMode: true,
     hmr: { server },
@@ -26,7 +36,7 @@ export async function setupVite(app: Express, server: Server) {
 
     try {
       const clientTemplate = path.resolve(
-        import.meta.dirname,
+        __dirname,
         "../..",
         "client",
         "index.html"
@@ -50,8 +60,8 @@ export async function setupVite(app: Express, server: Server) {
 export function serveStatic(app: Express) {
   const distPath =
     process.env.NODE_ENV === "development"
-      ? path.resolve(import.meta.dirname, "../..", "dist", "public")
-      : path.resolve(import.meta.dirname, "public");
+      ? path.resolve(__dirname, "../..", "dist", "public")
+      : path.resolve(__dirname, "public");
   if (!fs.existsSync(distPath)) {
     console.error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`

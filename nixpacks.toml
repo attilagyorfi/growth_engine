@@ -1,0 +1,9 @@
+# Railway / Nixpacks build config
+# Force Node 20 — a project import.meta.dirname-et használ ami Node 20.11+ feature.
+# A package.json#engines">=20.11" range-et a Nixpacks regex parser nem érti,
+# ezért explicit nixPkgs override kell.
+
+providers = ["node"]
+
+[phases.setup]
+nixPkgs = ["nodejs_20", "pnpm-10_x", "openssl"]

@@ -10,10 +10,24 @@ import { getDb } from "../db";
 import { appUsers } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2026-04-22.dahlia" });
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+// LAZY INIT: a Stripe kliens csak akkor példányosul, amikor a webhook
+// tényleg meghívódik — így a server elindul akkor is, ha a STRIPE_SECRET_KEY
+// env var nincs beállítva (graceful degradation).
+let _stripe: Stripe | null = null;
+function getStripe(): Stripe | null {
+  if (_stripe) return _stripe;
+  if (!process.env.STRIPE_SECRET_KEY) return null;
+  _stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2026-04-22.dahlia" });
+  return _stripe;
+}
 
 export async function handleStripeWebhook(req: Request, res: Response) {
+  const stripe = getStripe();
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!stripe || !webhookSecret) {
+    console.warn("[Stripe Webhook] STRIPE_SECRET_KEY vagy STRIPE_WEBHOOK_SECRET nincs beállítva.");
+    return res.status(503).json({ error: "Stripe nincs konfigurálva" });
+  }
   const sig = req.headers["stripe-signature"];
 
   let event: Stripe.Event;
