@@ -1,57 +1,65 @@
 /**
- * G2A Growth Engine – DB auto-migration (idempotent, safe)
+ * G2A Growth Engine – DB migration runner (mysql2 direct + drizzle-orm migrator)
  *
- * Minden Railway/Render deploy előtt lefut a `prestart` hook-ból.
+ * MIÉRT NEM drizzle-kit push?
+ * - A drizzle-kit CLI a `dbCredentials.ssl` config-ot ignorálja TiDB-vel
+ * - Eredmény: "Connections using insecure transport are prohibited"
+ * - A server-side mysql2 viszont megfelelően kezeli az SSL-t
  *
- * Mit csinál:
- * 1. Csatlakozik a DATABASE_URL-en (mysql2/promise)
- * 2. drizzle-kit `push --force` mode-ot futtat — szinkronizálja a TS schema-t
- *    a DB-vel. Csak ADDITIVE műveleteket hagyunk át (CREATE TABLE, ADD COLUMN),
- *    destruktívokat NEM (DROP TABLE, DROP COLUMN) — a `--strict` flag-gel kompatibilis.
- * 3. Hiba esetén log + exit 0 — a `|| true` mégis hagyná start-olni, de itt
- *    proper logot adunk hogy lássuk mi történt.
+ * Ez a script bypass-olja a drizzle-kit-et:
+ * - Közvetlenül mysql2/promise-szal csatlakozik (ssl: { rejectUnauthorized: true })
+ * - drizzle-orm/mysql2/migrator `migrate()` function-t használja
+ * - Felhasználja a meglévő drizzle/*.sql migration fájlokat (15 db)
+ * - A drizzle/meta/_journal.json tracking-eli, mely migrationok futottak már
  *
- * Ha a DATABASE_URL nincs beállítva (pl. lokális dev DB nélkül), skip.
+ * Idempotens: ha minden már fent van, az `__drizzle_migrations` tábla
+ * journal-ja alapján a migrator skippeli a már alkalmazott migrationoket.
  *
- * MIÉRT ez és nem `pnpm db:push` (drizzle-kit generate + migrate)?
- * - A migrate fájl-alapú: kell egy committelt migrations/ mappa.
- * - Mi production-on DIRECT schema sync-et akarunk, nem migration history-t.
- * - A drizzle-kit `push` parancs pontosan ezt csinálja: schema → DB diff,
- *   és push-olja a változásokat.
+ * Hibatűrő: ha bármi crash, exit 0 — a server akkor is elindul a healthcheckhez.
  */
-import { spawn } from "node:child_process";
+import mysql from "mysql2/promise";
+import { drizzle } from "drizzle-orm/mysql2";
+import { migrate } from "drizzle-orm/mysql2/migrator";
 
 if (!process.env.DATABASE_URL) {
   console.log("[migrate-db] DATABASE_URL nincs beállítva — skipping migration.");
   process.exit(0);
 }
 
+const isTiDB = process.env.DATABASE_URL.includes("tidbcloud.com");
+const hostFragment = process.env.DATABASE_URL.split("@")[1]?.split("/")[0] || "(hidden)";
 console.log("[migrate-db] DB schema sync start...");
-console.log("[migrate-db] DATABASE_URL prefix:", process.env.DATABASE_URL.split("@")[1]?.split("/")[0] || "(hidden)");
+console.log(`[migrate-db] Host: ${hostFragment}`);
+console.log(`[migrate-db] TiDB Cloud detected: ${isTiDB} (SSL ${isTiDB ? "enabled" : "disabled"})`);
 
-// `drizzle-kit push --force` — auto-confirms all changes, including ALTER TABLE ADD COLUMN.
-// Stdin az "yes" prompt-okra: a --force ezt megkerüli.
-const proc = spawn(
-  "node",
-  ["./node_modules/drizzle-kit/bin.cjs", "push", "--force"],
-  {
-    stdio: "inherit",
-    env: process.env,
-  },
-);
+let connection;
+try {
+  connection = await mysql.createConnection({
+    uri: process.env.DATABASE_URL,
+    // TiDB Cloud Serverless kötelezően TLS-t igényel.
+    // rejectUnauthorized: true → ellenőrzi a CA-t (TiDB Cloud-nak valid Let's Encrypt cert-je van).
+    ssl: isTiDB ? { rejectUnauthorized: true } : undefined,
+    multipleStatements: true,
+  });
 
-proc.on("error", (err) => {
-  console.error("[migrate-db] spawn error:", err.message);
-  // Don't crash — a server akkor is induljon (a router-ek graceful degradation).
+  const db = drizzle(connection);
+  await migrate(db, { migrationsFolder: "./drizzle" });
+  console.log("[migrate-db] ✓ All migrations applied successfully");
+
+  await connection.end();
   process.exit(0);
-});
-
-proc.on("exit", (code) => {
-  if (code === 0) {
-    console.log("[migrate-db] ✓ DB schema sync OK");
-  } else {
-    console.warn(`[migrate-db] drizzle-kit push exit code ${code} — folytatjuk a server start-tal.`);
+} catch (err) {
+  console.warn("[migrate-db] Migration error:", err.message);
+  console.warn("[migrate-db] Stack:", err.stack);
+  // Cleanup ha lehet
+  if (connection) {
+    try {
+      await connection.end();
+    } catch {
+      // ignore
+    }
   }
-  // Mindenképp 0-val lépünk ki, hogy a `pnpm start` ne álljon meg.
+  // Mindenképp 0-val lépünk ki, hogy a server elinduljon a healthcheck-hez.
+  console.warn("[migrate-db] Folytatjuk a server start-tal (graceful degradation).");
   process.exit(0);
-});
+}
