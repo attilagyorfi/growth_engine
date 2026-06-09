@@ -9,11 +9,13 @@
     "build:frontend": "vite build",
     "build:api": "node scripts/build-api.mjs",
     "build:vercel": "vite build && node scripts/build-api.mjs",
+    "prestart": "node scripts/migrate-db.mjs || true",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "vitest run",
-    "db:push": "drizzle-kit generate && drizzle-kit migrate"
+    "db:push": "drizzle-kit generate && drizzle-kit migrate",
+    "db:sync": "node scripts/migrate-db.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",
