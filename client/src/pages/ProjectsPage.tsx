@@ -31,11 +31,13 @@ const INDUSTRIES = [
   "Szépségipar / Wellness", "Nonprofit", "Egyéb",
 ];
 
+// FONTOS: valódi szín-értékek (nem CSS-változók) — ezek mentődnek a DB-be,
+// és a UI-on kívül (pl. avatar háttér) is helyesen kell megjelenniük.
 const PROJECT_COLORS = [
-  { label: "Kék", value: "var(--qa-accent)" },
-  { label: "Lila", value: "var(--qa-accent)" },
-  { label: "Zöld", value: "var(--qa-success)" },
-  { label: "Sárga", value: "var(--qa-warning)" },
+  { label: "Kék", value: "oklch(0.6 0.2 255)" },
+  { label: "Lila", value: "oklch(0.55 0.22 295)" },
+  { label: "Zöld", value: "oklch(0.65 0.18 145)" },
+  { label: "Sárga", value: "oklch(0.8 0.16 90)" },
   { label: "Piros", value: "oklch(0.6 0.22 30)" },
   { label: "Narancs", value: "oklch(0.7 0.2 50)" },
   { label: "Cián", value: "oklch(0.65 0.15 200)" },
@@ -56,7 +58,7 @@ const emptyForm: ProjectFormData = {
   website: "",
   industry: "",
   description: "",
-  color: "var(--qa-accent)",
+  color: "oklch(0.6 0.2 255)",
   logoUrl: "",
 };
 

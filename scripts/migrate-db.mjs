@@ -28,6 +28,11 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const MIGRATIONS_DIR = "./drizzle";
+const META_DIR = "./drizzle/meta";
+
+// TiDB nem engedi a DEFAULT értéket text/json/blob típusú oszlopokon.
+const NO_DEFAULT_TYPES =
+  /^(text|json|blob|longtext|mediumtext|tinytext|longblob|mediumblob|tinyblob)\b/i;
 
 // Hibák, amiket idempotensen LENYELÜNK (a kívánt állapot már fennáll):
 const IGNORABLE_FRAGMENTS = [
@@ -62,6 +67,84 @@ export function parseStatements(sqlText) {
       // A futtatáshoz a trailing `;`-t leszedjük (egy utasítást futtatunk).
       return idempotent.replace(/;\s*$/, "");
     });
+}
+
+/**
+ * Egy oszlop-definícióból (drizzle snapshot formátum) TiDB-biztos
+ * `ADD COLUMN` DDL-töredéket épít.
+ */
+function columnDdl(col) {
+  let ddl = `\`${col.name}\` ${col.type}`;
+  if (col.notNull) ddl += " NOT NULL";
+  // TEXT/JSON/BLOB típuson a TiDB tiltja a DEFAULT-ot → kihagyjuk.
+  if (col.default !== undefined && !NO_DEFAULT_TYPES.test(col.type)) {
+    const d = typeof col.default === "boolean" ? String(col.default) : col.default;
+    ddl += ` DEFAULT ${d}`;
+  }
+  return ddl;
+}
+
+/**
+ * Önjavító oszlop-szinkron: a legutóbbi drizzle snapshot (= schema.ts igazság)
+ * alapján pótolja a már LÉTEZŐ táblákból hiányzó oszlopokat.
+ *
+ * MIÉRT KELL? A `CREATE TABLE IF NOT EXISTS` nem javítja meg a már létező,
+ * de hiányos táblát (pl. egy korábbi félkész migration-futás öröksége). Ez a
+ * lépés garantálja, hogy a telepített séma egyezzen a schema.ts-szel.
+ */
+async function syncColumnsFromSnapshot(connection) {
+  let snapFiles;
+  try {
+    snapFiles = readdirSync(META_DIR)
+      .filter((f) => f.endsWith("_snapshot.json"))
+      .sort();
+  } catch {
+    return;
+  }
+  if (!snapFiles.length) return;
+  const latest = snapFiles[snapFiles.length - 1];
+  let snap;
+  try {
+    snap = JSON.parse(readFileSync(join(META_DIR, latest), "utf8"));
+  } catch {
+    return;
+  }
+
+  const [rows] = await connection.query(
+    "SELECT table_name AS t, column_name AS c FROM information_schema.columns WHERE table_schema = DATABASE()",
+  );
+  const actual = {};
+  for (const r of rows) {
+    const t = r.t ?? r.table_name ?? r.TABLE_NAME;
+    const c = r.c ?? r.column_name ?? r.COLUMN_NAME;
+    (actual[t] = actual[t] || new Set()).add(c);
+  }
+
+  let added = 0;
+  for (const [table, def] of Object.entries(snap.tables || {})) {
+    const have = actual[table];
+    if (!have) continue; // a táblát a migrationnek kell létrehoznia
+    for (const col of Object.values(def.columns || {})) {
+      if (have.has(col.name)) continue;
+      const ddl = `ALTER TABLE \`${table}\` ADD ${columnDdl(col)}`;
+      try {
+        await connection.query(ddl);
+        console.log(`[migrate-db] + hiányzó oszlop pótolva: ${table}.${col.name}`);
+        added++;
+      } catch (e) {
+        if (!isIgnorable(e.message)) {
+          console.warn(
+            `[migrate-db] ! nem sikerült pótolni ${table}.${col.name}: ${e.message}`,
+          );
+        }
+      }
+    }
+  }
+  console.log(
+    added
+      ? `[migrate-db] ✓ Oszlop-szinkron: ${added} hiányzó oszlop pótolva.`
+      : `[migrate-db] ✓ Oszlop-szinkron: minden oszlop a helyén.`,
+  );
 }
 
 const isTiDB = (process.env.DATABASE_URL || "").includes("tidbcloud.com");
@@ -146,6 +229,9 @@ async function main() {
     console.log(
       `[migrate-db] ✓ Schema sync kész — ${applied} utasítás alkalmazva, ${skipped} kihagyva (már létezett)`,
     );
+
+    // Önjavító oszlop-szinkron: pótolja a hiányos táblák oszlopait a snapshot alapján.
+    await syncColumnsFromSnapshot(connection);
   } finally {
     try {
       await connection.end();
