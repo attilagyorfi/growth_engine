@@ -1,5 +1,6 @@
 import { eq, desc, and } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
+import { drizzle, type MySql2Database } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
 import {
   users, InsertUser,
   clientProfiles, InsertClientProfile,
@@ -13,19 +14,51 @@ import {
 import type { InboundEmail } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
-let _db: ReturnType<typeof drizzle> | null = null;
+let _db: MySql2Database | null = null;
+let _dbPromise: Promise<MySql2Database | null> | null = null;
 
-// Lazily create the drizzle instance so local tooling can run without a DB.
+/**
+ * Lazily create the drizzle instance so local tooling can run without a DB.
+ *
+ * FONTOS: A TiDB Cloud Serverless KÖTELEZŐEN TLS-t igényel. A korábbi
+ * `drizzle(process.env.DATABASE_URL)` forma NEM állított be SSL-t, ezért a
+ * TiDB minden lekérdezést elutasított ("Connections using insecure transport
+ * are prohibited"), amit a drizzle "Failed query: select ..." formában jelez.
+ * Ezért ugyanazt az SSL-es mysql2 poolt használjuk, mint a migration script.
+ */
 export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
-    try {
-      _db = drizzle(process.env.DATABASE_URL);
-    } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
-      _db = null;
-    }
+  if (_db) return _db;
+  if (!process.env.DATABASE_URL) return null;
+  if (!_dbPromise) {
+    _dbPromise = (async () => {
+      try {
+        const url = process.env.DATABASE_URL as string;
+        const isTiDB = url.includes("tidbcloud.com");
+        const pool = mysql.createPool({
+          uri: url,
+          ssl: isTiDB ? { rejectUnauthorized: true } : undefined,
+          connectionLimit: 5,
+          waitForConnections: true,
+        });
+        // Ellenőrizzük a kapcsolatot rögtön — így az SSL/auth hibák AZONNAL és
+        // HANGOSAN megjelennek a logban, nem pedig elrejtve egy query mögött.
+        await pool.query("SELECT 1");
+        console.log(
+          `[Database] ✓ Connected to ${isTiDB ? "TiDB Cloud (SSL enabled)" : "MySQL"}`,
+        );
+        _db = drizzle(pool);
+        return _db;
+      } catch (error) {
+        console.error(
+          "[Database] ✗ Connection failed:",
+          error instanceof Error ? error.message : error,
+        );
+        _dbPromise = null; // engedjük újrapróbálni a következő híváskor
+        return null;
+      }
+    })();
   }
-  return _db;
+  return _dbPromise;
 }
 
 export async function upsertUser(user: InsertUser): Promise<void> {
