@@ -85,7 +85,7 @@ CREATE TABLE `content_calendar_items` (
 	`funnelStage` varchar(50),
 	`pillar` varchar(255),
 	`campaignTag` varchar(255),
-	`scheduledAt` timestamp NOT NULL,
+	`scheduledAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`status` enum('planned','draft','approved','scheduled','published','cancelled') NOT NULL DEFAULT 'planned',
 	`notes` text,
 	`createdAt` timestamp NOT NULL DEFAULT (now()),
