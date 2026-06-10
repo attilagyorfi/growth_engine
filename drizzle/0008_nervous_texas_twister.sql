@@ -5,7 +5,7 @@ CREATE TABLE `scheduled_posts` (
 	`platform` enum('facebook','instagram','linkedin','twitter') NOT NULL,
 	`text` text NOT NULL,
 	`imageUrl` text,
-	`scheduledAt` timestamp NOT NULL,
+	`scheduledAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`status` enum('pending','published','failed') NOT NULL DEFAULT 'pending',
 	`publishedAt` timestamp,
 	`errorMessage` text,
