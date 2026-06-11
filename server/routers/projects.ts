@@ -46,8 +46,12 @@ export const projectsRouter = router({
       profileId: z.string().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
-      const id = input.id ?? nanoid();
-      return upsertProject({ id, ownerId: ctx.appUser.id, ...input, isActive: false });
+      // FONTOS: az `id`-t a spread UTÁN állítjuk be, különben az input.id
+      // (új projektnél undefined) felülírná a frissen generált azonosítót,
+      // és az elsődleges kulcs `default`-ként menne a DB-be → insert hiba.
+      const { id: inputId, ...rest } = input;
+      const id = inputId ?? nanoid();
+      return upsertProject({ ...rest, id, ownerId: ctx.appUser.id, isActive: false });
     }),
 
   setActive: superAdminProcedure
