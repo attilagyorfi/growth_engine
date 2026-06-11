@@ -6,9 +6,13 @@ export const ENV = {
   ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
   isProduction: process.env.NODE_ENV === "production",
   // ─── LLM providers ─────────────────────────────────────────────────────
-  // LLM_PROVIDER lehet: "manus" (default, backwards compatible),
-  // "openai" (OpenAI-kompatibilis bármely endpoint), "anthropic" (TODO)
-  llmProvider: (process.env.LLM_PROVIDER ?? "manus").toLowerCase() as "manus" | "openai" | "anthropic",
+  // LLM_PROVIDER lehet: "openai", "manus" (régi Forge proxy), "anthropic" (TODO).
+  // Alapértelmezés: ha LLM_PROVIDER nincs megadva, de van OPENAI_API_KEY, akkor
+  // automatikusan "openai" (a Manusról lemigráltunk). Csak ha OPENAI_API_KEY sincs,
+  // akkor esik vissza a régi "manus" (Forge) providerre — visszafelé kompatibilitásból.
+  llmProvider: (
+    process.env.LLM_PROVIDER ?? (process.env.OPENAI_API_KEY ? "openai" : "manus")
+  ).toLowerCase() as "manus" | "openai" | "anthropic",
   llmModel: process.env.LLM_MODEL ?? "",
   // Manus Forge (default) — auto-injected env-ek
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
