@@ -224,6 +224,36 @@ type ResolvedProvider = {
   defaultModel: string;
 };
 
+/**
+ * Startup diagnosztika: kiírja, melyik LLM provider aktív, és hogy a hozzá
+ * tartozó API kulcs be van-e állítva. NEM dob hibát (a server induljon el a
+ * healthcheckhez) — csak loggol, hogy a deploy logból AZONNAL látszódjon, ha
+ * rossz provideren vagy hiányzó kulccsal megyünk. Ez derítette ki, hogy a
+ * szöveges AI miért nem ment: rossz provider / kulcs vagy túl nagy max_tokens.
+ */
+export function logLlmStartup(): void {
+  const provider = ENV.llmProvider;
+  let model = ENV.llmModel || "";
+  let keyPresent = false;
+  if (provider === "openai") {
+    keyPresent = !!ENV.openaiApiKey;
+    model = model || "gpt-4o-mini";
+  } else if (provider === "anthropic") {
+    keyPresent = !!ENV.anthropicApiKey;
+  } else {
+    keyPresent = !!ENV.forgeApiKey;
+    model = model || "gemini-2.5-flash";
+  }
+  console.log(
+    `[LLM] Aktív provider: ${provider} | model: ${model} | API kulcs: ${keyPresent ? "✓ beállítva" : "✗ HIÁNYZIK"}`,
+  );
+  if (provider === "manus") {
+    console.warn(
+      "[LLM] FIGYELEM: a 'manus' provider a Manus Forge proxyt használja, ami már nem elérhető — a szöveges AI NEM fog működni. Állíts be OPENAI_API_KEY-t (és NE legyen LLM_PROVIDER=manus) a Railway Variables-ben.",
+    );
+  }
+}
+
 const resolveProvider = (): ResolvedProvider => {
   const provider = ENV.llmProvider;
   if (provider === "openai") {
@@ -335,6 +365,16 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   }
 
   payload.max_tokens = params.maxTokens ?? params.max_tokens ?? 32768;
+  // FONTOS: az OpenAI gpt-4o-mini maximum kimeneti tokenje 16384. A 32768-as
+  // default ezért 400-as hibát ad ("max_tokens is too large"), és emiatt MINDEN
+  // szöveges AI-hívás elhasalt az OpenAI-ra váltás után. OpenAI-nál levágjuk.
+  if (
+    target.provider === "openai" &&
+    typeof payload.max_tokens === "number" &&
+    payload.max_tokens > 16384
+  ) {
+    payload.max_tokens = 16384;
+  }
   // A Manus Forge proxy specifikus thinking budget paraméter — más providereknél
   // ignorált vagy hibát adhat, ezért csak Manus esetén küldjük
   if (target.provider === "manus") {
