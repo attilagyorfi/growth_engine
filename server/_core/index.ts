@@ -10,6 +10,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { handleStripeWebhook } from "../stripe/webhook";
 import { logLlmStartup } from "./llm";
+import { ENV } from "./env";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -45,6 +46,15 @@ async function startServer() {
       service: "g2a-growth-engine",
       env: process.env.NODE_ENV || "development",
       time: new Date().toISOString(),
+      // Diagnosztika: melyik LLM provider aktív és van-e hozzá kulcs.
+      // (Csak boolean + provider név — kulcs vagy más titok SOHA nem kerülhet ide.)
+      llmProvider: ENV.llmProvider,
+      llmKeyConfigured:
+        ENV.llmProvider === "openai"
+          ? !!ENV.openaiApiKey
+          : ENV.llmProvider === "anthropic"
+            ? !!ENV.anthropicApiKey
+            : !!ENV.forgeApiKey,
     });
   });
   // OAuth callback under /api/oauth/callback

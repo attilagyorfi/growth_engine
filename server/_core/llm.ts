@@ -1,3 +1,4 @@
+import { TRPCError } from "@trpc/server";
 import { ENV } from "./env";
 
 export type Role = "system" | "user" | "assistant" | "tool" | "function";
@@ -403,9 +404,15 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(
-      `LLM invoke failed (provider=${target.provider}): ${response.status} ${response.statusText} – ${errorText}`
-    );
+    // TRPCError-ként dobjuk (nem sima Error-ként), így a globális sanitizeErrors
+    // middleware NEM nyeli le INTERNAL hibaként — a kliens megkapja a valódi
+    // okot (HTTP státusz + a provider hibaszövege). Az API kulcs SOHA nincs
+    // a hibaszövegben, így ez biztonságosan megjeleníthető. Enélkül a "Váratlan
+    // hiba történt" üzenet mögött diagnosztizálhatatlan volt, miért hal el az AI.
+    throw new TRPCError({
+      code: "BAD_GATEWAY",
+      message: `AI szolgáltatás hiba (${target.provider}, HTTP ${response.status}): ${errorText.slice(0, 400)}`,
+    });
   }
 
   return (await response.json()) as InvokeResult;
