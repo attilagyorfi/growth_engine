@@ -9,6 +9,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { handleStripeWebhook } from "../stripe/webhook";
+import { logLlmStartup } from "./llm";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -80,6 +81,8 @@ async function startServer() {
   // tudja a containert routolni (a default `localhost`-only bind nem elég).
   server.listen(port, "0.0.0.0", () => {
     console.log(`Server running on port ${port} (${process.env.NODE_ENV || "development"})`);
+    // Diagnosztika: melyik LLM provider aktív (openai vs. a halott manus proxy)?
+    logLlmStartup();
   });
 }
 
