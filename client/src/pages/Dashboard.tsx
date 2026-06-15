@@ -63,10 +63,14 @@ export default function Dashboard() {
   ].filter(p => p.count > 0);
 
   // --- Scheduled Next 7 Days ---
+  // FONTOS: az AI-generált posztok status="draft" + scheduledAt-tal jönnek létre,
+  // mert a tartalom-naptár dátumot rendel hozzá, de a publikáláshoz külön
+  // ütemezés (jóváhagyás → scheduled státusz) kell. Ezt a kártyát konzisztenssé
+  // tesszük a Naptár füllel: bármi, aminek scheduledAt-ja van és 7 napon belül.
   const now = new Date();
   const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
   const upcomingScheduled = contentItems.filter((c: any) => {
-    if (c.status !== "scheduled" || !c.scheduledAt) return false;
+    if (!c.scheduledAt) return false;
     const d = new Date(c.scheduledAt);
     return d >= now && d <= in7Days;
   }).slice(0, 5);
