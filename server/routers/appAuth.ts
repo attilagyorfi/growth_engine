@@ -7,7 +7,7 @@ import { TRPCError } from "@trpc/server";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 import { router, publicProcedure, protectedProcedure, appUserProcedure, superAdminProcedure } from "../_core/trpc";
-import { sendPasswordResetEmail } from "../email";
+import { sendPasswordResetEmail, sendWelcomeEmail } from "../email";
 import {
   createAppUser, getAppUserByEmail, getAppUserById,
   updateAppUser, updateLastSignedIn, updateAppUserOnboarding,
@@ -107,6 +107,11 @@ export const appAuthRouter = router({
 
       const token = await signToken(user.id, user.role);
       ctx.res.setHeader("Set-Cookie", `app_token=${token}; HttpOnly; Path=/; Max-Age=${30 * 24 * 3600}; SameSite=Lax`);
+      // Üdvözlő email — fire-and-forget, hogy ne lassítsa a regisztrációs választ.
+      // Hiba esetén csak logolunk; a sikeres regisztrációt nem buktatjuk meg.
+      const appUrl = process.env.APP_URL || "https://growthengine-production.up.railway.app";
+      sendWelcomeEmail({ to: user.email, name: user.name, loginUrl: `${appUrl}/bejelentkezes` })
+        .catch(err => console.error("[appAuth.register] sendWelcomeEmail failed:", err));
       return { success: true, user: { id: user.id, email: user.email, name: user.name, role: user.role, onboardingCompleted: user.onboardingCompleted, subscriptionPlan: user.subscriptionPlan, subscriptionBilling: user.subscriptionBilling } };
     }),
 

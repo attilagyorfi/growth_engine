@@ -168,7 +168,7 @@ export default function Intelligence() {
           <div>
             <h1 className="text-2xl font-bold text-white flex items-center gap-3" style={{ fontFamily: "Sora, sans-serif" }}>
               <Brain size={24} className="text-purple-400" />
-              Company Intelligence
+              Cégintelligencia
             </h1>
             <p className="text-gray-400 mt-1">
               {currentProfile?.name} – AI-alapú elemzés és stratégiai összefoglaló
@@ -199,7 +199,7 @@ export default function Intelligence() {
         {!isLoading && !intelData && (
           <div className="text-center py-20">
             <Brain size={48} className="mx-auto mb-4 text-gray-600" />
-            <h3 className="text-white font-semibold mb-2">Még nincs Company Intelligence</h3>
+            <h3 className="text-white font-semibold mb-2">Még nincs cégintelligencia</h3>
             <p className="text-gray-400 text-sm mb-6">Hozz létre egy ügyfélprofilt az Onboarding Wizard segítségével, vagy generáld manuálisan.</p>
             <button
               onClick={handleRegenerate}
