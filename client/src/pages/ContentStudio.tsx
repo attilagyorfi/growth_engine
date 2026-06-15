@@ -540,7 +540,7 @@ export default function ContentStudio() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>Content Studio</h1>
+          <h1 className="text-xl font-bold" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>Tartalom Studio</h1>
           <p className="text-sm mt-0.5" style={{ color: "var(--qa-fg3)" }}>
             {activeProfile.name} · {(posts as Post[]).length} tartalom
           </p>

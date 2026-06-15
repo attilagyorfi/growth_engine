@@ -157,7 +157,8 @@ function App() {
         <ProfileProvider>
           <DataProvider>
             <TooltipProvider>
-              <Toaster />
+              {/* top-right pozíció: az alsó CTA-kat (pl. onboarding "Tovább" gomb) ne takarja el */}
+              <Toaster position="top-right" />
               <Suspense fallback={<DashboardLayoutSkeleton />}>
                 <Router />
               </Suspense>
