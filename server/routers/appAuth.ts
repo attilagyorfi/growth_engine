@@ -7,7 +7,7 @@ import { TRPCError } from "@trpc/server";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 import { router, publicProcedure, protectedProcedure, appUserProcedure, superAdminProcedure } from "../_core/trpc";
-import { sendPasswordResetEmail, sendWelcomeEmail } from "../email";
+import { sendPasswordResetEmail, sendWelcomeEmail, sendAdminApprovalNeededEmail } from "../email";
 import {
   createAppUser, getAppUserByEmail, getAppUserById,
   updateAppUser, updateLastSignedIn, updateAppUserOnboarding,
@@ -60,7 +60,11 @@ export const appAuthRouter = router({
       }
       const passwordHash = await bcrypt.hash(input.password, 12);
       const id = nanoid();
-      const role = isSuperAdminEmail(input.email) ? "super_admin" : "user";
+      const isAdmin = isSuperAdminEmail(input.email);
+      const role = isAdmin ? "super_admin" : "user";
+      // Admin-jóváhagyás: új felhasználók alapból INAKTÍVAK, az adminnak kell aktiválnia.
+      // A super_admin-okat (saját címek) azonnal aktiváljuk, hogy ne legyenek kizárva.
+      const isActive = isAdmin;
       // Free plan ignorálja a billing periódust – csak fizetős csomagnál releváns
       const billing = input.subscriptionPlan === "free" ? "monthly" : (input.subscriptionBilling ?? "monthly");
       const user = await createAppUser({
@@ -71,7 +75,7 @@ export const appAuthRouter = router({
         role,
         onboardingCompleted: false,
         profileId: null,
-        active: true,
+        active: isActive,
         subscriptionPlan: input.subscriptionPlan ?? "free",
         subscriptionBilling: billing,
       });
@@ -105,14 +109,32 @@ export const appAuthRouter = router({
         } catch { /* non-fatal */ }
       }
 
-      const token = await signToken(user.id, user.role);
-      ctx.res.setHeader("Set-Cookie", `app_token=${token}; HttpOnly; Path=/; Max-Age=${30 * 24 * 3600}; SameSite=Lax`);
-      // Üdvözlő email — fire-and-forget, hogy ne lassítsa a regisztrációs választ.
-      // Hiba esetén csak logolunk; a sikeres regisztrációt nem buktatjuk meg.
       const appUrl = process.env.APP_URL || "https://growthengine-production.up.railway.app";
-      sendWelcomeEmail({ to: user.email, name: user.name, loginUrl: `${appUrl}/bejelentkezes` })
-        .catch(err => console.error("[appAuth.register] sendWelcomeEmail failed:", err));
-      return { success: true, user: { id: user.id, email: user.email, name: user.name, role: user.role, onboardingCompleted: user.onboardingCompleted, subscriptionPlan: user.subscriptionPlan, subscriptionBilling: user.subscriptionBilling } };
+      // Aktív (admin) → cookie + üdvözlő email.
+      // Pending (user) → NINCS cookie (nem jelentkezik be), külön email az adminnak.
+      if (isActive) {
+        const token = await signToken(user.id, user.role);
+        ctx.res.setHeader("Set-Cookie", `app_token=${token}; HttpOnly; Path=/; Max-Age=${30 * 24 * 3600}; SameSite=Lax`);
+        sendWelcomeEmail({ to: user.email, name: user.name, loginUrl: `${appUrl}/bejelentkezes` })
+          .catch(err => console.error("[appAuth.register] sendWelcomeEmail failed:", err));
+      } else {
+        // Értesítés az összes super_admin-nak az új regisztrációról.
+        const adminUrl = `${appUrl}/admin/users`;
+        for (const adminEmail of SUPER_ADMIN_EMAILS) {
+          sendAdminApprovalNeededEmail({
+            to: adminEmail,
+            newUserEmail: user.email,
+            newUserName: user.name,
+            subscriptionPlan: user.subscriptionPlan,
+            adminUrl,
+          }).catch(err => console.error("[appAuth.register] sendAdminApprovalNeededEmail failed:", err));
+        }
+      }
+      return {
+        success: true,
+        pendingApproval: !isActive,
+        user: { id: user.id, email: user.email, name: user.name, role: user.role, onboardingCompleted: user.onboardingCompleted, subscriptionPlan: user.subscriptionPlan, subscriptionBilling: user.subscriptionBilling },
+      };
     }),
 
   // ─── Bejelentkezés ───────────────────────────────────────────────────────────
@@ -123,12 +145,23 @@ export const appAuthRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       const user = await getAppUserByEmail(input.email);
-      if (!user || !user.active) {
+      if (!user) {
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Hibás email cím vagy jelszó" });
       }
+      // Először a jelszót ellenőrizzük (timing-safe — ne áruljuk el, hogy létezik-e fiók
+      // a megadott emailhez egy rossz jelszós kísérletnél).
       const valid = await bcrypt.compare(input.password, user.passwordHash);
       if (!valid) {
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Hibás email cím vagy jelszó" });
+      }
+      // Csak ha a jelszó helyes, akkor mondjuk meg, hogy a fiók még jóváhagyásra vár —
+      // így a megtévesztő "Hibás email cím vagy jelszó" üzenetet kerüljük, de
+      // jelszó-enumerációt se engedünk.
+      if (!user.active) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "A fiókod még jóváhagyásra vár az adminisztrátortól. Kérlek várd meg az aktivációs emailt.",
+        });
       }
       await updateLastSignedIn(user.id);
       const token = await signToken(user.id, user.role);

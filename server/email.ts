@@ -201,6 +201,95 @@ export async function sendWelcomeEmail(params: {
   }
 }
 
+// ─── Admin-jóváhagyásra váró regisztráció értesítő ─────────────────────────────
+// Új user regisztrált → az összes super_admin kap egy linket az admin felületre.
+export async function sendAdminApprovalNeededEmail(params: {
+  to: string;
+  newUserEmail: string;
+  newUserName: string | null;
+  subscriptionPlan: string;
+  adminUrl: string;
+}): Promise<boolean> {
+  try {
+    const resend = getResend();
+    if (!resend) return false;
+    const { to, newUserEmail, newUserName, subscriptionPlan, adminUrl } = params;
+    const displayName = newUserName || "(név nélkül)";
+
+    const { error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to,
+      subject: `🔔 Új regisztráció vár jóváhagyásra – ${APP_NAME}`,
+      html: `
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <title>Új regisztráció</title>
+</head>
+<body style="margin:0;padding:0;background:#0f0f1a;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f0f1a;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="560" cellpadding="0" cellspacing="0" style="background:#1a1a2e;border-radius:16px;overflow:hidden;border:1px solid rgba(139,92,246,0.2);">
+          <tr>
+            <td style="background:linear-gradient(135deg,#f59e0b,#ef4444);padding:32px 40px;text-align:center;">
+              <span style="color:#fff;font-size:20px;font-weight:700;">🔔 Új regisztráció</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:40px;">
+              <h1 style="color:#fff;font-size:22px;font-weight:700;margin:0 0 16px;">Új felhasználó vár jóváhagyásra</h1>
+              <p style="color:#a1a1aa;font-size:15px;line-height:1.6;margin:0 0 20px;">
+                Egy új felhasználó regisztrált a ${APP_NAME} platformra, és a fiókja aktiválására vár:
+              </p>
+              <table cellpadding="0" cellspacing="0" width="100%" style="background:#0f0f1a;border-radius:10px;padding:16px;margin:0 0 24px;">
+                <tr><td style="padding:6px 0;color:#9ca3af;font-size:13px;width:120px;">Név:</td><td style="padding:6px 0;color:#fff;font-size:14px;font-weight:600;">${displayName}</td></tr>
+                <tr><td style="padding:6px 0;color:#9ca3af;font-size:13px;">Email:</td><td style="padding:6px 0;color:#fff;font-size:14px;font-weight:600;">${newUserEmail}</td></tr>
+                <tr><td style="padding:6px 0;color:#9ca3af;font-size:13px;">Csomag:</td><td style="padding:6px 0;color:#fff;font-size:14px;font-weight:600;">${subscriptionPlan}</td></tr>
+              </table>
+              <table cellpadding="0" cellspacing="0" style="margin:0 auto 16px;">
+                <tr>
+                  <td style="background:linear-gradient(135deg,#7c3aed,#4f46e5);border-radius:10px;">
+                    <a href="${adminUrl}" style="display:block;color:#fff;text-decoration:none;font-size:15px;font-weight:600;padding:12px 28px;text-align:center;">
+                      Aktiválás az admin felületen →
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <p style="color:#6b7280;font-size:12px;line-height:1.5;margin:0;text-align:center;">
+                A felhasználó addig nem tud belépni, amíg nem aktiválod a fiókot.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#111827;padding:24px 40px;border-top:1px solid rgba(139,92,246,0.1);">
+              <p style="color:#4b5563;font-size:12px;text-align:center;margin:0;">
+                © ${new Date().getFullYear()} G2A Marketing – ${APP_NAME}
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+      `.trim(),
+      text: `Új regisztráció vár jóváhagyásra:\n\nNév: ${displayName}\nEmail: ${newUserEmail}\nCsomag: ${subscriptionPlan}\n\nAktiválás: ${adminUrl}\n\n– ${APP_NAME}`,
+    });
+
+    if (error) {
+      console.error("[Email] Admin approval email error:", error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("[Email] Unexpected error:", err);
+    return false;
+  }
+}
+
 /**
  * Approval workflow értesítés – a profil tulajdonosa kap emailt,
  * amikor egy poszt review státuszba kerül

@@ -92,9 +92,16 @@ export default function Register() {
   const [showConfirmPass, setShowConfirmPass] = useState(false);
   const [error, setError] = useState("");
   const [newsletterConsent, setNewsletterConsent] = useState(true);
+  const [pendingApprovalEmail, setPendingApprovalEmail] = useState<string | null>(null);
 
   const register = trpc.appAuth.register.useMutation({
     onSuccess: (data) => {
+      // Admin-jóváhagyás: ne irányítsuk át, mutassuk a "várj az aktiválásra"
+      // visszajelzést — a cookie szándékosan nincs beállítva ebben az esetben.
+      if (data.pendingApproval) {
+        setPendingApprovalEmail(data.user.email);
+        return;
+      }
       if (data.user.onboardingCompleted) {
         navigate("/iranyitopult");
       } else {
@@ -128,6 +135,39 @@ export default function Register() {
   ) : password.length > 0 ? "gyenge" : "";
 
   const activePlan = PLANS.find(p => p.id === selectedPlan)!;
+
+  // Pending-approval képernyő: regisztráció sikerült, de az adminnak még jóvá kell hagynia.
+  if (pendingApprovalEmail) {
+    return (
+      <div className="min-h-screen bg-[#0A0A0F] flex items-center justify-center px-4">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md rounded-2xl border p-8 text-center"
+          style={{ background: "#12121e", borderColor: "rgba(139,92,246,0.2)" }}
+        >
+          <div className="w-16 h-16 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: "rgba(139,92,246,0.15)" }}>
+            <CheckCircle2 className="w-8 h-8" style={{ color: "#a78bfa" }} />
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-3" style={{ fontFamily: "Sora, sans-serif" }}>
+            Sikeres regisztráció!
+          </h1>
+          <p className="text-white/70 text-sm leading-relaxed mb-6">
+            Köszönjük, hogy regisztráltál! A fiókod (<span className="text-white font-medium">{pendingApprovalEmail}</span>) <strong className="text-white">jóváhagyásra vár</strong> az adminisztrátortól.
+          </p>
+          <div className="rounded-xl p-4 mb-6 text-left" style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)" }}>
+            <p className="text-amber-200 text-xs leading-relaxed">
+              <strong>Mi a következő lépés?</strong><br />
+              Hamarosan emailben értesítünk, amint az admin aktiválja a fiókodat. Ezután bejelentkezhetsz a megadott jelszavaddal.
+            </p>
+          </div>
+          <Link href="/" className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white transition-colors">
+            <ArrowLeft className="w-4 h-4" /> Vissza a főoldalra
+          </Link>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0A0A0F] flex">
