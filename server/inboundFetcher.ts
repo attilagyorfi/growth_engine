@@ -272,8 +272,30 @@ export async function fetchAndStoreInboundEmails(): Promise<FetchResult> {
       lock.release();
     }
   } catch (err: any) {
-    result.error = err?.message ?? "Ismeretlen IMAP hiba.";
-    console.error("[inboundFetcher] IMAP fetch failed:", err);
+    // ImapFlow error diagnosztika — a `err.message` gyakran csak "Command failed",
+    // amiből semmit nem lehet kihámozni. Az igazi részletek a `responseText`,
+    // `authenticationFailed`, `code` mezőkben vannak.
+    const rawMsg = err?.message ?? "Ismeretlen IMAP hiba.";
+    let diagnostic: string;
+    if (err?.authenticationFailed === true) {
+      diagnostic = `IMAP autentikáció elutasítva (${ENV.inboundImapUser}). Lehetséges okok: (1) a jelszó NEM Gmail APP-PASSWORD (16 karakter, szóközök nélkül) — generálás: https://myaccount.google.com/apppasswords ; (2) a Gmail-ben az IMAP nincs bekapcsolva — Gmail Settings → Forwarding and POP/IMAP → "Enable IMAP" ; (3) a 2FA nincs bekapcsolva a fiókon, így app-password sem generálható. Eredeti üzenet: ${err.responseText || rawMsg}`;
+    } else if (err?.code === "ENOTFOUND") {
+      diagnostic = `Az IMAP host nem található: ${ENV.inboundImapHost}. Ellenőrizd az INBOUND_IMAP_HOST env-et.`;
+    } else if (err?.code === "ECONNREFUSED" || err?.code === "ETIMEDOUT") {
+      diagnostic = `IMAP kapcsolódás elutasítva vagy timeout (${ENV.inboundImapHost}:${ENV.inboundImapPort}). Ellenőrizd a host+port-ot.`;
+    } else if (err?.responseText) {
+      diagnostic = `IMAP szerver hiba: ${err.responseText} (kód: ${err.responseStatus || "?"})`;
+    } else {
+      diagnostic = rawMsg;
+    }
+    result.error = diagnostic;
+    console.error("[inboundFetcher] IMAP fetch failed:", {
+      message: rawMsg,
+      authenticationFailed: err?.authenticationFailed,
+      code: err?.code,
+      responseText: err?.responseText,
+      responseStatus: err?.responseStatus,
+    });
     return result;
   } finally {
     try {
