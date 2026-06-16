@@ -451,3 +451,84 @@ export async function sendOutboundEmail(params: {
     return { success: false, error: message };
   }
 }
+
+// ─── Hírlevél (newsletter) küldés ─────────────────────────────────────────────
+// A super_admin által szerkesztett kampány-emailt küldi ki egyetlen címnek.
+// HTML body-t bagolódlik egy brand-keretbe, a végén KÖTELEZŐ leiratkozási
+// linkkel és lábléccel (GDPR / CAN-SPAM compliance).
+export async function sendNewsletterEmail(params: {
+  to: string;
+  recipientName: string | null;
+  subject: string;
+  htmlBody: string;
+  textBody?: string;
+}): Promise<boolean> {
+  try {
+    const resend = getResend();
+    if (!resend) return false;
+    const { to, recipientName, subject, htmlBody, textBody } = params;
+    const displayName = recipientName || "Kedves Olvasónk";
+    // Leiratkozási link — mailto-fallback, hogy ne kelljen most külön
+    // unsubscribe-flow-t építeni. Később cserélhető tokenes /unsubscribe?token=...
+    // route-ra (akkor a unsubscribed flag-et lehet majd a leads-ben tárolni).
+    const unsubscribeMailto = `mailto:${ENV.emailFrom || "info@g2amarketing.hu"}?subject=Leiratkozás%20a%20h%C3%ADrlev%C3%A9lr%C5%91l`;
+
+    const { error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to,
+      subject,
+      html: `
+<!DOCTYPE html>
+<html lang="hu">
+<head><meta charset="UTF-8"><title>${subject}</title></head>
+<body style="margin:0;padding:0;background:#0f0f1a;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f0f1a;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background:#1a1a2e;border-radius:16px;overflow:hidden;border:1px solid rgba(139,92,246,0.2);">
+          <tr>
+            <td style="background:linear-gradient(135deg,#7c3aed,#4f46e5);padding:24px 40px;">
+              <span style="color:#fff;font-size:18px;font-weight:700;">⚡ ${APP_NAME}</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:40px;color:#e5e7eb;font-size:15px;line-height:1.65;">
+              <p style="margin:0 0 18px;color:#a1a1aa;font-size:14px;">${displayName},</p>
+              <div style="color:#e5e7eb;">${htmlBody}</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#111827;padding:20px 40px;border-top:1px solid rgba(139,92,246,0.1);text-align:center;">
+              <p style="color:#6b7280;font-size:12px;line-height:1.5;margin:0 0 8px;">
+                Ezt a hírlevelet a ${APP_NAME} platformon keresztül kapod, mert feliratkoztál a hírlevelünkre.
+              </p>
+              <p style="color:#6b7280;font-size:12px;margin:0 0 8px;">
+                <a href="${unsubscribeMailto}" style="color:#9ca3af;text-decoration:underline;">Leiratkozás</a>
+              </p>
+              <p style="color:#4b5563;font-size:11px;margin:0;">
+                © ${new Date().getFullYear()} G2A Marketing – ${APP_NAME}
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+      `.trim(),
+      text: textBody
+        ? `${displayName},\n\n${textBody}\n\n---\nLeiratkozás: ${unsubscribeMailto}\n– ${APP_NAME}`
+        : `${displayName},\n\n[Az email teljes tartalmához HTML-támogatás szükséges.]\n\nLeiratkozás: ${unsubscribeMailto}\n\n– ${APP_NAME}`,
+    });
+
+    if (error) {
+      console.error("[Email] Newsletter send error:", error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("[Email] Newsletter unexpected error:", err);
+    return false;
+  }
+}

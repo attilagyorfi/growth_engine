@@ -11,6 +11,7 @@ import { strategyVersionsRouter } from "./routers/strategyVersions";
 import { socialRouter } from "./routers/social";
 import { projectsRouter } from "./routers/projects";
 import { seoRouter } from "./routers/seo";
+import { newsletterRouter } from "./routers/newsletter";
 import { generateImage } from "./_core/imageGeneration";
 import { sendEmail, verifyEmailConfig, type EmailConfig } from "./emailSender";
 import { sendOutboundEmail as sendOutboundEmailViaResend } from "./email";
@@ -1213,6 +1214,7 @@ A link mező mindig ezek egyike legyen, ne találj ki más URL-t.`,
 
   // ─── Projects (Super Admin Multi-Workspace) ─────────────────────────────────
   projects: projectsRouter,
+  newsletter: newsletterRouter,
 
   // ─── SEO Audit ──────────────────────────────────────────────────────────────
   seo: seoRouter,
