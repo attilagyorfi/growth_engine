@@ -1,6 +1,11 @@
 /**
- * G2A Growth Engine – Company Intelligence Page
- * Shows AI-generated company insights, SWOT, buyer personas, competitor analysis
+ * G2A Growth Engine – Cégintelligencia oldal
+ *
+ * A `companyIntelligence` DB-séma (drizzle/schema.ts) tényleges mezőit jeleníti meg:
+ * companySummary, brandDna, offerMap, audienceMap, competitorSnapshot,
+ * platformPriorities, successGoals, aiWritingRules. (Korábban régi mezőnevek
+ * — swot / personas / contentPillars / uniqueValueProposition — szerepeltek
+ * a render-blokkokban, ezért az oldal nagy része üresen maradt.)
  */
 
 import { useState } from "react";
@@ -10,110 +15,160 @@ import { trpc } from "@/lib/trpc";
 import { useProfile } from "@/contexts/ProfileContext";
 import { toast } from "sonner";
 import {
-  Brain, RefreshCw, Loader2, TrendingUp, TrendingDown,
-  Users, Target, AlertTriangle, Star, Lightbulb,
-  BarChart3, Globe, Zap, ChevronDown, ChevronUp,
-  Building2, MessageSquare, Eye, Edit3, Check, X
+  Brain, RefreshCw, Loader2, Users, Target, AlertTriangle,
+  Lightbulb, Globe, Zap, ChevronDown, ChevronUp,
+  Building2, Edit3, Check, X, Sparkles, Package, BarChart3,
+  CalendarDays, Quote, Heart,
 } from "lucide-react";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Types: a valódi DB-séma alapján (drizzle/schema.ts) ──────────────────────
 
-interface SwotItem { text: string; source?: string }
-interface Persona { name: string; role: string; painPoints: string[]; goals: string[]; channels: string[]; messagingAngle: string }
-interface Competitor { name: string; strengths: string[]; weaknesses: string[]; differentiator: string }
-interface ContentPillar { name: string; description: string; percentage: number; exampleTopics: string[] }
+interface BrandDna {
+  coreValues?: string[];
+  personality?: string[];
+  differentiators?: string[];
+  brandPromise?: string;
+}
+interface Offer { name: string; description: string; targetAudience?: string; pricing?: string; usp?: string }
+interface Audience { segment: string; description: string; painPoints?: string[]; goals?: string[]; channels?: string[] }
+interface Competitor { name: string; strengths?: string[]; weaknesses?: string[]; positioning?: string }
+interface Platform { platform: string; priority: number; rationale?: string }
+interface SuccessGoals { thirtyDay?: string[]; ninetyDay?: string[]; oneYear?: string[] }
+interface AiWritingRules { doList?: string[]; dontList?: string[]; toneGuidelines?: string; examplePhrases?: string[] }
+
 interface IntelligenceData {
   id?: string;
-  companySummary?: string;
-  swot?: { strengths: SwotItem[]; weaknesses: SwotItem[]; opportunities: SwotItem[]; threats: SwotItem[] };
-  personas?: Persona[];
-  competitors?: Competitor[];
-  contentPillars?: ContentPillar[];
-  positioningStatement?: string;
-  uniqueValueProposition?: string;
-  keyMessages?: string[];
-  toneGuidelines?: string;
-  generatedAt?: Date;
+  companySummary?: string | null;
+  brandDna?: BrandDna | null;
+  offerMap?: Offer[] | null;
+  audienceMap?: Audience[] | null;
+  competitorSnapshot?: Competitor[] | null;
+  platformPriorities?: Platform[] | null;
+  successGoals?: SuccessGoals | null;
+  aiWritingRules?: AiWritingRules | null;
+  generatedAt?: Date | string;
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function SwotCard({ title, items, color, icon: Icon }: {
-  title: string; items: SwotItem[]; color: string; icon: React.ElementType
-}) {
+function SectionCard({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className="rounded-xl p-4 border" style={{ background: "var(--qa-bg)", borderColor: "var(--qa-surface3)" }}>
-      <h3 className="font-semibold mb-3 flex items-center gap-2" style={{ color }}>
-        <Icon size={16} /> {title}
-      </h3>
-      <ul className="space-y-2">
-        {(items ?? []).map((item, i) => (
-          <li key={i} className="text-gray-300 text-sm flex items-start gap-2">
-            <span className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: color }} />
-            {typeof item === "string" ? item : item.text}
-          </li>
-        ))}
-        {(!items || items.length === 0) && <li className="text-gray-500 text-sm italic">Nincs adat</li>}
-      </ul>
+    <div
+      className={`rounded-xl p-5 border ${className ?? ""}`}
+      style={{ background: "var(--qa-bg)", borderColor: "var(--qa-surface3)" }}
+    >
+      {children}
     </div>
   );
 }
 
-function PersonaCard({ persona }: { persona: Persona }) {
+function SectionTitle({ icon: Icon, color, children }: { icon: React.ElementType; color: string; children: React.ReactNode }) {
+  return (
+    <h2 className="text-white font-semibold mb-3 flex items-center gap-2">
+      <Icon size={18} style={{ color }} /> {children}
+    </h2>
+  );
+}
+
+function ChipList({ items, color }: { items: string[]; color: string }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {items.map((v, i) => (
+        <span
+          key={i}
+          className="text-xs px-2.5 py-1 rounded-full"
+          style={{ background: `oklch(from ${color} l c h / 15%)`, color }}
+        >
+          {v}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function AudienceCard({ a }: { a: Audience }) {
   const [expanded, setExpanded] = useState(false);
+  const has = (xs?: string[]) => !!xs && xs.length > 0;
   return (
     <div className="rounded-xl border overflow-hidden" style={{ background: "var(--qa-bg)", borderColor: "var(--qa-surface3)" }}>
-      <div
-        className="p-4 flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors"
-        onClick={() => setExpanded(!expanded)}
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold" style={{ background: "linear-gradient(135deg, var(--qa-accent), oklch(0.55 0.18 165))" }}>
-            {persona.name?.[0] ?? "?"}
+      <div className="p-4 flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors" onClick={() => setExpanded(!expanded)}>
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0" style={{ background: "linear-gradient(135deg, var(--qa-accent), oklch(0.55 0.18 165))" }}>
+            {a.segment?.[0]?.toUpperCase() ?? "?"}
           </div>
-          <div>
-            <div className="text-white font-medium">{persona.name}</div>
-            <div className="text-gray-400 text-sm">{persona.role}</div>
+          <div className="min-w-0">
+            <div className="text-white font-medium truncate">{a.segment}</div>
+            <div className="text-gray-400 text-sm truncate">{a.description}</div>
           </div>
         </div>
-        {expanded ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+        {expanded ? <ChevronUp size={16} className="text-gray-400 flex-shrink-0" /> : <ChevronDown size={16} className="text-gray-400 flex-shrink-0" />}
       </div>
       {expanded && (
         <div className="px-4 pb-4 space-y-3 border-t" style={{ borderColor: "oklch(0.22 0.03 255)" }}>
-          <div className="pt-3">
-            <h4 className="text-gray-400 text-xs uppercase tracking-wider mb-2">Fájdalompontok</h4>
-            <ul className="space-y-1">
-              {(persona.painPoints ?? []).map((p, i) => (
-                <li key={i} className="text-gray-300 text-sm flex items-start gap-2">
-                  <AlertTriangle size={12} className="text-orange-400 mt-0.5 flex-shrink-0" /> {p}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <h4 className="text-gray-400 text-xs uppercase tracking-wider mb-2">Célok</h4>
-            <ul className="space-y-1">
-              {(persona.goals ?? []).map((g, i) => (
-                <li key={i} className="text-gray-300 text-sm flex items-start gap-2">
-                  <Target size={12} className="text-green-400 mt-0.5 flex-shrink-0" /> {g}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <h4 className="text-gray-400 text-xs uppercase tracking-wider mb-2">Üzenetszög</h4>
-            <p className="text-gray-300 text-sm italic">"{persona.messagingAngle}"</p>
-          </div>
-          <div>
-            <h4 className="text-gray-400 text-xs uppercase tracking-wider mb-2">Preferált csatornák</h4>
-            <div className="flex flex-wrap gap-2">
-              {(persona.channels ?? []).map((c, i) => (
-                <span key={i} className="text-xs px-2 py-1 rounded-full" style={{ background: "oklch(0.22 0.03 255)", color: "var(--qa-accent)" }}>{c}</span>
-              ))}
+          {has(a.painPoints) && (
+            <div className="pt-3">
+              <h4 className="text-gray-400 text-xs uppercase tracking-wider mb-2">Fájdalompontok</h4>
+              <ul className="space-y-1">
+                {a.painPoints!.map((p, i) => (
+                  <li key={i} className="text-gray-300 text-sm flex items-start gap-2">
+                    <AlertTriangle size={12} className="text-orange-400 mt-0.5 flex-shrink-0" /> {p}
+                  </li>
+                ))}
+              </ul>
             </div>
-          </div>
+          )}
+          {has(a.goals) && (
+            <div>
+              <h4 className="text-gray-400 text-xs uppercase tracking-wider mb-2">Célok</h4>
+              <ul className="space-y-1">
+                {a.goals!.map((g, i) => (
+                  <li key={i} className="text-gray-300 text-sm flex items-start gap-2">
+                    <Target size={12} className="text-green-400 mt-0.5 flex-shrink-0" /> {g}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {has(a.channels) && (
+            <div>
+              <h4 className="text-gray-400 text-xs uppercase tracking-wider mb-2">Preferált csatornák</h4>
+              <ChipList items={a.channels!} color="oklch(0.7 0.15 255)" />
+            </div>
+          )}
         </div>
       )}
+    </div>
+  );
+}
+
+function GoalsTimeline({ goals }: { goals: SuccessGoals }) {
+  const cols: Array<{ label: string; items?: string[]; color: string }> = [
+    { label: "30 nap", items: goals.thirtyDay, color: "oklch(0.7 0.15 145)" },
+    { label: "90 nap", items: goals.ninetyDay, color: "oklch(0.7 0.15 255)" },
+    { label: "1 év", items: goals.oneYear, color: "oklch(0.7 0.18 295)" },
+  ];
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      {cols.map((c, i) => (
+        <div key={i} className="rounded-lg p-4 border" style={{ background: "oklch(0.18 0.02 255)", borderColor: "var(--qa-surface3)" }}>
+          <div className="flex items-center gap-2 mb-3">
+            <CalendarDays size={14} style={{ color: c.color }} />
+            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: c.color }}>{c.label}</span>
+          </div>
+          {c.items && c.items.length > 0 ? (
+            <ul className="space-y-2">
+              {c.items.map((it, j) => (
+                <li key={j} className="text-sm text-gray-300 flex items-start gap-2">
+                  <span className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: c.color }} />
+                  {it}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-xs text-gray-500 italic">Nincs adat</p>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -147,7 +202,7 @@ export default function Intelligence() {
         onboardingAnswers: [],
       });
       await refetch();
-      toast.success("Company Intelligence frissítve!");
+      toast.success("Cégintelligencia frissítve!");
     } catch {
       toast.error("Hiba a generálás során.");
     } finally {
@@ -156,11 +211,13 @@ export default function Intelligence() {
   };
 
   const intelData = intel as IntelligenceData | undefined;
+  const bd = intelData?.brandDna ?? undefined;
+  const uvp = bd?.brandPromise?.trim();
+  const has = <T,>(xs?: T[] | null): xs is T[] => Array.isArray(xs) && xs.length > 0;
 
   return (
     <DashboardLayout>
       <div className="p-6 space-y-6">
-        {/* AI Limit Banner */}
         <AiLimitBanner />
 
         {/* Header */}
@@ -215,146 +272,238 @@ export default function Intelligence() {
 
         {!isLoading && intelData && (
           <div className="space-y-6">
-            {/* Company Summary + UVP */}
+            {/* Cégprofil + UVP */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="rounded-xl p-5 border" style={{ background: "var(--qa-bg)", borderColor: "var(--qa-surface3)" }}>
+              <SectionCard>
                 <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
                   <Building2 size={18} className="text-blue-400" /> Cégprofil összefoglaló
                 </h3>
-                <p className="text-gray-300 text-sm leading-relaxed">{intelData.companySummary ?? "–"}</p>
-              </div>
-              <div className="rounded-xl p-5 border" style={{ background: "var(--qa-bg)", borderColor: "var(--qa-surface3)" }}>
+                <p className="text-gray-300 text-sm leading-relaxed">{intelData.companySummary ?? "Nincs adat"}</p>
+              </SectionCard>
+              <SectionCard>
                 <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
                   <Zap size={18} className="text-yellow-400" /> Egyedi értékajánlat (UVP)
                 </h3>
-                <p className="text-gray-300 text-sm leading-relaxed italic">"{intelData.uniqueValueProposition ?? "–"}"</p>
-                {intelData.positioningStatement && (
-                  <div className="mt-3 pt-3 border-t" style={{ borderColor: "oklch(0.22 0.03 255)" }}>
-                    <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Pozicionálás</p>
-                    <p className="text-gray-300 text-sm">{intelData.positioningStatement}</p>
-                  </div>
+                {uvp ? (
+                  <p className="text-gray-300 text-sm leading-relaxed italic">"{uvp}"</p>
+                ) : (
+                  <p className="text-gray-500 text-sm italic">A brand ígéret még nem készült el. Generálj újra a fenti gombbal.</p>
                 )}
-              </div>
+              </SectionCard>
             </div>
 
-            {/* Key Messages */}
-            {intelData.keyMessages && intelData.keyMessages.length > 0 && (
-              <div className="rounded-xl p-5 border" style={{ background: "var(--qa-bg)", borderColor: "var(--qa-surface3)" }}>
-                <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
-                  <MessageSquare size={18} className="text-cyan-400" /> Kulcsüzenetek
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {intelData.keyMessages.map((msg, i) => (
-                    <div key={i} className="p-3 rounded-lg flex items-start gap-2" style={{ background: "oklch(0.18 0.02 255)" }}>
-                      <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style={{ background: "oklch(0.4 0.15 255)" }}>{i + 1}</span>
-                      <p className="text-gray-300 text-sm">{msg}</p>
-                    </div>
-                  ))}
+            {/* Márka DNS */}
+            {bd && (has(bd.coreValues) || has(bd.personality) || has(bd.differentiators)) && (
+              <div>
+                <SectionTitle icon={Heart} color="oklch(0.65 0.2 0)">Márka DNS</SectionTitle>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {has(bd.coreValues) && (
+                    <SectionCard>
+                      <h4 className="text-xs uppercase tracking-wider mb-3" style={{ color: "oklch(0.7 0.15 30)" }}>Alapértékek</h4>
+                      <ChipList items={bd.coreValues!} color="oklch(0.7 0.15 30)" />
+                    </SectionCard>
+                  )}
+                  {has(bd.personality) && (
+                    <SectionCard>
+                      <h4 className="text-xs uppercase tracking-wider mb-3" style={{ color: "oklch(0.7 0.18 295)" }}>Személyiség</h4>
+                      <ChipList items={bd.personality!} color="oklch(0.7 0.18 295)" />
+                    </SectionCard>
+                  )}
+                  {has(bd.differentiators) && (
+                    <SectionCard>
+                      <h4 className="text-xs uppercase tracking-wider mb-3" style={{ color: "oklch(0.7 0.15 255)" }}>Megkülönböztető tényezők</h4>
+                      <ul className="space-y-1.5">
+                        {bd.differentiators!.map((d, i) => (
+                          <li key={i} className="text-gray-300 text-sm flex items-start gap-2">
+                            <Sparkles size={12} className="mt-1 flex-shrink-0" style={{ color: "oklch(0.7 0.15 255)" }} /> {d}
+                          </li>
+                        ))}
+                      </ul>
+                    </SectionCard>
+                  )}
                 </div>
               </div>
             )}
 
-            {/* SWOT */}
-            {intelData.swot && (
+            {/* Szolgáltatások / Termékek */}
+            {has(intelData.offerMap) && (
               <div>
-                <h2 className="text-white font-semibold mb-3 flex items-center gap-2">
-                  <BarChart3 size={18} className="text-green-400" /> SWOT Elemzés
-                </h2>
-                <div className="grid grid-cols-2 gap-4">
-                  <SwotCard title="Erősségek" items={intelData.swot.strengths ?? []} color="oklch(0.65 0.18 145)" icon={Star} />
-                  <SwotCard title="Gyengeségek" items={intelData.swot.weaknesses ?? []} color="oklch(0.65 0.18 30)" icon={TrendingDown} />
-                  <SwotCard title="Lehetőségek" items={intelData.swot.opportunities ?? []} color="oklch(0.65 0.18 255)" icon={TrendingUp} />
-                  <SwotCard title="Fenyegetések" items={intelData.swot.threats ?? []} color="oklch(0.65 0.18 0)" icon={AlertTriangle} />
-                </div>
-              </div>
-            )}
-
-            {/* Buyer Personas */}
-            {intelData.personas && intelData.personas.length > 0 && (
-              <div>
-                <h2 className="text-white font-semibold mb-3 flex items-center gap-2">
-                  <Users size={18} className="text-pink-400" /> Vevői Personák
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {intelData.personas.map((persona, i) => (
-                    <PersonaCard key={i} persona={persona} />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Content Pillars */}
-            {intelData.contentPillars && intelData.contentPillars.length > 0 && (
-              <div>
-                <h2 className="text-white font-semibold mb-3 flex items-center gap-2">
-                  <Lightbulb size={18} className="text-amber-400" /> Tartalmi Pillérek
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {intelData.contentPillars.map((pillar, i) => (
-                    <div key={i} className="rounded-xl p-4 border" style={{ background: "var(--qa-bg)", borderColor: "var(--qa-surface3)" }}>
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-white font-medium">{pillar.name}</h3>
-                        <span className="text-sm font-bold" style={{ color: `hsl(${i * 60}, 70%, 60%)` }}>{pillar.percentage}%</span>
+                <SectionTitle icon={Package} color="oklch(0.65 0.18 195)">Szolgáltatások és termékek</SectionTitle>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {intelData.offerMap.map((o, i) => (
+                    <SectionCard key={i}>
+                      <h4 className="text-white font-medium mb-1.5">{o.name}</h4>
+                      <p className="text-gray-300 text-sm mb-3">{o.description}</p>
+                      <div className="space-y-1.5 text-xs">
+                        {o.targetAudience && (
+                          <div><span className="text-gray-500">Célcsoport:</span> <span className="text-gray-300">{o.targetAudience}</span></div>
+                        )}
+                        {o.usp && (
+                          <div><span className="text-gray-500">USP:</span> <span className="text-gray-300 italic">{o.usp}</span></div>
+                        )}
+                        {o.pricing && (
+                          <div><span className="text-gray-500">Árazás:</span> <span className="text-gray-300">{o.pricing}</span></div>
+                        )}
                       </div>
-                      <div className="h-1.5 rounded-full mb-3 overflow-hidden" style={{ background: "var(--qa-surface2)" }}>
-                        <div className="h-full rounded-full" style={{ width: `${pillar.percentage}%`, background: `hsl(${i * 60}, 70%, 60%)` }} />
-                      </div>
-                      <p className="text-gray-400 text-xs mb-2">{pillar.description}</p>
-                      {pillar.exampleTopics && pillar.exampleTopics.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {pillar.exampleTopics.slice(0, 3).map((topic, j) => (
-                            <span key={j} className="text-xs px-2 py-0.5 rounded-full" style={{ background: "oklch(0.22 0.03 255)", color: "oklch(0.65 0.1 255)" }}>{topic}</span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                    </SectionCard>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Competitors */}
-            {intelData.competitors && intelData.competitors.length > 0 && (
+            {/* Célközönség (audienceMap) */}
+            {has(intelData.audienceMap) && (
               <div>
-                <h2 className="text-white font-semibold mb-3 flex items-center gap-2">
-                  <Globe size={18} className="text-red-400" /> Versenytárs Elemzés
-                </h2>
+                <SectionTitle icon={Users} color="oklch(0.7 0.18 330)">Célközönség szegmensek</SectionTitle>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {intelData.audienceMap.map((a, i) => (
+                    <AudienceCard key={i} a={a} />
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-2">Kattints egy szegmensre a részletekhez (fájdalompontok, célok, csatornák).</p>
+              </div>
+            )}
+
+            {/* Versenytárs elemzés */}
+            {has(intelData.competitorSnapshot) && (
+              <div>
+                <SectionTitle icon={Globe} color="oklch(0.65 0.2 0)">Versenytárs elemzés</SectionTitle>
                 <div className="space-y-3">
-                  {intelData.competitors.map((comp, i) => (
-                    <div key={i} className="rounded-xl p-4 border" style={{ background: "var(--qa-bg)", borderColor: "var(--qa-surface3)" }}>
-                      <h3 className="text-white font-medium mb-3">{comp.name}</h3>
-                      <div className="grid grid-cols-3 gap-4">
+                  {intelData.competitorSnapshot.map((c, i) => (
+                    <SectionCard key={i}>
+                      <h3 className="text-white font-medium mb-3">{c.name}</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                           <p className="text-green-400 text-xs uppercase tracking-wider mb-2">Erősségek</p>
                           <ul className="space-y-1">
-                            {(comp.strengths ?? []).map((s, j) => <li key={j} className="text-gray-300 text-xs">• {s}</li>)}
+                            {(c.strengths ?? []).map((s, j) => <li key={j} className="text-gray-300 text-xs">• {s}</li>)}
+                            {!has(c.strengths) && <li className="text-gray-500 text-xs italic">–</li>}
                           </ul>
                         </div>
                         <div>
                           <p className="text-orange-400 text-xs uppercase tracking-wider mb-2">Gyengeségek</p>
                           <ul className="space-y-1">
-                            {(comp.weaknesses ?? []).map((w, j) => <li key={j} className="text-gray-300 text-xs">• {w}</li>)}
+                            {(c.weaknesses ?? []).map((w, j) => <li key={j} className="text-gray-300 text-xs">• {w}</li>)}
+                            {!has(c.weaknesses) && <li className="text-gray-500 text-xs italic">–</li>}
                           </ul>
                         </div>
                         <div>
-                          <p className="text-blue-400 text-xs uppercase tracking-wider mb-2">Mi a különbségünk</p>
-                          <p className="text-gray-300 text-xs">{comp.differentiator}</p>
+                          <p className="text-blue-400 text-xs uppercase tracking-wider mb-2">Pozicionálás</p>
+                          <p className="text-gray-300 text-xs">{c.positioning ?? "–"}</p>
                         </div>
                       </div>
-                    </div>
+                    </SectionCard>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Tone Guidelines */}
-            {intelData.toneGuidelines && (
-              <div className="rounded-xl p-5 border" style={{ background: "var(--qa-bg)", borderColor: "var(--qa-surface3)" }}>
-                <h3 className="text-white font-semibold mb-2 flex items-center gap-2">
-                  <Edit3 size={18} className="text-violet-400" /> Kommunikációs irányelvek
-                </h3>
-                <p className="text-gray-300 text-sm leading-relaxed">{intelData.toneGuidelines}</p>
+            {/* Platform prioritások */}
+            {has(intelData.platformPriorities) && (
+              <div>
+                <SectionTitle icon={BarChart3} color="oklch(0.7 0.15 145)">Csatorna-prioritások</SectionTitle>
+                <SectionCard>
+                  <div className="space-y-3">
+                    {[...intelData.platformPriorities]
+                      .sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0))
+                      .map((p, i) => {
+                        const pct = Math.max(0, Math.min(100, (p.priority ?? 0) * 20));
+                        return (
+                          <div key={i}>
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-sm text-white font-medium">{p.platform}</span>
+                              <span className="text-xs text-gray-400">Prioritás: {p.priority}/5</span>
+                            </div>
+                            <div className="h-1.5 rounded-full overflow-hidden mb-1.5" style={{ background: "var(--qa-surface2)" }}>
+                              <div className="h-full rounded-full" style={{ width: `${pct}%`, background: "linear-gradient(90deg, oklch(0.6 0.2 255), oklch(0.7 0.18 295))" }} />
+                            </div>
+                            {p.rationale && <p className="text-xs text-gray-400">{p.rationale}</p>}
+                          </div>
+                        );
+                      })}
+                  </div>
+                </SectionCard>
               </div>
+            )}
+
+            {/* Célok timeline */}
+            {intelData.successGoals && (has(intelData.successGoals.thirtyDay) || has(intelData.successGoals.ninetyDay) || has(intelData.successGoals.oneYear)) && (
+              <div>
+                <SectionTitle icon={Target} color="oklch(0.7 0.18 165)">Sikerstratégia – mérföldkövek</SectionTitle>
+                <GoalsTimeline goals={intelData.successGoals} />
+              </div>
+            )}
+
+            {/* AI írási szabályok */}
+            {intelData.aiWritingRules && (has(intelData.aiWritingRules.doList) || has(intelData.aiWritingRules.dontList) || intelData.aiWritingRules.toneGuidelines || has(intelData.aiWritingRules.examplePhrases)) && (
+              <div>
+                <SectionTitle icon={Edit3} color="oklch(0.7 0.18 295)">AI íráshoz használt szabályok</SectionTitle>
+                <div className="space-y-4">
+                  {intelData.aiWritingRules.toneGuidelines && (
+                    <SectionCard>
+                      <h4 className="text-xs uppercase tracking-wider text-gray-400 mb-2">Hangnem</h4>
+                      <p className="text-gray-300 text-sm leading-relaxed">{intelData.aiWritingRules.toneGuidelines}</p>
+                    </SectionCard>
+                  )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {has(intelData.aiWritingRules.doList) && (
+                      <SectionCard>
+                        <h4 className="text-xs uppercase tracking-wider mb-3 flex items-center gap-1.5" style={{ color: "oklch(0.7 0.15 145)" }}>
+                          <Check size={14} /> Ezeket használd
+                        </h4>
+                        <ul className="space-y-1.5">
+                          {intelData.aiWritingRules.doList!.map((d, i) => (
+                            <li key={i} className="text-gray-300 text-sm flex items-start gap-2">
+                              <Check size={12} className="mt-1 flex-shrink-0" style={{ color: "oklch(0.7 0.15 145)" }} /> {d}
+                            </li>
+                          ))}
+                        </ul>
+                      </SectionCard>
+                    )}
+                    {has(intelData.aiWritingRules.dontList) && (
+                      <SectionCard>
+                        <h4 className="text-xs uppercase tracking-wider mb-3 flex items-center gap-1.5" style={{ color: "oklch(0.65 0.2 30)" }}>
+                          <X size={14} /> Ezeket kerüld
+                        </h4>
+                        <ul className="space-y-1.5">
+                          {intelData.aiWritingRules.dontList!.map((d, i) => (
+                            <li key={i} className="text-gray-300 text-sm flex items-start gap-2">
+                              <X size={12} className="mt-1 flex-shrink-0" style={{ color: "oklch(0.65 0.2 30)" }} /> {d}
+                            </li>
+                          ))}
+                        </ul>
+                      </SectionCard>
+                    )}
+                  </div>
+                  {has(intelData.aiWritingRules.examplePhrases) && (
+                    <SectionCard>
+                      <h4 className="text-xs uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-1.5">
+                        <Quote size={14} /> Példa kifejezések
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {intelData.aiWritingRules.examplePhrases!.map((e, i) => (
+                          <div key={i} className="text-gray-300 text-sm italic p-2 rounded" style={{ background: "oklch(0.18 0.02 255)" }}>
+                            "{e}"
+                          </div>
+                        ))}
+                      </div>
+                    </SectionCard>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Friss generálás javaslat */}
+            {!bd && !has(intelData.offerMap) && !has(intelData.audienceMap) && (
+              <SectionCard>
+                <div className="flex items-start gap-3">
+                  <Lightbulb size={18} className="text-amber-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-white text-sm font-medium mb-1">Tipp</p>
+                    <p className="text-gray-400 text-sm">Ez a profil csak alapadatokat tartalmaz. Kattints az <span className="text-white font-medium">Újragenerálás</span> gombra a teljes elemzéshez (márka DNS, célközönség szegmensek, versenytárs elemzés, csatorna-prioritások, sikermutatók, AI írási szabályok).</p>
+                  </div>
+                </div>
+              </SectionCard>
             )}
           </div>
         )}
