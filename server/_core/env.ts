@@ -25,4 +25,17 @@ export const ENV = {
   // ─── Egyéb ─────────────────────────────────────────────────────────────
   resendApiKey: process.env.RESEND_API_KEY ?? "",
   emailFrom: process.env.EMAIL_FROM ?? "",
+  // ─── Bejövő email (IMAP) ───────────────────────────────────────────────
+  // Az info@g2amarketing.hu Gmail fiókhoz IMAP-pal kapcsolódunk, az új
+  // (UNSEEN) leveleket lefetcheljük, AI-vel kategorizáljuk, és az
+  // `inbound_emails` táblába mentjük. Gmail-hez APP-PASSWORD kell (NEM a
+  // sima Gmail jelszó!), a 2FA-val védett fiókokon:
+  // https://myaccount.google.com/apppasswords
+  inboundImapHost: process.env.INBOUND_IMAP_HOST ?? "imap.gmail.com",
+  inboundImapPort: parseInt(process.env.INBOUND_IMAP_PORT ?? "993", 10),
+  inboundImapUser: process.env.INBOUND_IMAP_USER ?? "",
+  inboundImapPassword: process.env.INBOUND_IMAP_PASSWORD ?? "",
+  // Melyik clientProfile-hoz csatoljuk a bejövő leveleket. Ha üres, a
+  // super_admin első profilját használjuk (lásd inboundFetcher.ts fallback).
+  inboundProfileId: process.env.INBOUND_PROFILE_ID ?? "",
 };

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import AiMemorySection from "@/components/settings/AiMemorySection";
 import NewsletterSection from "@/components/settings/NewsletterSection";
+import InboundImapSection from "@/components/settings/InboundImapSection";
 import { useSubscription, PLAN_FEATURES, type SubscriptionPlan } from "@/hooks/useSubscription";
 import BillingPlanCards from "@/components/BillingPlanCards";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -673,6 +674,9 @@ export default function Settings() {
       {/* Admin Panel – super_admin only */}
       {activeTab === "admin" && isSuperAdmin && (
         <div className="space-y-4">
+          {/* Inbound IMAP szinkron (super_admin) */}
+          <InboundImapSection />
+
           {/* API Config Status */}
           <div className="rounded-xl border p-5" style={{ background: cardBg, borderColor: border }}>
             <h3 className="text-sm font-bold mb-3" style={{ color: "var(--qa-fg2)" }}>API Konfiguráció Állapot</h3>
