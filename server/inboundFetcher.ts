@@ -24,9 +24,17 @@ import { inboundEmails, appUsers } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { invokeLLM } from "./_core/llm";
 
+// FONTOS: korlát egy fetch-en, hogy ne tartson a kérés perceken át. Ha a Gmail
+// INBOX-ban 1000+ UNSEEN van, az AI-hívások szorítása miatt egy futás 5-10
+// perces request-té duzzadna, amit a böngésző / Railway timeout megszakítana.
+// A user a következő futáson a maradékot kapja meg. A frontend a result-ban
+// jelzi `totalUnseen > inserted+skipped` esetben, hogy van még hátra.
+const MAX_UIDS_PER_FETCH = 50;
+
 export type FetchResult = {
   ok: boolean;
-  fetched: number;          // hány UNSEEN levelet láttunk
+  totalUnseen: number;       // hány UNSEEN levél van összesen az INBOX-ban
+  fetched: number;           // hány UID-ot a futás során feldolgoztunk (max MAX_UIDS_PER_FETCH)
   inserted: number;          // hány új rekord lett a DB-ben
   skipped: number;           // hány UID-ot kihagytunk (már létezett)
   classificationFailures: number; // hány esetben az AI-hívás nem sikerült (fallback "other")
@@ -152,6 +160,7 @@ async function uidAlreadyStored(profileId: string, imapUid: string): Promise<boo
 export async function fetchAndStoreInboundEmails(): Promise<FetchResult> {
   const result: FetchResult = {
     ok: false,
+    totalUnseen: 0,
     fetched: 0,
     inserted: 0,
     skipped: 0,
@@ -196,7 +205,11 @@ export async function fetchAndStoreInboundEmails(): Promise<FetchResult> {
       // .search() Promise<false | number[]> — `false` jelenti, hogy a szerver
       // nem támogatja a query-t, vagy üres az eredmény.
       const searchResult = await client.search({ seen: false });
-      const uids: number[] = Array.isArray(searchResult) ? searchResult : [];
+      const allUids: number[] = Array.isArray(searchResult) ? searchResult : [];
+      result.totalUnseen = allUids.length;
+      // A legutolsó (legújabb) MAX_UIDS_PER_FETCH UID-t dolgozzuk fel — a Gmail
+      // UID-ok növekvő sorrendben, így .slice(-N) a legfrissebbek.
+      const uids = allUids.slice(-MAX_UIDS_PER_FETCH);
       result.fetched = uids.length;
       if (uids.length === 0) {
         result.ok = true;

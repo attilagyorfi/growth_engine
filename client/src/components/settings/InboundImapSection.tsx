@@ -38,8 +38,16 @@ export default function InboundImapSection() {
       if (result.inserted > 0) messages.push(`${result.inserted} új levél`);
       if (result.skipped > 0) messages.push(`${result.skipped} már megvolt`);
       if (result.classificationFailures > 0) messages.push(`${result.classificationFailures} AI-besorolási hiba`);
-      if (result.fetched === 0) {
+      const remaining = (result.totalUnseen ?? 0) - result.fetched;
+      if (result.totalUnseen === 0) {
         toast.success("Nincs új olvasatlan levél a Gmail INBOX-ban.");
+      } else if (remaining > 0) {
+        // Batch limit miatt egy futás max 50 levelet dolgoz fel — jelezzük, hogy
+        // van még hátra, és a következő "Fetch most" gomb hozza a maradékot.
+        toast.success(
+          `✅ Szinkron kész — ${messages.join(", ")}. Még ${remaining} levél vár — nyomd újra a "Fetch most" gombot a folytatáshoz.`,
+          { duration: 9000 }
+        );
       } else {
         toast.success(`✅ Szinkron kész — ${messages.join(", ")}.`, { duration: 6000 });
       }
