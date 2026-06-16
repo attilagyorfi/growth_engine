@@ -2,7 +2,7 @@
  * DailyTasksBlock – „Mi a dolgom ma?" AI-alapú napi teendők blokk
  * Kattintható feladatok: navigáció + auto-trigger (stratégia generálás, content studio, stb.)
  */
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import {
@@ -62,16 +62,28 @@ interface DailyTasksBlockProps {
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
+// Cache kulcs: profilonként + napra. Egy AI-hívás per nap per profil →
+// ne pörgesse a tokent minden oldalváltáskor.
+const cacheKey = (profileId: string) =>
+  `g2a:dailyTasks:${profileId}:${new Date().toISOString().slice(0, 10)}`;
+
 export default function DailyTasksBlock({ profileId }: DailyTasksBlockProps) {
   const [, navigate] = useLocation();
   const [result, setResult] = useState<DailyTasksResult | null>(null);
   const [generated, setGenerated] = useState(false);
   const [clickedIdx, setClickedIdx] = useState<number | null>(null);
+  // Auto-trigger csak egyszer per mount, ne ismételje újra a generálást.
+  const autoTriggered = useRef(false);
 
   const generateMutation = trpc.dailyTasks.generate.useMutation({
     onSuccess: (data: unknown) => {
-      setResult(data as DailyTasksResult);
+      const parsed = data as DailyTasksResult;
+      setResult(parsed);
       setGenerated(true);
+      // Napi cache: a következő mount-on kihagyjuk az AI hívást.
+      try {
+        if (profileId) localStorage.setItem(cacheKey(profileId), JSON.stringify(parsed));
+      } catch { /* localStorage tele/letiltva — nem fatális */ }
     },
     onError: (err) => {
       toast.error(err.message ?? "Hiba a napi teendők generálása során");
@@ -82,6 +94,26 @@ export default function DailyTasksBlock({ profileId }: DailyTasksBlockProps) {
     if (!profileId) return;
     generateMutation.mutate({ profileId });
   };
+
+  // Mount: 1) próbáljuk a napi cache-t, 2) ha nincs, automatikusan generáljunk
+  // — a "Mi a dolgom ma?" sose legyen üres az első belépéskor.
+  useEffect(() => {
+    if (!profileId || autoTriggered.current) return;
+    autoTriggered.current = true;
+    try {
+      const cached = localStorage.getItem(cacheKey(profileId));
+      if (cached) {
+        const parsed = JSON.parse(cached) as DailyTasksResult;
+        if (parsed?.tasks?.length) {
+          setResult(parsed);
+          setGenerated(true);
+          return;
+        }
+      }
+    } catch { /* corrupt cache → újragenerál */ }
+    generateMutation.mutate({ profileId });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profileId]);
 
   const handleTaskClick = (task: Task, idx: number) => {
     if (!task.link) return;
