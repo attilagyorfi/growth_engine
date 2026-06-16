@@ -1,0 +1,23 @@
+{
+  "name": "G2A Growth Engine",
+  "short_name": "G2A Engine",
+  "description": "AI-alapú marketing operációs rendszer KKV-knak — stratégia, tartalom, lead-ek egy helyen.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f0f1a",
+  "theme_color": "#2150CB",
+  "icons": [
+    {
+      "src": "/brand/mark-blue.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/mark-blue.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

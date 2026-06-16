@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import G2ALogo from "@/components/G2ALogo";
 import { useAppAuth } from "@/hooks/useAppAuth";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -157,13 +158,8 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
         {/* Logo */}
         <div className="px-4 py-4 border-b" style={{ borderColor: "var(--qa-border)" }}>
           <Link href="/iranyitopult">
-            <div className="flex items-center gap-2.5 cursor-pointer group">
-              <div
-                className="w-7 h-7 rounded-md flex items-center justify-center transition-opacity group-hover:opacity-80"
-                style={{ background: "var(--qa-accent)" }}
-              >
-                <Zap size={14} className="text-white" />
-              </div>
+            <div className="flex items-center gap-2.5 cursor-pointer group transition-opacity hover:opacity-80">
+              <G2ALogo variant="mark" size="sm" />
               <div>
                 <p className="text-sm font-bold leading-none" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>G2A</p>
                 <p className="text-xs leading-none mt-0.5" style={{ color: "var(--qa-fg4)" }}>Growth Engine</p>

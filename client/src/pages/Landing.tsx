@@ -11,9 +11,10 @@ import { motion, useInView } from "framer-motion";
 import { useRef, useState } from "react";
 import {
   BarChart3, Brain, Mail, Megaphone, Target, Users,
-  CheckCircle2, ArrowRight, Zap, Shield, TrendingUp,
+  CheckCircle2, ArrowRight, Shield, TrendingUp,
   Sparkles, Rocket, Building2, Crown,
 } from "lucide-react";
+import G2ALogo from "@/components/G2ALogo";
 
 // ─── Shared Plans (synced with Register.tsx) ──────────────────────────────────
 // Színkódok minden csomaghoz — vizuális különbségtétel a választás megkönnyítésére.
@@ -147,14 +148,7 @@ export default function Landing() {
       <nav className={`fixed top-0 left-0 right-0 z-50 border-b backdrop-blur-xl ${navBg}`}>
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           {/* Logo – clickable, goes to home */}
-          <Link href="/">
-            <div className="flex items-center gap-2 cursor-pointer group">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Zap className="w-4 h-4 text-white" />
-              </div>
-              <span className="font-bold text-lg tracking-tight text-white">G2A Growth Engine</span>
-            </div>
-          </Link>
+          <G2ALogo variant="lockup-h" size="md" asLink className="transition-transform hover:scale-105" />
 
           {/* Nav links */}
           <div className={`hidden md:flex items-center gap-8 text-sm ${subtext}`}>
@@ -629,14 +623,7 @@ export default function Landing() {
       {/* ─── Footer ──────────────────────────────────────────────────────────── */}
       <footer className="py-12 px-6 border-t border-white/5">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <Link href="/">
-            <div className="flex items-center gap-2 cursor-pointer">
-              <div className="w-6 h-6 rounded bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
-                <Zap className="w-3 h-3 text-white" />
-              </div>
-              <span className="font-semibold text-sm">G2A Growth Engine</span>
-            </div>
-          </Link>
+          <G2ALogo variant="lockup-h" size="sm" asLink />
           <div className="flex items-center gap-6 text-sm text-white/30">
             <span>© {new Date().getFullYear()} G2A Marketing</span>
             <span>·</span>

@@ -6,7 +6,8 @@
  */
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Zap, ArrowLeft, Shield } from "lucide-react";
+import { ArrowLeft, Shield } from "lucide-react";
+import G2ALogo from "@/components/G2ALogo";
 
 export default function Privacy() {
   return (
@@ -14,14 +15,7 @@ export default function Privacy() {
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50 border-b backdrop-blur-xl bg-[#0A0A0F]/90 border-white/5">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/">
-            <div className="flex items-center gap-2 cursor-pointer group">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Zap className="w-4 h-4 text-white" />
-              </div>
-              <span className="font-bold text-lg tracking-tight text-white">G2A Growth Engine</span>
-            </div>
-          </Link>
+          <G2ALogo variant="lockup-h" size="md" asLink className="transition-transform hover:scale-105" />
           <Link href="/">
             <Button variant="ghost" size="sm" className="text-white/70 hover:text-white gap-2">
               <ArrowLeft className="w-4 h-4" />

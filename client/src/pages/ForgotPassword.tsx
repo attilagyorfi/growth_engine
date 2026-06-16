@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Zap, Loader2, CheckCircle2, ArrowLeft } from "lucide-react";
+import { Loader2, CheckCircle2, ArrowLeft } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import G2ALogo from "@/components/G2ALogo";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -27,14 +28,9 @@ export default function ForgotPassword() {
   return (
     <div className="min-h-screen bg-[#0A0A0F] flex items-center justify-center p-6">
       <div className="w-full max-w-md">
-        <Link href="/">
-          <div className="flex items-center gap-2 mb-8 justify-center cursor-pointer">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
-              <Zap className="w-4 h-4 text-white" />
-            </div>
-            <span className="font-bold text-white text-lg">G2A Growth Engine</span>
-          </div>
-        </Link>
+        <div className="flex justify-center mb-8">
+          <G2ALogo variant="lockup-h" size="lg" asLink />
+        </div>
 
         <Card className="bg-white/[0.03] border-white/[0.08]">
           <CardHeader className="pb-4">
