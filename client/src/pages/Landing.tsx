@@ -14,7 +14,7 @@ import {
   CheckCircle2, ArrowRight, Shield, TrendingUp,
   Sparkles, Rocket, Building2, Crown,
 } from "lucide-react";
-import G2ALogo from "@/components/G2ALogo";
+import { G2ALogoOnDark } from "@/components/G2ALogo";
 
 // ─── Shared Plans (synced with Register.tsx) ──────────────────────────────────
 // Színkódok minden csomaghoz — vizuális különbségtétel a választás megkönnyítésére.
@@ -148,7 +148,7 @@ export default function Landing() {
       <nav className={`fixed top-0 left-0 right-0 z-50 border-b backdrop-blur-xl ${navBg}`}>
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           {/* Logo – clickable, goes to home */}
-          <G2ALogo variant="lockup-h" size="md" asLink className="transition-transform hover:scale-105" />
+          <G2ALogoOnDark size="md" asLink className="transition-transform hover:scale-105" />
 
           {/* Nav links */}
           <div className={`hidden md:flex items-center gap-8 text-sm ${subtext}`}>
@@ -623,7 +623,7 @@ export default function Landing() {
       {/* ─── Footer ──────────────────────────────────────────────────────────── */}
       <footer className="py-12 px-6 border-t border-white/5">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <G2ALogo variant="lockup-h" size="sm" asLink />
+          <G2ALogoOnDark size="sm" asLink />
           <div className="flex items-center gap-6 text-sm text-white/30">
             <span>© {new Date().getFullYear()} G2A Marketing</span>
             <span>·</span>

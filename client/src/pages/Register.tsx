@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Eye, EyeOff, CheckCircle2, ArrowLeft, Sparkles, Rocket, Building2, Check, Crown } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
-import G2ALogo from "@/components/G2ALogo";
+import { G2ALogoOnDark } from "@/components/G2ALogo";
 
 const PLANS = [
   {
@@ -174,7 +174,7 @@ export default function Register() {
     <div className="min-h-screen bg-[#0A0A0F] flex">
       {/* Left panel */}
       <div className="hidden lg:flex flex-col justify-between w-5/12 p-12 bg-gradient-to-br from-violet-900/30 to-indigo-900/20 border-r border-white/5">
-        <G2ALogo variant="lockup-h" size="lg" asLink />
+        <G2ALogoOnDark size="lg" asLink />
         <div>
           <h2 className="text-3xl font-bold text-white mb-6 leading-tight">
             Indítsd el a marketing<br />
@@ -202,7 +202,7 @@ export default function Register() {
         <div className="w-full max-w-2xl py-8">
           {/* Mobile logo */}
           <div className="mb-8 lg:hidden">
-            <G2ALogo variant="lockup-h" size="md" asLink />
+            <G2ALogoOnDark size="md" asLink />
           </div>
 
           {/* Step indicator */}

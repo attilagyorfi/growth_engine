@@ -7,7 +7,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Shield } from "lucide-react";
-import G2ALogo from "@/components/G2ALogo";
+import { G2ALogoOnDark } from "@/components/G2ALogo";
 
 export default function Privacy() {
   return (
@@ -15,7 +15,7 @@ export default function Privacy() {
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50 border-b backdrop-blur-xl bg-[#0A0A0F]/90 border-white/5">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <G2ALogo variant="lockup-h" size="md" asLink className="transition-transform hover:scale-105" />
+          <G2ALogoOnDark size="md" asLink className="transition-transform hover:scale-105" />
           <Link href="/">
             <Button variant="ghost" size="sm" className="text-white/70 hover:text-white gap-2">
               <ArrowLeft className="w-4 h-4" />
