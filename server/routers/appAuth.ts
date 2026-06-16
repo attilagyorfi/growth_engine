@@ -119,7 +119,8 @@ export const appAuthRouter = router({
           .catch(err => console.error("[appAuth.register] sendWelcomeEmail failed:", err));
       } else {
         // Értesítés az összes super_admin-nak az új regisztrációról.
-        const adminUrl = `${appUrl}/admin/users`;
+        // Magyar route: /admin/felhasznalok (App.tsx: AdminUsers component path).
+        const adminUrl = `${appUrl}/admin/felhasznalok`;
         for (const adminEmail of SUPER_ADMIN_EMAILS) {
           sendAdminApprovalNeededEmail({
             to: adminEmail,
