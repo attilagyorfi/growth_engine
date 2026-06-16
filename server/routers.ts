@@ -324,6 +324,21 @@ export const appRouter = router({
         await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, inbound.profileId, ctx.appUser.profileId);
         return updateInboundCategory(input.id, input.category);
       }),
+
+    // ─── IMAP fetch (super_admin) ────────────────────────────────────────────
+    // Az info@g2amarketing.hu (vagy konfigurált) Gmail IMAP-fiókba érkezett
+    // UNSEEN levelek azonnali lekérése, AI-kategorizálás + DB-be mentés.
+    // A #6b PR-ben jön egy 5 percenként futó automata cron — ez itt a
+    // manuális "Fetch most" gomb backend-je.
+    getImapStatus: superAdminProcedure.query(async () => {
+      const { getInboundImapStatus } = await import("./inboundFetcher");
+      return getInboundImapStatus();
+    }),
+
+    fetchNow: superAdminProcedure.mutation(async () => {
+      const { fetchAndStoreInboundEmails } = await import("./inboundFetcher");
+      return fetchAndStoreInboundEmails();
+    }),
   }),
 
   // ─── Content Posts ──────────────────────────────────────────────────────────

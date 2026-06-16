@@ -110,6 +110,9 @@ export const inboundEmails = mysqlTable("inbound_emails", {
   category: mysqlEnum("category", ["interested", "not_interested", "question", "meeting_request", "out_of_office", "unsubscribe", "other"]).default("other").notNull(),
   read: boolean("read").default(false).notNull(),
   relatedOutboundId: varchar("relatedOutboundId", { length: 64 }),
+  // IMAP-szinkronhoz: az INBOX-on belüli egyedi UID. NULL azoknál a rekordoknál,
+  // amiket manuálisan (test/seed) vagy nem-IMAP forrásból szúrtak be.
+  imapUid: varchar("imapUid", { length: 64 }),
   receivedAt: timestamp("receivedAt").defaultNow().notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
