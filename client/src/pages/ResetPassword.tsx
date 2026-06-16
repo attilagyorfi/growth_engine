@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, CheckCircle2, ArrowLeft, Eye, EyeOff, AlertTriangle } from "lucide-react";
 import { trpc } from "@/lib/trpc";
-import G2ALogo from "@/components/G2ALogo";
+import { G2ALogoOnDark } from "@/components/G2ALogo";
 
 export default function ResetPassword() {
   const [, setLocation] = useLocation();
@@ -57,7 +57,7 @@ export default function ResetPassword() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex justify-center mb-8">
-          <G2ALogo variant="lockup-h" size="lg" asLink />
+          <G2ALogoOnDark size="lg" asLink />
         </div>
 
         <Card className="bg-white/[0.03] border-white/[0.08]">

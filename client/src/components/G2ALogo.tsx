@@ -83,4 +83,52 @@ export function G2ALogo({
   return img;
 }
 
+/**
+ * G2ALogoOnDark — sötét háttérre szánt kombináció: a hivatalos jel + fehér
+ * szöveg (NEM a `lockup-horizontal-color` PNG, mert annak a típo szürke,
+ * sötét háttéren halvány/olvashatatlan). A jel önmagában jó kontrasztot ad
+ * (kék körrel), a "G2A Growth Engine" szöveget magunk renderelnék fehéren.
+ *
+ * Brand-konzisztencia: a hivatalos jel (mark-blue) ugyanaz, mint a sidebar-on
+ * és a favikonban.
+ */
+interface OnDarkProps {
+  size?: "sm" | "md" | "lg";
+  asLink?: boolean;
+  className?: string;
+}
+const ON_DARK_SIZES = {
+  sm: { mark: 24, text: "text-sm" },
+  md: { mark: 32, text: "text-lg" },
+  lg: { mark: 40, text: "text-xl" },
+} as const;
+
+export function G2ALogoOnDark({ size = "md", asLink = false, className = "" }: OnDarkProps) {
+  const cfg = ON_DARK_SIZES[size];
+  const inner = (
+    <div className={`flex items-center gap-2.5 ${className}`}>
+      <img
+        src="/brand/mark-blue.png"
+        alt="G2A Growth Engine"
+        style={{ height: cfg.mark, width: cfg.mark, display: "block" }}
+        decoding="async"
+      />
+      <span
+        className={`font-bold tracking-tight text-white ${cfg.text}`}
+        style={{ fontFamily: "Sora, sans-serif" }}
+      >
+        G2A Growth Engine
+      </span>
+    </div>
+  );
+  if (asLink) {
+    return (
+      <Link href="/" className="inline-block cursor-pointer transition-opacity hover:opacity-80">
+        {inner}
+      </Link>
+    );
+  }
+  return inner;
+}
+
 export default G2ALogo;
