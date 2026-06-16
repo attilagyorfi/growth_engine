@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Zap, Loader2, Eye, EyeOff, CheckCircle2, ArrowLeft, Sparkles, Rocket, Building2, Check, Crown } from "lucide-react";
+import { Loader2, Eye, EyeOff, CheckCircle2, ArrowLeft, Sparkles, Rocket, Building2, Check, Crown } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
+import G2ALogo from "@/components/G2ALogo";
 
 const PLANS = [
   {
@@ -173,14 +174,7 @@ export default function Register() {
     <div className="min-h-screen bg-[#0A0A0F] flex">
       {/* Left panel */}
       <div className="hidden lg:flex flex-col justify-between w-5/12 p-12 bg-gradient-to-br from-violet-900/30 to-indigo-900/20 border-r border-white/5">
-        <Link href="/">
-          <div className="flex items-center gap-2 cursor-pointer">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
-              <Zap className="w-4 h-4 text-white" />
-            </div>
-            <span className="font-bold text-white text-lg">G2A Growth Engine</span>
-          </div>
-        </Link>
+        <G2ALogo variant="lockup-h" size="lg" asLink />
         <div>
           <h2 className="text-3xl font-bold text-white mb-6 leading-tight">
             Indítsd el a marketing<br />
@@ -207,14 +201,9 @@ export default function Register() {
       <div className="flex-1 flex items-center justify-center p-6 overflow-y-auto">
         <div className="w-full max-w-2xl py-8">
           {/* Mobile logo */}
-          <Link href="/">
-            <div className="flex items-center gap-2 mb-8 lg:hidden cursor-pointer">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
-                <Zap className="w-4 h-4 text-white" />
-              </div>
-              <span className="font-bold text-white text-lg">G2A Growth Engine</span>
-            </div>
-          </Link>
+          <div className="mb-8 lg:hidden">
+            <G2ALogo variant="lockup-h" size="md" asLink />
+          </div>
 
           {/* Step indicator */}
           <div className="flex items-center gap-3 mb-8">
