@@ -84,16 +84,23 @@ export const appAuthRouter = router({
       // Save newsletter subscriber to leads (owner's CRM)
       if (input.newsletterConsent) {
         try {
-          const { getDb } = await import("../db");
-          const { leads } = await import("../../drizzle/schema");
+          const { getDb, getProfilesByAppUser } = await import("../db");
+          const { leads, appUsers } = await import("../../drizzle/schema");
           const { nanoid: nid } = await import("nanoid");
-          const { OWNER_OPEN_ID } = await import("../routers").then(() => process.env);
-          const db = await getDb();
-          // Find the owner's active profile to attach the lead
-          const { appUsers } = await import("../../drizzle/schema");
           const { eq: eqLead } = await import("drizzle-orm");
+          const db = await getDb();
+          // FIX: az `appUsers.profileId` a felhasználó "aktív" client-profile
+          // mutatója — a super_adminnál gyakran null, miközben már van saját
+          // clientProfile-ja. Fallback: lekérjük a tulajdonolt profilokat, és
+          // az elsőre csatoljuk a leadet. Anélkül egyetlen hírlevél-feliratkozó
+          // sem mentődik le (élesteszttel igazolva: a panel "0 fő"-t mutatott).
           const ownerRows = await db!.select().from(appUsers).where(eqLead(appUsers.role, "super_admin" as any)).limit(1);
-          const ownerProfileId = ownerRows[0]?.profileId;
+          const owner = ownerRows[0];
+          let ownerProfileId = owner?.profileId ?? null;
+          if (!ownerProfileId && owner?.id) {
+            const profs = await getProfilesByAppUser(owner.id);
+            ownerProfileId = profs[0]?.id ?? null;
+          }
           if (ownerProfileId) {
             await db!.insert(leads).values({
               id: nid(),
