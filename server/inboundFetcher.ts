@@ -279,20 +279,33 @@ export async function fetchAndStoreInboundEmails(): Promise<FetchResult> {
         return result;
       }
 
-      // FETCH iterator: egyetlen IMAP körkérés az új UID-ekre. A {uid: "..."}
-      // OBJEKTUM-formátum a kanonikus ImapFlow pattern — string UID range,
-      // mint "12,15,42-50". A korábbi `client.fetch(newUids, query, {uid:true})`
-      // forma ÜRES iterátort adott (3. arg opció valamiért nem volt hatékony).
-      // Live test bizonyította: az új formával a loop végre fut.
-      console.log(`[inboundFetcher] for-await START — newUids=${newUids.length}, first5=[${newUids.slice(0, 5).join(",")}]`);
+      // FETCHONE PER UID: az ImapFlow `client.fetch()` iterátora többféle range
+      // formátumban (number[], {uid: string}, {uid: number[]}) ÜRES iterátort
+      // adott vissza ezzel az IMAP-szerverrel (mail.g2amarketing.hu) — élesteszt
+      // során `iteratorEntries=0` minden alkalommal. A `fetchOne(uid, query, {uid:true})`
+      // egyenkénti hívások viszont az ImapFlow stabil API-pontja, és string UID
+      // paraméterrel a legtöbb IMAP szerveren megbízhatóan működik.
+      // Hátrány: 50 különálló IMAP körkérés (lassabb), de a deploy-onkénti
+      // 50 levél így is < 30s alatt lefut.
+      console.log(`[inboundFetcher] fetchOne loop START — newUids=${newUids.length}, first5=[${newUids.slice(0, 5).join(",")}]`);
       let processed = 0;
       result.iteratorEntries = 0;
-      for await (const msg of client.fetch(
-        { uid: newUids.join(",") },
-        { source: true, envelope: true },
-      )) {
+      for (const uidNum of newUids) {
+        const imapUid = String(uidNum);
+        let msg: { source?: Buffer; uid?: number } | false | null = null;
+        try {
+          msg = (await client.fetchOne(imapUid, { source: true, envelope: true }, { uid: true })) as any;
+        } catch (err) {
+          console.warn(`[inboundFetcher] UID ${imapUid} — fetchOne hiba:`, err);
+          result.skipped++;
+          continue;
+        }
+        if (!msg) {
+          result.skipped++;
+          console.warn(`[inboundFetcher] UID ${imapUid} — fetchOne null/false választ adott.`);
+          continue;
+        }
         result.iteratorEntries++;
-        const imapUid = String(msg.uid);
         const source = msg.source as Buffer | undefined;
         if (!source) {
           result.skipped++;
