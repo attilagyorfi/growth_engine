@@ -339,6 +339,39 @@ export const appRouter = router({
       const { fetchAndStoreInboundEmails } = await import("./inboundFetcher");
       return fetchAndStoreInboundEmails();
     }),
+
+    // Debug endpoint: minden clientProfile-hoz visszadja a hozzá tartozó
+    // inbound levelek számát. Segít kideríteni, MELYIK profile-ba kerültek
+    // a levelek, ha a UI 0-t mutat. Csak super_admin.
+    debugCounts: superAdminProcedure.query(async () => {
+      const { getAllProfiles } = await import("./db");
+      const { getDb } = await import("./db");
+      const { inboundEmails } = await import("../drizzle/schema");
+      const { sql } = await import("drizzle-orm");
+      const profs = await getAllProfiles();
+      const db = await getDb();
+      if (!db) return { profiles: [], totalInbound: 0 };
+      // 1 query az összes count-ra
+      const rows = await db
+        .select({ profileId: inboundEmails.profileId, count: sql<number>`count(*)`.as("count") })
+        .from(inboundEmails)
+        .groupBy(inboundEmails.profileId);
+      const countMap = new Map(rows.map(r => [r.profileId, Number(r.count)]));
+      const result = profs.map(p => ({
+        profileId: p.id,
+        name: p.name,
+        appUserId: p.appUserId,
+        inboundCount: countMap.get(p.id) ?? 0,
+      }));
+      // Add orphan profile IDs from inbound_emails that don't match any profile
+      for (const [pid, cnt] of countMap.entries()) {
+        if (!profs.find(p => p.id === pid)) {
+          result.push({ profileId: pid, name: "(orphan — nincs ilyen clientProfile)", appUserId: null, inboundCount: cnt });
+        }
+      }
+      const totalInbound = rows.reduce((s, r) => s + Number(r.count), 0);
+      return { profiles: result, totalInbound };
+    }),
   }),
 
   // ─── Content Posts ──────────────────────────────────────────────────────────
