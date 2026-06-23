@@ -19,7 +19,7 @@ import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
 import { nanoid } from "nanoid";
 import { ENV } from "./_core/env";
-import { getDb, getProfilesByAppUser } from "./db";
+import { getDb, getProfilesByAppUser, getAllProfiles } from "./db";
 import { inboundEmails, appUsers } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { invokeLLM } from "./_core/llm";
@@ -107,6 +107,15 @@ async function resolveInboundProfileId(): Promise<string | null> {
     const profs = await getProfilesByAppUser(owner.id);
     chosenId = profs[0]?.id ?? null;
     chosenSource = `getProfilesByAppUser[0] (${profs.length} profile találva)`;
+  }
+  // FINAL FALLBACK: a `clientProfiles.appUserId` gyakran null (régi onboarding
+  // wizard nem állította be), és emiatt a getProfilesByAppUser üres listát ad
+  // még akkor is, ha a UI láthatja a profilokat (profiles.list super_admin
+  // esetén getAllProfiles-t hív). Vegyük az első létező profile-t a DB-ből.
+  if (!chosenId) {
+    const allProfiles = await getAllProfiles();
+    chosenId = allProfiles[0]?.id ?? null;
+    chosenSource = `getAllProfiles[0] FALLBACK (${allProfiles.length} profile a DB-ben — clientProfiles.appUserId valószínűleg NULL)`;
   }
   console.log(
     `[inboundFetcher] resolveInboundProfileId: owner=${owner.email} (${owner.id}), ` +
