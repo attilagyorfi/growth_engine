@@ -364,11 +364,11 @@ export const appRouter = router({
         inboundCount: countMap.get(p.id) ?? 0,
       }));
       // Add orphan profile IDs from inbound_emails that don't match any profile
-      for (const [pid, cnt] of countMap.entries()) {
+      Array.from(countMap.entries()).forEach(([pid, cnt]) => {
         if (!profs.find(p => p.id === pid)) {
           result.push({ profileId: pid, name: "(orphan — nincs ilyen clientProfile)", appUserId: null, inboundCount: cnt });
         }
-      }
+      });
       const totalInbound = rows.reduce((s, r) => s + Number(r.count), 0);
       return { profiles: result, totalInbound };
     }),
