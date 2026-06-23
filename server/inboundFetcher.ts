@@ -38,6 +38,8 @@ export type FetchResult = {
   inserted: number;          // hány új rekord lett a DB-ben
   skipped: number;           // hány UID-ot kihagytunk (már létezett)
   classificationFailures: number; // hány esetben az AI-hívás nem sikerült (fallback "other")
+  insertErrors: number;       // hány esetben a DB insert hibázott (silently catch-elve)
+  firstInsertError?: string;  // az ELSŐ insert-hiba üzenete (debug: gyakran az imapUid oszlop hiányzik)
   error?: string;            // ha a teljes fetch elhasalt
   lastSyncedAt: string;      // ISO timestamp
 };
@@ -206,6 +208,7 @@ export async function fetchAndStoreInboundEmails(): Promise<FetchResult> {
     inserted: 0,
     skipped: 0,
     classificationFailures: 0,
+    insertErrors: 0,
     lastSyncedAt: new Date().toISOString(),
   };
 
@@ -323,7 +326,15 @@ export async function fetchAndStoreInboundEmails(): Promise<FetchResult> {
           });
           result.inserted++;
           console.log(`[inboundFetcher] + ${fromEmail} | ${HUMAN_LABELS[category]} | "${subject.slice(0, 60)}"`);
-        } catch (err) {
+        } catch (err: any) {
+          result.insertErrors++;
+          // Az ELSŐ insert hiba üzenetét felvisszük a result-ba — így a frontend
+          // toast / debug endpoint nélkül is látszik a Railway log helyett.
+          // Tipikus okok: MySQL "Unknown column" (migration nem futott),
+          // FK violation, túl hosszú field, charset hiba.
+          if (!result.firstInsertError) {
+            result.firstInsertError = `UID ${imapUid}: ${err?.message ?? String(err)}${err?.code ? ` (code: ${err.code})` : ""}${err?.sqlMessage ? ` SQL: ${err.sqlMessage}` : ""}`;
+          }
           console.error(`[inboundFetcher] insert failed for UID ${imapUid}:`, err);
           // ne dobjuk tovább — folytassuk a többi levéllel
         }
