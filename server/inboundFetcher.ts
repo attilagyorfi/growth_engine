@@ -67,20 +67,52 @@ const HUMAN_LABELS: Record<Category, string> = {
 
 /**
  * Visszaadja a clientProfile id-t, amihez a bejövő leveleket csatolni kell.
- * Konfigurálható az `INBOUND_PROFILE_ID` env-vel; ha nincs megadva, a
- * super_admin első profilját használjuk (ugyanaz a fallback, mint a
- * hírlevél-lead beszúrásnál — lásd appAuth.register).
+ * Konfigurálható az `INBOUND_PROFILE_ID` env-vel; ha nincs megadva, az
+ * INBOUND_IMAP_USER (jellemzően info@g2amarketing.hu) super_admin saját
+ * clientProfile-jait használjuk — a `getProfilesByAppUser` ELSŐ elemét.
+ *
+ * Élesteszt során kiderült: a korábbi "select any super_admin" approach
+ * más super_admin (régi/teszt) profile-jába írta a leveleket, így a UI
+ * a tényleges fiókban 0 bejövőt mutatott. Ezért most kifejezetten az
+ * IMAP-fiók email címéhez tartozó user-t keressük.
+ *
+ * Diagnostic log a végén minden esetben, hogy a Railway logból azonnal
+ * látszódjon, melyik profileId-t választottuk.
  */
 async function resolveInboundProfileId(): Promise<string | null> {
-  if (ENV.inboundProfileId) return ENV.inboundProfileId;
+  if (ENV.inboundProfileId) {
+    console.log(`[inboundFetcher] resolveInboundProfileId: INBOUND_PROFILE_ID env használva → ${ENV.inboundProfileId}`);
+    return ENV.inboundProfileId;
+  }
   const db = await getDb();
   if (!db) return null;
-  const owners = await db.select().from(appUsers).where(eq(appUsers.role, "super_admin" as any)).limit(1);
-  const owner = owners[0];
-  if (!owner?.id) return null;
-  if (owner.profileId) return owner.profileId;
-  const profs = await getProfilesByAppUser(owner.id);
-  return profs[0]?.id ?? null;
+  const imapEmail = ENV.inboundImapUser.toLowerCase();
+  // PRIMARY: az IMAP-fiók email címéhez tartozó user (ha létezik mint
+  // appUser, és super_admin). Ez a "helyes" — a levelek annak a fiók
+  // tulajdonosának CRM-jében jelennek meg, aki a Gmail/IMAP-ot is birtokolja.
+  let owner = (await db.select().from(appUsers).where(eq(appUsers.email, imapEmail)).limit(1))[0];
+  let selectionMode = `email-match (${imapEmail})`;
+  // FALLBACK: ha nincs ilyen appUser, BÁRMELYIK super_admin (régi viselkedés).
+  if (!owner) {
+    owner = (await db.select().from(appUsers).where(eq(appUsers.role, "super_admin" as any)).limit(1))[0];
+    selectionMode = `fallback first super_admin (no user found for ${imapEmail})`;
+  }
+  if (!owner?.id) {
+    console.warn(`[inboundFetcher] resolveInboundProfileId: NEM TALÁLT super_admin user-t — a levelek nem mentődnek.`);
+    return null;
+  }
+  let chosenId: string | null = owner.profileId ?? null;
+  let chosenSource = "appUsers.profileId (aktív profil)";
+  if (!chosenId) {
+    const profs = await getProfilesByAppUser(owner.id);
+    chosenId = profs[0]?.id ?? null;
+    chosenSource = `getProfilesByAppUser[0] (${profs.length} profile találva)`;
+  }
+  console.log(
+    `[inboundFetcher] resolveInboundProfileId: owner=${owner.email} (${owner.id}), ` +
+    `mode="${selectionMode}", profileId=${chosenId} (${chosenSource})`,
+  );
+  return chosenId;
 }
 
 /**
