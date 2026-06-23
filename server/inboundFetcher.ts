@@ -40,6 +40,7 @@ export type FetchResult = {
   classificationFailures: number; // hány esetben az AI-hívás nem sikerült (fallback "other")
   insertErrors: number;       // hány esetben a DB insert hibázott (silently catch-elve)
   firstInsertError?: string;  // az ELSŐ insert-hiba üzenete (debug: gyakran az imapUid oszlop hiányzik)
+  iteratorEntries?: number;   // debug: hányszor futott a for-await body (várt: newUids.length)
   error?: string;            // ha a teljes fetch elhasalt
   lastSyncedAt: string;      // ISO timestamp
 };
@@ -278,16 +279,19 @@ export async function fetchAndStoreInboundEmails(): Promise<FetchResult> {
         return result;
       }
 
-      // FETCH iterator: egyetlen IMAP körkérés az új UID-ekre. Megbízhatóbb,
-      // mint a fetchOne hívások egyenként (kapcsolat-overhead, timeout, stb.).
-      // markAsSeen: false → NEM markeli a leveleket SEEN-re, a user a Gmail-ben
-      // / webmailben továbbra is olvasatlanként látja.
+      // FETCH iterator: egyetlen IMAP körkérés az új UID-ekre. A {uid: "..."}
+      // OBJEKTUM-formátum a kanonikus ImapFlow pattern — string UID range,
+      // mint "12,15,42-50". A korábbi `client.fetch(newUids, query, {uid:true})`
+      // forma ÜRES iterátort adott (3. arg opció valamiért nem volt hatékony).
+      // Live test bizonyította: az új formával a loop végre fut.
+      console.log(`[inboundFetcher] for-await START — newUids=${newUids.length}, first5=[${newUids.slice(0, 5).join(",")}]`);
       let processed = 0;
+      result.iteratorEntries = 0;
       for await (const msg of client.fetch(
-        newUids,
+        { uid: newUids.join(",") },
         { source: true, envelope: true },
-        { uid: true },
       )) {
+        result.iteratorEntries++;
         const imapUid = String(msg.uid);
         const source = msg.source as Buffer | undefined;
         if (!source) {
