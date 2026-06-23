@@ -216,26 +216,48 @@ export async function fetchAndStoreInboundEmails(): Promise<FetchResult> {
         return result;
       }
 
+      // Először kiszűrjük az UID-eket, amik már a DB-ben vannak (egyenként db hit
+      // sokkal gyorsabb mintha minden levelet letöltenénk és aztán dobnánk el).
+      const newUids: number[] = [];
       for (const uid of uids) {
-        const imapUid = String(uid);
-        // Duplikáció-szűrés: ha már elmentettük, kihagyjuk.
-        if (await uidAlreadyStored(profileId, imapUid)) {
+        if (await uidAlreadyStored(profileId, String(uid))) {
           result.skipped++;
-          continue;
+        } else {
+          newUids.push(uid);
         }
+      }
 
-        // FETCH BODY + envelope
-        const fetchResult = await client.fetchOne(uid, { source: true, envelope: true }, { uid: true });
-        if (!fetchResult || !fetchResult.source) {
+      if (newUids.length === 0) {
+        // Minden UID már a DB-ben van — különös az első futáson, jelezzük.
+        console.log(`[inboundFetcher] Mind a ${result.skipped} UID már a DB-ben — nincs új fetch.`);
+        result.ok = true;
+        return result;
+      }
+
+      // FETCH iterator: egyetlen IMAP körkérés az új UID-ekre. Megbízhatóbb,
+      // mint a fetchOne hívások egyenként (kapcsolat-overhead, timeout, stb.).
+      // markAsSeen: false → NEM markeli a leveleket SEEN-re, a user a Gmail-ben
+      // / webmailben továbbra is olvasatlanként látja.
+      let processed = 0;
+      for await (const msg of client.fetch(
+        newUids,
+        { source: true, envelope: true },
+        { uid: true },
+      )) {
+        const imapUid = String(msg.uid);
+        const source = msg.source as Buffer | undefined;
+        if (!source) {
           result.skipped++;
+          console.warn(`[inboundFetcher] UID ${imapUid} — nincs source a fetch eredményben.`);
           continue;
         }
-        const parsed = await simpleParser(fetchResult.source as Buffer);
+        const parsed = await simpleParser(source);
         const fromAddr = parsed.from?.value?.[0];
         const fromEmail = fromAddr?.address ?? "(ismeretlen)";
         const fromName = fromAddr?.name ?? null;
         const subject = (parsed.subject ?? "(tárgy nélkül)").slice(0, 500);
         const bodyText = (parsed.text ?? parsed.html ?? "").toString();
+        processed++;
 
         // AI klasszifikáció — fallback "other" ha az AI hibázik.
         let category: Category = "other";
@@ -266,6 +288,11 @@ export async function fetchAndStoreInboundEmails(): Promise<FetchResult> {
         }
       }
 
+      console.log(
+        `[inboundFetcher] Szinkron kész — totalUnseen=${result.totalUnseen}, batch=${result.fetched}, ` +
+        `már megvolt=${result.skipped - (newUids.length - processed)}, fetch-elt=${processed}, ` +
+        `beszúrva=${result.inserted}, AI-hibák=${result.classificationFailures}`,
+      );
       result.ok = true;
       return result;
     } finally {
