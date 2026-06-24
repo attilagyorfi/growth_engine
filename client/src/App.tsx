@@ -21,10 +21,8 @@ const Privacy = lazy(() => import("./pages/Privacy"));
 
 // App pages (protected)
 const Dashboard = lazy(() => import("./pages/Dashboard"));
-const Clients = lazy(() => import("./pages/Clients"));
 const Strategy = lazy(() => import("./pages/Strategy"));
 const ContentStudio = lazy(() => import("./pages/ContentStudio"));
-const SalesOps = lazy(() => import("./pages/SalesOps"));
 const Analytics = lazy(() => import("./pages/Analytics"));
 const Campaigns = lazy(() => import("./pages/Campaigns"));
 const Settings = lazy(() => import("./pages/Settings"));
@@ -39,6 +37,7 @@ const VideoStudio = lazy(() => import("./pages/VideoStudio"));
 const AdminUsers = lazy(() => import("./pages/AdminUsers"));
 const ProjectsPage = lazy(() => import("./pages/ProjectsPage"));
 const ProjectDashboard = lazy(() => import("./pages/ProjectDashboard"));
+const Newsletter = lazy(() => import("./pages/Newsletter"));
 
 // ─── Route Guards ─────────────────────────────────────────────────────────────
 
@@ -101,11 +100,8 @@ function Router() {
 
       {/* App routes (require login + onboarding) */}
       <Route path="/iranyitopult" component={() => <AppRoute component={Dashboard} />} />
-      <Route path="/ugyfelek" component={() => <AdminRoute component={Clients} />} />
-      <Route path="/ugyfelek/uj" component={() => <AdminRoute component={Clients} />} />
       <Route path="/strategia" component={() => <AppRoute component={Strategy} />} />
       <Route path="/tartalom-studio" component={() => <AppRoute component={ContentStudio} />} />
-      <Route path="/ertekesites" component={() => <AppRoute component={SalesOps} />} />
       <Route path="/analitika" component={() => <AppRoute component={Analytics} />} />
       <Route path="/kampanyok" component={() => <AppRoute component={Campaigns} />} />
       <Route path="/beallitasok" component={() => <AppRoute component={Settings} />} />
@@ -117,6 +113,7 @@ function Router() {
 
       {/* Admin routes */}
       <Route path="/admin/felhasznalok" component={() => <AdminRoute component={AdminUsers} />} />
+      <Route path="/hirlevel" component={() => <AdminRoute component={Newsletter} />} />
       <Route path="/projektek" component={() => <AdminRoute component={ProjectsPage} />} />
       {/* Project detail & project-specific onboarding (super_admin only) */}
       <Route path="/projektek/:id/onboarding" component={() => <AdminRoute component={OnboardingWizard} />} />
@@ -125,16 +122,20 @@ function Router() {
       {/* Legacy English URL redirects */}
       <Route path="/login" component={() => <Redirect to="/bejelentkezes" />} />
       <Route path="/dashboard" component={() => <Redirect to="/iranyitopult" />} />
-      <Route path="/clients" component={() => <Redirect to="/ugyfelek" />} />
       <Route path="/strategy" component={() => <Redirect to="/strategia" />} />
       <Route path="/content-studio" component={() => <Redirect to="/tartalom-studio" />} />
-      <Route path="/sales-ops" component={() => <Redirect to="/ertekesites" />} />
       <Route path="/analytics" component={() => <Redirect to="/analitika" />} />
       <Route path="/campaigns" component={() => <Redirect to="/kampanyok" />} />
       <Route path="/settings" component={() => <Redirect to="/beallitasok" />} />
-      <Route path="/leads" component={() => <Redirect to="/ertekesites" />} />
-      <Route path="/outbound" component={() => <Redirect to="/ertekesites" />} />
-      <Route path="/inbound" component={() => <Redirect to="/ertekesites" />} />
+      {/* Eltávolított modulok — minden hivatkozás a Vezérlőpultra menjen */}
+      <Route path="/ugyfelek" component={() => <Redirect to="/iranyitopult" />} />
+      <Route path="/ugyfelek/uj" component={() => <Redirect to="/iranyitopult" />} />
+      <Route path="/ertekesites" component={() => <Redirect to="/iranyitopult" />} />
+      <Route path="/clients" component={() => <Redirect to="/iranyitopult" />} />
+      <Route path="/sales-ops" component={() => <Redirect to="/iranyitopult" />} />
+      <Route path="/leads" component={() => <Redirect to="/iranyitopult" />} />
+      <Route path="/outbound" component={() => <Redirect to="/iranyitopult" />} />
+      <Route path="/inbound" component={() => <Redirect to="/iranyitopult" />} />
       <Route path="/content" component={() => <Redirect to="/tartalom-studio" />} />
       <Route path="/content-creator" component={() => <Redirect to="/tartalom-studio" />} />
       <Route path="/social-media" component={() => <Redirect to="/tartalom-studio" />} />

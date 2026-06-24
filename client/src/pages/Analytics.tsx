@@ -117,12 +117,11 @@ export default function Analytics() {
     { enabled: !!activeProfile.id }
   );
 
-  const { data: outboundEmails = [], isLoading: outboundLoading } = trpc.outbound.list.useQuery(
-    { profileId: activeProfile.id },
-    { enabled: !!activeProfile.id }
-  );
-
-  const isLoading = leadsLoading || contentLoading || outboundLoading;
+  // Az értékesítés-modul (outbound) törölve — minden email-statisztika
+  // alul üres helyettesítőre lett cserélve, az "Email Analytics" kártya
+  // pedig el lett távolítva.
+  const outboundEmails: any[] = [];
+  const isLoading = leadsLoading || contentLoading;
   const hasAnyData = leads.length > 0 || contentItems.length > 0;
 
   // ─── Derived analytics ────────────────────────────────────────────────────────
@@ -163,10 +162,7 @@ export default function Analytics() {
   const publishedContent = contentItems.filter(c => c.status === "published").length;
   const scheduledContent = contentItems.filter(c => c.status === "scheduled").length;
 
-  // Email stats
-  const sentEmails = (outboundEmails as any[]).filter(e => e.status === "sent" || e.status === "opened" || e.status === "replied").length;
-  const repliedEmails = (outboundEmails as any[]).filter(e => e.status === "replied").length;
-  const emailReplyRate = sentEmails > 0 ? Math.round((repliedEmails / sentEmails) * 100) : 0;
+  // Email stats változók kivéve — kapcsolódó UI kártyák alul eltávolítva.
 
   // Monthly trend: last 6 months
   const monthlyTrend = useMemo(() => {
@@ -253,7 +249,7 @@ export default function Analytics() {
             { icon: Users, label: "Összes lead", value: String(leads.length), sub: leads.length > 0 ? `${wonLeads} megnyert` : "Még nincs lead", color: blue },
             { icon: Target, label: "Konverzió", value: `${conversionRate}%`, sub: leads.length > 0 ? "Lead → Ügyfél" : "Nincs elég adat", color: green },
             { icon: Layers, label: "Tartalmak", value: String(contentItems.length), sub: publishedContent > 0 ? `${publishedContent} publikált` : "Még nincs tartalom", color: amber },
-            { icon: Mail, label: "Küldött emailek", value: String(sentEmails), sub: sentEmails > 0 ? `${emailReplyRate}% válaszarány` : "Még nincs küldött email", color: red },
+            { icon: Users, label: "Hírlevél feliratkozók", value: String(leads.length), sub: leads.length > 0 ? "regisztráltak" : "Még nincs feliratkozó", color: red },
           ].map((card, i) => (
             <motion.div key={i} variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4 } } }}>
               <StatCard icon={card.icon} label={card.label} value={card.value} sub={card.sub} color={card.color} />
@@ -463,41 +459,7 @@ export default function Analytics() {
           </div>
         )}
 
-        {/* Email Analytics */}
-        {(isLoading || (outboundEmails as any[]).length > 0) && (
-          <div className="rounded-2xl p-5" style={{ background: cardBg, border }}>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${red.replace(")", " / 15%)")}`, color: red }}>
-                <Mail size={15} />
-              </div>
-              <div>
-                <p className="text-sm font-bold" style={{ fontFamily: "Sora, sans-serif", color: textPrimary }}>Email Kampány</p>
-                <p className="text-xs" style={{ color: textMuted }}>Kimenő emailek teljesítménye</p>
-              </div>
-            </div>
-            {isLoading ? (
-              <div className="h-24 flex items-center justify-center">
-                <div className="w-6 h-6 border-2 rounded-full animate-spin" style={{ borderColor: red, borderTopColor: "transparent" }} />
-              </div>
-            ) : (outboundEmails as any[]).length === 0 ? (
-              <p className="text-sm text-center py-6" style={{ color: textMuted }}>Még nincs kimenő email. Küldj emaileket az Értékesítés menüpontban.</p>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {[
-                  { label: "Összes piszkozat", value: (outboundEmails as any[]).filter(e => e.status === "draft").length, color: textMuted },
-                  { label: "Elküldött", value: sentEmails, color: green },
-                  { label: "Válaszolt", value: repliedEmails, color: blue },
-                  { label: "Válaszarány", value: `${emailReplyRate}%`, color: amber },
-                ].map(({ label, value, color }) => (
-                  <div key={label} className="rounded-xl p-3 text-center" style={{ background: "var(--qa-surface2)" }}>
-                    <p className="text-xl font-bold" style={{ color }}>{value}</p>
-                    <p className="text-xs mt-1" style={{ color: textMuted }}>{label}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+        {/* Email Analytics kártya eltávolítva — értékesítés-modul nélkül. */}
 
         {/* Analytics hero image – shown when no data yet */}
         {!isLoading && !hasAnyData && (
@@ -516,7 +478,7 @@ export default function Analytics() {
             {[
               { icon: Zap, title: "Töltsd ki az onboardingot", desc: "A Company Intelligence profil az analitika alapja.", href: "/onboarding", color: blue },
               { icon: Layers, title: "Hozz létre tartalmakat", desc: "A Tartalom Stúdióban tervezett tartalmak megjelennek itt.", href: "/tartalom-studio", color: amber },
-              { icon: Users, title: "Adj hozzá leadeket", desc: "Az Értékesítés menüpontban rögzített leadek konverziója itt látható.", href: "/ertekesites", color: green },
+              { icon: BarChart, title: "Tervezd a stratégiát", desc: "A heti AI insight-ok és Quarterly Plan a Stratégiában érhetők el.", href: "/strategia", color: green },
             ].map(({ icon: Icon, title, desc, href, color }) => (
               <button
                 key={href}

@@ -13,8 +13,6 @@ import {
   Send,
 } from "lucide-react";
 import AiMemorySection from "@/components/settings/AiMemorySection";
-import NewsletterSection from "@/components/settings/NewsletterSection";
-import InboundImapSection from "@/components/settings/InboundImapSection";
 import { useSubscription, PLAN_FEATURES, type SubscriptionPlan } from "@/hooks/useSubscription";
 import BillingPlanCards from "@/components/BillingPlanCards";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -24,7 +22,7 @@ import { useAppAuth } from "@/hooks/useAppAuth";
 import { useTour } from "@/hooks/useTour";
 import { toast } from "sonner";
 
-type Tab = "brand" | "integrations" | "team" | "audit" | "admin" | "fiok" | "billing" | "ai-memory" | "hirlevel";
+type Tab = "brand" | "integrations" | "team" | "audit" | "admin" | "fiok" | "billing" | "ai-memory";
 
 const BASE_TABS: { id: Tab; label: string; icon: React.ReactNode; badge?: string }[] = [
   { id: "fiok", label: "Fiók", icon: <Users size={14} /> },
@@ -35,10 +33,7 @@ const BASE_TABS: { id: Tab; label: string; icon: React.ReactNode; badge?: string
   { id: "team", label: "Csapat", icon: <Users size={14} />, badge: "Hamarosan" },
   { id: "audit", label: "Audit Log", icon: <ClipboardList size={14} /> },
 ];
-// Super_admin-only tab: hírlevél küldés (a kibocsátó info@g2amarketing.hu),
-// ugyanúgy mint az Admin tab.
-const NEWSLETTER_TAB: { id: Tab; label: string; icon: React.ReactNode; badge?: string } =
-  { id: "hirlevel", label: "Hírlevél", icon: <Send size={14} /> };
+// A Hírlevél tab eltávolítva — átkerült a sidebar fő menübe (/hirlevel route).
 const ADMIN_TAB: { id: Tab; label: string; icon: React.ReactNode; badge?: string } =
   { id: "admin", label: "Admin", icon: <Settings2 size={14} /> };
 
@@ -55,7 +50,7 @@ export default function Settings() {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get("tab") as Tab | null;
-      const validTabs: Tab[] = ["fiok", "billing", "brand", "integrations", "ai-memory", "team", "audit", "admin", "hirlevel"];
+      const validTabs: Tab[] = ["fiok", "billing", "brand", "integrations", "ai-memory", "team", "audit", "admin"];
       if (tab && validTabs.includes(tab)) return tab;
     }
     return "brand";
@@ -208,7 +203,7 @@ export default function Settings() {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 p-1 rounded-xl" style={{ background: "var(--qa-surface)" }}>
-        {[...BASE_TABS, ...(isSuperAdmin ? [NEWSLETTER_TAB, ADMIN_TAB] : [])].map(tab => (
+        {[...BASE_TABS, ...(isSuperAdmin ? [ADMIN_TAB] : [])].map(tab => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)}
             className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-sm font-medium transition-all"
             style={{ background: activeTab === tab.id ? "var(--qa-accent)" : "transparent", color: activeTab === tab.id ? "white" : "var(--qa-fg3)" }}
@@ -666,16 +661,12 @@ export default function Settings() {
         </div>
       )}
 
-      {/* Hírlevél Panel – super_admin only */}
-      {activeTab === "hirlevel" && isSuperAdmin && (
-        <NewsletterSection />
-      )}
+      {/* Hírlevél tab eltávolítva — most a /hirlevel route az új helye. */}
 
       {/* Admin Panel – super_admin only */}
       {activeTab === "admin" && isSuperAdmin && (
         <div className="space-y-4">
-          {/* Inbound IMAP szinkron (super_admin) */}
-          <InboundImapSection />
+          {/* Inbound IMAP panel eltávolítva — az értékesítés/inbound modul teljesen kivéve. */}
 
           {/* API Config Status */}
           <div className="rounded-xl border p-5" style={{ background: cardBg, borderColor: border }}>
