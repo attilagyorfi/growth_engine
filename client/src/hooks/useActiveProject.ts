@@ -72,14 +72,17 @@ export function useActiveProject() {
       setActiveProfileId(project.profileId);
     }
 
-    // Invalidate all module caches so they reload with new profileId
-    utils.strategyVersions.list.invalidate();
-    utils.strategyVersions.getActive.invalidate();
-    utils.content.list.invalidate();
-    utils.leads.list.invalidate();
-    utils.outbound.list.invalidate();
-    utils.intelligence.get.invalidate();
-  }, [projects, setActiveMutation, setActiveProfileId, utils]);
+    // A user explicit kérése: a projektváltás AZONNAL hasson minden modulra.
+    // A részleges query-invalidálás (egyenként hívni minden trpc.utils-t) sok
+    // race-conditiont okoz — gyakran a Dashboard, Stratégia, Tartalom Studio
+    // még a régi profileId-vel renderel egy frame-ig. A teljes oldal-újratöltés
+    // garantáltan tiszta állapotból indít minden komponenst, és gyors (~300ms
+    // a Vite static asset-cache miatt).
+    if (typeof window !== "undefined") {
+      // Kis késleltetés hogy a setActive mutation kérése a fly-on legyen
+      setTimeout(() => window.location.reload(), 50);
+    }
+  }, [projects, setActiveMutation, setActiveProfileId]);
 
   const activeProject = projects.find((p) => p.id === activeProjectId)
     ?? projects.find((p) => p.isActive)

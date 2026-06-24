@@ -25,21 +25,6 @@ export const ENV = {
   // ─── Egyéb ─────────────────────────────────────────────────────────────
   resendApiKey: process.env.RESEND_API_KEY ?? "",
   emailFrom: process.env.EMAIL_FROM ?? "",
-  // ─── Bejövő email (IMAP) ───────────────────────────────────────────────
-  // Az info@g2amarketing.hu Gmail fiókhoz IMAP-pal kapcsolódunk, az új
-  // (UNSEEN) leveleket lefetcheljük, AI-vel kategorizáljuk, és az
-  // `inbound_emails` táblába mentjük. Gmail-hez APP-PASSWORD kell (NEM a
-  // sima Gmail jelszó!), a 2FA-val védett fiókokon:
-  // https://myaccount.google.com/apppasswords
-  // FONTOS: trim() — a Railway env mezőkbe gyakran beragad kezdő/végi
-  // whitespace, tab vagy újsor karakter (pl. copy-paste a webmail beállítási
-  // panelből). Ez DNS lookup hibát ad ("Az IMAP host nem található: \tmail...")
-  // vagy auth fail-t. A trim mind a 4 értékre védelmet ad.
-  inboundImapHost: (process.env.INBOUND_IMAP_HOST ?? "imap.gmail.com").trim(),
-  inboundImapPort: parseInt((process.env.INBOUND_IMAP_PORT ?? "993").trim(), 10),
-  inboundImapUser: (process.env.INBOUND_IMAP_USER ?? "").trim(),
-  inboundImapPassword: (process.env.INBOUND_IMAP_PASSWORD ?? "").trim(),
-  // Melyik clientProfile-hoz csatoljuk a bejövő leveleket. Ha üres, a
-  // super_admin első profilját használjuk (lásd inboundFetcher.ts fallback).
-  inboundProfileId: (process.env.INBOUND_PROFILE_ID ?? "").trim(),
+  // INBOUND_IMAP_* + INBOUND_PROFILE_ID env-ek eltávolítva — az
+  // értékesítés-modul (Gmail IMAP fetcher) törlésekor (2026-06).
 };

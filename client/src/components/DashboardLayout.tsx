@@ -23,7 +23,10 @@ import { useTour } from "@/hooks/useTour";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 
-const publicNavItems = [
+// Nav item: comingSoon=true → disabled, badge "Hamarosan", nem klikkelhető
+type NavItem = { href: string; label: string; icon: typeof LayoutDashboard; comingSoon?: boolean };
+
+const publicNavItems: NavItem[] = [
   { href: "/iranyitopult", label: "Irányítópult", icon: LayoutDashboard },
   { href: "/intelligencia", label: "Intelligencia", icon: Brain },
   { href: "/strategia", label: "Stratégia", icon: BarChart3 },
@@ -31,22 +34,21 @@ const publicNavItems = [
   { href: "/kampanyok", label: "Kampányok", icon: Megaphone },
   { href: "/analitika", label: "Analitika", icon: TrendingUp },
   { href: "/seo", label: "SEO Audit", icon: SearchCheck },
-  { href: "/video-studio", label: "Videókészítő", icon: Video },
+  { href: "/video-studio", label: "Videókészítő", icon: Video, comingSoon: true },
   { href: "/beallitasok", label: "Beállítások", icon: Settings },
 ];
 
-const adminNavItems = [
+const adminNavItems: NavItem[] = [
   { href: "/iranyitopult", label: "Irányítópult", icon: LayoutDashboard },
-  { href: "/ugyfelek", label: "Ügyfelek", icon: Users },
   { href: "/projektek", label: "Projektek", icon: FolderOpen },
   { href: "/intelligencia", label: "Intelligencia", icon: Brain },
   { href: "/strategia", label: "Stratégia", icon: BarChart3 },
   { href: "/tartalom-studio", label: "Tartalom Studio", icon: Layers },
-  { href: "/ertekesites", label: "Értékesítés", icon: Mail },
   { href: "/kampanyok", label: "Kampányok", icon: Megaphone },
   { href: "/analitika", label: "Analitika", icon: TrendingUp },
   { href: "/seo", label: "SEO Audit", icon: SearchCheck },
-  { href: "/video-studio", label: "Videókészítő", icon: Video },
+  { href: "/video-studio", label: "Videókészítő", icon: Video, comingSoon: true },
+  { href: "/hirlevel", label: "Hírlevél", icon: Mail },
   { href: "/beallitasok", label: "Beállítások", icon: Settings },
 ];
 
@@ -256,8 +258,36 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
 
         {/* Navigation */}
         <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
-          {navItems.map(({ href, label, icon: Icon }) => {
+          {navItems.map(({ href, label, icon: Icon, comingSoon }) => {
             const isActive = location === href || (href !== "/iranyitopult" && location.startsWith(href));
+            // comingSoon → nem klikkelhető, "Hamarosan" badge a label mellett.
+            // A flag-et a navItems-ben jelöljük (lásd publicNavItems/adminNavItems fent).
+            if (comingSoon) {
+              return (
+                <Tooltip key={href} delayDuration={400}>
+                  <TooltipTrigger asChild>
+                    <div
+                      className="nav-item cursor-not-allowed opacity-50 select-none"
+                      style={{ pointerEvents: "none" }}
+                      aria-disabled="true"
+                    >
+                      <Icon size={15} />
+                      <span>{label}</span>
+                      <span
+                        className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-full uppercase tracking-wider"
+                        style={{
+                          background: "oklch(0.75 0.18 75 / 18%)",
+                          color: "oklch(0.85 0.16 75)",
+                        }}
+                      >
+                        Hamarosan
+                      </span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="text-xs">{label} — hamarosan</TooltipContent>
+                </Tooltip>
+              );
+            }
             return (
               <Tooltip key={href} delayDuration={400}>
                 <TooltipTrigger asChild>

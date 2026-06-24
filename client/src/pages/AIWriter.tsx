@@ -7,7 +7,6 @@ import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { trpc } from "@/lib/trpc";
 import { useProfile } from "@/contexts/ProfileContext";
-import { useData } from "@/contexts/DataContext";
 import { toast } from "sonner";
 import {
   Wand2, Mail, Share2, FileText, Loader2, Copy, Check,
@@ -44,7 +43,8 @@ const CONTENT_TYPES: { value: ContentType; label: string; icon: React.ElementTyp
 
 export default function AIWriter() {
   const { activeProfile } = useProfile();
-  const { addOutbound } = useData();
+  // Az értékesítés-modul (addOutbound) eltávolítva — a generált tartalmat
+  // a Másolás gombbal viszi át a felhasználó a saját email-szolgáltatójába.
 
   // Form state
   const [contentType, setContentType] = useState<ContentType>("cold_email");
@@ -115,18 +115,9 @@ export default function AIWriter() {
     toast.success("Vágólapra másolva!");
   };
 
-  const handleSaveToOutbound = () => {
-    if (!generated || !isEmail) return;
-    addOutbound({
-      toName: recipientName || "Ismeretlen",
-      company: recipientCompany || "Ismeretlen cég",
-      to: "",
-      subject: generated.subject ?? topic,
-      body: isEditing ? editedContent : generated.content,
-      status: "draft",
-    });
-    toast.success("Email mentve az Outbound listába!");
-  };
+  // handleSaveToOutbound eltávolítva — az értékesítés-modul kivételével
+  // nincs hova menteni. A user a "Vágólapra" gombbal viszi át a tartalmat
+  // a saját email-szolgáltatójába.
 
   const displayContent = isEditing ? editedContent : (generated?.content ?? "");
 
@@ -354,16 +345,7 @@ export default function AIWriter() {
                       {copied ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
                       Másolás
                     </button>
-                    {isEmail && (
-                      <button
-                        onClick={handleSaveToOutbound}
-                        className="flex-1 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-all hover:opacity-90"
-                        style={{ background: "oklch(0.25 0.08 255)", color: "oklch(0.75 0.15 255)", border: "1px solid oklch(0.35 0.1 255)" }}
-                      >
-                        <Save size={14} />
-                        Mentés Outbound-ba
-                      </button>
-                    )}
+                    {/* Mentés Outbound-ba gomb eltávolítva — értékesítés-modul nélkül a Másolás gombbal vihető át a tartalom a saját email-szolgáltatóba. */}
                     <button
                       onClick={handleGenerate}
                       disabled={isGenerating}

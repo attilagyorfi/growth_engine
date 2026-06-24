@@ -24,7 +24,9 @@ import DailyTasksBlock from "@/components/DailyTasksBlock";
 
 export default function Dashboard() {
   const [, navigate] = useLocation();
-  const { outbound, leads, inbound, updateOutbound } = useData();
+  const { leads } = useData();
+  // Az értékesítés-modul (outbound/inbound emailek) törölve — minden
+  // ide hivatkozó számolás 0/üres lett alább.
   const { activeProfile } = useProfile();
   const { isSuperAdmin } = useAppAuth();
   const { activeProject } = useActiveProject();
@@ -50,16 +52,13 @@ export default function Dashboard() {
   });
 
   // --- Needs Approval ---
-  const pendingEmails = outbound.filter(e => e.status === "draft");
   const pendingContent = contentItems.filter((c: any) => c.status === "pending_approval");
-  const totalApproval = pendingEmails.length + pendingContent.length;
+  const totalApproval = pendingContent.length;
 
   // --- This Week's Priorities ---
   const weekPriorities = [
-    { id: "p1", label: "Heti outbound kampány indítása", type: "email", count: pendingEmails.length, href: "/sales-ops" },
-    { id: "p2", label: "Tartalom jóváhagyás", type: "content", count: pendingContent.length, href: "/content-studio" },
-    { id: "p3", label: "Stratégia heti fókusz frissítése", type: "strategy", count: 1, href: "/strategy" },
-    { id: "p4", label: "Új leadek minősítése", type: "leads", count: leads.filter(l => l.status === "new" || l.status === "researched").length, href: "/sales-ops" },
+    { id: "p2", label: "Tartalom jóváhagyás", type: "content", count: pendingContent.length, href: "/tartalom-studio" },
+    { id: "p3", label: "Stratégia heti fókusz frissítése", type: "strategy", count: 1, href: "/strategia" },
   ].filter(p => p.count > 0);
 
   // --- Scheduled Next 7 Days ---
@@ -75,24 +74,17 @@ export default function Dashboard() {
     return d >= now && d <= in7Days;
   }).slice(0, 5);
 
-  // --- At-risk Items ---
-  const atRiskLeads = leads.filter(l => l.status === "sent").slice(0, 3);
-  const unansweredInbound = inbound.filter(e => e.category === "interested" && !e.read).slice(0, 3);
+  // At-risk Items kártya kikerült — email-alapú modul nélkül üres lenne.
 
   // --- KPI Summary ---
   const aiGeneratedCount = contentItems.filter((c: any) => c.generatedByAi || c.aiGenerated).length;
   const activeCampaigns = (campaigns as any[]).filter(c => c.status === "active" || c.status === "draft").length;
   const kpis = [
-    { label: "Aktív Leadek", value: leads.filter(l => l.status !== "closed_won" && l.status !== "closed_lost").length, icon: Users, color: "var(--qa-accent)" },
+    { label: "Hírlevél feliratkozók", value: leads.length, icon: Users, color: "var(--qa-accent)" },
     { label: "AI Tartalmak", value: contentItems.length, icon: Sparkles, color: "var(--qa-success)" },
     { label: "Aktív Kampányok", value: activeCampaigns, icon: Zap, color: "var(--qa-warning)" },
     { label: "AI Kreditek", value: aiUsage ? (aiUsage.limit === -1 ? "∞" : `${aiUsage.used}/${aiUsage.limit}`) : "–", icon: Brain, color: "var(--qa-accent-purple)" },
   ];
-
-  const handleApproveEmail = async (id: string) => {
-    await updateOutbound(id, { status: "approved" });
-    toast.success("Email jóváhagyva");
-  };
 
   const handleApproveContent = async (id: string) => {
     await updateContentMutation.mutateAsync({ id, status: "approved" });
@@ -157,18 +149,7 @@ export default function Dashboard() {
                   </div>
                 </div>
               </div>
-              {pendingEmails.slice(0, 2).map(e => (
-                <div key={e.id} className="flex items-center justify-between py-2 border-t" style={{ borderColor: "var(--qa-border)" }}>
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Mail size={13} style={{ color: "var(--qa-accent)", flexShrink: 0 }} />
-                    <p className="text-xs truncate" style={{ color: "var(--qa-fg2)" }}>{e.subject}</p>
-                  </div>
-                  <button onClick={() => handleApproveEmail(e.id)} className="ml-2 flex-shrink-0 px-2 py-1 rounded text-xs font-semibold flex items-center gap-1" style={{ background: "oklch(from var(--qa-success) l c h / 15%)", color: "var(--qa-success)" }}>
-                    <ThumbsUp size={11} />
-                  </button>
-                </div>
-              ))}
-              {pendingContent.slice(0, 2).map((c: any) => (
+              {pendingContent.slice(0, 4).map((c: any) => (
                 <div key={c.id} className="flex items-center justify-between py-2 border-t" style={{ borderColor: "var(--qa-border)" }}>
                   <div className="flex items-center gap-2 min-w-0">
                     <FileText size={13} style={{ color: "var(--qa-accent-purple)", flexShrink: 0 }} />
@@ -180,7 +161,7 @@ export default function Dashboard() {
                 </div>
               ))}
               {totalApproval > 4 && (
-                <button onClick={() => navigate("/sales-ops")} className="mt-2 text-xs flex items-center gap-1" style={{ color: "var(--qa-accent)" }}>
+                <button onClick={() => navigate("/tartalom-studio")} className="mt-2 text-xs flex items-center gap-1" style={{ color: "var(--qa-accent)" }}>
                   +{totalApproval - 4} további <ArrowRight size={11} />
                 </button>
               )}
@@ -281,11 +262,11 @@ export default function Dashboard() {
                     : "Töltsd ki az onboardingot és generálj stratégiát, hogy személyre szabott AI insight-okat kapj a vállalkozásodról."}
                 </p>
                 <div className="flex gap-2 mt-2">
-                  <button onClick={() => navigate("/strategy")} className="text-xs flex items-center gap-1" style={{ color: "var(--qa-accent)" }}>
+                  <button onClick={() => navigate("/strategia")} className="text-xs flex items-center gap-1" style={{ color: "var(--qa-accent)" }}>
                     Stratégiában megnyitás <ArrowRight size={11} />
                   </button>
                   <span style={{ color: "var(--qa-fg4)" }}>·</span>
-                  <button onClick={() => navigate("/clients")} className="text-xs flex items-center gap-1" style={{ color: "var(--qa-success)" }}>
+                  <button onClick={() => navigate("/intelligencia")} className="text-xs flex items-center gap-1" style={{ color: "var(--qa-success)" }}>
                     Intelligence megtekintése <Eye size={11} />
                   </button>
                 </div>
@@ -294,46 +275,23 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* 5. At-risk Items */}
+        {/* 5. Quick Actions — az At-risk Items helyett (email-modul kivéve) */}
         <div>
-          {sectionTitle("At-risk Items")}
+          {sectionTitle("Gyors műveletek")}
           {card(
-            <div>
-              {atRiskLeads.length === 0 && unansweredInbound.length === 0 ? (
-                <div className="flex items-center gap-2 py-2">
-                  <CheckCircle2 size={16} style={{ color: "var(--qa-success)" }} />
-                  <p className="text-xs" style={{ color: "var(--qa-success)" }}>Nincsenek kockázatos elemek</p>
-                </div>
-              ) : (
-                <>
-                  {unansweredInbound.map(e => (
-                    <div key={e.id} className="flex items-center gap-2.5 py-2 border-b last:border-0" style={{ borderColor: "var(--qa-border)" }}>
-                      <AlertTriangle size={14} style={{ color: "var(--qa-warning)", flexShrink: 0 }} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium truncate" style={{ color: "var(--qa-fg2)" }}>
-                          Megválaszolatlan: {e.fromName}
-                        </p>
-                        <p className="text-xs" style={{ color: "var(--qa-fg4)" }}>Érdeklődő – azonnali figyelmet igényel</p>
-                      </div>
-                      <button onClick={() => navigate("/sales-ops")} className="flex-shrink-0">
-                        <ChevronRight size={13} style={{ color: "var(--qa-fg4)" }} />
-                      </button>
-                    </div>
-                  ))}
-                  {atRiskLeads.map(l => (
-                    <div key={l.id} className="flex items-center gap-2.5 py-2 border-b last:border-0" style={{ borderColor: "var(--qa-border)" }}>
-                      <AlertTriangle size={14} style={{ color: "var(--qa-danger)", flexShrink: 0 }} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium truncate" style={{ color: "var(--qa-fg2)" }}>{l.company}</p>
-                        <p className="text-xs" style={{ color: "var(--qa-fg4)" }}>Megkeresett – nincs visszajelzés</p>
-                      </div>
-                      <button onClick={() => navigate("/sales-ops")} className="flex-shrink-0">
-                        <ChevronRight size={13} style={{ color: "var(--qa-fg4)" }} />
-                      </button>
-                    </div>
-                  ))}
-                </>
-              )}
+            <div className="space-y-2">
+              <button onClick={() => navigate("/tartalom-studio")} className="w-full text-left flex items-center gap-2.5 p-2.5 rounded-lg" style={{ background: "var(--qa-surface2)" }}>
+                <FileText size={13} style={{ color: "var(--qa-accent-purple)" }} />
+                <span className="text-xs" style={{ color: "var(--qa-fg2)" }}>Új tartalom generálása</span>
+              </button>
+              <button onClick={() => navigate("/strategia")} className="w-full text-left flex items-center gap-2.5 p-2.5 rounded-lg" style={{ background: "var(--qa-surface2)" }}>
+                <BarChart3 size={13} style={{ color: "var(--qa-accent)" }} />
+                <span className="text-xs" style={{ color: "var(--qa-fg2)" }}>Stratégia áttekintés</span>
+              </button>
+              <button onClick={() => navigate("/intelligencia")} className="w-full text-left flex items-center gap-2.5 p-2.5 rounded-lg" style={{ background: "var(--qa-surface2)" }}>
+                <Brain size={13} style={{ color: "var(--qa-success)" }} />
+                <span className="text-xs" style={{ color: "var(--qa-fg2)" }}>Intelligence megnyitás</span>
+              </button>
             </div>
           )}
         </div>
@@ -360,64 +318,8 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Activity Stream + Latest Replies */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div>
-          {sectionTitle("Aktivitás")}
-          {card(
-            <div>
-              {outbound.length === 0 && inbound.length === 0 ? (
-                <p className="text-xs text-center py-4" style={{ color: "var(--qa-fg4)" }}>Nincs aktivitás</p>
-              ) : [
-                ...outbound.slice(0, 3).map(e => ({ id: `o-${e.id}`, type: "email", label: e.subject, sub: e.toName || e.to, time: e.createdAt ? new Date(e.createdAt).toLocaleDateString("hu-HU") : "–", href: "/sales-ops" })),
-                ...inbound.slice(0, 2).map(e => ({ id: `i-${e.id}`, type: "inbound", label: e.subject, sub: e.fromName || e.from, time: e.receivedAt ? new Date(e.receivedAt).toLocaleDateString("hu-HU") : "–", href: "/sales-ops" })),
-              ].slice(0, 5).map(a => (
-                <button key={a.id} onClick={() => navigate(a.href)} className="w-full flex items-center gap-3 py-2.5 border-b last:border-0 text-left" style={{ borderColor: "var(--qa-border)" }}
-                  onMouseEnter={(e: any) => (e.currentTarget.style.background = "oklch(1 0 0 / 4%)")}
-                  onMouseLeave={(e: any) => (e.currentTarget.style.background = "transparent")}
-                >
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: a.type === "email" ? "oklch(from var(--qa-accent) l c h / 15%)" : "oklch(from var(--qa-success) l c h / 15%)" }}>
-                    {a.type === "email" ? <Mail size={13} style={{ color: "var(--qa-accent)" }} /> : <MessageSquare size={13} style={{ color: "var(--qa-success)" }} />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium truncate" style={{ color: "var(--qa-fg2)" }}>{a.label}</p>
-                    <p className="text-xs" style={{ color: "var(--qa-fg4)" }}>{a.sub} · {a.time}</p>
-                  </div>
-                  <Activity size={12} style={{ color: "var(--qa-fg4)", flexShrink: 0 }} />
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div>
-          {sectionTitle("Legutóbbi Válaszok")}
-          {card(
-            <div>
-              {inbound.length === 0 ? (
-                <p className="text-xs text-center py-4" style={{ color: "var(--qa-fg4)" }}>Nincsenek beérkező válaszok</p>
-              ) : inbound.slice(0, 5).map(e => (
-                <button key={e.id} onClick={() => navigate("/sales-ops")} className="w-full flex items-center gap-3 py-2.5 border-b last:border-0 text-left" style={{ borderColor: "var(--qa-border)" }}
-                  onMouseEnter={(e2: any) => (e2.currentTarget.style.background = "oklch(1 0 0 / 4%)")}
-                  onMouseLeave={(e2: any) => (e2.currentTarget.style.background = "transparent")}
-                >
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "oklch(from var(--qa-success) l c h / 15%)" }}>
-                    <MessageSquare size={13} style={{ color: "var(--qa-success)" }} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium truncate" style={{ color: "var(--qa-fg2)" }}>{e.fromName}</p>
-                    <p className="text-xs truncate" style={{ color: "var(--qa-fg4)" }}>{e.subject}</p>
-                  </div>
-                  {!e.read && <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: "var(--qa-accent)" }} />}
-                </button>
-              ))}
-              <button onClick={() => navigate("/sales-ops")} className="mt-2 text-xs flex items-center gap-1 w-full justify-center" style={{ color: "var(--qa-accent)" }}>
-                Összes válasz <Eye size={11} />
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Activity Stream + Latest Replies blokk eltávolítva — az
+          értékesítés-modul kivételével mindkettő üres maradt volna. */}
 
       {/* AI Kredit Widget – csak nem-super_admin felhasználóknak */}
       <AiCreditsWidget navigate={navigate} isSuperAdmin={isSuperAdmin} />

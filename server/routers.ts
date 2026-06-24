@@ -13,15 +13,11 @@ import { projectsRouter } from "./routers/projects";
 import { seoRouter } from "./routers/seo";
 import { newsletterRouter } from "./routers/newsletter";
 import { generateImage } from "./_core/imageGeneration";
-import { sendEmail, verifyEmailConfig, type EmailConfig } from "./emailSender";
-import { sendOutboundEmail as sendOutboundEmailViaResend } from "./email";
 import { nanoid } from "nanoid";
 import { TRPCError } from "@trpc/server";
 import {
   getAllProfiles, getProfileById, getProfilesByAppUser, upsertProfile, deleteProfile,
   getLeadsByProfile, getLeadById, createLead, updateLead, deleteLead,
-  getOutboundByProfile, getOutboundById, createOutbound, updateOutbound, deleteOutbound,
-  getInboundByProfile, getInboundById, createInbound, markInboundRead, updateInboundCategory,
   getContentByProfile, getContentById, createContent, updateContent, deleteContent,
   getStrategiesByProfile, getStrategyById, createStrategy, updateStrategy,
   getEmailIntegration, upsertEmailIntegration,
@@ -208,171 +204,11 @@ export const appRouter = router({
       }),
   }),
 
-  // ─── Outbound Emails ────────────────────────────────────────────────────────
-  outbound: router({
-    list: appUserProcedure
-      .input(z.object({ profileId: z.string() }))
-      .query(async ({ input, ctx }) => {
-        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
-        return getOutboundByProfile(input.profileId);
-      }),
-
-    create: appUserProcedure
-      .input(z.object({
-        profileId: z.string(),
-        leadId: z.string().optional(),
-        to: z.string().email(),
-        toName: z.string().optional(),
-        company: z.string().optional(),
-        subject: z.string().min(1),
-        body: z.string().min(1),
-      }))
-      .mutation(async ({ input, ctx }) => {
-        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
-        return createOutbound({ ...input, id: nanoid(), status: "draft" });
-      }),
-
-    update: appUserProcedure
-      .input(z.object({
-        id: z.string(),
-        subject: z.string().optional(),
-        body: z.string().optional(),
-        status: z.enum(["draft", "approved", "sent", "opened", "replied", "bounced"]).optional(),
-        sentAt: z.date().optional(),
-      }))
-      .mutation(async ({ input, ctx }) => {
-        const outbound = await getOutboundById(input.id);
-        if (!outbound) throw new TRPCError({ code: "NOT_FOUND", message: "Az email nem található" });
-        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, outbound.profileId, ctx.appUser.profileId);
-        const { id, ...updates } = input;
-        return updateOutbound(id, updates);
-      }),
-
-    delete: appUserProcedure
-      .input(z.object({ id: z.string() }))
-      .mutation(async ({ input, ctx }) => {
-        const outbound = await getOutboundById(input.id);
-        if (!outbound) throw new TRPCError({ code: "NOT_FOUND", message: "Az email nem található" });
-        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, outbound.profileId, ctx.appUser.profileId);
-        return deleteOutbound(input.id);
-      }),
-
-    sendViaResend: appUserProcedure
-      .input(z.object({
-        emailId: z.string(),
-        to: z.string().email(),
-        toName: z.string().optional(),
-        subject: z.string().min(1),
-        body: z.string().min(1),
-      }))
-      .mutation(async ({ input }) => {
-        const result = await sendOutboundEmailViaResend({
-          to: input.to,
-          toName: input.toName,
-          subject: input.subject,
-          body: input.body,
-        });
-        if (result.success) {
-          await updateOutbound(input.emailId, { status: "sent", sentAt: new Date() });
-        }
-        return result;
-      }),
-  }),
-
-  // ─── Inbound Emails ─────────────────────────────────────────────────────────
-  inbound: router({
-    list: appUserProcedure
-      .input(z.object({ profileId: z.string() }))
-      .query(async ({ input, ctx }) => {
-        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
-        return getInboundByProfile(input.profileId);
-      }),
-
-    create: appUserProcedure
-      .input(z.object({
-        profileId: z.string(),
-        from: z.string(),
-        fromName: z.string().optional(),
-        company: z.string().optional(),
-        subject: z.string(),
-        body: z.string(),
-        category: z.enum(["interested", "not_interested", "question", "meeting_request", "out_of_office", "unsubscribe", "other"]).optional(),
-        relatedOutboundId: z.string().optional(),
-      }))
-      .mutation(async ({ input, ctx }) => {
-        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
-        return createInbound({ ...input, id: nanoid() });
-      }),
-
-    markRead: appUserProcedure
-      .input(z.object({ id: z.string() }))
-      .mutation(async ({ input, ctx }) => {
-        const inbound = await getInboundById(input.id);
-        if (!inbound) throw new TRPCError({ code: "NOT_FOUND", message: "Az inbox bejegyzés nem található" });
-        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, inbound.profileId, ctx.appUser.profileId);
-        return markInboundRead(input.id);
-      }),
-
-    updateCategory: appUserProcedure
-      .input(z.object({
-        id: z.string(),
-        category: z.enum(["interested", "not_interested", "question", "meeting_request", "out_of_office", "unsubscribe", "other"]),
-      }))
-      .mutation(async ({ input, ctx }) => {
-        const inbound = await getInboundById(input.id);
-        if (!inbound) throw new TRPCError({ code: "NOT_FOUND", message: "Az inbox bejegyzés nem található" });
-        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, inbound.profileId, ctx.appUser.profileId);
-        return updateInboundCategory(input.id, input.category);
-      }),
-
-    // ─── IMAP fetch (super_admin) ────────────────────────────────────────────
-    // Az info@g2amarketing.hu (vagy konfigurált) Gmail IMAP-fiókba érkezett
-    // UNSEEN levelek azonnali lekérése, AI-kategorizálás + DB-be mentés.
-    // A #6b PR-ben jön egy 5 percenként futó automata cron — ez itt a
-    // manuális "Fetch most" gomb backend-je.
-    getImapStatus: superAdminProcedure.query(async () => {
-      const { getInboundImapStatus } = await import("./inboundFetcher");
-      return getInboundImapStatus();
-    }),
-
-    fetchNow: superAdminProcedure.mutation(async () => {
-      const { fetchAndStoreInboundEmails } = await import("./inboundFetcher");
-      return fetchAndStoreInboundEmails();
-    }),
-
-    // Debug endpoint: minden clientProfile-hoz visszadja a hozzá tartozó
-    // inbound levelek számát. Segít kideríteni, MELYIK profile-ba kerültek
-    // a levelek, ha a UI 0-t mutat. Csak super_admin.
-    debugCounts: superAdminProcedure.query(async () => {
-      const { getAllProfiles } = await import("./db");
-      const { getDb } = await import("./db");
-      const { inboundEmails } = await import("../drizzle/schema");
-      const { sql } = await import("drizzle-orm");
-      const profs = await getAllProfiles();
-      const db = await getDb();
-      if (!db) return { profiles: [], totalInbound: 0 };
-      // 1 query az összes count-ra
-      const rows = await db
-        .select({ profileId: inboundEmails.profileId, count: sql<number>`count(*)`.as("count") })
-        .from(inboundEmails)
-        .groupBy(inboundEmails.profileId);
-      const countMap = new Map(rows.map(r => [r.profileId, Number(r.count)]));
-      const result = profs.map(p => ({
-        profileId: p.id,
-        name: p.name,
-        appUserId: p.appUserId,
-        inboundCount: countMap.get(p.id) ?? 0,
-      }));
-      // Add orphan profile IDs from inbound_emails that don't match any profile
-      Array.from(countMap.entries()).forEach(([pid, cnt]) => {
-        if (!profs.find(p => p.id === pid)) {
-          result.push({ profileId: pid, name: "(orphan — nincs ilyen clientProfile)", appUserId: null, inboundCount: cnt });
-        }
-      });
-      const totalInbound = rows.reduce((s, r) => s + Number(r.count), 0);
-      return { profiles: result, totalInbound };
-    }),
-  }),
+  // ─── Outbound + Inbound email modulok TELJES ELTÁVOLÍTÁSA ──────────────────
+  // 2026-06: az értékesítés-modult kivettük (mindenki a saját email
+  // szolgáltatóját használja). Ez automatikusan megszüntette a security audit
+  // #1 (spam-relay) és #2 (LinkedIn OAuth bypass kontextus) kritikus
+  // sebezhetőségét. A leads tábla MEGMARAD a hírlevél-feliratkozók miatt.
 
   // ─── Content Posts ──────────────────────────────────────────────────────────
   content: contentRouter,
@@ -461,53 +297,8 @@ export const appRouter = router({
       }),
   }),
 
-  // ─── Email Sending ────────────────────────────────────────────────────────────
-  emailSend: router({
-    send: appUserProcedure
-      .input(z.object({
-        emailId: z.string(),
-        to: z.string().email(),
-        toName: z.string().optional(),
-        subject: z.string().min(1),
-        body: z.string().min(1),
-        config: z.object({
-          provider: z.enum(["gmail", "outlook", "smtp"]),
-          host: z.string().optional(),
-          port: z.number().optional(),
-          secure: z.boolean().optional(),
-          user: z.string().email(),
-          password: z.string().min(1),
-          fromName: z.string().optional(),
-        }),
-      }))
-      .mutation(async ({ input }) => {
-        const result = await sendEmail({
-          config: input.config as EmailConfig,
-          to: input.to,
-          toName: input.toName,
-          subject: input.subject,
-          body: input.body,
-        });
-        if (result.success) {
-          await updateOutbound(input.emailId, { status: "sent", sentAt: new Date() });
-        }
-        return result;
-      }),
-
-    verify: appUserProcedure
-      .input(z.object({
-        provider: z.enum(["gmail", "outlook", "smtp"]),
-        host: z.string().optional(),
-        port: z.number().optional(),
-        secure: z.boolean().optional(),
-        user: z.string().email(),
-        password: z.string().min(1),
-        fromName: z.string().optional(),
-      }))
-      .mutation(async ({ input }) => {
-        return verifyEmailConfig(input as EmailConfig);
-      }),
-  }),
+  // emailSend router eltávolítva — az értékesítés-modul törlésével.
+  // Az audit #1 spam-relay sebezhetőséget megszüntette.
 
   // ─── Onboarding ──────────────────────────────────────────────────────────────
   onboarding: onboardingRouter,
