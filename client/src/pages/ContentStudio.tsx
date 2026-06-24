@@ -320,9 +320,13 @@ export default function ContentStudio() {
     const prompt = editForm.imagePrompt || editForm.title || "marketing post visual";
     setGeneratingImage(true);
     try {
-      const result = await generateImageMutation.mutateAsync({ prompt });
+      // platform: a poszt platform mezője (linkedin/facebook/instagram/tiktok/twitter).
+      // A backend a PLATFORM_IMAGE_SIZE alapján a megfelelő DALL-E 3 arányt
+      // (1:1, 9:16 vagy 16:9) választja, így a kép azonnal a posztformátumra
+      // van szabva — nincs külön crop-utómunka.
+      const result = await generateImageMutation.mutateAsync({ prompt, platform: editForm.platform });
       setEditForm(f => ({ ...f, imageUrl: result.url ?? undefined }));
-      toast.success("Kép generálva");
+      toast.success(`Kép generálva (${result.size})`);
     } catch { toast.error("Képgenerálás sikertelen"); }
     finally { setGeneratingImage(false); }
   };
@@ -331,9 +335,9 @@ export default function ContentStudio() {
     const prompt = newPost.imagePrompt || newPost.title || "marketing post visual";
     setGeneratingImage(true);
     try {
-      const result = await generateImageMutation.mutateAsync({ prompt });
+      const result = await generateImageMutation.mutateAsync({ prompt, platform: newPost.platform });
       setNewPost(p => ({ ...p, imageUrl: result.url ?? undefined }));
-      toast.success("Kép generálva");
+      toast.success(`Kép generálva (${result.size})`);
     } catch { toast.error("Képgenerálás sikertelen"); }
     finally { setGeneratingImage(false); }
   };
