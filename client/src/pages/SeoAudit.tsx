@@ -109,7 +109,7 @@ export default function SeoAudit() {
   const { activeProfile } = useProfile();
   const [url, setUrl] = useState(activeProfile?.website ?? "");
   const [expandedAudit, setExpandedAudit] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"issues" | "meta" | "content" | "technical" | "ai">("issues");
+  const [activeTab, setActiveTab] = useState<"issues" | "meta" | "speed" | "content" | "technical" | "ai">("issues");
 
   const { data: audits = [], refetch } = trpc.seo.getAudits.useQuery(
     { profileId: activeProfile?.id ?? "" },
@@ -245,6 +245,7 @@ export default function SeoAudit() {
             <div className="flex gap-1 overflow-x-auto">
               {[
                 { id: "issues", label: "Problémák", icon: <AlertTriangle size={13} /> },
+                { id: "speed", label: "Sebesség", icon: <Zap size={13} /> },
                 { id: "meta", label: "Meta adatok", icon: <FileText size={13} /> },
                 { id: "content", label: "Tartalom", icon: <BarChart2 size={13} /> },
                 { id: "technical", label: "Technikai", icon: <Shield size={13} /> },
@@ -310,9 +311,134 @@ export default function SeoAudit() {
                   <MetricRow label="Összes kép" value={expanded.report.content.totalImages} />
                   <MetricRow label="Alt szöveg nélküli képek" value={expanded.report.content.imagesWithoutAlt} good={expanded.report.content.imagesWithoutAlt === 0} />
                   <MetricRow label="Oldal mérete" value={expanded.report.performance.pageSize ? `${Math.round(expanded.report.performance.pageSize / 1024)} KB` : "N/A"} />
-                  <MetricRow label="Betöltési idő" value={expanded.report.performance.loadTime ? `${expanded.report.performance.loadTime} ms` : "N/A"} good={(expanded.report.performance.loadTime ?? 9999) < 3000} />
+                  <MetricRow label="Betöltési idő (HTML letöltés)" value={expanded.report.performance.loadTime ? `${expanded.report.performance.loadTime} ms` : "N/A"} good={(expanded.report.performance.loadTime ?? 9999) < 3000} />
+
+                  {/* Mini-crawl eredmények — a homepage + max 4 belső link.
+                      Csak ha az új audit-verzió (v2) lefutott. A `report` cast
+                      `any`-re mert a tRPC typegen a régi shape-et ismeri,
+                      a `crawledPages`/`brokenLinks`/`pageSpeed` az új v2 router
+                      runtime-mezői. */}
+                  {Array.isArray((expanded.report as any).crawledPages) && (expanded.report as any).crawledPages.length > 0 && (
+                    <div className="pt-4 mt-3 border-t" style={{ borderColor: border }}>
+                      <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: textMuted }}>
+                        Bejárt aloldalak ({(expanded.report as any).crawledPages.length})
+                      </p>
+                      <div className="space-y-1.5">
+                        {(expanded.report as any).crawledPages.map((p: any) => (
+                          <div key={p.url} className="flex items-center justify-between gap-2 py-1.5 border-b last:border-0" style={{ borderColor: "var(--qa-border)" }}>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-medium truncate" style={{ color: textPrimary }}>{p.title ?? "(címek nélkül)"}</p>
+                              <p className="text-xs truncate" style={{ color: textMuted }}>{p.url}</p>
+                            </div>
+                            <span className="text-xs flex-shrink-0 px-1.5 py-0.5 rounded"
+                              style={{
+                                background: (p.status ?? 0) >= 200 && (p.status ?? 0) < 400 ? "oklch(0.72 0.19 145 / 18%)" : "oklch(0.65 0.22 25 / 18%)",
+                                color: (p.status ?? 0) >= 200 && (p.status ?? 0) < 400 ? green : red,
+                              }}>
+                              {p.status ?? "hiba"} · {p.wordCount} szó
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Hibás linkek (broken link check, max 15 link). */}
+                  {Array.isArray((expanded.report as any).brokenLinks) && (expanded.report as any).brokenLinks.length > 0 && (
+                    <div className="pt-4 mt-3 border-t" style={{ borderColor: border }}>
+                      <p className="text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-1.5" style={{ color: red }}>
+                        <AlertTriangle size={12} /> Hibás linkek ({(expanded.report as any).brokenLinks.length})
+                      </p>
+                      <div className="space-y-1.5">
+                        {(expanded.report as any).brokenLinks.map((bl: any, i: number) => (
+                          <div key={i} className="flex items-center justify-between gap-2 py-1.5 border-b last:border-0" style={{ borderColor: "var(--qa-border)" }}>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs truncate" style={{ color: textPrimary }}>{bl.url}</p>
+                              <p className="text-xs" style={{ color: textMuted }}>{bl.type === "internal" ? "Belső" : "Külső"}</p>
+                            </div>
+                            <span className="text-xs flex-shrink-0 px-1.5 py-0.5 rounded" style={{ background: "oklch(0.65 0.22 25 / 18%)", color: red }}>
+                              {bl.status ?? "hibás"}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
+
+              {/* Sebesség tab: Google PageSpeed Insights (mobil + desktop).
+                  A v1 audit-okban nincs ilyen adat (csak az új v2 routerben),
+                  így graceful fallback-et mutatunk. */}
+              {activeTab === "speed" && (() => {
+                // pageSpeed mező csak az új v2 router runtime-eredményeiben van.
+                // A `report` cast `any`-re mert a tRPC typegen a régi shape-et ismeri.
+                const ps = (expanded.report as any).pageSpeed;
+                const m = ps?.mobile, d = ps?.desktop;
+                const scoreColor = (s: number | null | undefined) =>
+                  (s ?? 0) >= 75 ? green : (s ?? 0) >= 50 ? yellow : red;
+                return (
+                  <div>
+                    {ps ? (
+                      <div className="space-y-5">
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-sm font-bold" style={{ color: textPrimary }}>📱 Mobil</p>
+                            {m?.performanceScore !== null && m?.performanceScore !== undefined && (
+                              <span className="text-2xl font-bold" style={{ color: scoreColor(m.performanceScore), fontFamily: "Sora, sans-serif" }}>
+                                {m.performanceScore}/100
+                              </span>
+                            )}
+                          </div>
+                          {m?.error ? (
+                            <p className="text-xs italic" style={{ color: textMuted }}>{m.error}</p>
+                          ) : (
+                            <div className="space-y-1">
+                              <MetricRow label="LCP (Largest Contentful Paint)" value={m?.lcp ? `${Math.round(m.lcp)} ms` : "N/A"} good={(m?.lcp ?? 9999) < 2500} />
+                              <MetricRow label="CLS (Cumulative Layout Shift)" value={m?.cls?.toFixed(3) ?? "N/A"} good={(m?.cls ?? 1) < 0.1} />
+                              <MetricRow label="INP (Interaction to Next Paint)" value={m?.inp ? `${Math.round(m.inp)} ms` : "N/A"} good={(m?.inp ?? 9999) < 200} />
+                              <MetricRow label="FCP (First Contentful Paint)" value={m?.fcp ? `${Math.round(m.fcp)} ms` : "N/A"} good={(m?.fcp ?? 9999) < 1800} />
+                              <MetricRow label="TTFB (Time to First Byte)" value={m?.ttfb ? `${Math.round(m.ttfb)} ms` : "N/A"} good={(m?.ttfb ?? 9999) < 800} />
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-sm font-bold" style={{ color: textPrimary }}>💻 Desktop</p>
+                            {d?.performanceScore !== null && d?.performanceScore !== undefined && (
+                              <span className="text-2xl font-bold" style={{ color: scoreColor(d.performanceScore), fontFamily: "Sora, sans-serif" }}>
+                                {d.performanceScore}/100
+                              </span>
+                            )}
+                          </div>
+                          {d?.error ? (
+                            <p className="text-xs italic" style={{ color: textMuted }}>{d.error}</p>
+                          ) : (
+                            <div className="space-y-1">
+                              <MetricRow label="LCP" value={d?.lcp ? `${Math.round(d.lcp)} ms` : "N/A"} good={(d?.lcp ?? 9999) < 2500} />
+                              <MetricRow label="CLS" value={d?.cls?.toFixed(3) ?? "N/A"} good={(d?.cls ?? 1) < 0.1} />
+                              <MetricRow label="INP" value={d?.inp ? `${Math.round(d.inp)} ms` : "N/A"} good={(d?.inp ?? 9999) < 200} />
+                              <MetricRow label="FCP" value={d?.fcp ? `${Math.round(d.fcp)} ms` : "N/A"} good={(d?.fcp ?? 9999) < 1800} />
+                              <MetricRow label="TTFB" value={d?.ttfb ? `${Math.round(d.ttfb)} ms` : "N/A"} good={(d?.ttfb ?? 9999) < 800} />
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-xs pt-3 border-t" style={{ color: textMuted, borderColor: border }}>
+                          Forrás: Google PageSpeed Insights. Az LCP/CLS/INP a Google "Core Web Vitals" hármasa, közvetlen rangsorolási faktor.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <Zap size={32} className="mx-auto mb-2" style={{ color: textMuted }} />
+                        <p className="text-sm font-semibold" style={{ color: textMuted }}>Régi audit — nincs PageSpeed adat</p>
+                        <p className="text-xs mt-1" style={{ color: textMuted }}>
+                          Indíts új auditot a Core Web Vitals lekéréséhez.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {activeTab === "technical" && (
                 <div className="space-y-1">

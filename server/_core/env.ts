@@ -25,6 +25,10 @@ export const ENV = {
   // ─── Egyéb ─────────────────────────────────────────────────────────────
   resendApiKey: process.env.RESEND_API_KEY ?? "",
   emailFrom: process.env.EMAIL_FROM ?? "",
-  // INBOUND_IMAP_* + INBOUND_PROFILE_ID env-ek eltávolítva — az
-  // értékesítés-modul (Gmail IMAP fetcher) törlésekor (2026-06).
+  // ─── Google PageSpeed Insights API (opcionális) ────────────────────────
+  // Az SEO audit a https://pagespeedonline.googleapis.com endpoint-ot hívja
+  // a valódi Core Web Vitals (LCP, FID, CLS) lekéréséhez. API key nélkül is
+  // megy (anonim ~25 req/nap), de éles használathoz key ajánlott:
+  // https://developers.google.com/speed/docs/insights/v5/get-started
+  pagespeedApiKey: (process.env.PAGESPEED_API_KEY ?? "").trim(),
 };
