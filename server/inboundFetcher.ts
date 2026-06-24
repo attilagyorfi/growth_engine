@@ -245,67 +245,51 @@ export async function fetchAndStoreInboundEmails(): Promise<FetchResult> {
     await client.connect();
     const lock = await client.getMailboxLock("INBOX");
     try {
-      // Csak az olvasatlan (UNSEEN) leveleket fetcheljük. A user a Gmail-ben
-      // még mindig látja olvasatlanként (nem jelöljük SEEN-nek).
-      // .search() Promise<false | number[]> — `false` jelenti, hogy a szerver
-      // nem támogatja a query-t, vagy üres az eredmény.
-      const searchResult = await client.search({ seen: false });
-      const allUids: number[] = Array.isArray(searchResult) ? searchResult : [];
-      result.totalUnseen = allUids.length;
-      // A legutolsó (legújabb) MAX_UIDS_PER_FETCH UID-t dolgozzuk fel — a Gmail
-      // UID-ok növekvő sorrendben, így .slice(-N) a legfrissebbek.
-      const uids = allUids.slice(-MAX_UIDS_PER_FETCH);
-      result.fetched = uids.length;
-      if (uids.length === 0) {
+      // SEQUENCE-MODE: a `{uid: true}` opció EZT az IMAP szervert (cPanel /
+      // Dovecot a mail.g2amarketing.hu-n) NEM értelmezi helyesen — a fetchOne
+      // null-t ad UID-okra. Megoldás: kérjünk SEQUENCE-eket a search-ből
+      // ({uid: false}), és a fetchOne-t is sequence-szel hívjuk (default).
+      // A sequence pillanatnyi értelem — a mailbox lock biztosítja, hogy a
+      // search és a fetch közötti idő alatt nem változnak.
+      const searchResult = await client.search({ seen: false }, { uid: false });
+      const allSeqs: number[] = Array.isArray(searchResult) ? searchResult : [];
+      result.totalUnseen = allSeqs.length;
+      // A legutolsó (legújabb) MAX_UIDS_PER_FETCH sequence-et dolgozzuk fel.
+      const seqs = allSeqs.slice(-MAX_UIDS_PER_FETCH);
+      result.fetched = seqs.length;
+      if (seqs.length === 0) {
         result.ok = true;
         return result;
       }
 
-      // Először kiszűrjük az UID-eket, amik már a DB-ben vannak (egyenként db hit
-      // sokkal gyorsabb mintha minden levelet letöltenénk és aztán dobnánk el).
-      const newUids: number[] = [];
-      for (const uid of uids) {
-        if (await uidAlreadyStored(profileId, String(uid))) {
-          result.skipped++;
-        } else {
-          newUids.push(uid);
-        }
-      }
-
-      if (newUids.length === 0) {
-        // Minden UID már a DB-ben van — különös az első futáson, jelezzük.
-        console.log(`[inboundFetcher] Mind a ${result.skipped} UID már a DB-ben — nincs új fetch.`);
-        result.ok = true;
-        return result;
-      }
-
-      // FETCHONE PER UID: az ImapFlow `client.fetch()` iterátora többféle range
-      // formátumban (number[], {uid: string}, {uid: number[]}) ÜRES iterátort
-      // adott vissza ezzel az IMAP-szerverrel (mail.g2amarketing.hu) — élesteszt
-      // során `iteratorEntries=0` minden alkalommal. A `fetchOne(uid, query, {uid:true})`
-      // egyenkénti hívások viszont az ImapFlow stabil API-pontja, és string UID
-      // paraméterrel a legtöbb IMAP szerveren megbízhatóan működik.
-      // Hátrány: 50 különálló IMAP körkérés (lassabb), de a deploy-onkénti
-      // 50 levél így is < 30s alatt lefut.
-      console.log(`[inboundFetcher] fetchOne loop START — newUids=${newUids.length}, first5=[${newUids.slice(0, 5).join(",")}]`);
+      console.log(`[inboundFetcher] fetchOne loop START (sequence mode) — seqs=${seqs.length}, first5=[${seqs.slice(0, 5).join(",")}]`);
       let processed = 0;
       result.iteratorEntries = 0;
-      for (const uidNum of newUids) {
-        const imapUid = String(uidNum);
+      for (const seq of seqs) {
+        const seqStr = String(seq);
         let msg: { source?: Buffer; uid?: number } | false | null = null;
         try {
-          msg = (await client.fetchOne(imapUid, { source: true, envelope: true }, { uid: true })) as any;
+          // Default sequence mode (NEM {uid: true}!). A response-ban a `msg.uid`
+          // tartalmazza az IMAP-UID-ot, amit az imapUid mezőbe mentünk
+          // (duplikáció-szűréshez).
+          msg = (await client.fetchOne(seqStr, { source: true, envelope: true, uid: true })) as any;
         } catch (err) {
-          console.warn(`[inboundFetcher] UID ${imapUid} — fetchOne hiba:`, err);
+          console.warn(`[inboundFetcher] seq ${seqStr} — fetchOne hiba:`, err);
           result.skipped++;
           continue;
         }
         if (!msg) {
           result.skipped++;
-          console.warn(`[inboundFetcher] UID ${imapUid} — fetchOne null/false választ adott.`);
+          console.warn(`[inboundFetcher] seq ${seqStr} — fetchOne null/false választ adott.`);
           continue;
         }
         result.iteratorEntries++;
+        const imapUid = msg.uid ? String(msg.uid) : `seq-${seqStr}`;
+        // Most az imapUid alapján ellenőrzünk duplikációt (UID stable, sequence nem).
+        if (await uidAlreadyStored(profileId, imapUid)) {
+          result.skipped++;
+          continue;
+        }
         const source = msg.source as Buffer | undefined;
         if (!source) {
           result.skipped++;
@@ -359,7 +343,7 @@ export async function fetchAndStoreInboundEmails(): Promise<FetchResult> {
 
       console.log(
         `[inboundFetcher] Szinkron kész — totalUnseen=${result.totalUnseen}, batch=${result.fetched}, ` +
-        `már megvolt=${result.skipped - (newUids.length - processed)}, fetch-elt=${processed}, ` +
+        `már megvolt=${result.skipped}, fetch-elt=${processed}, ` +
         `beszúrva=${result.inserted}, AI-hibák=${result.classificationFailures}`,
       );
       result.ok = true;
