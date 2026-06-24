@@ -23,19 +23,30 @@ import { useTour } from "@/hooks/useTour";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 
-// Nav item: comingSoon=true → disabled, badge "Hamarosan", nem klikkelhető
-type NavItem = { href: string; label: string; icon: typeof LayoutDashboard; comingSoon?: boolean };
+// Nav item: comingSoon=true → disabled, badge "Hamarosan", nem klikkelhető.
+// gate: melyik plan-tól látható ez a menüpont. "all" → mindenki, "starter+" →
+// starter/pro/agency, "pro+" → pro/agency. A user kérése: "csak és kifejezetten
+// azokat a menüpontokat kell, hogy lássa, amire előfizetett". A super_admin
+// minden item-et lát (lásd lent: az adminNavItems-en nincs gate-szűrés).
+type PlanGate = "all" | "starter+" | "pro+";
+type NavItem = {
+  href: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  comingSoon?: boolean;
+  gate?: PlanGate;
+};
 
 const publicNavItems: NavItem[] = [
-  { href: "/iranyitopult", label: "Irányítópult", icon: LayoutDashboard },
-  { href: "/intelligencia", label: "Intelligencia", icon: Brain },
-  { href: "/strategia", label: "Stratégia", icon: BarChart3 },
-  { href: "/tartalom-studio", label: "Tartalom Studio", icon: Layers },
-  { href: "/kampanyok", label: "Kampányok", icon: Megaphone },
-  { href: "/analitika", label: "Analitika", icon: TrendingUp },
-  { href: "/seo", label: "SEO Audit", icon: SearchCheck },
-  { href: "/video-studio", label: "Videókészítő", icon: Video, comingSoon: true },
-  { href: "/beallitasok", label: "Beállítások", icon: Settings },
+  { href: "/iranyitopult", label: "Irányítópult", icon: LayoutDashboard, gate: "all" },
+  { href: "/intelligencia", label: "Intelligencia", icon: Brain, gate: "all" },
+  { href: "/strategia", label: "Stratégia", icon: BarChart3, gate: "starter+" },
+  { href: "/tartalom-studio", label: "Tartalom Studio", icon: Layers, gate: "all" },
+  { href: "/kampanyok", label: "Kampányok", icon: Megaphone, gate: "pro+" },
+  { href: "/analitika", label: "Analitika", icon: TrendingUp, gate: "all" },
+  { href: "/seo", label: "SEO Audit", icon: SearchCheck, gate: "all" },
+  { href: "/video-studio", label: "Videókészítő", icon: Video, gate: "pro+", comingSoon: true },
+  { href: "/beallitasok", label: "Beállítások", icon: Settings, gate: "all" },
 ];
 
 const adminNavItems: NavItem[] = [
@@ -95,8 +106,19 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
   const markAllNotificationsRead = () => markAllReadMutation.mutate();
 
   const { user, logout, isSuperAdmin, refetch } = useAppAuth();
-  const navItems = isSuperAdmin ? adminNavItems : publicNavItems;
   const subscription = useSubscription();
+  // Plan-alapú menü-szűrés: a sima user csak az előfizetése szerint
+  // jogosult menüpontokat látja. Super_admin mindent. A canUseStrategy
+  // a "starter+" gate, a canUseCampaigns a "pro+" gate vetítője — a
+  // useSubscription hook már tartalmazza ezeket a flag-eket.
+  const navItems = isSuperAdmin
+    ? adminNavItems
+    : publicNavItems.filter(item => {
+        if (!item.gate || item.gate === "all") return true;
+        if (item.gate === "starter+") return subscription.canUseStrategy;
+        if (item.gate === "pro+") return subscription.canUseCampaigns;
+        return true;
+      });
   const { restartTour } = useTour();
 
   const updateSelf = trpc.appAuth.updateSelf.useMutation({

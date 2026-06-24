@@ -218,7 +218,10 @@ export default function ContentCreator() {
       toast.error("Adj meg egy kép promptot a generáláshoz!");
       return;
     }
-    generateImageMutation.mutate({ prompt: editForm.imagePrompt });
+    // platform: a kép a kiválasztott közösségi platformnak megfelelő
+    // DALL-E 3 arányban (1:1, 9:16 vagy 16:9) készül — lásd
+    // server/_core/imageGeneration.ts:PLATFORM_IMAGE_SIZE.
+    generateImageMutation.mutate({ prompt: editForm.imagePrompt, platform: editPost?.platform });
   };
 
   const updateStatus = (id: string, status: PostStatus) => {

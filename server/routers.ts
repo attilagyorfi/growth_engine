@@ -888,15 +888,25 @@ export const appRouter = router({
       .input(z.object({
         prompt: z.string().min(3).max(500),
         originalImageUrl: z.string().optional(),
+        // Új: platform-specifikus képméret. Ha megadva, a backend a
+        // PLATFORM_IMAGE_SIZE alapján választja a DALL-E 3 méretet
+        // (1024x1024, 1024x1792, 1792x1024 közül). Ha nincs, marad
+        // az alapértelmezett 1024x1024.
+        platform: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
+        const { PLATFORM_IMAGE_SIZE } = await import("./_core/imageGeneration");
+        const size = input.platform
+          ? PLATFORM_IMAGE_SIZE[input.platform.toLowerCase()]
+          : undefined;
         const result = await generateImage({
           prompt: input.prompt,
+          ...(size ? { size } : {}),
           ...(input.originalImageUrl ? {
             originalImages: [{ url: input.originalImageUrl, mimeType: "image/jpeg" as const }]
           } : {}),
         });
-        return { url: result.url ?? null };
+        return { url: result.url ?? null, size: size ?? "1024x1024" };
       }),
 
     generatePostContent: appUserProcedure

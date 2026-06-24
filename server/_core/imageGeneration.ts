@@ -17,13 +17,36 @@
 import { storagePut } from "../storage";
 import { ENV } from "./env";
 
+// DALL-E 3 a 3 méretet támogatja — minden közösségi média formátum ezek
+// közül a "legközelebbire" mappelendő (lásd PLATFORM_IMAGE_SIZE alább).
+export type DalleSize = "1024x1024" | "1024x1792" | "1792x1024";
+
 export type GenerateImageOptions = {
   prompt: string;
+  size?: DalleSize;
   originalImages?: Array<{
     url?: string;
     b64Json?: string;
     mimeType?: string;
   }>;
+};
+
+// Platform → DALL-E 3 méret mapping. Ezzel az AI-generált kép azonnali
+// arányban érkezik a kiválasztott közösségi platformnak. A "platform"
+// érték a tartalomkészítő UI-jából érkezik (linkedin / facebook /
+// instagram_post / instagram_story / tiktok / twitter / square).
+export const PLATFORM_IMAGE_SIZE: Record<string, DalleSize> = {
+  linkedin: "1024x1024",          // LinkedIn poszt 1:1 (1200x1200 közelítés)
+  facebook: "1024x1024",          // Facebook poszt 1:1 (1200x1200 közelítés)
+  instagram: "1024x1024",         // Instagram alapértelmezett 1:1
+  instagram_post: "1024x1024",    // 1080x1080
+  instagram_story: "1024x1792",   // 9:16 story / reel (1080x1920)
+  tiktok: "1024x1792",            // TikTok 9:16
+  twitter: "1792x1024",           // X/Twitter link share 16:9 (1200x675)
+  x: "1792x1024",
+  youtube_thumbnail: "1792x1024", // 16:9 thumbnail
+  blog: "1792x1024",              // blog header 16:9
+  square: "1024x1024",
 };
 
 export type GenerateImageResponse = {
@@ -58,6 +81,7 @@ export async function generateImage(
     ? `${options.prompt}\n\n(Reference image style was provided; recreate a similar composition.)`
     : options.prompt;
 
+  const size = options.size ?? "1024x1024";
   const response = await fetch(resolveImagesEndpoint(), {
     method: "POST",
     headers: {
@@ -68,7 +92,7 @@ export async function generateImage(
       model: "dall-e-3",
       prompt: finalPrompt,
       n: 1,
-      size: "1024x1024",
+      size,
       quality: "standard",
       response_format: "b64_json",
     }),
