@@ -24,6 +24,23 @@ const SUPER_ADMIN_EMAILS = ["admin@g2a.hu", "info@g2amarketing.hu"];
 const isSuperAdminEmail = (email: string) => SUPER_ADMIN_EMAILS.includes(email.toLowerCase());
 const JWT_SECRET = new TextEncoder().encode(ENV.cookieSecret);
 const TOKEN_EXPIRY = "30d";
+const COOKIE_MAX_AGE = 30 * 24 * 3600;
+
+// Egységes Set-Cookie helper. Production-ban `Secure` (csak HTTPS),
+// fejlesztésben nincs (localhost HTTP). SameSite=Lax — a Strict megszakítaná
+// a Stripe/OAuth callback redirecteket. HttpOnly mindenhol (XSS védelem).
+// Ez fixálja az audit #3 sebezhetőséget: a sima Set-Cookie nem volt Secure,
+// így nyilvános WiFi-n a session token ellopható volt.
+function buildSessionCookie(token: string): string {
+  const flags = ["HttpOnly", "Path=/", `Max-Age=${COOKIE_MAX_AGE}`, "SameSite=Lax"];
+  if (ENV.isProduction) flags.push("Secure");
+  return `app_token=${token}; ${flags.join("; ")}`;
+}
+function buildLogoutCookie(): string {
+  const flags = ["HttpOnly", "Path=/", "Max-Age=0", "SameSite=Lax"];
+  if (ENV.isProduction) flags.push("Secure");
+  return `app_token=; ${flags.join("; ")}`;
+}
 
 async function signToken(userId: string, role: string) {
   return new SignJWT({ userId, role })
@@ -121,7 +138,7 @@ export const appAuthRouter = router({
       // Pending (user) → NINCS cookie (nem jelentkezik be), külön email az adminnak.
       if (isActive) {
         const token = await signToken(user.id, user.role);
-        ctx.res.setHeader("Set-Cookie", `app_token=${token}; HttpOnly; Path=/; Max-Age=${30 * 24 * 3600}; SameSite=Lax`);
+        ctx.res.setHeader("Set-Cookie", buildSessionCookie(token));
         sendWelcomeEmail({ to: user.email, name: user.name, loginUrl: `${appUrl}/bejelentkezes` })
           .catch(err => console.error("[appAuth.register] sendWelcomeEmail failed:", err));
       } else {
@@ -173,14 +190,14 @@ export const appAuthRouter = router({
       }
       await updateLastSignedIn(user.id);
       const token = await signToken(user.id, user.role);
-      ctx.res.setHeader("Set-Cookie", `app_token=${token}; HttpOnly; Path=/; Max-Age=${30 * 24 * 3600}; SameSite=Lax`);
+      ctx.res.setHeader("Set-Cookie", buildSessionCookie(token));
       return { success: true, user: { id: user.id, email: user.email, name: user.name, role: user.role, onboardingCompleted: user.onboardingCompleted, profileId: user.profileId, subscriptionPlan: user.subscriptionPlan, subscriptionBilling: user.subscriptionBilling } };
     }),
 
   // ─── Kijelentkezés ───────────────────────────────────────────────────────────
   logout: publicProcedure
     .mutation(({ ctx }) => {
-      ctx.res.setHeader("Set-Cookie", "app_token=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax");
+      ctx.res.setHeader("Set-Cookie", buildLogoutCookie());
       return { success: true };
     }),
 

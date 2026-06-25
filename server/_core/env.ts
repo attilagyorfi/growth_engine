@@ -1,6 +1,20 @@
+// JWT_SECRET fail-fast guard: production-ban a session-token aláíró kulcs
+// MUSZÁJ minimum 32 karakter, különben bárki üres kulccsal érvényes
+// session-tokent gyárthatna. A jwt.sign üres kulccsal hibát dob, de a
+// fail-fast itt segít hogy a deploy-pillanatban derüljön ki, ne a
+// első bejelentkezésnél.
+const _jwtSecret = process.env.JWT_SECRET ?? "";
+if (process.env.NODE_ENV === "production" && _jwtSecret.length < 32) {
+  throw new Error(
+    `[FATAL] JWT_SECRET túl rövid vagy hiányzik (${_jwtSecret.length} karakter). ` +
+    `Production-ban legalább 32 karakteres random érték kell. Generálás: ` +
+    `\`openssl rand -base64 48\` vagy \`node -p "require('crypto').randomBytes(48).toString('base64url')"\``
+  );
+}
+
 export const ENV = {
   appId: process.env.VITE_APP_ID ?? "",
-  cookieSecret: process.env.JWT_SECRET ?? "",
+  cookieSecret: _jwtSecret,
   databaseUrl: process.env.DATABASE_URL ?? "",
   oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
   ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
