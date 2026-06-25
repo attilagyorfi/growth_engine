@@ -498,15 +498,30 @@ export const appRouter = router({
     create: appUserProcedure
       .input(z.object({
         profileId: z.string().optional(),
-        userId: z.string().optional(),
-        userName: z.string().optional(),
         action: z.string(),
         objectType: z.string(),
         objectId: z.string().optional(),
         objectTitle: z.string().optional(),
         changes: z.any().optional(),
       }))
-      .mutation(({ input }) => createAuditLog(input)),
+      .mutation(({ input, ctx }) => {
+        // Audit #5 fix: korábban a userId/userName-t USER INPUT-ból elfogadta,
+        // bárki bejegyezhetett "ati admin törölte mindet" típusú hamis rekordot.
+        // Most: a userId/userName ALWAYS a ctx-ből (a valódi session tulaja).
+        // A profileId ownership-checkjét is hozzáadtuk — super_admin bármilyen
+        // profile-ra írhat, sima user csak a sajátjára.
+        if (input.profileId && ctx.appUser.role !== "super_admin") {
+          // assertProfileOwnership a function call alatt — itt csak quick check
+          if (input.profileId !== ctx.appUser.profileId) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "Nincs jogosultsága audit logot írni ehhez a profilhoz" });
+          }
+        }
+        return createAuditLog({
+          ...input,
+          userId: ctx.appUser.id,
+          userName: ctx.appUser.name ?? ctx.appUser.email,
+        });
+      }),
   }),
 
   // ─── Strategy Versions ──────────────────────────────────────────────────────
@@ -523,7 +538,16 @@ export const appRouter = router({
 
     get: appUserProcedure
       .input(z.object({ id: z.string() }))
-      .query(({ input }) => getCampaignById(input.id)),
+      .query(async ({ input, ctx }) => {
+        // Audit #4 fix: korábban semmilyen ownership check nem volt —
+        // bárki egy kampány ID-val lekérhette más profilba tartozó kampány
+        // teljes brief-jét (stratégia, célcsoport, költségvetés). Most:
+        // előbb lekérjük, aztán ellenőrizzük a profileId-t.
+        const campaign = await getCampaignById(input.id);
+        if (!campaign) throw new TRPCError({ code: "NOT_FOUND", message: "A kampány nem található" });
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, campaign.profileId, ctx.appUser.profileId);
+        return campaign;
+      }),
 
     upsert: appUserProcedure
       .input(z.object({
@@ -578,7 +602,14 @@ export const appRouter = router({
 
     getAssets: appUserProcedure
       .input(z.object({ campaignId: z.string() }))
-      .query(({ input }) => getCampaignAssets(input.campaignId)),
+      .query(async ({ input, ctx }) => {
+        // Audit #4 fix: assets is profile-érzékeny adat (kreatív poszt-szövegek,
+        // képek, ad copyk). Előbb lekérjük a kampányt és csekkoljuk a tulajt.
+        const campaign = await getCampaignById(input.campaignId);
+        if (!campaign) throw new TRPCError({ code: "NOT_FOUND", message: "A kampány nem található" });
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, campaign.profileId, ctx.appUser.profileId);
+        return getCampaignAssets(input.campaignId);
+      }),
 
     upsertAsset: appUserProcedure
       .input(z.object({
