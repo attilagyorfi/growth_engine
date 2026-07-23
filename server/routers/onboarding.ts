@@ -147,19 +147,38 @@ export const onboardingRouter = router({
   uploadAsset: appUserProcedure
     .input(z.object({
       profileId: z.string(),
-      fileName: z.string(),
-      fileType: z.string(),
-      fileBase64: z.string(),
+      fileName: z.string().min(1).max(500),
+      fileType: z.string().min(1).max(200),
+      // Base64-kódolt tartalom. Ha ~13.4 MB fölött van (10 MB * 1.34
+      // base64-túlterhelés), az adatbázis-hívás/network is gátolna, de a
+      // lentebbi validateUpload() a decoded buffer alapján dob magyar
+      // hibaüzenetet. Egy explicit z-limit itt a "fast fail" — az
+      // express body-parsing 50 MB-os limitéhez a max csomópont.
+      fileBase64: z.string().max(15 * 1024 * 1024),
       assetType: z.enum(["brand_guide", "visual_identity", "sales_material", "strategy", "buyer_persona", "faq", "other"]),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      // ── 1. Ownership guard — audit medium fix: eddig HIÁNYZOTT
+      await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+
+      // ── 2. Validáció (méret + MIME whitelist + magic-byte spoof-védelem)
+      const { validateUpload, sanitizeFileName } = await import("../_core/uploadValidation");
       const fileBuffer = Buffer.from(input.fileBase64, "base64");
-      const fileKey = `brand-assets/${input.profileId}/${nanoid()}-${input.fileName}`;
+      try {
+        validateUpload(input.assetType, input.fileType, fileBuffer);
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : "Érvénytelen fájl";
+        throw new TRPCError({ code: "BAD_REQUEST", message: msg });
+      }
+
+      // ── 3. Fájlnév sanitizálás (path-traversal + Unicode-anomáliák ellen)
+      const safeName = sanitizeFileName(input.fileName);
+      const fileKey = `brand-assets/${input.profileId}/${nanoid()}-${safeName}`;
       const { url } = await storagePut(fileKey, fileBuffer, input.fileType);
       const asset = await createBrandAsset({
         id: nanoid(),
         profileId: input.profileId,
-        fileName: input.fileName,
+        fileName: safeName,
         fileType: input.fileType,
         fileUrl: url,
         fileKey,
