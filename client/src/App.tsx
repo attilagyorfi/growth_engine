@@ -18,6 +18,7 @@ const Register = lazy(() => import("./pages/Register"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Privacy = lazy(() => import("./pages/Privacy"));
+const Aszf = lazy(() => import("./pages/Aszf"));
 
 // App pages (protected)
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -94,6 +95,9 @@ function Router() {
       <Route path="/jelszo-visszaallitas" component={ResetPassword} />
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/adatvedelem" component={Privacy} />
+      <Route path="/aszf" component={Aszf} />
+      {/* Legacy English URL: /terms → /aszf */}
+      <Route path="/terms" component={() => <Redirect to="/aszf" />} />
 
       {/* Onboarding */}
       <Route path="/onboarding" component={() => <OnboardingRoute component={OnboardingWizard} />} />

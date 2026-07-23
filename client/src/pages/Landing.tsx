@@ -630,6 +630,10 @@ export default function Landing() {
             <Link href="/adatvedelem" className="flex items-center gap-1 transition-colors hover:text-white/60">
               <Shield className="w-3 h-3" /> Adatvédelem
             </Link>
+            <span>·</span>
+            <Link href="/aszf" className="transition-colors hover:text-white/60">
+              ÁSZF
+            </Link>
           </div>
           <div className="flex items-center gap-4 text-sm text-white/30">
             <Link href="/bejelentkezes" className="transition-colors hover:text-white/60">

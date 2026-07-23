@@ -566,7 +566,9 @@ export default function Register() {
 
           <p className="text-center text-xs text-white/20 mt-6">
             A regisztrációval elfogadod az{" "}
-            <span className="text-white/40">Általános Szerződési Feltételeket</span>{" "}
+            <Link href="/aszf" className="text-white/40 underline hover:text-violet-400 transition-colors">
+              Általános Szerződési Feltételeket
+            </Link>{" "}
             és az{" "}
             <Link href="/adatvedelem" className="text-white/40 underline hover:text-violet-400 transition-colors">
               Adatvédelmi Szabályzatot
