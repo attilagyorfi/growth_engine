@@ -17,6 +17,13 @@ import {
 import { getProfilesByAppUser } from "../db";
 import { SignJWT, jwtVerify } from "jose";
 import { ENV } from "../_core/env";
+import {
+  loginIpLimiter, loginEmailLimiter,
+  registerIpLimiter,
+  forgotPasswordIpLimiter, forgotPasswordEmailLimiter,
+  resetPasswordIpLimiter,
+  consumeOrThrow, getClientIp,
+} from "../_core/rateLimiter";
 
 // G2A super admin emails — ezek automatikusan super_admin szerepet kapnak
 // regisztráció során. Konzisztens a server/authDb.ts OAuth bridge-jével.
@@ -71,6 +78,9 @@ export const appAuthRouter = router({
       newsletterConsent: z.boolean().optional().default(false),
     }))
     .mutation(async ({ input, ctx }) => {
+      // Rate-limit: max 5 regisztráció / IP / 1 óra (spam-account bot védelem)
+      await consumeOrThrow(registerIpLimiter, getClientIp(ctx.req));
+
       const existing = await getAppUserByEmail(input.email);
       if (existing) {
         throw new TRPCError({ code: "CONFLICT", message: "Ez az email cím már regisztrált" });
@@ -169,6 +179,15 @@ export const appAuthRouter = router({
       password: z.string().min(1),
     }))
     .mutation(async ({ input, ctx }) => {
+      // Rate-limit KETTŐS: IP alapján (5/15min) ÉS email alapján (5/15min).
+      // Az elsőnek trippelő dob TRPCError-t. A kettős kulcs kivédi:
+      //   - egy bot több emailt tesztel egy IP-ről (IP-limiter megfogja)
+              //   - distributed botnet egy jó emailt tesztel több IP-ről (email-limiter)
+      const ip = getClientIp(ctx.req);
+      const emailKey = input.email.toLowerCase();
+      await consumeOrThrow(loginIpLimiter, ip);
+      await consumeOrThrow(loginEmailLimiter, emailKey);
+
       const user = await getAppUserByEmail(input.email);
       if (!user) {
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Hibás email cím vagy jelszó" });
@@ -249,7 +268,15 @@ export const appAuthRouter = router({
   // ─── Elfelejtett jelszó ──────────────────────────────────────────────────────
   forgotPassword: publicProcedure
     .input(z.object({ email: z.string().email() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      // Rate-limit: 3/óra IP-re és 3/óra email-re. Kettős kulcs mert egy bot
+      // több emailt tesztelhet reset-tokent kérve (spam-inbox generálás),
+      // vagy sok IP egy emailt kereshet (kihasználva ha a reset flow lassul).
+      const ip = getClientIp(ctx.req);
+      const emailKey = input.email.toLowerCase();
+      await consumeOrThrow(forgotPasswordIpLimiter, ip);
+      await consumeOrThrow(forgotPasswordEmailLimiter, emailKey);
+
       const user = await getAppUserByEmail(input.email);
       // Always return success to prevent email enumeration
       if (!user) return { success: true };
@@ -279,7 +306,14 @@ export const appAuthRouter = router({
       token: z.string(),
       newPassword: z.string().min(8, "A jelszó legalább 8 karakter legyen"),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      // Rate-limit IP-re: 5 beváltási kísérlet / 15 perc.
+      // (Csak IP alapján — a token brute-force önmagában nem életképes:
+      // nanoid(48) = 288 bit entrópia. De ha valaki már megtalálta a
+      // reset URL-t egy leaked emailből, ne engedjük hogy különböző jelszót
+      // próbálgasson újra és újra.)
+      await consumeOrThrow(resetPasswordIpLimiter, getClientIp(ctx.req));
+
       const resetToken = await getValidResetToken(input.token);
       if (!resetToken) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Érvénytelen vagy lejárt token" });
