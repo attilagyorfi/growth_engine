@@ -84,8 +84,43 @@ export const socialRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Adatbázis nem elérhető" });
       const [conn] = await db.select().from(scTable).where(eq(scTable.id, input.connectionId)).limit(1);
       if (!conn || !conn.isActive) throw new TRPCError({ code: "NOT_FOUND", message: "Social fiók nem található vagy inaktív" });
-      const { publishToLinkedIn } = await import("../socialPublisher");
-      const { postId } = await publishToLinkedIn(conn.accessToken, conn.platformUserId ?? "", input.text, input.imageUrl);
+
+      // Ownership guard: a connection is a saját profile-hoz tartozik-e?
+      // (A input.profileId már ownership-checkelve, de a connectionId nem —
+      // szigorúan megnézzük, hogy ne lehessen más profile connection-jét használni.)
+      if (conn.profileId !== input.profileId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "A social fiók nem ehhez a profilhoz tartozik" });
+      }
+
+      // Platform-alapú routolás. Mindegyik publisher a saját API-t hívja,
+      // egyseges { postId } shape-ben tér vissza.
+      const {
+        publishToLinkedIn, publishToFacebook, publishToInstagram,
+      } = await import("../socialPublisher");
+
+      let postId: string;
+      try {
+        if (conn.platform === "linkedin") {
+          ({ postId } = await publishToLinkedIn(conn.accessToken, conn.platformUserId ?? "", input.text, input.imageUrl));
+        } else if (conn.platform === "facebook") {
+          if (!conn.platformUserId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "A Facebook Page ID hiányzik a csatlakozásból — csatlakoztasd újra a fiókot" });
+          ({ postId } = await publishToFacebook(conn.accessToken, conn.platformUserId, input.text, input.imageUrl));
+        } else if (conn.platform === "instagram") {
+          if (!conn.platformUserId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Az Instagram Business Account ID hiányzik — csatlakoztasd újra a Facebook Page-en keresztül" });
+          if (!input.imageUrl) throw new TRPCError({ code: "BAD_REQUEST", message: "Instagram poszthoz kép szükséges (text-only nem megy)" });
+          ({ postId } = await publishToInstagram(conn.accessToken, conn.platformUserId, input.text, input.imageUrl));
+        } else {
+          // tiktok: a #66 PR schema-bővítés után jön külön PR-ben (videó-input hiányzik)
+          // twitter: nincs implementálva, ha valaki mégis csatlakoztatná
+          throw new TRPCError({ code: "BAD_REQUEST", message: `A(z) '${conn.platform}' platformra jelenleg nem támogatott a publikálás` });
+        }
+      } catch (err) {
+        // Meta / LinkedIn API rate-limit vagy expired token esetén readable hibaüzenet
+        const msg = err instanceof Error ? err.message : String(err);
+        if (err instanceof TRPCError) throw err;
+        throw new TRPCError({ code: "BAD_GATEWAY", message: `Publikálás sikertelen (${conn.platform}): ${msg}` });
+      }
+
       await db.insert(scheduledPosts).values({
         id: nanoid(),
         profileId: input.profileId,
