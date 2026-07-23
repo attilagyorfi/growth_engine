@@ -45,4 +45,17 @@ export const ENV = {
   // megy (anonim ~25 req/nap), de éles használathoz key ajánlott:
   // https://developers.google.com/speed/docs/insights/v5/get-started
   pagespeedApiKey: (process.env.PAGESPEED_API_KEY ?? "").trim(),
+  // ─── Közösségi média OAuth (Meta + TikTok) ─────────────────────────────
+  // A Meta egy App-pal lefedi a Facebook Page-eket ÉS az Instagram Business
+  // accountokat (IG csak FB Page-en keresztül érhető el). A TikTok külön
+  // Developer App-ot igényel. Mindkettő hosszú App Review folyamatot kér a
+  // publishing scope-okhoz — production-ban valós ügyfél csak review után
+  // tudja csatlakoztatni a sajat fiókját. Lásd: docs/social-oauth-setup.md
+  facebookAppId: (process.env.FACEBOOK_APP_ID ?? "").trim(),
+  facebookAppSecret: (process.env.FACEBOOK_APP_SECRET ?? "").trim(),
+  tiktokClientKey: (process.env.TIKTOK_CLIENT_KEY ?? "").trim(),
+  tiktokClientSecret: (process.env.TIKTOK_CLIENT_SECRET ?? "").trim(),
+  // APP_URL — production base URL minden OAuth callback redirectjéhez.
+  // A LinkedIn OAuth biztonsági javításával lett bevezetve (audit #2 fix).
+  appUrl: (process.env.APP_URL ?? "").trim().replace(/\/+$/, ""),
 };

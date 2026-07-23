@@ -674,7 +674,7 @@ export type InsertAppNotification = typeof appNotifications.$inferInsert;
 export const socialConnections = mysqlTable("social_connections", {
   id: varchar("id", { length: 64 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
   profileId: varchar("profileId", { length: 64 }).notNull(),
-  platform: mysqlEnum("platform", ["facebook", "instagram", "linkedin", "twitter"]).notNull(),
+  platform: mysqlEnum("platform", ["facebook", "instagram", "linkedin", "twitter", "tiktok"]).notNull(),
   accessToken: text("accessToken").notNull(),
   refreshToken: text("refreshToken"),
   tokenExpiresAt: varchar("tokenExpiresAt", { length: 32 }),
@@ -691,7 +691,7 @@ export const scheduledPosts = mysqlTable("scheduled_posts", {
   id: varchar("id", { length: 64 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
   profileId: varchar("profileId", { length: 64 }).notNull(),
   contentId: varchar("contentId", { length: 64 }),
-  platform: mysqlEnum("platform", ["facebook", "instagram", "linkedin", "twitter"]).notNull(),
+  platform: mysqlEnum("platform", ["facebook", "instagram", "linkedin", "twitter", "tiktok"]).notNull(),
   text: text("text").notNull(),
   imageUrl: text("imageUrl"),
   scheduledAt: timestamp("scheduledAt").notNull(),

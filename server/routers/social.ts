@@ -29,7 +29,7 @@ export const socialRouter = router({
   saveConnection: appUserProcedure
     .input(z.object({
       profileId: z.string(),
-      platform: z.enum(["facebook", "instagram", "linkedin", "twitter"]),
+      platform: z.enum(["facebook", "instagram", "linkedin", "twitter", "tiktok"]),
       accessToken: z.string(),
       refreshToken: z.string().optional(),
       tokenExpiresAt: z.string().optional(),
@@ -102,7 +102,7 @@ export const socialRouter = router({
   schedulePost: appUserProcedure
     .input(z.object({
       profileId: z.string(),
-      platform: z.enum(["facebook", "instagram", "linkedin", "twitter"]),
+      platform: z.enum(["facebook", "instagram", "linkedin", "twitter", "tiktok"]),
       text: z.string().min(1).max(3000),
       imageUrl: z.string().optional(),
       scheduledAt: z.string(),
@@ -163,4 +163,15 @@ export const socialRouter = router({
     .query(() => {
       return { configured: !!(process.env.LINKEDIN_CLIENT_ID && process.env.LINKEDIN_CLIENT_SECRET) };
     }),
+  // Új: a 3 platform konfiguráltság-státusza egy hívásban. A frontend
+  // ezzel dönti el, hogy a gomb klikkelhető (van env) vagy "Konfiguráció
+  // szükséges" modal-t mutat.
+  isPlatformConfigured: publicProcedure
+    .query(() => ({
+      linkedin: !!(process.env.LINKEDIN_CLIENT_ID && process.env.LINKEDIN_CLIENT_SECRET),
+      facebook: !!(process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET),
+      // Instagram a Facebook OAuth-on keresztül megy, ugyanaz az env-kombináció
+      instagram: !!(process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET),
+      tiktok: !!(process.env.TIKTOK_CLIENT_KEY && process.env.TIKTOK_CLIENT_SECRET),
+    })),
 });

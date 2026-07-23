@@ -5,6 +5,8 @@ import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { registerLinkedInOAuthRoutes } from "../linkedinOAuth";
+import { registerFacebookOAuthRoutes } from "../facebookOAuth";
+import { registerTikTokOAuthRoutes } from "../tiktokOAuth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
@@ -59,8 +61,12 @@ async function startServer() {
   });
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
-  // LinkedIn OAuth routes
+  // Social OAuth routes — minden hardened auth-gate + HMAC state +
+  // ownership check + APP_URL-derived redirect-tel (lásd a security audit
+  // #2 fix-et). Mind a 3 modul defensive: env nélkül 500-at ad, NEM crash.
   registerLinkedInOAuthRoutes(app);
+  registerFacebookOAuthRoutes(app);
+  registerTikTokOAuthRoutes(app);
   // tRPC API
   app.use(
     "/api/trpc",
