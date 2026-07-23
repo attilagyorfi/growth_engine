@@ -33,6 +33,17 @@ const JWT_SECRET = new TextEncoder().encode(ENV.cookieSecret);
 const TOKEN_EXPIRY = "30d";
 const COOKIE_MAX_AGE = 30 * 24 * 3600;
 
+// Dummy bcrypt hash a login timing-attack ellen. Ha a megadott email
+// cím NEM létezik, a szerver mégis lefuttat egy bcrypt.compare hívást
+// ezzel a hash-el, hogy a válaszidő független legyen attól, hogy a
+// user létezik-e. Bcrypt konstans időben fut adott rounds-nál (~250ms
+// rounds=12-vel). Enélkül a támadó a login válaszidejéből ki tudná
+// deríteni hogy melyik email cím regisztrált — pl. `victim@example.com`
+// (250ms) vs `notreal@example.com` (5ms). Ez a hash egyszer, offline
+// lett generálva a "!!dummy-never-matches-real-password!!" input-ból,
+// bcryptjs rounds=12-vel. Semmilyen valós jelszó nem fog egyezni vele.
+const DUMMY_BCRYPT_HASH = "$2b$12$diqRr.CMQx0IEe3NeCDFM.oED5M/eVA3t9MYoekprkSsVlpvkGVNy";
+
 // Egységes Set-Cookie helper. Production-ban `Secure` (csak HTTPS),
 // fejlesztésben nincs (localhost HTTP). SameSite=Lax — a Strict megszakítaná
 // a Stripe/OAuth callback redirecteket. HttpOnly mindenhol (XSS védelem).
@@ -188,14 +199,17 @@ export const appAuthRouter = router({
       await consumeOrThrow(loginIpLimiter, ip);
       await consumeOrThrow(loginEmailLimiter, emailKey);
 
+      // Timing-attack fix (audit medium): mindig futtatunk bcrypt.compare-t,
+      // akkor is ha a user nem létezik — egy dummy hash-el. Enélkül a támadó
+      // a válaszidő különbségéből (250ms bcrypt vs 5ms azonnali throw) meg
+      // tudja mondani hogy melyik email cím regisztrált. A `passwordValid`
+      // változó akkor is `false` marad, ha a user null (mert a DUMMY_HASH
+      // semmivel nem egyezik), így a végleges throw ugyanaz a magyar
+      // "Hibás email cím vagy jelszó" üzenet.
       const user = await getAppUserByEmail(input.email);
-      if (!user) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "Hibás email cím vagy jelszó" });
-      }
-      // Először a jelszót ellenőrizzük (timing-safe — ne áruljuk el, hogy létezik-e fiók
-      // a megadott emailhez egy rossz jelszós kísérletnél).
-      const valid = await bcrypt.compare(input.password, user.passwordHash);
-      if (!valid) {
+      const hashToCompare = user?.passwordHash ?? DUMMY_BCRYPT_HASH;
+      const passwordValid = await bcrypt.compare(input.password, hashToCompare);
+      if (!user || !passwordValid) {
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Hibás email cím vagy jelszó" });
       }
       // Csak ha a jelszó helyes, akkor mondjuk meg, hogy a fiók még jóváhagyásra vár —
