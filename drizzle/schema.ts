@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, json } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, json, double, date } from "drizzle-orm/mysql-core";
 
 // ─── Users ────────────────────────────────────────────────────────────────────
 
@@ -826,3 +826,95 @@ export const heygenVideos = mysqlTable("heygenVideos", {
 });
 export type HeygenVideo = typeof heygenVideos.$inferSelect;
 export type InsertHeygenVideo = typeof heygenVideos.$inferInsert;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// RIPORTGENERÁTOR MODUL (2026-06 — külső integrációs terv szerint)
+//
+// Havi PDF-riport az ügyfelek Google Ads / GA4 / Search Console / Meta Ads
+// teljesítményéről. A `seoAudits` mintát követi (score + report JSON +
+// aiInsights). A tokenek KLINIKAILAG KÜLÖN vannak a socialConnections-től,
+// mert az ads_read scope külön OAuth review-t igényel.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Data Connections — Ads/Analytics OAuth (a social publikálás tokenjétől
+// külön, mert az ads_read külön scope-ot igényel).
+export const dataConnections = mysqlTable("data_connections", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  profileId: varchar("profileId", { length: 64 }).notNull(),
+  platform: mysqlEnum("platform", ["google_ads", "ga4", "search_console", "meta_ads"]).notNull(),
+  // Platform-specifikus fiók/property azonosító (ad account id, GA4 property id, GSC site url)
+  externalAccountId: varchar("externalAccountId", { length: 255 }).notNull(),
+  externalAccountName: varchar("externalAccountName", { length: 255 }),
+  // ⚠️ Ezek plaintext oszlopok. Éles bevezetés előtt a token-titkosítást
+  // (AES-GCM a JWT_SECRET-tel derivált kulcson) be kell építeni. Egyelőre
+  // fejlesztési adatot tárol.
+  accessToken: text("accessToken"),
+  refreshToken: text("refreshToken"),
+  tokenExpiry: timestamp("tokenExpiry"),
+  scopes: json("scopes").$type<string[]>(),
+  connected: boolean("connected").default(false).notNull(),
+  lastSyncedAt: timestamp("lastSyncedAt"),
+  lastSyncError: text("lastSyncError"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type DataConnection = typeof dataConnections.$inferSelect;
+export type InsertDataConnection = typeof dataConnections.$inferInsert;
+
+// Report Metrics — napi bontású, normalizált, float. Az analyticsSnapshots
+// poszt-szintű int marad; ez a fizetett/forgalmi metrikák "közös kincse".
+export const reportMetrics = mysqlTable("report_metrics", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  profileId: varchar("profileId", { length: 64 }).notNull(),
+  platform: mysqlEnum("platform", ["google_ads", "ga4", "search_console", "meta_ads"]).notNull(),
+  date: date("date").notNull(),
+  metricKey: varchar("metricKey", { length: 64 }).notNull(), // spend, impressions, clicks, conversions, sessions, ctr, cpa
+  value: double("value").notNull(),
+  currency: varchar("currency", { length: 3 }),
+  // Opcionális bontás: { campaign, adset, channel, device, query, landingPage }
+  dimension: json("dimension").$type<Record<string, string>>(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type ReportMetric = typeof reportMetrics.$inferSelect;
+export type InsertReportMetric = typeof reportMetrics.$inferInsert;
+
+// Reports — legenerált riportok. A summaryData a Recharts renderhez;
+// az aiSummary a Claude által generált magyar vezetői összefoglaló.
+export const reports = mysqlTable("reports", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  profileId: varchar("profileId", { length: 64 }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  periodFrom: date("periodFrom").notNull(),
+  periodTo: date("periodTo").notNull(),
+  templateKey: varchar("templateKey", { length: 64 }).default("default").notNull(), // default | paid | seo
+  status: mysqlEnum("status", ["pending", "rendering", "rendered", "delivered", "failed"]).default("pending").notNull(),
+  summaryData: json("summaryData").$type<{
+    kpis: Array<{ key: string; label: string; value: number; prevValue?: number; unit?: string }>;
+    series: Array<{ metricKey: string; points: Array<{ date: string; value: number }> }>;
+    byPlatform: Array<{ platform: string; spend?: number; conversions?: number }>;
+  }>(),
+  aiSummary: text("aiSummary"),
+  pdfUrl: varchar("pdfUrl", { length: 1000 }),
+  createdBy: varchar("createdBy", { length: 64 }),
+  deliveredAt: timestamp("deliveredAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type Report = typeof reports.$inferSelect;
+export type InsertReport = typeof reports.$inferInsert;
+
+// Report Schedules — havi automatikus futás. A scheduledPosts cron-mintáját
+// követi (Vercel/Railway cron → /api/cron/monthly-reports végpont).
+export const reportSchedules = mysqlTable("report_schedules", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  profileId: varchar("profileId", { length: 64 }).notNull().unique(),
+  templateKey: varchar("templateKey", { length: 64 }).default("default").notNull(),
+  dayOfMonth: int("dayOfMonth").default(3).notNull(),  // pl. minden hó 3-án az előző hóról
+  recipients: json("recipients").$type<string[]>(),
+  active: boolean("active").default(true).notNull(),
+  lastRunAt: timestamp("lastRunAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type ReportSchedule = typeof reportSchedules.$inferSelect;
+export type InsertReportSchedule = typeof reportSchedules.$inferInsert;

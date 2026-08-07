@@ -12,6 +12,7 @@ import { socialRouter } from "./routers/social";
 import { projectsRouter } from "./routers/projects";
 import { seoRouter } from "./routers/seo";
 import { newsletterRouter } from "./routers/newsletter";
+import { reportsRouter } from "./routers/reports";
 import { generateImage } from "./_core/imageGeneration";
 import { nanoid } from "nanoid";
 import { TRPCError } from "@trpc/server";
@@ -1098,6 +1099,9 @@ A link mező mindig ezek egyike legyen, ne találj ki más URL-t.`,
 
   // ─── SEO Audit ──────────────────────────────────────────────────────────────
   seo: seoRouter,
+
+  // ─── Riportgenerátor (Google Ads / GA4 / Search Console / Meta Ads) ─────
+  reports: reportsRouter,
 
   // ─── HeyGen Videókészítő ──────────────────────────────────────────────────────────────────────
   heygen: heygenRouter,
