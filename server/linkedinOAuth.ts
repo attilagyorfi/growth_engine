@@ -17,7 +17,7 @@
  * 3. LinkedIn → /api/oauth/linkedin/callback?code=xxx&state=xxx
  * 4. Szerver: state HMAC verify (timing-safe), TTL check (<15 perc), ownership re-check,
  *    code→token cserél, social_connections-be ment
- * 5. Redirect a frontend-re: /beallitasok?linkedin=connected (APP_URL-en belül)
+ * 5. Redirect a frontend-re: /integraciok?linkedin=connected (APP_URL-en belül)
  *
  * Setup:
  * - LinkedIn App: https://www.linkedin.com/developers/apps (scopes:
@@ -160,19 +160,19 @@ export function registerLinkedInOAuthRoutes(app: Express) {
 
     if (error) {
       console.error("[LinkedIn OAuth] Error:", error, error_description);
-      res.redirect(`${appOrigin}/beallitasok?linkedin=error&reason=${encodeURIComponent(error_description ?? error)}`);
+      res.redirect(`${appOrigin}/integraciok?linkedin=error&reason=${encodeURIComponent(error_description ?? error)}`);
       return;
     }
 
     if (!code || !state) {
-      res.redirect(`${appOrigin}/beallitasok?linkedin=error&reason=missing_params`);
+      res.redirect(`${appOrigin}/integraciok?linkedin=error&reason=missing_params`);
       return;
     }
 
     // ── 1. HMAC state verify — kovácsolt state-et elutasít, lejárt state-et is
     const verified = verifyState(state);
     if (!verified) {
-      res.redirect(`${appOrigin}/beallitasok?linkedin=error&reason=invalid_state`);
+      res.redirect(`${appOrigin}/integraciok?linkedin=error&reason=invalid_state`);
       return;
     }
     const { profileId, userId } = verified;
@@ -180,19 +180,19 @@ export function registerLinkedInOAuthRoutes(app: Express) {
     // ── 2. Re-check ownership (a state óta változhatott a jogosultság)
     const user = await getAppUserById(userId);
     if (!user) {
-      res.redirect(`${appOrigin}/beallitasok?linkedin=error&reason=user_gone`);
+      res.redirect(`${appOrigin}/integraciok?linkedin=error&reason=user_gone`);
       return;
     }
     try {
       await assertProfileOwnership(user.id, user.role, profileId, user.profileId);
     } catch {
-      res.redirect(`${appOrigin}/beallitasok?linkedin=error&reason=forbidden`);
+      res.redirect(`${appOrigin}/integraciok?linkedin=error&reason=forbidden`);
       return;
     }
 
     const { clientId, clientSecret } = getLinkedInConfig();
     if (!clientId || !clientSecret) {
-      res.redirect(`${appOrigin}/beallitasok?linkedin=error&reason=not_configured`);
+      res.redirect(`${appOrigin}/integraciok?linkedin=error&reason=not_configured`);
       return;
     }
 
@@ -214,7 +214,7 @@ export function registerLinkedInOAuthRoutes(app: Express) {
       if (!tokenRes.ok) {
         const errText = await tokenRes.text();
         console.error("[LinkedIn OAuth] Token exchange failed:", errText);
-        res.redirect(`${appOrigin}/beallitasok?linkedin=error&reason=token_exchange_failed`);
+        res.redirect(`${appOrigin}/integraciok?linkedin=error&reason=token_exchange_failed`);
         return;
       }
 
@@ -243,7 +243,7 @@ export function registerLinkedInOAuthRoutes(app: Express) {
       const { eq, and } = await import("drizzle-orm");
       const db = await getDb();
       if (!db) {
-        res.redirect(`${appOrigin}/beallitasok?linkedin=error&reason=db_unavailable`);
+        res.redirect(`${appOrigin}/integraciok?linkedin=error&reason=db_unavailable`);
         return;
       }
 
@@ -267,10 +267,10 @@ export function registerLinkedInOAuthRoutes(app: Express) {
       });
 
       console.log(`[LinkedIn OAuth] Connected for profile ${profileId}: ${platformUsername}`);
-      res.redirect(`${appOrigin}/beallitasok?linkedin=connected&username=${encodeURIComponent(platformUsername)}`);
+      res.redirect(`${appOrigin}/integraciok?linkedin=connected&username=${encodeURIComponent(platformUsername)}`);
     } catch (err) {
       console.error("[LinkedIn OAuth] Unexpected error:", err);
-      res.redirect(`${appOrigin}/beallitasok?linkedin=error&reason=unexpected`);
+      res.redirect(`${appOrigin}/integraciok?linkedin=error&reason=unexpected`);
     }
   });
 }

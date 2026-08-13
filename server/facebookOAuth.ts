@@ -17,7 +17,7 @@
  *      d) MINDEN Page-re egy `social_connections` rekord (platform=facebook)
  *      e) MINDEN Page-re GET /{pageId}?fields=instagram_business_account →
  *         ha van IG account, plusz egy `social_connections` (platform=instagram)
- *   5. Redirect: /beallitasok?facebook=connected&pages=N&instagram=M
+ *   5. Redirect: /integraciok?facebook=connected&pages=N&instagram=M
  *
  * App Review szükséges scopes (production):
  *   - pages_show_list (alap)
@@ -150,35 +150,35 @@ export function registerFacebookOAuthRoutes(app: Express) {
 
     if (error) {
       console.error("[Facebook OAuth] Error:", error, error_description);
-      res.redirect(`${appOrigin}/beallitasok?facebook=error&reason=${encodeURIComponent(error_description ?? error)}`);
+      res.redirect(`${appOrigin}/integraciok?facebook=error&reason=${encodeURIComponent(error_description ?? error)}`);
       return;
     }
     if (!code || !state) {
-      res.redirect(`${appOrigin}/beallitasok?facebook=error&reason=missing_params`);
+      res.redirect(`${appOrigin}/integraciok?facebook=error&reason=missing_params`);
       return;
     }
 
     const verified = verifyState(state);
     if (!verified) {
-      res.redirect(`${appOrigin}/beallitasok?facebook=error&reason=invalid_state`);
+      res.redirect(`${appOrigin}/integraciok?facebook=error&reason=invalid_state`);
       return;
     }
     const { profileId, userId } = verified;
 
     const user = await getAppUserById(userId);
     if (!user) {
-      res.redirect(`${appOrigin}/beallitasok?facebook=error&reason=user_gone`);
+      res.redirect(`${appOrigin}/integraciok?facebook=error&reason=user_gone`);
       return;
     }
     try {
       await assertProfileOwnership(user.id, user.role, profileId, user.profileId);
     } catch {
-      res.redirect(`${appOrigin}/beallitasok?facebook=error&reason=forbidden`);
+      res.redirect(`${appOrigin}/integraciok?facebook=error&reason=forbidden`);
       return;
     }
 
     if (!ENV.facebookAppId || !ENV.facebookAppSecret) {
-      res.redirect(`${appOrigin}/beallitasok?facebook=error&reason=not_configured`);
+      res.redirect(`${appOrigin}/integraciok?facebook=error&reason=not_configured`);
       return;
     }
 
@@ -195,7 +195,7 @@ export function registerFacebookOAuthRoutes(app: Express) {
       if (!shortTokenRes.ok) {
         const errText = await shortTokenRes.text();
         console.error("[Facebook OAuth] Token exchange failed:", errText);
-        res.redirect(`${appOrigin}/beallitasok?facebook=error&reason=token_exchange_failed`);
+        res.redirect(`${appOrigin}/integraciok?facebook=error&reason=token_exchange_failed`);
         return;
       }
       const shortToken = (await shortTokenRes.json() as { access_token: string }).access_token;
@@ -219,7 +219,7 @@ export function registerFacebookOAuthRoutes(app: Express) {
       if (!pagesRes.ok) {
         const errText = await pagesRes.text();
         console.error("[Facebook OAuth] /me/accounts failed:", errText);
-        res.redirect(`${appOrigin}/beallitasok?facebook=error&reason=pages_fetch_failed`);
+        res.redirect(`${appOrigin}/integraciok?facebook=error&reason=pages_fetch_failed`);
         return;
       }
       const pages = (await pagesRes.json() as {
@@ -228,7 +228,7 @@ export function registerFacebookOAuthRoutes(app: Express) {
 
       if (pages.length === 0) {
         // Nincs Page-e a usernek → nem tudunk publikálni semmilyen Page-re
-        res.redirect(`${appOrigin}/beallitasok?facebook=error&reason=no_pages`);
+        res.redirect(`${appOrigin}/integraciok?facebook=error&reason=no_pages`);
         return;
       }
 
@@ -237,7 +237,7 @@ export function registerFacebookOAuthRoutes(app: Express) {
       const { eq, and } = await import("drizzle-orm");
       const db = await getDb();
       if (!db) {
-        res.redirect(`${appOrigin}/beallitasok?facebook=error&reason=db_unavailable`);
+        res.redirect(`${appOrigin}/integraciok?facebook=error&reason=db_unavailable`);
         return;
       }
 
@@ -308,10 +308,10 @@ export function registerFacebookOAuthRoutes(app: Express) {
       }
 
       console.log(`[Facebook OAuth] Profile ${profileId}: ${fbConnected} Page(s), ${igConnected} IG account(s)`);
-      res.redirect(`${appOrigin}/beallitasok?facebook=connected&pages=${fbConnected}&instagram=${igConnected}`);
+      res.redirect(`${appOrigin}/integraciok?facebook=connected&pages=${fbConnected}&instagram=${igConnected}`);
     } catch (err) {
       console.error("[Facebook OAuth] Unexpected error:", err);
-      res.redirect(`${appOrigin}/beallitasok?facebook=error&reason=unexpected`);
+      res.redirect(`${appOrigin}/integraciok?facebook=error&reason=unexpected`);
     }
   });
 }

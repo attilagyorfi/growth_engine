@@ -14,7 +14,7 @@ import {
   LayoutDashboard, Users, BarChart3, Layers, TrendingUp, Settings,
   Zap, ChevronRight, Bell, X, CheckCircle, AlertCircle, Info, Mail,
   ChevronDown, LogOut, Shield, Megaphone, SearchCheck, Video,
-  User, KeyRound, UserCog, Crown, Sparkles, Menu, Brain, FolderOpen, Plus, Check,
+  User, KeyRound, UserCog, Crown, Sparkles, Menu, Brain, FolderOpen, Plus, Check, Plug,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -50,6 +50,7 @@ const publicNavItems: NavItem[] = [
   { href: "/seo", label: "SEO Audit", icon: SearchCheck, gate: "all" },
   { href: "/riportok", label: "Riportok", icon: BarChart3, gate: "pro+" },
   { href: "/video-studio", label: "Videókészítő", icon: Video, gate: "pro+", comingSoon: true },
+  { href: "/integraciok", label: "Integrációk", icon: Plug, gate: "all" },
   { href: "/beallitasok", label: "Beállítások", icon: Settings, gate: "all" },
 ];
 
@@ -64,6 +65,7 @@ const adminNavItems: NavItem[] = [
   { href: "/seo", label: "SEO Audit", icon: SearchCheck },
   { href: "/riportok", label: "Riportok", icon: BarChart3 },
   { href: "/video-studio", label: "Videókészítő", icon: Video, comingSoon: true },
+  { href: "/integraciok", label: "Integrációk", icon: Plug },
   { href: "/hirlevel", label: "Hírlevél", icon: Mail },
   { href: "/beallitasok", label: "Beállítások", icon: Settings },
 ];
