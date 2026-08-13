@@ -8,6 +8,8 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import CommandPalette from "@/components/CommandPalette";
+import ChangelogDrawer from "@/components/ChangelogDrawer";
+import { useChangelog } from "@/hooks/useChangelog";
 import {
   LayoutDashboard, Users, BarChart3, Layers, TrendingUp, Settings,
   Zap, ChevronRight, Bell, X, CheckCircle, AlertCircle, Info, Mail,
@@ -88,6 +90,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
   const [newName, setNewName] = useState("");
   const [showProjectMenu, setShowProjectMenu] = useState(false);
   const [cmdPaletteOpen, setCmdPaletteOpen] = useState(false);
+  const changelog = useChangelog();
 
   // Globális ⌘K / Ctrl+K keyboard shortcut a parancspalettához.
   // A meta/ctrl+k IDE/browser search-t is triggerelheti (különösen
@@ -544,10 +547,18 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
                 }}
               >
                 <div
-                  className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                  className="relative w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
                   style={{ background: "var(--qa-accent)" }}
                 >
                   {(user?.name ?? user?.email ?? "?")[0].toUpperCase()}
+                  {/* Changelog notification dot — a user-menu-avatar sarkán */}
+                  {changelog.hasUnread && (
+                    <span
+                      className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full ring-2"
+                      style={{ background: "var(--qa-warning)", '--tw-ring-color': "var(--qa-surface2)" } as React.CSSProperties}
+                      aria-label={`${changelog.unreadCount} új újdonság`}
+                    />
+                  )}
                 </div>
                 <div className="text-left hidden sm:block">
                   <p className="text-xs font-semibold leading-none max-w-28 truncate" style={{ color: "var(--qa-fg)", fontFamily: "Sora, sans-serif" }}>
@@ -675,6 +686,28 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
                     )}
                   </div>
 
+                  {/* Újdonságok — changelog drawer */}
+                  <div className="px-3 py-2 border-b" style={{ borderColor: "var(--qa-border)" }}>
+                    <button
+                      onClick={() => { changelog.setOpen(true); setShowUserMenu(false); }}
+                      className="flex items-center gap-2 px-3 py-2 rounded-md text-xs font-medium transition-colors w-full"
+                      style={{ color: "var(--qa-fg3)" }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "var(--qa-surface)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                    >
+                      <Sparkles size={12} />
+                      <span className="flex-1 text-left">Újdonságok</span>
+                      {changelog.hasUnread && (
+                        <span
+                          className="text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white"
+                          style={{ background: "var(--qa-accent)", minWidth: 18, textAlign: "center" }}
+                        >
+                          {changelog.unreadCount}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+
                   {/* Password reset */}
                   <div className="px-3 py-2 border-b" style={{ borderColor: "var(--qa-border)" }}>
                     <Link
@@ -722,6 +755,9 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
 
       {/* Command palette — global Cmd+K / Ctrl+K */}
       <CommandPalette open={cmdPaletteOpen} onOpenChange={setCmdPaletteOpen} />
+
+      {/* Changelog drawer — user menu "Újdonságok" gomb nyitja meg */}
+      <ChangelogDrawer open={changelog.open} onOpenChange={changelog.setOpen} />
     </div>
   );
 }
