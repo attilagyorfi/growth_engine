@@ -15,6 +15,7 @@ import {
   Sparkles, Rocket, Building2, Crown,
 } from "lucide-react";
 import { G2ALogoOnDark } from "@/components/G2ALogo";
+import PricingMatrix from "@/components/PricingMatrix";
 
 // ─── Shared Plans (synced with Register.tsx) ──────────────────────────────────
 // Színkódok minden csomaghoz — vizuális különbségtétel a választás megkönnyítésére.
@@ -590,6 +591,17 @@ export default function Landing() {
               </FadeIn>
             ))}
           </div>
+
+          {/* Feature-mátrix — részletes összehasonlítás a kártyák alatt */}
+          <FadeIn delay={0.1} className="mt-16">
+            <div className="text-center mb-6">
+              <h3 className="text-2xl font-bold mb-2">Csomag-összehasonlítás</h3>
+              <p className={`text-sm ${subtext}`}>
+                Minden funkció és korlát egy táblázatban — hogy pontosan lásd, melyik csomag felel meg a legjobban.
+              </p>
+            </div>
+            <PricingMatrix />
+          </FadeIn>
         </div>
       </section>
 
