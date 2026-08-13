@@ -140,15 +140,15 @@ export default function Register() {
   // Pending-approval képernyő: regisztráció sikerült, de az adminnak még jóvá kell hagynia.
   if (pendingApprovalEmail) {
     return (
-      <div className="min-h-screen bg-[#0A0A0F] flex items-center justify-center px-4">
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "var(--qa-bg)" }}>
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           className="w-full max-w-md rounded-2xl border p-8 text-center"
-          style={{ background: "#12121e", borderColor: "rgba(139,92,246,0.2)" }}
+          style={{ background: "var(--qa-surface)", borderColor: "var(--qa-border)" }}
         >
-          <div className="w-16 h-16 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: "rgba(139,92,246,0.15)" }}>
-            <CheckCircle2 className="w-8 h-8" style={{ color: "#a78bfa" }} />
+          <div className="w-16 h-16 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: "oklch(0.58 0.19 258 / 15%)" }}>
+            <CheckCircle2 className="w-8 h-8" style={{ color: "var(--qa-accent)" }} />
           </div>
           <h1 className="text-2xl font-bold text-white mb-3" style={{ fontFamily: "Sora, sans-serif" }}>
             Sikeres regisztráció!
@@ -171,7 +171,7 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0A0F] flex">
+    <div className="min-h-screen flex" style={{ background: "var(--qa-bg)" }}>
       {/* Left panel */}
       <div className="hidden lg:flex flex-col justify-between w-5/12 p-12 bg-gradient-to-br from-violet-900/30 to-indigo-900/20 border-r border-white/5">
         <G2ALogoOnDark size="lg" asLink />
@@ -213,7 +213,7 @@ export default function Register() {
               </div>
               Csomag választás
             </div>
-            <div className="flex-1 h-px bg-white/10" />
+            <div className="flex-1 h-px" style={{ background: "var(--qa-border)" }} />
             <div className={cn("flex items-center gap-2 text-sm font-medium", step === "form" ? "text-violet-400" : "text-white/40")}>
               <div className={cn("w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold", step === "form" ? "bg-violet-600 text-white" : "bg-white/10 text-white/40")}>
                 2
@@ -263,8 +263,8 @@ export default function Register() {
                       className={cn(
                         "relative w-full text-left p-5 rounded-xl border transition-all",
                         isSelected
-                          ? "border-violet-500/60 bg-violet-500/10"
-                          : "border-white/[0.08] bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.04]"
+                          ? ""
+                          : ""
                       )}
                     >
                       <div className="flex items-start gap-5">
@@ -305,9 +305,9 @@ export default function Register() {
 
               {/* "VAGY VÁLASSZ FIZETŐS CSOMAGOT" elválasztó */}
               <div className="flex items-center gap-3 my-4">
-                <div className="flex-1 h-px bg-white/10" />
+                <div className="flex-1 h-px" style={{ background: "var(--qa-border)" }} />
                 <span className="text-xs uppercase tracking-wider text-white/30">vagy válassz fizetős csomagot</span>
-                <div className="flex-1 h-px bg-white/10" />
+                <div className="flex-1 h-px" style={{ background: "var(--qa-border)" }} />
               </div>
 
               {/* 3 fizetős csomag egy sorban */}
@@ -324,10 +324,10 @@ export default function Register() {
                       className={cn(
                         "relative text-left p-5 rounded-xl border transition-all",
                         isDisabled
-                          ? "border-white/[0.05] bg-white/[0.01] opacity-50 cursor-not-allowed"
+                          ? "opacity-50 cursor-not-allowed"
                           : isSelected
-                            ? "border-violet-500/60 bg-violet-500/10"
-                            : "border-white/[0.08] bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.04]"
+                            ? ""
+                            : ""
                       )}
                     >
                       {plan.popular && !isDisabled && (
@@ -389,7 +389,7 @@ export default function Register() {
               <Button
                 onClick={() => setStep("form")}
                 disabled={activePlan.disabled}
-                className="w-full bg-violet-600 hover:bg-violet-500 text-white border-0 h-11 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full h-11 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {activePlan.disabled
                   ? "Az Agency csomag csak egyedi elbírálással elérhető"
@@ -437,35 +437,33 @@ export default function Register() {
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 {error && (
-                  <Alert className="bg-red-500/10 border-red-500/20 text-red-400">
+                  <Alert variant="destructive">
                     <AlertDescription>{error}</AlertDescription>
                   </Alert>
                 )}
 
                 <div className="space-y-1.5">
-                  <Label className="text-white/70 text-sm">Neved (opcionális)</Label>
+                  <Label className="text-sm" style={{ color: "var(--qa-fg2)" }}>Neved (opcionális)</Label>
                   <Input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Pl. Kovács Péter"
-                    className="bg-white/[0.05] border-white/[0.08] text-white placeholder:text-white/30 focus:border-violet-500/50"
-                  />
+                                      />
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-white/70 text-sm">Email cím *</Label>
+                  <Label className="text-sm" style={{ color: "var(--qa-fg2)" }}>Email cím *</Label>
                   <Input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="email@ceg.hu"
                     required
-                    className="bg-white/[0.05] border-white/[0.08] text-white placeholder:text-white/30 focus:border-violet-500/50"
-                  />
+                                      />
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-white/70 text-sm">Jelszó *</Label>
+                  <Label className="text-sm" style={{ color: "var(--qa-fg2)" }}>Jelszó *</Label>
                   <div className="relative">
                     <Input
                       type={showPass ? "text" : "password"}
@@ -474,12 +472,12 @@ export default function Register() {
                       placeholder="Legalább 8 karakter"
                       required
                       minLength={8}
-                      className="bg-white/[0.05] border-white/[0.08] text-white placeholder:text-white/30 focus:border-violet-500/50 pr-10"
+                      className="pr-10"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPass(!showPass)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors" style={{ color: "var(--qa-fg4)" }}
                     >
                       {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -495,7 +493,7 @@ export default function Register() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-white/70 text-sm">Jelszó megerősítése *</Label>
+                  <Label className="text-sm" style={{ color: "var(--qa-fg2)" }}>Jelszó megerősítése *</Label>
                   <div className="relative">
                     <Input
                       type={showConfirmPass ? "text" : "password"}
@@ -503,12 +501,12 @@ export default function Register() {
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Írja be mégegyszer a jelszót"
                       required
-                      className="bg-white/[0.05] border-white/[0.08] text-white placeholder:text-white/30 focus:border-violet-500/50 pr-10"
+                      className="pr-10"
                     />
                     <button
                       type="button"
                       onClick={() => setShowConfirmPass(!showConfirmPass)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors" style={{ color: "var(--qa-fg4)" }}
                     >
                       {showConfirmPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -545,7 +543,7 @@ export default function Register() {
                 <Button
                   type="submit"
                   disabled={register.isPending}
-                  className="w-full bg-violet-600 hover:bg-violet-500 text-white border-0 h-11"
+                  className="w-full h-11"
                 >
                   {register.isPending ? (
                     <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Regisztráció...</>
