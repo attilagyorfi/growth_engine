@@ -33,6 +33,7 @@ const AIWriter = lazy(() => import("./pages/AIWriter"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const SeoAudit = lazy(() => import("./pages/SeoAudit"));
 const Notifications = lazy(() => import("./pages/Notifications"));
+const IntegrationsHub = lazy(() => import("./pages/IntegrationsHub"));
 const Reports = lazy(() => import("./pages/Reports"));
 const VideoStudio = lazy(() => import("./pages/VideoStudio"));
 
@@ -116,6 +117,7 @@ function Router() {
       <Route path="/profil" component={() => <AppRoute component={ProfilePage} />} />
       <Route path="/seo" component={() => <AppRoute component={SeoAudit} />} />
       <Route path="/ertesitesek" component={() => <AppRoute component={Notifications} />} />
+      <Route path="/integraciok" component={() => <AppRoute component={IntegrationsHub} />} />
       <Route path="/riportok" component={() => <AppRoute component={Reports} />} />
       <Route path="/video-studio" component={() => <AppRoute component={VideoStudio} />} />
 

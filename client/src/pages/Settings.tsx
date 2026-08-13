@@ -149,64 +149,9 @@ export default function Settings() {
   });
 
   const [emailForm, setEmailForm] = useState<any>({ provider: "gmail", email: "" });
-  // Social connections
-  const { data: socialConnections = [], refetch: refetchSocial } = trpc.social.listConnections.useQuery(
-    { profileId: activeProfile.id },
-    { enabled: !!activeProfile.id && activeTab === "integrations" }
-  );
-  const disconnectSocial = trpc.social.disconnect.useMutation({
-    onSuccess: () => { refetchSocial(); toast.success("Kapcsolat megszakítva"); },
-  });
-  const saveConnection = trpc.social.saveConnection.useMutation({
-    onSuccess: () => { refetchSocial(); toast.success("LinkedIn fiók csatlakoztatva!"); setLinkedInModal(false); },
-    onError: (e) => toast.error(e.message),
-  });
-  const [linkedInModal, setLinkedInModal] = useState(false);
-  const [linkedInForm, setLinkedInForm] = useState({ accessToken: "", platformUserId: "", platformUsername: "" });
-  const { data: linkedInConfig } = trpc.social.isLinkedInConfigured.useQuery();
-  const { data: linkedInOAuthData } = trpc.social.getLinkedInOAuthUrl.useQuery(
-    { profileId: activeProfile.id, origin: typeof window !== "undefined" ? window.location.origin : "" },
-    { enabled: !!activeProfile.id && !!linkedInConfig?.configured }
-  );
-  // A 3 közösségi platform (FB/IG/TikTok) konfiguráltság-státusza egy
-  // hívásban. A frontend ezzel dönti el, hogy a gomb klikkelhető (van
-  // env Railway-en) vagy a "Még nincs konfigurálva" modal jelenjen meg.
-  const { data: platformConfig } = trpc.social.isPlatformConfigured.useQuery();
-  const [oauthErrorModal, setOauthErrorModal] = useState<{ platform: string; reason: string } | null>(null);
-
-  // Handle OAuth callback eredmény a URL paraméterekből (mind a 4 platform):
-  // ?linkedin=connected / ?facebook=connected&pages=N&instagram=M / ?tiktok=connected
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    let cleaned = false;
-
-    const handleStatus = (platform: string, label: string, extra?: () => string) => {
-      const status = params.get(platform);
-      if (status === "connected") {
-        const username = params.get("username") ?? "";
-        const extraMsg = extra ? extra() : "";
-        toast.success(`${label} csatlakoztatva${username ? `: ${username}` : ""}${extraMsg}!`);
-        refetchSocial();
-        cleaned = true;
-      } else if (status === "error") {
-        const reason = params.get("reason") ?? "unknown";
-        toast.error(`${label} csatlakoztatás sikertelen: ${reason}`);
-        cleaned = true;
-      }
-    };
-
-    handleStatus("linkedin", "LinkedIn");
-    handleStatus("facebook", "Facebook + Instagram", () => {
-      const pages = params.get("pages");
-      const igs = params.get("instagram");
-      if (pages || igs) return ` (${pages ?? 0} Page, ${igs ?? 0} IG)`;
-      return "";
-    });
-    handleStatus("tiktok", "TikTok");
-
-    if (cleaned) window.history.replaceState({}, "", window.location.pathname);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // A social-integráció logika átkerült az /integraciok dedikált oldalra
+  // (IntegrationsHub.tsx). A Settings integrations tab most csak egy
+  // redirect-kártyát mutat.
 
   const handleSaveBrand = async () => {
     await upsertProfile.mutateAsync({ id: activeProfile.id, name: activeProfile.name, initials: activeProfile.initials, ...brandForm });
@@ -427,224 +372,23 @@ export default function Settings() {
 
       {/* Integrations */}
       {activeTab === "integrations" && (
-        <div className="space-y-4">
-          {/* Social Media Integrations */}
-          <div className="rounded-xl border p-5" style={{ background: cardBg, borderColor: border }}>
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h3 className="text-sm font-bold" style={{ color: "var(--qa-fg2)" }}>Social Media fiókok</h3>
-                <p className="text-xs mt-0.5" style={{ color: "var(--qa-fg4)" }}>Csatlakoztasd a közösségi média fiókjaidat a direkt publikáláshoz</p>
-              </div>
-            </div>
-
-            {/* Platform grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-              {/* LinkedIn */}
-              {(() => {
-                const conn = socialConnections.find(c => c.isActive && c.platform === "linkedin");
-                return (
-                  <div className="flex flex-col items-center gap-2 p-4 rounded-xl border cursor-pointer transition-all"
-                    style={{ background: conn ? "oklch(0.55 0.18 255 / 12%)" : "var(--qa-surface2)", borderColor: conn ? "oklch(0.55 0.18 255 / 40%)" : "var(--qa-border)" }}
-                    onClick={() => { if (!conn) { linkedInOAuthData?.url ? window.location.href = linkedInOAuthData.url : setLinkedInModal(true); } }}>
-                    <svg viewBox="0 0 24 24" className="w-8 h-8" fill="#0A66C2"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
-                    <span className="text-xs font-semibold" style={{ color: conn ? "var(--qa-accent)" : "var(--qa-fg3)" }}>LinkedIn</span>
-                    {conn ? <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "oklch(from var(--qa-success) l c h / 15%)", color: "var(--qa-success)" }}>✓ Csatlakozva</span>
-                      : <span className="text-xs" style={{ color: "var(--qa-fg4)" }}>Csatlakoztatás</span>}
-                  </div>
-                );
-              })()}
-
-              {/* Facebook + Instagram — egyetlen OAuth flow a Meta-n keresztül.
-                  Ha sikeresen csatlakozik, az IG Business accountokat is
-                  feltölti a connection-be (lásd server/facebookOAuth.ts). */}
-              {(() => {
-                const conn = socialConnections.find(c => c.isActive && c.platform === "facebook");
-                const configured = !!platformConfig?.facebook;
-                const handleClick = () => {
-                  if (conn) return;
-                  if (!configured) {
-                    setOauthErrorModal({ platform: "Facebook + Instagram", reason: "A Meta App credentialjei nincsenek beállítva. Az adminisztrátornak konfigurálnia kell a FACEBOOK_APP_ID és FACEBOOK_APP_SECRET env változókat Railway-en." });
-                    return;
-                  }
-                  window.location.href = `/api/oauth/facebook/start?profileId=${activeProfile.id}`;
-                };
-                return (
-                  <div className="flex flex-col items-center gap-2 p-4 rounded-xl border cursor-pointer transition-all"
-                    style={{ background: conn ? "oklch(0.45 0.18 260 / 12%)" : "var(--qa-surface2)", borderColor: conn ? "#1877F2" : "var(--qa-border)" }}
-                    onClick={handleClick}>
-                    <svg viewBox="0 0 24 24" className="w-8 h-8" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                    <span className="text-xs font-semibold" style={{ color: conn ? "#4593F4" : "var(--qa-fg3)" }}>Facebook</span>
-                    {conn
-                      ? <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "oklch(from var(--qa-success) l c h / 15%)", color: "var(--qa-success)" }}>✓ Csatlakozva</span>
-                      : <span className="text-xs" style={{ color: "var(--qa-fg4)" }}>{configured ? "Csatlakoztatás" : "Nincs konfigurálva"}</span>}
-                  </div>
-                );
-              })()}
-
-              {/* Instagram — info-kártya: a FB csatlakozással együtt jön be */}
-              {(() => {
-                const conn = socialConnections.find(c => c.isActive && c.platform === "instagram");
-                const fbConfigured = !!platformConfig?.facebook;
-                const handleClick = () => {
-                  if (conn) return;
-                  if (!fbConfigured) {
-                    setOauthErrorModal({ platform: "Instagram", reason: "Az Instagram a Facebook-on keresztül csatlakozik. Először konfigurálni kell a Meta App credentialjeit (FACEBOOK_APP_ID + FACEBOOK_APP_SECRET) Railway-en." });
-                    return;
-                  }
-                  window.location.href = `/api/oauth/facebook/start?profileId=${activeProfile.id}`;
-                };
-                return (
-                  <div className="flex flex-col items-center gap-2 p-4 rounded-xl border cursor-pointer transition-all"
-                    style={{ background: conn ? "oklch(0.55 0.2 330 / 12%)" : "var(--qa-surface2)", borderColor: conn ? "#dc2743" : "var(--qa-border)" }}
-                    onClick={handleClick}>
-                    <svg viewBox="0 0 24 24" className="w-8 h-8"><defs><linearGradient id="ig" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" stopColor="#f09433"/><stop offset="25%" stopColor="#e6683c"/><stop offset="50%" stopColor="#dc2743"/><stop offset="75%" stopColor="#cc2366"/><stop offset="100%" stopColor="#bc1888"/></linearGradient></defs><path fill="url(#ig)" d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
-                    <span className="text-xs font-semibold" style={{ color: conn ? "#e6683c" : "var(--qa-fg3)" }}>Instagram</span>
-                    {conn
-                      ? <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "oklch(from var(--qa-success) l c h / 15%)", color: "var(--qa-success)" }}>✓ Csatlakozva</span>
-                      : <span className="text-xs" style={{ color: "var(--qa-fg4)" }}>{fbConfigured ? "A Facebookkal együtt" : "Nincs konfigurálva"}</span>}
-                  </div>
-                );
-              })()}
-
-              {/* TikTok — saját OAuth flow */}
-              {(() => {
-                const conn = socialConnections.find(c => c.isActive && c.platform === "tiktok");
-                const configured = !!platformConfig?.tiktok;
-                const handleClick = () => {
-                  if (conn) return;
-                  if (!configured) {
-                    setOauthErrorModal({ platform: "TikTok", reason: "A TikTok App credentialjei nincsenek beállítva. Az adminisztrátornak konfigurálnia kell a TIKTOK_CLIENT_KEY és TIKTOK_CLIENT_SECRET env változókat Railway-en." });
-                    return;
-                  }
-                  window.location.href = `/api/oauth/tiktok/start?profileId=${activeProfile.id}`;
-                };
-                return (
-                  <div className="flex flex-col items-center gap-2 p-4 rounded-xl border cursor-pointer transition-all"
-                    style={{ background: conn ? "oklch(0.7 0.2 200 / 12%)" : "var(--qa-surface2)", borderColor: conn ? "#25F4EE" : "var(--qa-border)" }}
-                    onClick={handleClick}>
-                    <svg viewBox="0 0 24 24" className="w-8 h-8" fill="white"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.76a4.85 4.85 0 01-1.01-.07z"/></svg>
-                    <span className="text-xs font-semibold" style={{ color: conn ? "#25F4EE" : "var(--qa-fg3)" }}>TikTok</span>
-                    {conn
-                      ? <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "oklch(from var(--qa-success) l c h / 15%)", color: "var(--qa-success)" }}>✓ Csatlakozva</span>
-                      : <span className="text-xs" style={{ color: "var(--qa-fg4)" }}>{configured ? "Csatlakoztatás" : "Nincs konfigurálva"}</span>}
-                  </div>
-                );
-              })()}
-            </div>
-
-            {/* Connected accounts list */}
-            {socialConnections.filter(c => c.isActive).length > 0 && (
-              <div className="space-y-2 mt-4">
-                <p className="text-xs font-semibold mb-2" style={{ color: "var(--qa-fg3)" }}>Csatlakoztatott fiókok</p>
-                {socialConnections.filter(c => c.isActive).map(conn => (
-                  <div key={conn.id} className="flex items-center justify-between p-3 rounded-xl" style={{ background: "var(--qa-surface2)" }}>
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "oklch(from var(--qa-accent) l c h / 20%)" }}>
-                        <Globe size={16} style={{ color: "var(--qa-accent)" }} />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold" style={{ color: "var(--qa-fg2)" }}>{conn.platformUsername ?? conn.platform}</p>
-                        <p className="text-xs" style={{ color: "var(--qa-fg4)" }}>{conn.platform} • <span style={{ color: "var(--qa-success)" }}>Csatlakozva</span></p>
-                      </div>
-                    </div>
-                    <button onClick={() => disconnectSocial.mutate({ connectionId: conn.id })}
-                      className="px-3 py-1.5 rounded-lg text-xs font-semibold"
-                      style={{ background: "oklch(0.65 0.22 25 / 15%)", color: "var(--qa-danger)" }}>
-                      Lecsatlakoztatás
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+        <div className="rounded-xl border p-6 flex flex-col items-center text-center" style={{ background: cardBg, borderColor: border }}>
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ background: "oklch(0.6 0.2 255 / 15%)" }}>
+            <Plug size={22} style={{ color: "var(--qa-accent)" }} />
           </div>
-        </div>
-      )}
-
-      {/* LinkedIn Connect Modal */}
-      {linkedInModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)" }} onClick={() => setLinkedInModal(false)}>
-          <div className="w-full max-w-md rounded-2xl border p-6" style={{ background: "oklch(0.15 0.022 255)", borderColor: "var(--qa-border-hi)" }} onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>LinkedIn fiók csatlakoztatása</h3>
-              <button onClick={() => setLinkedInModal(false)} style={{ color: "var(--qa-fg4)" }}><X size={18} /></button>
-            </div>
-            {linkedInOAuthData?.url ? (
-              <div className="mb-4">
-                <p className="text-xs mb-3 p-3 rounded-lg" style={{ background: "oklch(from var(--qa-accent) l c h / 8%)", color: "var(--qa-accent)" }}>
-                  Kattints az alábbi gombra a LinkedIn fiókod biztonságos csatlakoztatásához. Átirányítunk a LinkedIn bejelentkezési oldalára.
-                </p>
-                <a href={linkedInOAuthData.url}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-white text-sm"
-                  style={{ background: "var(--qa-accent)" }}>
-                  <Plug size={15} /> Csatlakozás LinkedIn-nel
-                </a>
-              </div>
-            ) : (
-              <p className="text-xs mb-4 p-3 rounded-lg" style={{ background: "oklch(from var(--qa-warning) l c h / 8%)", color: "var(--qa-warning)" }}>
-                A LinkedIn OAuth integráció konfiguráláshoz szükséges a LINKEDIN_CLIENT_ID és LINKEDIN_CLIENT_SECRET env var. Addig manuálisan add meg az access tokent.
-              </p>
-            )}
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--qa-fg3)" }}>Access Token *</label>
-                <input value={linkedInForm.accessToken} onChange={e => setLinkedInForm(f => ({ ...f, accessToken: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-lg text-sm border font-mono" style={{ background: "var(--qa-surface2)", borderColor: "var(--qa-border)", color: "var(--qa-fg2)" }}
-                  placeholder="AQV..." />
-              </div>
-              <div>
-                <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--qa-fg3)" }}>LinkedIn Person ID *</label>
-                <input value={linkedInForm.platformUserId} onChange={e => setLinkedInForm(f => ({ ...f, platformUserId: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-lg text-sm border" style={{ background: "var(--qa-surface2)", borderColor: "var(--qa-border)", color: "var(--qa-fg2)" }}
-                  placeholder="urn:li:person:xxx" />
-              </div>
-              <div>
-                <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--qa-fg3)" }}>Felhasználónév (megjelenítéshez)</label>
-                <input value={linkedInForm.platformUsername} onChange={e => setLinkedInForm(f => ({ ...f, platformUsername: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-lg text-sm border" style={{ background: "var(--qa-surface2)", borderColor: "var(--qa-border)", color: "var(--qa-fg2)" }}
-                  placeholder="Név vagy @handle" />
-              </div>
-            </div>
-            <div className="flex gap-3 mt-5">
-              <button onClick={() => setLinkedInModal(false)} className="flex-1 py-2.5 rounded-lg text-sm font-semibold" style={{ background: "var(--qa-surface2)", color: "var(--qa-fg3)" }}>Mégse</button>
-              <button
-                onClick={() => {
-                  if (!linkedInForm.accessToken || !linkedInForm.platformUserId) { toast.error("Access Token és Person ID kötelező"); return; }
-                  saveConnection.mutate({
-                    profileId: activeProfile.id,
-                    platform: "linkedin",
-                    accessToken: linkedInForm.accessToken,
-                    platformUserId: linkedInForm.platformUserId,
-                    platformUsername: linkedInForm.platformUsername || undefined,
-                  });
-                }}
-                disabled={saveConnection.isPending}
-                className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white flex items-center justify-center gap-1.5"
-                style={{ background: "var(--qa-accent)" }}>
-                {saveConnection.isPending ? <Loader2 size={13} className="animate-spin" /> : <Plug size={13} />} Csatlakoztatás
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Not-configured modal — Facebook/Instagram/TikTok */}
-      {oauthErrorModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)" }} onClick={() => setOauthErrorModal(null)}>
-          <div className="rounded-xl border p-6 max-w-md w-full" style={{ background: cardBg, borderColor: border }} onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-base font-bold" style={{ color: "var(--qa-fg)" }}>{oauthErrorModal.platform} — még nem konfigurálva</h3>
-              <button onClick={() => setOauthErrorModal(null)} style={{ color: "var(--qa-fg4)" }}><X size={18} /></button>
-            </div>
-            <p className="text-sm leading-relaxed mb-4" style={{ color: "var(--qa-fg3)" }}>
-              {oauthErrorModal.reason}
-            </p>
-            <p className="text-xs mb-4" style={{ color: "var(--qa-fg4)" }}>
-              A részletes setup-leírás a <code style={{ background: "var(--qa-surface2)", padding: "2px 6px", borderRadius: "4px" }}>docs/social-oauth-setup.md</code> fájlban található. A Meta + TikTok App Review folyamat 2–4 hetet vehet igénybe.
-            </p>
-            <div className="flex justify-end">
-              <button onClick={() => setOauthErrorModal(null)} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "var(--qa-accent)", color: "white" }}>Értem</button>
-            </div>
-          </div>
+          <h3 className="text-base font-bold mb-1" style={{ color: "var(--qa-fg)", fontFamily: "Sora, sans-serif" }}>
+            Az Integrációk saját oldalt kaptak
+          </h3>
+          <p className="text-sm mb-5 max-w-sm" style={{ color: "var(--qa-fg3)" }}>
+            A közösségi média, analitika és email integrációk mostantól egy dedikált, kategóriákra bontott oldalon érhetők el — átláthatóbban.
+          </p>
+          <button
+            onClick={() => navigate("/integraciok")}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            style={{ background: "var(--qa-accent)" }}
+          >
+            <Plug size={14} /> Integrációk megnyitása
+          </button>
         </div>
       )}
 

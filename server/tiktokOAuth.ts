@@ -9,7 +9,7 @@
  *      a) code → access token (POST /v2/oauth/token/)
  *      b) GET /v2/user/info/ → display_name + open_id
  *      c) social_connections rekord (platform=tiktok)
- *   5. Redirect: /beallitasok?tiktok=connected
+ *   5. Redirect: /integraciok?tiktok=connected
  *
  * Scopes (App Review szükséges production-ban):
  *   - user.info.basic — display_name + open_id (azonnal jóváhagyott)
@@ -133,35 +133,35 @@ export function registerTikTokOAuthRoutes(app: Express) {
 
     if (error) {
       console.error("[TikTok OAuth] Error:", error, error_description);
-      res.redirect(`${appOrigin}/beallitasok?tiktok=error&reason=${encodeURIComponent(error_description ?? error)}`);
+      res.redirect(`${appOrigin}/integraciok?tiktok=error&reason=${encodeURIComponent(error_description ?? error)}`);
       return;
     }
     if (!code || !state) {
-      res.redirect(`${appOrigin}/beallitasok?tiktok=error&reason=missing_params`);
+      res.redirect(`${appOrigin}/integraciok?tiktok=error&reason=missing_params`);
       return;
     }
 
     const verified = verifyState(state);
     if (!verified) {
-      res.redirect(`${appOrigin}/beallitasok?tiktok=error&reason=invalid_state`);
+      res.redirect(`${appOrigin}/integraciok?tiktok=error&reason=invalid_state`);
       return;
     }
     const { profileId, userId } = verified;
 
     const user = await getAppUserById(userId);
     if (!user) {
-      res.redirect(`${appOrigin}/beallitasok?tiktok=error&reason=user_gone`);
+      res.redirect(`${appOrigin}/integraciok?tiktok=error&reason=user_gone`);
       return;
     }
     try {
       await assertProfileOwnership(user.id, user.role, profileId, user.profileId);
     } catch {
-      res.redirect(`${appOrigin}/beallitasok?tiktok=error&reason=forbidden`);
+      res.redirect(`${appOrigin}/integraciok?tiktok=error&reason=forbidden`);
       return;
     }
 
     if (!ENV.tiktokClientKey || !ENV.tiktokClientSecret) {
-      res.redirect(`${appOrigin}/beallitasok?tiktok=error&reason=not_configured`);
+      res.redirect(`${appOrigin}/integraciok?tiktok=error&reason=not_configured`);
       return;
     }
 
@@ -186,7 +186,7 @@ export function registerTikTokOAuthRoutes(app: Express) {
       if (!tokenRes.ok) {
         const errText = await tokenRes.text();
         console.error("[TikTok OAuth] Token exchange failed:", errText);
-        res.redirect(`${appOrigin}/beallitasok?tiktok=error&reason=token_exchange_failed`);
+        res.redirect(`${appOrigin}/integraciok?tiktok=error&reason=token_exchange_failed`);
         return;
       }
       const tokenData = await tokenRes.json() as {
@@ -201,7 +201,7 @@ export function registerTikTokOAuthRoutes(app: Express) {
       };
       if (tokenData.error) {
         console.error("[TikTok OAuth] Token response error:", tokenData);
-        res.redirect(`${appOrigin}/beallitasok?tiktok=error&reason=token_response_error`);
+        res.redirect(`${appOrigin}/integraciok?tiktok=error&reason=token_response_error`);
         return;
       }
 
@@ -225,7 +225,7 @@ export function registerTikTokOAuthRoutes(app: Express) {
       const { eq, and } = await import("drizzle-orm");
       const db = await getDb();
       if (!db) {
-        res.redirect(`${appOrigin}/beallitasok?tiktok=error&reason=db_unavailable`);
+        res.redirect(`${appOrigin}/integraciok?tiktok=error&reason=db_unavailable`);
         return;
       }
 
@@ -249,10 +249,10 @@ export function registerTikTokOAuthRoutes(app: Express) {
       });
 
       console.log(`[TikTok OAuth] Connected for profile ${profileId}: ${platformUsername || platformUserId}`);
-      res.redirect(`${appOrigin}/beallitasok?tiktok=connected&username=${encodeURIComponent(platformUsername)}`);
+      res.redirect(`${appOrigin}/integraciok?tiktok=connected&username=${encodeURIComponent(platformUsername)}`);
     } catch (err) {
       console.error("[TikTok OAuth] Unexpected error:", err);
-      res.redirect(`${appOrigin}/beallitasok?tiktok=error&reason=unexpected`);
+      res.redirect(`${appOrigin}/integraciok?tiktok=error&reason=unexpected`);
     }
   });
 }
