@@ -918,3 +918,37 @@ export const reportSchedules = mysqlTable("report_schedules", {
 });
 export type ReportSchedule = typeof reportSchedules.$inferSelect;
 export type InsertReportSchedule = typeof reportSchedules.$inferInsert;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEAM INVITE MODUL (2026-08 — audit "Team invite flow")
+//
+// Egy super_admin / profile-tulaj meghívhat csapattagokat egy adott
+// clientProfile-hoz, profile-szintű szereppel (owner/editor/viewer). Ez KÜLÖN
+// a globális app_users.role-tól (super_admin/user) — az utóbbi a platform-
+// szintű jogosultság, ez a profile-kontextusú.
+//
+// SCOPE: ez a modul az invite CRUD-ot + email-küldést fedi. A meghívott
+// ELFOGADÁSA (regisztráció + profile-hoz kötés) egy későbbi PR (mély auth-
+// integráció). Az `accepted` státusz oda készül elő.
+// ═══════════════════════════════════════════════════════════════════════════════
+export const teamInvites = mysqlTable("team_invites", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  profileId: varchar("profileId", { length: 64 }).notNull(),
+  email: varchar("email", { length: 320 }).notNull(),
+  // Profile-szintű szerep — a jövőbeni jogosultság-ellenőrzés alapja
+  role: mysqlEnum("role", ["owner", "editor", "viewer"]).default("editor").notNull(),
+  // Egyedi token a meghívó-linkhez (nanoid(48) — 288 bit entrópia)
+  token: varchar("token", { length: 64 }).notNull().unique(),
+  status: mysqlEnum("status", ["pending", "accepted", "revoked", "expired"]).default("pending").notNull(),
+  // Ki hívta meg (app_users.id + a megjelenítendő név a listához)
+  invitedByUserId: varchar("invitedByUserId", { length: 64 }),
+  invitedByName: varchar("invitedByName", { length: 255 }),
+  // 7 napos lejárat (az acceptAt/acceptedByUserId a jövőbeni accept-flow-hoz)
+  expiresAt: timestamp("expiresAt").notNull(),
+  acceptedAt: timestamp("acceptedAt"),
+  acceptedByUserId: varchar("acceptedByUserId", { length: 64 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type TeamInvite = typeof teamInvites.$inferSelect;
+export type InsertTeamInvite = typeof teamInvites.$inferInsert;

@@ -13,6 +13,7 @@ import { projectsRouter } from "./routers/projects";
 import { seoRouter } from "./routers/seo";
 import { newsletterRouter } from "./routers/newsletter";
 import { reportsRouter } from "./routers/reports";
+import { teamRouter } from "./routers/team";
 import { generateImage } from "./_core/imageGeneration";
 import { nanoid } from "nanoid";
 import { TRPCError } from "@trpc/server";
@@ -527,6 +528,9 @@ export const appRouter = router({
 
   // ─── Strategy Versions ──────────────────────────────────────────────────────
   strategyVersions: strategyVersionsRouter,
+
+  // ─── Team (csapat-meghívók) ───────────────────────────────────────────────────
+  team: teamRouter,
 
   // ─── Campaigns ──────────────────────────────────────────────────────────────
   campaigns: router({

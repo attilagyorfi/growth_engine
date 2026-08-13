@@ -940,3 +940,65 @@ export async function upsertReportSchedule(input: Omit<InsertReportSchedule, "id
   const rows = await db.select().from(reportSchedules).where(eq(reportSchedules.id, id)).limit(1);
   return rows[0] ?? null;
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEAM INVITE helperek (2026-08 — audit "Team invite flow")
+// ═══════════════════════════════════════════════════════════════════════════════
+import {
+  teamInvites, type InsertTeamInvite, type TeamInvite,
+} from "../drizzle/schema";
+
+// A profile összes meghívója (legújabb elöl). A UI a pending listához hívja,
+// de a revoked/accepted rekordokat is visszaadjuk audit-célból (a router szűr).
+export async function getTeamInvitesByProfile(profileId: string): Promise<TeamInvite[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(teamInvites)
+    .where(eq(teamInvites.profileId, profileId))
+    .orderBy(desc(teamInvites.createdAt))
+    .limit(100);
+}
+
+export async function getTeamInviteById(id: string): Promise<TeamInvite | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  const rows = await db.select().from(teamInvites).where(eq(teamInvites.id, id)).limit(1);
+  return rows[0];
+}
+
+// A jövőbeni accept-flow ehhez a tokenhez keresi majd a meghívót.
+export async function getTeamInviteByToken(token: string): Promise<TeamInvite | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  const rows = await db.select().from(teamInvites).where(eq(teamInvites.token, token)).limit(1);
+  return rows[0];
+}
+
+// Ugyanarra a (profile, email) párra ne lehessen két aktív (pending) meghívó —
+// a router ezzel dedupol, mielőtt új invite-ot hozna létre.
+export async function getPendingInviteByProfileEmail(profileId: string, email: string): Promise<TeamInvite | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  const rows = await db.select().from(teamInvites)
+    .where(and(
+      eq(teamInvites.profileId, profileId),
+      eq(teamInvites.email, email),
+      eq(teamInvites.status, "pending"),
+    )).limit(1);
+  return rows[0];
+}
+
+export async function createTeamInvite(input: InsertTeamInvite): Promise<TeamInvite | null> {
+  const db = await getDb();
+  if (!db) return null;
+  await db.insert(teamInvites).values(input);
+  const rows = await db.select().from(teamInvites).where(eq(teamInvites.id, input.id!)).limit(1);
+  return rows[0] ?? null;
+}
+
+// Meghívó visszavonása — csak pending → revoked átmenet engedélyezett a routerben.
+export async function updateTeamInviteStatus(id: string, status: TeamInvite["status"]): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(teamInvites).set({ status }).where(eq(teamInvites.id, id));
+}
