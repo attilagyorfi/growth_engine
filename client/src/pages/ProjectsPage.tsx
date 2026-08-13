@@ -24,6 +24,7 @@ import {
   AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { EmptyState } from "@/components/EmptyState";
+import { ListSkeleton } from "@/components/skeletons";
 
 const INDUSTRIES = [
   "Technológia / SaaS", "E-kereskedelem", "Pénzügyi szolgáltatások",
@@ -192,9 +193,7 @@ export default function ProjectsPage() {
 
         {/* Project list */}
         {isLoading ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="w-6 h-6 animate-spin" style={{ color: "var(--qa-accent)" }} />
-          </div>
+          <ListSkeleton rows={3} />
         ) : projects.length === 0 && !showNewForm ? (
           <EmptyState
             icon={<FolderOpen size={22} />}

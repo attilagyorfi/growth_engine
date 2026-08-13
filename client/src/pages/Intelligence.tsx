@@ -11,6 +11,7 @@
 import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { AiLimitBanner } from "@/components/AiLimitBanner";
+import { CardBlockSkeleton } from "@/components/skeletons";
 import { trpc } from "@/lib/trpc";
 import { useProfile } from "@/contexts/ProfileContext";
 import { toast } from "sonner";
@@ -248,8 +249,10 @@ export default function Intelligence() {
         </div>
 
         {isLoading && (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 size={32} className="animate-spin text-purple-400" />
+          <div className="space-y-4">
+            <CardBlockSkeleton lines={3} />
+            <CardBlockSkeleton lines={4} />
+            <CardBlockSkeleton lines={2} />
           </div>
         )}
 
