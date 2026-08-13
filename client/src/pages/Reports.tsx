@@ -24,6 +24,7 @@ import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
 } from "recharts";
+import { PageContainer, PageHeader } from "@/components/layout";
 
 const cardBg = "var(--qa-surface)";
 const border = "var(--qa-border)";
@@ -109,30 +110,22 @@ export default function Reports() {
 
   return (
     <DashboardLayout>
-      <div className="p-6 max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: "oklch(0.6 0.2 255 / 15%)" }}>
-              <BarChart3 size={20} style={{ color: accent }} />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold" style={{ color: textPrimary, fontFamily: "Sora, sans-serif" }}>
-                Riportok
-              </h1>
-              <p className="text-sm" style={{ color: textMuted }}>
-                Google Ads · GA4 · Search Console · Meta Ads — havi vezetői riportok
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => setShowConnectionsModal(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold"
-            style={{ background: "var(--qa-surface2)", color: textMuted }}
-          >
-            <Plus size={14} /> Kapcsolat ({connections.length})
-          </button>
-        </div>
+      <PageContainer maxWidth="7xl">
+        {/* Header — a reusable PageHeader wrapper (layout/index.tsx) */}
+        <PageHeader
+          icon={<BarChart3 size={20} />}
+          title="Riportok"
+          subtitle="Google Ads · GA4 · Search Console · Meta Ads — havi vezetői riportok"
+          action={
+            <button
+              onClick={() => setShowConnectionsModal(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold"
+              style={{ background: "var(--qa-surface2)", color: textMuted }}
+            >
+              <Plus size={14} /> Kapcsolat ({connections.length})
+            </button>
+          }
+        />
 
         {/* Generate bar */}
         <div className="rounded-xl border p-4 flex flex-wrap items-end gap-3" style={{ background: cardBg, borderColor: border }}>
@@ -312,7 +305,7 @@ export default function Reports() {
             )}
           </div>
         </div>
-      </div>
+      </PageContainer>
 
       {/* Kapcsolatok modal */}
       {showConnectionsModal && (
