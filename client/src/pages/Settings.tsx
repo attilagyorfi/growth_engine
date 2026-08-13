@@ -16,6 +16,7 @@ import AiMemorySection from "@/components/settings/AiMemorySection";
 import { useSubscription, PLAN_FEATURES, type SubscriptionPlan } from "@/hooks/useSubscription";
 import BillingPlanCards from "@/components/BillingPlanCards";
 import DashboardLayout from "@/components/DashboardLayout";
+import AuditLogTimeline from "@/components/AuditLogTimeline";
 import { trpc } from "@/lib/trpc";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useAppAuth } from "@/hooks/useAppAuth";
@@ -682,44 +683,16 @@ export default function Settings() {
         </div>
       )}
 
-      {/* Audit Log */}
+      {/* Audit Log — új timeline UI (bal oldali vonal + dot marker + user avatar) */}
       {activeTab === "audit" && (
-        <div className="rounded-xl border" style={{ background: cardBg, borderColor: border }}>
-          <div className="p-4 border-b" style={{ borderColor: border }}>
+        <div className="space-y-4">
+          <div>
             <h3 className="text-sm font-bold" style={{ color: "var(--qa-fg2)" }}>Audit Log</h3>
-            <p className="text-xs mt-0.5" style={{ color: "var(--qa-fg4)" }}>Rendszeresemények és változások naplója</p>
+            <p className="text-xs mt-0.5" style={{ color: "var(--qa-fg4)" }}>
+              Rendszeresemények és változások naplója — dátum-csoportosítva, kategória-ikonnal.
+            </p>
           </div>
-          {auditLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 size={20} className="animate-spin" style={{ color: "var(--qa-fg4)" }} />
-            </div>
-          ) : !auditLogs || auditLogs.length === 0 ? (
-            <div className="text-center py-16">
-              <ClipboardList size={32} className="mx-auto mb-3" style={{ color: "var(--qa-fg4)" }} />
-              <p className="text-sm font-semibold mb-1" style={{ color: "var(--qa-fg3)" }}>Nincs rögzített esemény</p>
-              <p className="text-xs" style={{ color: "var(--qa-fg4)" }}>A rendszeresemények automatikusan kerülnek ide</p>
-            </div>
-          ) : (
-            <div className="divide-y" style={{ borderColor: border }}>
-              {auditLogs.map((log) => (
-                <div key={log.id} className="flex items-start gap-3 px-4 py-3">
-                  <ClipboardList size={14} className="mt-0.5 flex-shrink-0" style={{ color: "var(--qa-accent)" }} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium" style={{ color: "var(--qa-fg2)" }}>{log.action}</p>
-                    {(log.objectTitle || log.objectType) && (
-                      <p className="text-xs mt-0.5 truncate" style={{ color: "var(--qa-fg4)" }}>
-                        {log.objectType}{log.objectTitle ? `: ${log.objectTitle}` : ""}
-                        {log.userName ? ` – ${log.userName}` : ""}
-                      </p>
-                    )}
-                  </div>
-                  <span className="text-xs flex-shrink-0" style={{ color: "var(--qa-fg4)" }}>
-                    {log.createdAt ? new Date(log.createdAt).toLocaleString("hu-HU") : "–"}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
+          <AuditLogTimeline logs={auditLogs ?? undefined} isLoading={auditLoading} />
         </div>
       )}
 
