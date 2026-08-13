@@ -513,6 +513,22 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
                       </button>
                     ))}
                   </div>
+                  {/* Footer link — összes értesítés az /ertesitesek dedikált oldalon */}
+                  {notifications.length > 0 && (
+                    <div
+                      className="px-4 py-2.5 border-t text-center"
+                      style={{ borderColor: "var(--qa-border)", background: "var(--qa-surface)" }}
+                    >
+                      <Link
+                        href="/ertesitesek"
+                        className="text-xs font-semibold transition-colors hover:opacity-80"
+                        style={{ color: "var(--qa-accent)" }}
+                        onClick={() => setShowNotifs(false)}
+                      >
+                        Összes értesítés →
+                      </Link>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
