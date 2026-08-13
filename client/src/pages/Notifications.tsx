@@ -21,6 +21,7 @@ import {
 import { EmptyState } from "@/components/EmptyState";
 import { ListSkeleton } from "@/components/skeletons";
 import { Button } from "@/components/ui/button";
+import { PageContainer, PageHeader } from "@/components/layout";
 
 // Notification típusok — a schema mysqlEnum-ját tükrözi
 type NotifType = "reply_received" | "approval_ready" | "campaign_deadline" | "strategy_update" | "new_lead" | "system";
@@ -103,31 +104,13 @@ export default function Notifications() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-4xl mx-auto p-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-10 h-10 rounded-lg flex items-center justify-center"
-              style={{ background: "oklch(0.6 0.2 255 / 15%)" }}
-            >
-              <Bell size={20} style={{ color: "var(--qa-accent)" }} />
-            </div>
-            <div>
-              <h1
-                className="text-2xl font-bold"
-                style={{ color: "var(--qa-fg)", fontFamily: "Sora, sans-serif" }}
-              >
-                Értesítések
-              </h1>
-              <p className="text-sm" style={{ color: "var(--qa-fg3)" }}>
-                {totalCount === 0
-                  ? "Még nincs értesítésed"
-                  : `${totalCount} értesítés · ${unreadCount} olvasatlan`}
-              </p>
-            </div>
-          </div>
-          {unreadCount > 0 && (
+      <PageContainer maxWidth="4xl">
+        {/* Header — a reusable PageHeader wrapper (layout/index.tsx) */}
+        <PageHeader
+          icon={<Bell size={20} />}
+          title="Értesítések"
+          subtitle={totalCount === 0 ? "Még nincs értesítésed" : `${totalCount} értesítés · ${unreadCount} olvasatlan`}
+          action={unreadCount > 0 ? (
             <Button
               onClick={() => markAllReadMutation.mutate()}
               variant="outline"
@@ -137,8 +120,8 @@ export default function Notifications() {
             >
               <CheckCheck size={14} /> Mind olvasottnak jelöl
             </Button>
-          )}
-        </div>
+          ) : undefined}
+        />
 
         {/* Szűrő chip-ek */}
         {totalCount > 0 && (
@@ -274,7 +257,7 @@ export default function Notifications() {
             })}
           </div>
         )}
-      </div>
+      </PageContainer>
     </DashboardLayout>
   );
 }
