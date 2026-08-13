@@ -1,10 +1,22 @@
 /*
- * G2A Growth Engine – DetailModal
- * Reusable slide-in modal for displaying details and confirming actions
+ * G2A Growth Engine – DetailModal (v2 — shadcn Dialog fölött)
+ *
+ * Az audit-agent talált: "Kettős modal pattern — DetailModal + ManusDialog +
+ * shadcn Dialog egymás mellett. Egyet választani."
+ *
+ * A ManusDialog (dead code) törölve. A DetailModal API-ja VÁLTOZATLAN (a
+ * ProfilePage 5 helyen használja), de a belső implementáció most a shadcn
+ * `<Dialog>` — így focus-trap, ESC-kezelés, aria-attribútumok és a
+ * theme-token stílus ingyen jön, nem kézzel újraírva.
+ *
+ * Így egyetlen modal-alapréteg van a projektben: a shadcn Dialog. Ez a
+ * DetailModal egy vékony, kényelmi wrapper fölötte (title/subtitle/footer
+ * slot-okkal), a többi oldal (Campaigns, AdminUsers, ProjectsPage) pedig
+ * közvetlenül a shadcn Dialog-ot használja.
  */
-
-import { X } from "lucide-react";
-import { useEffect } from "react";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
 
 interface DetailModalProps {
   isOpen: boolean;
@@ -16,55 +28,19 @@ interface DetailModalProps {
 }
 
 export default function DetailModal({ isOpen, onClose, title, subtitle, children, footer }: DetailModalProps) {
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    if (isOpen) document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ background: "oklch(0 0 0 / 60%)" }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div
-        className="relative w-full max-w-2xl max-h-[85vh] flex flex-col rounded-xl shadow-2xl"
-        style={{
-          background: "oklch(0.18 0.022 255)",
-          border: "1px solid oklch(1 0 0 / 12%)",
-        }}
-      >
-        {/* Header */}
-        <div
-          className="flex items-start justify-between px-6 py-5 border-b flex-shrink-0"
-          style={{ borderColor: "oklch(1 0 0 / 8%)" }}
-        >
-          <div>
-            <h2
-              className="text-base font-bold"
-              style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}
-            >
-              {title}
-            </h2>
-            {subtitle && (
-              <p className="text-xs mt-0.5" style={{ color: "oklch(0.55 0.015 240)" }}>
-                {subtitle}
-              </p>
-            )}
-          </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors flex-shrink-0 ml-4"
-            style={{ background: "oklch(0.22 0.02 255)", color: "oklch(0.6 0.015 240)" }}
-          >
-            <X size={15} />
-          </button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col gap-0 p-0">
+        <DialogHeader className="px-6 py-5 border-b flex-shrink-0 space-y-0.5 text-left" style={{ borderColor: "var(--qa-border)" }}>
+          <DialogTitle style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>
+            {title}
+          </DialogTitle>
+          {subtitle && (
+            <DialogDescription style={{ color: "var(--qa-fg3)" }}>
+              {subtitle}
+            </DialogDescription>
+          )}
+        </DialogHeader>
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-5">
@@ -73,14 +49,11 @@ export default function DetailModal({ isOpen, onClose, title, subtitle, children
 
         {/* Footer */}
         {footer && (
-          <div
-            className="flex items-center justify-end gap-3 px-6 py-4 border-t flex-shrink-0"
-            style={{ borderColor: "oklch(1 0 0 / 8%)" }}
-          >
+          <DialogFooter className="px-6 py-4 border-t flex-shrink-0" style={{ borderColor: "var(--qa-border)" }}>
             {footer}
-          </div>
+          </DialogFooter>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
