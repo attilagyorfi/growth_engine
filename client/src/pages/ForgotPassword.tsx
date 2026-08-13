@@ -26,29 +26,29 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0A0F] flex items-center justify-center p-6">
+    <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "var(--qa-bg)" }}>
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-8">
           <G2ALogoOnDark size="lg" asLink />
         </div>
 
-        <Card className="bg-white/[0.03] border-white/[0.08]">
+        <Card>
           <CardHeader className="pb-4">
-            <CardTitle className="text-2xl text-white text-center">Elfelejtett jelszó</CardTitle>
-            <CardDescription className="text-white/50 text-center">
+            <CardTitle className="text-2xl text-center" style={{ color: "var(--qa-fg)" }}>Elfelejtett jelszó</CardTitle>
+            <CardDescription className="text-center" style={{ color: "var(--qa-fg3)" }}>
               Add meg az email címedet és küldünk egy visszaállítási linket
             </CardDescription>
           </CardHeader>
           <CardContent>
             {sent ? (
               <div className="text-center py-4">
-                <CheckCircle2 className="w-12 h-12 text-green-400 mx-auto mb-4" />
-                <h3 className="text-white font-semibold mb-2">Email elküldve!</h3>
-                <p className="text-white/50 text-sm mb-6">
+                <CheckCircle2 className="w-12 h-12 mx-auto mb-4" style={{ color: "var(--qa-success)" }} />
+                <h3 className="font-semibold mb-2" style={{ color: "var(--qa-fg)" }}>Email elküldve!</h3>
+                <p className="text-sm mb-6" style={{ color: "var(--qa-fg3)" }}>
                   Ha ez az email cím regisztrált, hamarosan megkapod a visszaállítási linket.
                 </p>
                 <Link href="/bejelentkezes">
-                  <Button variant="outline" className="border-white/10 text-white/70 hover:text-white bg-transparent">
+                  <Button variant="outline">
                     <ArrowLeft className="w-4 h-4 mr-2" /> Vissza a bejelentkezéshez
                   </Button>
                 </Link>
@@ -56,27 +56,26 @@ export default function ForgotPassword() {
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
                 {error && (
-                  <Alert className="bg-red-500/10 border-red-500/20 text-red-400">
+                  <Alert variant="destructive">
                     <AlertDescription>{error}</AlertDescription>
                   </Alert>
                 )}
 
                 <div className="space-y-1.5">
-                  <Label className="text-white/70 text-sm">Email cím</Label>
+                  <Label className="text-sm" style={{ color: "var(--qa-fg2)" }}>Email cím</Label>
                   <Input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="email@ceg.hu"
                     required
-                    className="bg-white/[0.05] border-white/[0.08] text-white placeholder:text-white/30 focus:border-violet-500/50"
                   />
                 </div>
 
                 <Button
                   type="submit"
                   disabled={forgotPassword.isPending}
-                  className="w-full bg-violet-600 hover:bg-violet-500 text-white border-0 h-11"
+                  className="w-full h-11"
                 >
                   {forgotPassword.isPending ? (
                     <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Küldés...</>
@@ -86,7 +85,7 @@ export default function ForgotPassword() {
                 </Button>
 
                 <Link href="/bejelentkezes">
-                  <Button variant="ghost" className="w-full text-white/40 hover:text-white/70">
+                  <Button variant="ghost" className="w-full">
                     <ArrowLeft className="w-4 h-4 mr-2" /> Vissza a bejelentkezéshez
                   </Button>
                 </Link>

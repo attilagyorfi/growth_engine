@@ -52,44 +52,50 @@ export default function ResetPassword() {
     resetPassword.mutate({ token, newPassword: password });
   };
 
+  // Jelszó-erősség indikátor színek — QA tokenek
+  const strengthColor = (i: number) => {
+    if (password.length < i * 3) return "var(--qa-border)";
+    if (i <= 1) return "var(--qa-danger)";
+    if (i <= 2) return "var(--qa-warning)";
+    if (i <= 3) return "var(--qa-accent)";
+    return "var(--qa-success)";
+  };
+
   return (
-    <div className="min-h-screen bg-[#0A0A0F] flex items-center justify-center p-6">
+    <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "var(--qa-bg)" }}>
       <div className="w-full max-w-md">
-        {/* Logo */}
         <div className="flex justify-center mb-8">
           <G2ALogoOnDark size="lg" asLink />
         </div>
 
-        <Card className="bg-white/[0.03] border-white/[0.08]">
+        <Card>
           <CardHeader className="pb-4">
-            <CardTitle className="text-2xl text-white text-center">Új jelszó beállítása</CardTitle>
-            <CardDescription className="text-white/50 text-center">
+            <CardTitle className="text-2xl text-center" style={{ color: "var(--qa-fg)" }}>Új jelszó beállítása</CardTitle>
+            <CardDescription className="text-center" style={{ color: "var(--qa-fg3)" }}>
               Add meg az új jelszavadat
             </CardDescription>
           </CardHeader>
           <CardContent>
             {!token ? (
               <div className="text-center py-4">
-                <AlertTriangle className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
-                <h3 className="text-white font-semibold mb-2">Érvénytelen link</h3>
-                <p className="text-white/50 text-sm mb-6">
+                <AlertTriangle className="w-12 h-12 mx-auto mb-4" style={{ color: "var(--qa-warning)" }} />
+                <h3 className="font-semibold mb-2" style={{ color: "var(--qa-fg)" }}>Érvénytelen link</h3>
+                <p className="text-sm mb-6" style={{ color: "var(--qa-fg3)" }}>
                   Ez a visszaállítási link érvénytelen vagy lejárt. Kérj új jelszó-visszaállítási emailt.
                 </p>
                 <Link href="/elfelejtett-jelszo">
-                  <Button className="bg-violet-600 hover:bg-violet-500 text-white border-0">
-                    Új link kérése
-                  </Button>
+                  <Button>Új link kérése</Button>
                 </Link>
               </div>
             ) : success ? (
               <div className="text-center py-4">
-                <CheckCircle2 className="w-12 h-12 text-green-400 mx-auto mb-4" />
-                <h3 className="text-white font-semibold mb-2">Jelszó sikeresen megváltoztatva!</h3>
-                <p className="text-white/50 text-sm mb-6">
+                <CheckCircle2 className="w-12 h-12 mx-auto mb-4" style={{ color: "var(--qa-success)" }} />
+                <h3 className="font-semibold mb-2" style={{ color: "var(--qa-fg)" }}>Jelszó sikeresen megváltoztatva!</h3>
+                <p className="text-sm mb-6" style={{ color: "var(--qa-fg3)" }}>
                   Átirányítunk a bejelentkezési oldalra...
                 </p>
                 <Link href="/bejelentkezes">
-                  <Button className="bg-violet-600 hover:bg-violet-500 text-white border-0">
+                  <Button>
                     <ArrowLeft className="w-4 h-4 mr-2" /> Bejelentkezés
                   </Button>
                 </Link>
@@ -97,13 +103,13 @@ export default function ResetPassword() {
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
                 {error && (
-                  <Alert className="bg-red-500/10 border-red-500/20 text-red-400">
+                  <Alert variant="destructive">
                     <AlertDescription>{error}</AlertDescription>
                   </Alert>
                 )}
 
                 <div className="space-y-1.5">
-                  <Label className="text-white/70 text-sm">Új jelszó</Label>
+                  <Label className="text-sm" style={{ color: "var(--qa-fg2)" }}>Új jelszó</Label>
                   <div className="relative">
                     <Input
                       type={showPassword ? "text" : "password"}
@@ -112,12 +118,14 @@ export default function ResetPassword() {
                       placeholder="Legalább 8 karakter"
                       required
                       minLength={8}
-                      className="bg-white/[0.05] border-white/[0.08] text-white placeholder:text-white/30 focus:border-violet-500/50 pr-10"
+                      className="pr-10"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                      style={{ color: "var(--qa-fg4)" }}
+                      aria-label={showPassword ? "Jelszó elrejtése" : "Jelszó mutatása"}
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -125,7 +133,7 @@ export default function ResetPassword() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-white/70 text-sm">Jelszó megerősítése</Label>
+                  <Label className="text-sm" style={{ color: "var(--qa-fg2)" }}>Jelszó megerősítése</Label>
                   <div className="relative">
                     <Input
                       type={showConfirm ? "text" : "password"}
@@ -133,37 +141,36 @@ export default function ResetPassword() {
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="Írd be újra a jelszót"
                       required
-                      className="bg-white/[0.05] border-white/[0.08] text-white placeholder:text-white/30 focus:border-violet-500/50 pr-10"
+                      className="pr-10"
                     />
                     <button
                       type="button"
                       onClick={() => setShowConfirm(!showConfirm)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                      style={{ color: "var(--qa-fg4)" }}
+                      aria-label={showConfirm ? "Jelszó elrejtése" : "Jelszó mutatása"}
                     >
                       {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                   {password && confirmPassword && password !== confirmPassword && (
-                    <p className="text-red-400 text-xs mt-1">A két jelszó nem egyezik</p>
+                    <p className="text-xs mt-1" style={{ color: "var(--qa-danger)" }}>A két jelszó nem egyezik</p>
                   )}
                 </div>
 
-                {/* Password strength indicator */}
+                {/* Password strength indicator — QA tokenek */}
                 {password.length > 0 && (
                   <div className="space-y-1">
                     <div className="flex gap-1">
                       {[1, 2, 3, 4].map((i) => (
                         <div
                           key={i}
-                          className={`h-1 flex-1 rounded-full transition-colors ${
-                            password.length >= i * 3
-                              ? i <= 1 ? "bg-red-500" : i <= 2 ? "bg-yellow-500" : i <= 3 ? "bg-blue-500" : "bg-green-500"
-                              : "bg-white/10"
-                          }`}
+                          className="h-1 flex-1 rounded-full transition-colors"
+                          style={{ background: strengthColor(i) }}
                         />
                       ))}
                     </div>
-                    <p className="text-white/30 text-xs">
+                    <p className="text-xs" style={{ color: "var(--qa-fg4)" }}>
                       {password.length < 8 ? "Túl rövid" : password.length < 10 ? "Gyenge" : password.length < 12 ? "Közepes" : "Erős"}
                     </p>
                   </div>
@@ -172,7 +179,7 @@ export default function ResetPassword() {
                 <Button
                   type="submit"
                   disabled={resetPassword.isPending || !password || !confirmPassword}
-                  className="w-full bg-violet-600 hover:bg-violet-500 text-white border-0 h-11"
+                  className="w-full h-11"
                 >
                   {resetPassword.isPending ? (
                     <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Mentés...</>
@@ -182,7 +189,7 @@ export default function ResetPassword() {
                 </Button>
 
                 <Link href="/bejelentkezes">
-                  <Button variant="ghost" className="w-full text-white/40 hover:text-white/70">
+                  <Button variant="ghost" className="w-full">
                     <ArrowLeft className="w-4 h-4 mr-2" /> Vissza a bejelentkezéshez
                   </Button>
                 </Link>

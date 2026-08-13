@@ -9,6 +9,15 @@ import { Loader2, Eye, EyeOff } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { G2ALogoOnDark } from "@/components/G2ALogo";
 
+/**
+ * Login — QA-token migrated (2026-06)
+ *
+ * A shadcn Card/Button/Input/Label komponensek defaultjukban már a Quiet
+ * Authority tokenekhez vannak kötve (index.css: --card, --border, --primary
+ * → --qa-surface, --qa-border, --qa-accent). Ezért NE adjunk explicit
+ * bg-white/[0.03], text-violet-400 hardcode-okat — a bare shadcn magától
+ * konzisztens a dashboarddal. Csak a hero (page bg) marad var(--qa-bg).
+ */
 export default function Login() {
   const [, navigate] = useLocation();
   const [email, setEmail] = useState("");
@@ -19,7 +28,6 @@ export default function Login() {
 
   const login = trpc.appAuth.login.useMutation({
     onSuccess: async (data) => {
-      // Invalidate auth cache so AppRoute/OnboardingRoute guards get fresh data
       await utils.appAuth.me.invalidate();
       if (!data.user.onboardingCompleted) {
         navigate("/onboarding");
@@ -39,29 +47,29 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0A0F] flex items-center justify-center p-6">
+    <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "var(--qa-bg)" }}>
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-8">
           <G2ALogoOnDark size="lg" asLink />
         </div>
 
-        <Card className="bg-white/[0.03] border-white/[0.08]">
+        <Card>
           <CardHeader className="pb-4">
-            <CardTitle className="text-2xl text-white text-center">Üdvözlünk vissza</CardTitle>
-            <CardDescription className="text-white/50 text-center">
+            <CardTitle className="text-2xl text-center" style={{ color: "var(--qa-fg)" }}>Üdvözlünk vissza</CardTitle>
+            <CardDescription className="text-center" style={{ color: "var(--qa-fg3)" }}>
               Jelentkezz be a fiókodba
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
-                <Alert className="bg-red-500/10 border-red-500/20 text-red-400">
+                <Alert variant="destructive">
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
 
               <div className="space-y-1.5">
-                <Label className="text-white/70 text-sm">Email cím</Label>
+                <Label className="text-sm" style={{ color: "var(--qa-fg2)" }}>Email cím</Label>
                 <Input
                   type="email"
                   value={email}
@@ -69,14 +77,13 @@ export default function Login() {
                   placeholder="email@ceg.hu"
                   required
                   autoComplete="email"
-                  className="bg-white/[0.05] border-white/[0.08] text-white placeholder:text-white/30 focus:border-violet-500/50"
                 />
               </div>
 
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <Label className="text-white/70 text-sm">Jelszó</Label>
-                  <Link href="/elfelejtett-jelszo" className="text-xs text-violet-400 hover:text-violet-300 transition-colors">
+                  <Label className="text-sm" style={{ color: "var(--qa-fg2)" }}>Jelszó</Label>
+                  <Link href="/elfelejtett-jelszo" className="text-xs transition-colors" style={{ color: "var(--qa-accent)" }}>
                     Elfelejtett jelszó?
                   </Link>
                 </div>
@@ -88,12 +95,14 @@ export default function Login() {
                     placeholder="Jelszó"
                     required
                     autoComplete="current-password"
-                    className="bg-white/[0.05] border-white/[0.08] text-white placeholder:text-white/30 focus:border-violet-500/50 pr-10"
+                    className="pr-10"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPass(!showPass)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                    style={{ color: "var(--qa-fg4)" }}
+                    aria-label={showPass ? "Jelszó elrejtése" : "Jelszó mutatása"}
                   >
                     {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -103,7 +112,7 @@ export default function Login() {
               <Button
                 type="submit"
                 disabled={login.isPending}
-                className="w-full bg-violet-600 hover:bg-violet-500 text-white border-0 h-11"
+                className="w-full h-11"
               >
                 {login.isPending ? (
                   <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Bejelentkezés...</>
@@ -112,9 +121,9 @@ export default function Login() {
                 )}
               </Button>
 
-              <p className="text-center text-sm text-white/40">
+              <p className="text-center text-sm" style={{ color: "var(--qa-fg4)" }}>
                 Még nincs fiókod?{" "}
-                <Link href="/regisztracio" className="text-violet-400 hover:text-violet-300 transition-colors">
+                <Link href="/regisztracio" className="transition-colors" style={{ color: "var(--qa-accent)" }}>
                   Regisztrálj ingyen
                 </Link>
               </p>
