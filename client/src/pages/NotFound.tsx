@@ -1,66 +1,159 @@
+/**
+ * 404 – Az oldal nem található
+ *
+ * Az audit-agent kiemelte: "NotFound.tsx bland — 404 a márka-hangulat egyik
+ * teszthelye". A polírozás:
+ *   - Nagy, feltűnő "404" szám a Sora font-tal
+ *   - Meaning-ful magyar üzenet (nem sablon)
+ *   - 3 kontextuális gyorslink kártyaként: Vezérlőpult, SEO Audit, Support
+ *   - QA-token használat végig, gradient nélkül (a Register.tsx bal panelje
+ *     őrzi a violet gradient-et, ide már nem kell)
+ */
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Home, Compass } from "lucide-react";
-import { useLocation } from "wouter";
+import { Home, Compass, Search, Mail, ArrowRight } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import { useAppAuth } from "@/hooks/useAppAuth";
+import { G2ALogoOnDark } from "@/components/G2ALogo";
+
+interface QuickLinkProps {
+  href: string;
+  icon: React.ReactNode;
+  label: string;
+  description: string;
+}
+
+function QuickLink({ href, icon, label, description }: QuickLinkProps) {
+  return (
+    <Link href={href}>
+      <a
+        className="group flex items-center gap-3 p-3 rounded-xl border transition-all hover:opacity-90"
+        style={{
+          background: "var(--qa-surface)",
+          borderColor: "var(--qa-border)",
+        }}
+      >
+        <div
+          className="w-9 h-9 rounded-lg flex-shrink-0 flex items-center justify-center"
+          style={{ background: "var(--qa-surface2)", color: "var(--qa-accent)" }}
+        >
+          {icon}
+        </div>
+        <div className="flex-1 min-w-0 text-left">
+          <p className="text-sm font-semibold" style={{ color: "var(--qa-fg)" }}>
+            {label}
+          </p>
+          <p className="text-xs truncate" style={{ color: "var(--qa-fg3)" }}>
+            {description}
+          </p>
+        </div>
+        <ArrowRight
+          className="w-4 h-4 flex-shrink-0 transition-transform group-hover:translate-x-0.5"
+          style={{ color: "var(--qa-fg4)" }}
+        />
+      </a>
+    </Link>
+  );
+}
 
 export default function NotFound() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
+  const { user } = useAppAuth();
+  const isAuthed = !!user;
+
+  // Kontextuális gyorslinkek — bejelentkezett usernek app-célok, kijelentkezettnek marketing/support
+  const quickLinks: QuickLinkProps[] = isAuthed
+    ? [
+        { href: "/iranyitopult", icon: <Home size={16} />, label: "Vezérlőpult", description: "A napi feladatok és KPI-ok" },
+        { href: "/seo", icon: <Search size={16} />, label: "SEO Audit", description: "Weboldal-elemzés indítása" },
+        { href: "/beallitasok", icon: <Compass size={16} />, label: "Beállítások", description: "Fiók, integrációk, brand" },
+      ]
+    : [
+        { href: "/", icon: <Home size={16} />, label: "Főoldal", description: "Vissza a Landing oldalra" },
+        { href: "/bejelentkezes", icon: <Compass size={16} />, label: "Bejelentkezés", description: "Fiókod eléréséhez" },
+        { href: "/regisztracio", icon: <Search size={16} />, label: "Regisztráció", description: "Kezdd ingyen a próbát" },
+      ];
 
   return (
     <div
-      className="min-h-screen w-full flex items-center justify-center px-4"
-      style={{ background: "var(--qa-bg, #0f0f1a)" }}
+      className="min-h-screen w-full flex flex-col items-center justify-center px-4 py-16"
+      style={{ background: "var(--qa-bg)" }}
     >
-      <Card
-        className="w-full max-w-lg border-0"
-        style={{
-          background: "var(--qa-surface, #1a1a2e)",
-          border: "1px solid var(--qa-border, rgba(139, 92, 246, 0.15))",
-        }}
-      >
-        <CardContent className="pt-10 pb-10 text-center">
-          <div className="flex justify-center mb-6">
-            <div
-              className="relative w-16 h-16 rounded-full flex items-center justify-center"
-              style={{ background: "rgba(139, 92, 246, 0.1)" }}
-            >
-              <Compass className="w-8 h-8" style={{ color: "var(--qa-accent, #8b5cf6)" }} />
-            </div>
-          </div>
+      {/* Logo felül — vissza a főoldalra */}
+      <div className="mb-10">
+        <G2ALogoOnDark size="md" asLink />
+      </div>
 
-          <h1
-            className="text-5xl font-bold mb-3"
-            style={{ color: "var(--qa-fg, #ffffff)", fontFamily: "Sora, sans-serif" }}
+      {/* Fő tartalom */}
+      <div className="w-full max-w-lg text-center">
+        {/* Nagy 404 */}
+        <h1
+          className="font-bold mb-2 leading-none tracking-tighter"
+          style={{
+            color: "var(--qa-fg)",
+            fontFamily: "Sora, sans-serif",
+            fontSize: "clamp(96px, 20vw, 160px)",
+            lineHeight: 1,
+          }}
+        >
+          404
+        </h1>
+        <div
+          className="inline-block px-3 py-1 rounded-full text-xs font-semibold mb-6"
+          style={{
+            background: "oklch(0.6 0.2 255 / 15%)",
+            color: "var(--qa-accent)",
+          }}
+        >
+          Az oldal nem található
+        </div>
+
+        <p
+          className="text-base leading-relaxed mb-3"
+          style={{ color: "var(--qa-fg2)" }}
+        >
+          A keresett oldal nem létezik, vagy már elköltözött.
+        </p>
+        {location && location !== "/" && (
+          <p
+            className="text-xs font-mono mb-8 break-all px-2 py-1 rounded inline-block"
+            style={{ color: "var(--qa-fg4)", background: "var(--qa-surface)" }}
           >
-            404
-          </h1>
-
-          <h2
-            className="text-xl font-semibold mb-4"
-            style={{ color: "var(--qa-fg, #ffffff)" }}
-          >
-            Az oldal nem található
-          </h2>
-
-          <p className="mb-8 leading-relaxed" style={{ color: "var(--qa-muted, #9ca3af)" }}>
-            Sajnos a keresett oldal nem létezik vagy elköltözött.
-            <br />
-            Térj vissza a vezérlőpultra a folytatáshoz.
+            {location}
           </p>
+        )}
+      </div>
 
-          <Button
-            onClick={() => setLocation("/")}
-            className="px-6 py-2.5"
-            style={{
-              background: "linear-gradient(135deg, #7c3aed, #4f46e5)",
-              color: "#ffffff",
-            }}
+      {/* Gyorslinkek */}
+      <div className="w-full max-w-md space-y-2 mt-6">
+        <p className="text-xs uppercase tracking-wider mb-2 px-1" style={{ color: "var(--qa-fg4)" }}>
+          Gyors ugrás
+        </p>
+        {quickLinks.map((link) => (
+          <QuickLink key={link.href} {...link} />
+        ))}
+      </div>
+
+      {/* Vissza-gomb + support kontakt */}
+      <div className="mt-8 flex flex-col items-center gap-4">
+        <Button
+          onClick={() => window.history.length > 1 ? window.history.back() : setLocation("/")}
+          variant="outline"
+          className="gap-2"
+        >
+          <ArrowRight className="w-4 h-4 rotate-180" />
+          Vissza az előző oldalra
+        </Button>
+        <p className="text-xs" style={{ color: "var(--qa-fg4)" }}>
+          Segítségre van szükséged?{" "}
+          <a
+            href="mailto:info@g2amarketing.hu"
+            className="inline-flex items-center gap-1 hover:underline"
+            style={{ color: "var(--qa-accent)" }}
           >
-            <Home className="w-4 h-4 mr-2" />
-            Vissza a főoldalra
-          </Button>
-        </CardContent>
-      </Card>
+            <Mail size={11} /> info@g2amarketing.hu
+          </a>
+        </p>
+      </div>
     </div>
   );
 }
