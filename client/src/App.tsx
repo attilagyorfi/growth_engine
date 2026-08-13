@@ -32,6 +32,7 @@ const Intelligence = lazy(() => import("./pages/Intelligence"));
 const AIWriter = lazy(() => import("./pages/AIWriter"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const SeoAudit = lazy(() => import("./pages/SeoAudit"));
+const Reports = lazy(() => import("./pages/Reports"));
 const VideoStudio = lazy(() => import("./pages/VideoStudio"));
 
 // Admin pages
@@ -113,6 +114,7 @@ function Router() {
       <Route path="/ai-iro" component={() => <AppRoute component={AIWriter} />} />
       <Route path="/profil" component={() => <AppRoute component={ProfilePage} />} />
       <Route path="/seo" component={() => <AppRoute component={SeoAudit} />} />
+      <Route path="/riportok" component={() => <AppRoute component={Reports} />} />
       <Route path="/video-studio" component={() => <AppRoute component={VideoStudio} />} />
 
       {/* Admin routes */}

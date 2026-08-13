@@ -46,6 +46,7 @@ const publicNavItems: NavItem[] = [
   { href: "/kampanyok", label: "Kampányok", icon: Megaphone, gate: "pro+" },
   { href: "/analitika", label: "Analitika", icon: TrendingUp, gate: "all" },
   { href: "/seo", label: "SEO Audit", icon: SearchCheck, gate: "all" },
+  { href: "/riportok", label: "Riportok", icon: BarChart3, gate: "pro+" },
   { href: "/video-studio", label: "Videókészítő", icon: Video, gate: "pro+", comingSoon: true },
   { href: "/beallitasok", label: "Beállítások", icon: Settings, gate: "all" },
 ];
@@ -59,6 +60,7 @@ const adminNavItems: NavItem[] = [
   { href: "/kampanyok", label: "Kampányok", icon: Megaphone },
   { href: "/analitika", label: "Analitika", icon: TrendingUp },
   { href: "/seo", label: "SEO Audit", icon: SearchCheck },
+  { href: "/riportok", label: "Riportok", icon: BarChart3 },
   { href: "/video-studio", label: "Videókészítő", icon: Video, comingSoon: true },
   { href: "/hirlevel", label: "Hírlevél", icon: Mail },
   { href: "/beallitasok", label: "Beállítások", icon: Settings },

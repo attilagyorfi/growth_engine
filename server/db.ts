@@ -1,5 +1,6 @@
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, gte, lte } from "drizzle-orm";
 import { drizzle, type MySql2Database } from "drizzle-orm/mysql2";
+import { nanoid } from "nanoid";
 import mysql from "mysql2/promise";
 import {
   users, InsertUser,
@@ -785,4 +786,157 @@ export async function markAllNotificationsRead(appUserId: string) {
   const db = await getDb();
   if (!db) return;
   await db.update(appNotifications).set({ isRead: true }).where(eq(appNotifications.appUserId, appUserId));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// RIPORTGENERÁTOR MODUL — 4 tábla helper (drizzle/schema.ts riport-tábláihoz)
+// A getLeadsByProfile stílust követi: getDb() null-check + tömb-fallback.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// A `data_connections` + `report_metrics` + `reports` + `report_schedules` tábla
+// oszlopaira és típusaira a schema.ts-ben deklarált export-okat használjuk.
+// Egyetlen import-blokk a modul aljához (elkerüli a felül lévő importok bővítését).
+import {
+  dataConnections, type InsertDataConnection,
+  reportMetrics, type InsertReportMetric,
+  reports as reportsTable, type InsertReport,
+  reportSchedules, type InsertReportSchedule,
+} from "../drizzle/schema";
+
+// ─── Data Connections ───────────────────────────────────────────────────
+
+export async function listDataConnections(profileId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(dataConnections).where(eq(dataConnections.profileId, profileId));
+}
+
+export async function upsertDataConnection(input: Omit<InsertDataConnection, "id"> & { connected?: boolean }) {
+  const db = await getDb();
+  if (!db) return null;
+  // ONE-per-profile-platform-account: ha már van ilyen, frissítjük a tokeneket.
+  const existing = await db.select().from(dataConnections).where(
+    and(
+      eq(dataConnections.profileId, input.profileId),
+      eq(dataConnections.platform, input.platform),
+      eq(dataConnections.externalAccountId, input.externalAccountId),
+    ),
+  ).limit(1);
+  const id = existing[0]?.id ?? nanoid();
+  const values = { ...input, id, connected: input.connected ?? true };
+  if (existing[0]) {
+    await db.update(dataConnections).set(values).where(eq(dataConnections.id, id));
+  } else {
+    await db.insert(dataConnections).values(values);
+  }
+  const rows = await db.select().from(dataConnections).where(eq(dataConnections.id, id)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function deleteDataConnection(profileId: string, connectionId: string) {
+  const db = await getDb();
+  if (!db) return { ok: false };
+  await db.delete(dataConnections).where(
+    and(eq(dataConnections.id, connectionId), eq(dataConnections.profileId, profileId)),
+  );
+  return { ok: true };
+}
+
+// ─── Report Metrics ─────────────────────────────────────────────────────
+
+/**
+ * Bulk insert normalizált metrikák. A hívó (sync mutation) egy időszakhoz
+ * több platform sorát adja át; a helpert a legkönnyebb kis batch-ekben
+ * hívni (~500 sor / batch a TiDB packet-limit alatt).
+ */
+export async function insertReportMetrics(
+  profileId: string,
+  rows: Array<Omit<InsertReportMetric, "id" | "profileId" | "createdAt">>,
+) {
+  const db = await getDb();
+  if (!db || rows.length === 0) return { inserted: 0 };
+  const values = rows.map((r) => ({ ...r, id: nanoid(), profileId }));
+  await db.insert(reportMetrics).values(values);
+  return { inserted: values.length };
+}
+
+/**
+ * Napi bontású metrikák egy időszakra (from/to inkluzív). A dátum-oszlop
+ * a drizzle-oldalon `date` (nem timestamp), a szűrést string-formában
+ * végezzük (YYYY-MM-DD), mert a MySQL a `date` oszlopot lexikografikusan
+ * hasonlítja össze.
+ */
+export async function getMetricsByProfile(profileId: string, from: string, to: string) {
+  const db = await getDb();
+  if (!db) return [];
+  // A drizzle `date` oszlopa Date objektumot vár a where clause-ban.
+  // A `from`/`to` YYYY-MM-DD stringet a hívó adja, itt Date-re konvertáljuk.
+  const fromDate = new Date(from);
+  const toDate = new Date(to);
+  return db.select().from(reportMetrics).where(
+    and(
+      eq(reportMetrics.profileId, profileId),
+      gte(reportMetrics.date, fromDate),
+      lte(reportMetrics.date, toDate),
+    ),
+  );
+}
+
+// ─── Reports ────────────────────────────────────────────────────────────
+
+export async function createReport(input: Omit<InsertReport, "id"> & { id?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Adatbázis nem elérhető");
+  const id = input.id ?? nanoid();
+  await db.insert(reportsTable).values({ ...input, id });
+  const rows = await db.select().from(reportsTable).where(eq(reportsTable.id, id)).limit(1);
+  return rows[0]!;
+}
+
+export async function updateReport(
+  reportId: string,
+  patch: Partial<Omit<InsertReport, "id" | "profileId" | "createdAt">>,
+) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.update(reportsTable).set(patch).where(eq(reportsTable.id, reportId));
+  const rows = await db.select().from(reportsTable).where(eq(reportsTable.id, reportId)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function listReports(profileId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(reportsTable)
+    .where(eq(reportsTable.profileId, profileId))
+    .orderBy(desc(reportsTable.createdAt))
+    .limit(50);
+}
+
+export async function getReportById(profileId: string, reportId: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(reportsTable).where(
+    and(eq(reportsTable.id, reportId), eq(reportsTable.profileId, profileId)),
+  ).limit(1);
+  return rows[0] ?? null;
+}
+
+// ─── Report Schedules ───────────────────────────────────────────────────
+
+export async function upsertReportSchedule(input: Omit<InsertReportSchedule, "id">) {
+  const db = await getDb();
+  if (!db) return null;
+  // egy profile-hoz egyetlen schedule (unique constraint a profileId-n)
+  const existing = await db.select().from(reportSchedules)
+    .where(eq(reportSchedules.profileId, input.profileId)).limit(1);
+  const id = existing[0]?.id ?? nanoid();
+  const values = { ...input, id };
+  if (existing[0]) {
+    await db.update(reportSchedules).set(values).where(eq(reportSchedules.id, id));
+  } else {
+    await db.insert(reportSchedules).values(values);
+  }
+  const rows = await db.select().from(reportSchedules).where(eq(reportSchedules.id, id)).limit(1);
+  return rows[0] ?? null;
 }
