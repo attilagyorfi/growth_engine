@@ -5,8 +5,9 @@
  * Features: persistent sidebar, notification panel, own profile menu only
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
+import CommandPalette from "@/components/CommandPalette";
 import {
   LayoutDashboard, Users, BarChart3, Layers, TrendingUp, Settings,
   Zap, ChevronRight, Bell, X, CheckCircle, AlertCircle, Info, Mail,
@@ -84,6 +85,21 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState("");
   const [showProjectMenu, setShowProjectMenu] = useState(false);
+  const [cmdPaletteOpen, setCmdPaletteOpen] = useState(false);
+
+  // Globális ⌘K / Ctrl+K keyboard shortcut a parancspalettához.
+  // A meta/ctrl+k IDE/browser search-t is triggerelheti (különösen
+  // Firefox address bar), ezért preventDefault-tal blokkoljuk.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.key === "k" || e.key === "K") && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setCmdPaletteOpen(open => !open);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const { data: dbNotifications = [], refetch: refetchNotifs } = trpc.notifications.list.useQuery(
     undefined,
@@ -402,6 +418,27 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Cmd+K palette trigger — vizuális "discovery" a shortcuthez */}
+            <button
+              onClick={() => setCmdPaletteOpen(true)}
+              className="hidden md:flex items-center gap-2 h-8 px-2.5 rounded-md text-xs transition-colors"
+              style={{
+                background: "var(--qa-surface2)",
+                color: "var(--qa-fg3)",
+                border: "1px solid var(--qa-border)",
+              }}
+              aria-label="Parancspaletta megnyitása (Ctrl+K)"
+              title="Parancspaletta"
+            >
+              <span>Ugrás…</span>
+              <kbd
+                className="hidden lg:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded"
+                style={{ background: "var(--qa-surface)", color: "var(--qa-fg4)", fontSize: "10px", fontFamily: "monospace" }}
+              >
+                ⌘K
+              </kbd>
+            </button>
+
             {/* Notification Bell */}
             <div className="relative">
               <button
@@ -664,6 +701,9 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
       {(showNotifs || showUserMenu) && (
         <div className="fixed inset-0 z-40" onClick={() => { setShowNotifs(false); setShowUserMenu(false); }} />
       )}
+
+      {/* Command palette — global Cmd+K / Ctrl+K */}
+      <CommandPalette open={cmdPaletteOpen} onOpenChange={setCmdPaletteOpen} />
     </div>
   );
 }
