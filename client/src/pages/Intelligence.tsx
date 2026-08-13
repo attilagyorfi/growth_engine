@@ -205,7 +205,14 @@ export default function Intelligence() {
       await refetch();
       toast.success("Cégintelligencia frissítve!");
     } catch {
-      toast.error("Hiba a generálás során.");
+      // Retry action — 1-kattos újrapróbálkozás fail után (nem kell a
+      // sidebarra visszakattingatni). Sonner `action` prop → button toast-ban.
+      toast.error("Hiba a generálás során.", {
+        action: {
+          label: "Újra",
+          onClick: () => handleRegenerate(),
+        },
+      });
     } finally {
       setIsRegenerating(false);
     }

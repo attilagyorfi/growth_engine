@@ -119,7 +119,16 @@ export default function SeoAudit() {
 
   const runAudit = trpc.seo.runAudit.useMutation({
     onSuccess: () => { refetch(); toast.success("SEO audit kész!"); },
-    onError: (e) => toast.error(`Hiba: ${e.message}`),
+    onError: (e, variables) => {
+      // Retry action a Sonner action prop-pal — a variables megőrzi az eredeti
+      // input-ot (profileId + url), így 1 kattintással újra próbálható.
+      toast.error(`Hiba: ${e.message}`, {
+        action: {
+          label: "Újra",
+          onClick: () => runAudit.mutate(variables),
+        },
+      });
+    },
   });
 
   const deleteAudit = trpc.seo.deleteAudit.useMutation({

@@ -89,9 +89,18 @@ export default function Campaigns() {
         brief,
       });
     },
-    onError: () => {
+    onError: (_err, variables) => {
       setGeneratingBrief(false);
-      toast.error("Nem sikerült a brief generálása.");
+      // Retry action — a variables tartalmazza az eredeti profileId + brief-input-ot
+      toast.error("Nem sikerült a brief generálása.", {
+        action: {
+          label: "Újra",
+          onClick: () => {
+            setGeneratingBrief(true);
+            generateBriefMutation.mutate(variables);
+          },
+        },
+      });
     },
   });
 

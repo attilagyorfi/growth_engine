@@ -213,8 +213,35 @@ export default function Settings() {
 
   const FONT_OPTIONS = ["Sora", "Inter", "Poppins", "Roboto", "Montserrat", "Playfair Display", "Raleway"];
 
+  // Aktív tab label a breadcrumb-hoz — a BASE_TABS + ADMIN_TAB egyesítéséből
+  const activeTabLabel = [...BASE_TABS, ADMIN_TAB].find(t => t.id === activeTab)?.label ?? "Beállítások";
+
   return (
     <DashboardLayout>
+      {/* Breadcrumb — orientáció a mély tab-struktúrában */}
+      <nav aria-label="breadcrumb" className="mb-3">
+        <ol className="flex flex-wrap items-center gap-1.5 text-sm" style={{ color: "var(--qa-fg3)" }}>
+          <li>
+            <a
+              href="/iranyitopult"
+              className="hover:underline transition-colors"
+              style={{ color: "var(--qa-fg3)" }}
+              onClick={(e) => { e.preventDefault(); navigate("/iranyitopult"); }}
+            >
+              Vezérlőpult
+            </a>
+          </li>
+          <li aria-hidden="true" style={{ color: "var(--qa-fg4)" }}>›</li>
+          <li>
+            <span className="font-medium" style={{ color: "var(--qa-fg3)" }}>Beállítások</span>
+          </li>
+          <li aria-hidden="true" style={{ color: "var(--qa-fg4)" }}>›</li>
+          <li>
+            <span className="font-semibold" style={{ color: "var(--qa-fg2)" }}>{activeTabLabel}</span>
+          </li>
+        </ol>
+      </nav>
+
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>Beállítások</h1>
