@@ -14,6 +14,7 @@ import {
   Trash2, ChevronDown, ChevronUp, Loader2, RefreshCw,
   BarChart2, FileText, Zap, Shield, Image, Link2,
 } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
 import { motion, AnimatePresence } from "framer-motion";
 
 // ─── Style tokens ──────────────────────────────────────────────────────────────
@@ -487,11 +488,11 @@ export default function SeoAudit() {
 
         {/* Empty state */}
         {audits.length === 0 && !runAudit.isPending && (
-          <div className="rounded-2xl border p-12 text-center" style={{ background: cardBg, borderColor: border }}>
-            <Globe size={40} className="mx-auto mb-3" style={{ color: "var(--qa-fg4)" }} />
-            <p className="text-base font-semibold mb-1" style={{ color: "var(--qa-fg3)" }}>Még nincs SEO audit</p>
-            <p className="text-sm" style={{ color: textMuted }}>Add meg a weboldal URL-jét fent, és indítsd el az elemzést.</p>
-          </div>
+          <EmptyState
+            icon={<Globe size={22} />}
+            title="Még nincs SEO audit"
+            description="Az első audit átfogó képet ad az oldalad Core Web Vitals-airól, meta tagek állapotáról és tartalmi optimalizációról. Add meg a weboldal URL-jét fent, ~30 másodperc alatt kész."
+          />
         )}
       </div>
     </DashboardLayout>

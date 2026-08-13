@@ -23,6 +23,7 @@ import {
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { EmptyState } from "@/components/EmptyState";
 
 const INDUSTRIES = [
   "Technológia / SaaS", "E-kereskedelem", "Pénzügyi szolgáltatások",
@@ -195,15 +196,16 @@ export default function ProjectsPage() {
             <Loader2 className="w-6 h-6 animate-spin" style={{ color: "var(--qa-accent)" }} />
           </div>
         ) : projects.length === 0 && !showNewForm ? (
-          <div
-            className="rounded-2xl border p-12 text-center"
-            style={{ background: "var(--qa-surface)", borderColor: "var(--qa-border)" }}
-          >
-            <FolderOpen size={40} className="mx-auto mb-3 opacity-30" style={{ color: "var(--qa-accent)" }} />
-            <p className="text-sm font-medium" style={{ color: "var(--qa-fg3)" }}>
-              Még nincs projekt. Hozd létre az elsőt!
-            </p>
-          </div>
+          <EmptyState
+            icon={<FolderOpen size={22} />}
+            title="Még nincs projekt"
+            description="A projektek segítenek külön kezelni több ügyfél brand-jét, stratégiáját és tartalmait — mind egy super admin fiók alatt."
+            action={
+              <Button onClick={() => setShowNewForm(true)} className="gap-2">
+                <Plus className="w-4 h-4" /> Első projekt létrehozása
+              </Button>
+            }
+          />
         ) : (
           <div className="grid gap-4">
             {projects.map((p) => (

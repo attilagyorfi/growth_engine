@@ -11,6 +11,7 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Mail, Send, Loader2, Users, AlertTriangle, Sparkles, X } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
 
 const cardBg = "var(--qa-surface)";
 const border = "var(--qa-border)";
@@ -63,10 +64,12 @@ export default function NewsletterSection() {
             <Loader2 size={20} className="animate-spin" style={{ color: "var(--qa-accent)" }} />
           </div>
         ) : subscriberCount === 0 ? (
-          <div className="text-center py-8" style={{ color: "var(--qa-fg4)" }}>
-            <Mail size={24} className="mx-auto mb-2 opacity-60" />
-            <p className="text-sm">Még nincs feliratkozó.</p>
-          </div>
+          <EmptyState
+            compact
+            icon={<Mail size={20} />}
+            title="Még nincs feliratkozó"
+            description="A hírlevél feliratkozók akkor jelennek meg itt, ha valaki regisztrációkor bejelöli a hírlevél opciót."
+          />
         ) : (
           <div className="rounded-lg overflow-hidden" style={{ background: "var(--qa-surface2)" }}>
             <div className="max-h-64 overflow-y-auto">
