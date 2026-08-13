@@ -21,6 +21,7 @@ import { motion } from "framer-motion";
 import { useState } from "react";
 import { Sparkles, RefreshCw, Brain, Image, Video } from "lucide-react";
 import DailyTasksBlock from "@/components/DailyTasksBlock";
+import OnboardingChecklist from "@/components/OnboardingChecklist";
 
 export default function Dashboard() {
   const [, navigate] = useLocation();
@@ -126,6 +127,9 @@ export default function Dashboard() {
         </div>
 
       </div>
+
+      {/* Első lépések — új user retention widget (elrejthető) */}
+      {activeProfile.id && <OnboardingChecklist profileId={activeProfile.id} />}
 
       {/* Mi a dolgom ma? – AI napi teendők */}
       {activeProfile.id && <DailyTasksBlock profileId={activeProfile.id} />}
