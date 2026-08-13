@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Plus, Target, Zap, Calendar, BarChart2, Loader2, Trash2, Edit2, ChevronRight, Megaphone } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
+import { ListSkeleton } from "@/components/skeletons";
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   draft: { label: "Vázlat", color: "bg-gray-100 text-gray-700" },
@@ -207,9 +208,7 @@ export default function Campaigns() {
 
         {/* Campaign List */}
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-          </div>
+          <ListSkeleton rows={3} />
         ) : campaigns.length === 0 ? (
           <Card>
             <CardContent>

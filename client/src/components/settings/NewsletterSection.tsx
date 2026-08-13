@@ -12,6 +12,7 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Mail, Send, Loader2, Users, AlertTriangle, Sparkles, X } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
+import { ListSkeleton } from "@/components/skeletons";
 
 const cardBg = "var(--qa-surface)";
 const border = "var(--qa-border)";
@@ -60,9 +61,7 @@ export default function NewsletterSection() {
           Azok a felhasználók, akik a regisztráció során bejelölték a hírlevél feliratkozást.
         </p>
         {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 size={20} className="animate-spin" style={{ color: "var(--qa-accent)" }} />
-          </div>
+          <ListSkeleton rows={3} showAvatar={false} />
         ) : subscriberCount === 0 ? (
           <EmptyState
             compact
