@@ -149,14 +149,14 @@ export default function OnboardingChecklist({ profileId }: OnboardingChecklistPr
             <div className="flex items-start gap-3 min-w-0 flex-1">
               <div
                 className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{ background: "oklch(0.6 0.2 255 / 15%)", color: "var(--qa-accent)" }}
+                style={{ background: "var(--qa-accent-soft, rgba(20,184,166,.14))", color: "var(--qa-accent)" }}
               >
                 <Sparkles size={18} />
               </div>
               <div className="min-w-0 flex-1">
                 <h3
                   className="text-sm font-bold mb-0.5"
-                  style={{ color: "var(--qa-fg)", fontFamily: "Sora, sans-serif" }}
+                  style={{ color: "var(--qa-fg)", fontFamily: "var(--font-heading)" }}
                 >
                   Első lépések ({doneCount}/{steps.length})
                 </h3>
@@ -220,7 +220,7 @@ export default function OnboardingChecklist({ profileId }: OnboardingChecklistPr
             <CheckCircle2 size={22} style={{ color: "var(--qa-success)" }} />
             <div>
               <p className="text-sm font-semibold" style={{ color: "var(--qa-fg)" }}>
-                🎉 A profilod teljes!
+                A profilod teljes
               </p>
               <p className="text-xs" style={{ color: "var(--qa-fg3)" }}>
                 Minden alap kész — most már fókuszálhatsz a marketingedre.

@@ -8,6 +8,9 @@
 
 @import "tailwindcss";
 @import "tw-animate-css";
+/* G2A arculat v2 — Geist + Geist Mono (a teal/Geist pilot betűkészlete).
+   Globálisan betöltjük, de csak a .ge-arculat scope alkalmazza (lásd a fájl alján). */
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400..600&display=swap');
 
 @custom-variant dark (&:is(.dark *));
 
@@ -428,3 +431,82 @@
   .glow-blue  { box-shadow: 0 0 16px oklch(0.58 0.19 258 / 20%); }
   .glow-green { box-shadow: 0 0 16px oklch(0.72 0.19 145 / 20%); }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   G2A ARCULAT v2 — teal + Geist (PILOT SCOPE)
+   ────────────────────────────────────────────────────────────────────────
+   Forrás: design_handoff / tokens-g2a.css. Ez EGYELŐRE csak a `.ge-arculat`
+   konténerre hat (Irányítópult pilot) — a többi oldal marad a mai kék/Sora
+   arculaton. A CSS custom property-k a konténeren felülírják a :root teal-re
+   ÉS Geist-re mindent, ami `var(--qa-*)` / `var(--font-*)`-ot használ.
+   Ha a tulaj jóváhagyja: ezek az értékek a fenti :root blokkba emelődnek →
+   az egész app egyszerre vált (teljes flip), a scope megszűnik.
+   ════════════════════════════════════════════════════════════════════════ */
+.ge-arculat {
+  /* Akcent: G2A teal (csere a kékről) */
+  --qa-accent:        #14B8A6;
+  --qa-accent-hover:  #0D9488;
+  --qa-accent-on:     #04211D;   /* szöveg teal háttéren */
+  --qa-accent-soft:   rgba(20, 184, 166, 0.14);
+  --qa-accent-ring:   rgba(20, 184, 166, 0.12);
+  --qa-accent-glow:   0 6px 20px rgba(20, 184, 166, 0.35);
+
+  /* Ma hiányzó / üresen resolve-áló változók pótlása */
+  --qa-surface3:      #23262F;
+  --qa-accent-purple: #8B5CF6;
+
+  /* Tipográfia: Geist (nincs külön display font) + Geist Mono az eyebrow-hoz */
+  --font-sans:    'Geist', system-ui, sans-serif;
+  --font-heading: 'Geist', system-ui, sans-serif;
+  --font-mono:    'Geist Mono', ui-monospace, monospace;
+
+  /* 15px alapméret (touch + olvashatóság, mobil-paritás) */
+  font-family: var(--font-sans);
+  font-size: 15px;
+  color: var(--qa-fg);
+}
+
+/* Eyebrow / szekció-label — Geist Mono, uppercase, ritkított */
+.ge-arculat .qa-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--qa-fg3);
+}
+.ge-arculat .qa-eyebrow-accent { color: var(--qa-accent); }
+
+/* KPI / metrika szám — sűrű, tabular */
+.ge-arculat .qa-metric {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--qa-fg);
+}
+
+/* Státusz-pill (soft háttér + telített szöveg) */
+.ge-arculat .qa-status {
+  display: inline-flex; align-items: center;
+  padding: 3px 9px; border-radius: 999px;
+  font-size: 11px; font-weight: 600; font-family: var(--font-sans);
+}
+.ge-arculat .qa-status-pending   { background: var(--qa-warning-soft, rgba(245,158,11,.14)); color: var(--qa-warning); }
+.ge-arculat .qa-status-scheduled { background: var(--qa-accent-soft);  color: var(--qa-accent); }
+.ge-arculat .qa-status-draft     { background: var(--qa-surface2);     color: var(--qa-fg3); }
+.ge-arculat .qa-status-published { background: var(--qa-success-soft, rgba(34,197,94,.14)); color: var(--qa-success); }
+
+/* Primary / secondary gomb a pilot-hoz (teal, dark szöveg) */
+.ge-arculat .qa-btn-primary {
+  padding: 9px 16px; border-radius: 8px; font-size: 14px; font-weight: 600;
+  background: var(--qa-accent); color: var(--qa-accent-on); border: none;
+  transition: background .15s ease, box-shadow .15s ease;
+}
+.ge-arculat .qa-btn-primary:hover:not(:disabled) { background: var(--qa-accent-hover); box-shadow: var(--qa-accent-glow); }
+.ge-arculat .qa-btn-secondary {
+  padding: 9px 16px; border-radius: 8px; font-size: 14px; font-weight: 500;
+  background: transparent; color: var(--qa-fg2); border: 1px solid var(--qa-border-hi);
+  transition: background .15s ease, color .15s ease;
+}
+.ge-arculat .qa-btn-secondary:hover:not(:disabled) { background: var(--qa-surface2); color: var(--qa-fg); }

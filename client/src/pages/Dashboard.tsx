@@ -1,16 +1,24 @@
 /*
- * G2A Growth Engine – Dashboard v3.0
- * Operatív döntéstámogató felület
- * Blokkok: Needs Approval, This Week's Priorities, Scheduled Next 7 Days, Top Insight, At-risk Items
+ * G2A Growth Engine – Dashboard v4.0 (G2A arculat PILOT — teal + Geist)
+ *
+ * A design_handoff asztali Irányítópult újraépítése az új arculatban.
+ * SCOPE: a teljes oldal a `.ge-arculat` konténerben renderel — a token-réteg
+ * (index.css) itt teal-re és Geist-re vált mindent, a többi oldal érintetlen.
+ *
+ * FONTOS — adat-őszinteség: a designban látható "+34% elérés", "0,9% foglalási
+ * konverzió" stb. DEMO számok; a repóban NINCS analitika/reach idősor-API.
+ * Ez az oldal KIZÁRÓLAG valós tRPC-adatból dolgozik (leads, tartalom,
+ * kampányok, AI kredit); a sparkline-ok valós createdAt időbélyegekből
+ * származnak. Ahol nincs valós adat, ott őszinte üres/lapos állapot van.
  */
 
 import { useLocation } from "wouter";
 import {
-  CheckCircle2, Clock, AlertTriangle, Lightbulb, TrendingUp,
-  Mail, FileText, BarChart3, Users, ChevronRight, Zap,
-  Calendar, Eye, ThumbsUp, MessageSquare, ArrowRight, Activity,
+  ChevronRight, Calendar, CheckCircle2,
+  ArrowRight, Eye, ThumbsUp, Brain, Image, Video,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
+import Sparkline from "@/components/charts/Sparkline";
 import { useData } from "@/contexts/DataContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useAppAuth } from "@/hooks/useAppAuth";
@@ -18,316 +26,353 @@ import { useActiveProject } from "@/hooks/useActiveProject";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { useState } from "react";
-import { Sparkles, RefreshCw, Brain, Image, Video } from "lucide-react";
 import DailyTasksBlock from "@/components/DailyTasksBlock";
 import OnboardingChecklist from "@/components/OnboardingChecklist";
+
+// ─── Valós idősor-származtatás (createdAt-ból) ────────────────────────────────
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function toTime(raw: unknown): number | null {
+  if (!raw) return null;
+  const t = new Date(raw as string).getTime();
+  return Number.isNaN(t) ? null : t;
+}
+
+/** Heti darabszám-vödrök az utolsó N hétre (régi → új). Sparkline-hoz. */
+function weeklyCounts(items: any[], weeks = 12): number[] {
+  const buckets = new Array(weeks).fill(0);
+  const now = Date.now();
+  for (const it of items) {
+    const t = toTime(it?.createdAt);
+    if (t == null) continue;
+    const ago = Math.floor((now - t) / WEEK_MS);
+    if (ago >= 0 && ago < weeks) buckets[weeks - 1 - ago]++;
+  }
+  return buckets;
+}
+
+/** Napi darabszám az utolsó N napra (régi → új). Hero area-charthoz. */
+function dailyCounts(items: any[], days = 30): number[] {
+  const buckets = new Array(days).fill(0);
+  const now = Date.now();
+  for (const it of items) {
+    const t = toTime(it?.createdAt);
+    if (t == null) continue;
+    const ago = Math.floor((now - t) / DAY_MS);
+    if (ago >= 0 && ago < days) buckets[days - 1 - ago]++;
+  }
+  return buckets;
+}
+
+function countSince(items: any[], sinceMs: number): number {
+  const cutoff = Date.now() - sinceMs;
+  return items.filter((it) => {
+    const t = toTime(it?.createdAt);
+    return t != null && t >= cutoff;
+  }).length;
+}
+
+const PLATFORM_LABELS: Record<string, string> = {
+  linkedin: "LinkedIn", facebook: "Facebook", instagram: "Instagram",
+  twitter: "X", tiktok: "TikTok", blog: "Blog",
+};
 
 export default function Dashboard() {
   const [, navigate] = useLocation();
   const { leads } = useData();
-  // Az értékesítés-modul (outbound/inbound emailek) törölve — minden
-  // ide hivatkozó számolás 0/üres lett alább.
   const { activeProfile } = useProfile();
   const { isSuperAdmin } = useAppAuth();
   const { activeProject } = useActiveProject();
-  const [aiTasksKey, setAiTasksKey] = useState(0);
 
-  // Content items from tRPC
   const { data: contentItems = [] } = trpc.content.list.useQuery(
     { profileId: activeProfile.id },
     { enabled: !!activeProfile.id }
   );
-
-  // Campaigns from tRPC
   const { data: campaigns = [] } = trpc.campaigns.list.useQuery(
     { profileId: activeProfile.id },
     { enabled: !!activeProfile.id }
   );
-
-  // AI usage from tRPC
   const { data: aiUsage } = trpc.aiUsage.status.useQuery(undefined, { enabled: true });
+
   const utils = trpc.useUtils();
   const updateContentMutation = trpc.content.update.useMutation({
     onSuccess: () => utils.content.list.invalidate({ profileId: activeProfile.id }),
   });
 
-  // --- Needs Approval ---
+  // ─── Származtatott valós adatok ───────────────────────────────────────────
   const pendingContent = contentItems.filter((c: any) => c.status === "pending_approval");
   const totalApproval = pendingContent.length;
 
-  // --- This Week's Priorities ---
-  const weekPriorities = [
-    { id: "p2", label: "Tartalom jóváhagyás", type: "content", count: pendingContent.length, href: "/tartalom-studio" },
-    { id: "p3", label: "Stratégia heti fókusz frissítése", type: "strategy", count: 1, href: "/strategia" },
-  ].filter(p => p.count > 0);
-
-  // --- Scheduled Next 7 Days ---
-  // FONTOS: az AI-generált posztok status="draft" + scheduledAt-tal jönnek létre,
-  // mert a tartalom-naptár dátumot rendel hozzá, de a publikáláshoz külön
-  // ütemezés (jóváhagyás → scheduled státusz) kell. Ezt a kártyát konzisztenssé
-  // tesszük a Naptár füllel: bármi, aminek scheduledAt-ja van és 7 napon belül.
   const now = new Date();
-  const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const in7Days = new Date(now.getTime() + WEEK_MS);
   const upcomingScheduled = contentItems.filter((c: any) => {
     if (!c.scheduledAt) return false;
     const d = new Date(c.scheduledAt);
     return d >= now && d <= in7Days;
   }).slice(0, 5);
 
-  // At-risk Items kártya kikerült — email-alapú modul nélkül üres lenne.
-
-  // --- KPI Summary ---
-  const aiGeneratedCount = contentItems.filter((c: any) => c.generatedByAi || c.aiGenerated).length;
   const activeCampaigns = (campaigns as any[]).filter(c => c.status === "active" || c.status === "draft").length;
-  const kpis = [
-    { label: "Hírlevél feliratkozók", value: leads.length, icon: Users, color: "var(--qa-accent)" },
-    { label: "AI Tartalmak", value: contentItems.length, icon: Sparkles, color: "var(--qa-success)" },
-    { label: "Aktív Kampányok", value: activeCampaigns, icon: Zap, color: "var(--qa-warning)" },
-    { label: "AI Kreditek", value: aiUsage ? (aiUsage.limit === -1 ? "∞" : `${aiUsage.used}/${aiUsage.limit}`) : "–", icon: Brain, color: "var(--qa-accent-purple)" },
+  const draftCampaigns = (campaigns as any[]).filter(c => c.status === "draft").length;
+  const activeContent = contentItems.filter((c: any) => c.status === "scheduled" || c.status === "published" || c.status === "approved").length;
+  const contentLast7 = countSince(contentItems, 7 * DAY_MS);
+
+  // Feliratkozók e hónapban (valós createdAt alapján)
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  const leadsThisMonth = (leads as any[]).filter(l => {
+    const t = toTime(l?.createdAt);
+    return t != null && t >= monthStart;
+  }).length;
+
+  // Napi teendők (valós, származtatott prioritások)
+  const priorities = [
+    { id: "approve", label: "Tartalom jóváhagyása", count: totalApproval, href: "/tartalom-studio", done: totalApproval === 0 },
+    { id: "schedule", label: "Következő hét ütemezése", count: upcomingScheduled.length, href: "/tartalom-studio", done: upcomingScheduled.length > 0 },
+    { id: "strategy", label: "Heti fókusz frissítése", count: 1, href: "/strategia", done: false },
   ];
+  const prioritiesDone = priorities.filter(p => p.done).length;
+
+  // KPI kártyák — mind valós adat + valós sparkline
+  const kpis = [
+    {
+      key: "subs", eyebrow: "Hírlevél feliratkozók", value: (leads as any[]).length,
+      sub: leadsThisMonth > 0 ? `+${leadsThisMonth} / hó` : "összesen",
+      series: weeklyCounts(leads as any[]), color: "var(--qa-success)",
+    },
+    {
+      key: "content", eyebrow: "AI tartalmak", value: contentItems.length,
+      sub: `${activeContent} aktív`,
+      series: weeklyCounts(contentItems as any[]), color: "var(--qa-accent)",
+    },
+    {
+      key: "campaigns", eyebrow: "Aktív kampányok", value: activeCampaigns,
+      sub: `${draftCampaigns} vázlat`,
+      series: weeklyCounts(campaigns as any[]), color: "var(--qa-fg3)",
+    },
+    {
+      key: "credits", eyebrow: "AI kreditek",
+      value: aiUsage ? (aiUsage.limit === -1 ? "∞" : `${aiUsage.used}/${aiUsage.limit}`) : "–",
+      sub: aiUsage?.plan ? String(aiUsage.plan) : "csomag",
+      series: [0, 0], color: "var(--qa-accent-purple)",
+    },
+  ];
+
+  const contentDaily = dailyCounts(contentItems as any[], 30);
 
   const handleApproveContent = async (id: string) => {
     await updateContentMutation.mutateAsync({ id, status: "approved" });
     toast.success("Tartalom jóváhagyva");
   };
 
-  const card = (children: React.ReactNode, className?: string) => (
-    <div className={`rounded-xl border p-4 ${className ?? ""}`} style={{ background: "var(--qa-surface)", borderColor: "var(--qa-border)" }}>
-      {children}
-    </div>
-  );
-
-  const sectionTitle = (text: string) => (
-    <h2 className="text-xs font-bold uppercase tracking-wider mb-3" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg4)" }}>{text}</h2>
-  );
+  const subtitle = isSuperAdmin && activeProject
+    ? `Aktív projekt: ${activeProject.name} · ${now.toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric" })}`
+    : activeProfile.name
+      ? `Aktív ügyfél: ${activeProfile.name} · ${now.toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric" })}`
+      : now.toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric" });
 
   return (
-    <DashboardLayout>
-      {/* Welcome bar */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-xl font-bold" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>
-            Jó reggelt! 👋
-          </h1>
-          <p className="text-sm mt-0.5" style={{ color: "var(--qa-fg3)" }}>
-            {isSuperAdmin && activeProject ? (
-              <>
-                Aktív projekt: <span className="font-semibold" style={{ color: "var(--qa-warning)" }}>{activeProject.name}</span>
-                <span className="mx-2" style={{ color: "var(--qa-fg4)" }}>·</span>
-              </>
-            ) : activeProfile.name ? (
-              <>
-                Aktív ügyfél: <span className="font-semibold" style={{ color: "var(--qa-accent)" }}>{activeProfile.name}</span>
-                <span className="mx-2" style={{ color: "var(--qa-fg4)" }}>·</span>
-              </>
-            ) : null}
-            <span style={{ color: "var(--qa-fg4)" }}>{new Date().toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric" })}</span>
-          </p>
+    <DashboardLayout title="Irányítópult" subtitle={subtitle}>
+      <div className="ge-arculat">
+
+        {/* Onboarding retention widget (feltételes) */}
+        {activeProfile.id && <OnboardingChecklist profileId={activeProfile.id} />}
+
+        {/* ─── KPI sor: 4 kártya sparkline-nal ─────────────────────────────── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+          {kpis.map((k, i) => (
+            <motion.div
+              key={k.key}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, delay: i * 0.06 }}
+              className="rounded-2xl border p-4 flex flex-col"
+              style={{ background: "var(--qa-surface)", borderColor: "var(--qa-border)" }}
+            >
+              <span className="qa-eyebrow mb-2">{k.eyebrow}</span>
+              <div className="flex items-baseline gap-2">
+                <span className="qa-metric" style={{ fontSize: 30, lineHeight: 1 }}>{k.value}</span>
+                <span className="text-xs" style={{ color: "var(--qa-fg4)" }}>{k.sub}</span>
+              </div>
+              <div className="mt-3">
+                <Sparkline data={k.series} color={k.color} height={30} />
+              </div>
+            </motion.div>
+          ))}
         </div>
 
-      </div>
+        {/* ─── Fő rács: hero + jóváhagyás | jobb oszlop ─────────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
 
-      {/* Első lépések — új user retention widget (elrejthető) */}
-      {activeProfile.id && <OnboardingChecklist profileId={activeProfile.id} />}
+          {/* BAL: hero insight + jóváhagyásra vár */}
+          <div className="lg:col-span-2 space-y-4">
 
-      {/* Mi a dolgom ma? – AI napi teendők */}
-      {activeProfile.id && <DailyTasksBlock profileId={activeProfile.id} />}
-
-      {/* PRIMARY BLOCKS */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-
-        {/* 1. Needs Approval */}
-        <div>
-          {sectionTitle("Needs Approval")}
-          {card(
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "oklch(from var(--qa-warning) l c h / 15%)" }}>
-                    <Clock size={16} style={{ color: "var(--qa-warning)" }} />
+            {/* Hero AI insight */}
+            <div
+              className="rounded-2xl p-5"
+              style={{ background: "var(--qa-surface)", border: "1px solid rgba(20,184,166,.28)" }}
+            >
+              <div className="flex items-start gap-5">
+                <div className="flex-shrink-0">
+                  <div className="flex items-baseline gap-0.5">
+                    <span className="qa-metric" style={{ fontSize: 56, color: "var(--qa-accent)" }}>{contentLast7}</span>
                   </div>
-                  <div>
-                    <p className="text-2xl font-bold leading-none" style={{ color: "var(--qa-fg)", fontFamily: "Sora, sans-serif" }}>{totalApproval}</p>
-                    <p className="text-xs mt-0.5" style={{ color: "var(--qa-fg3)" }}>elem vár jóváhagyásra</p>
-                  </div>
+                  <div className="qa-eyebrow mt-1">Új tartalom</div>
+                  <div className="text-xs mt-0.5" style={{ color: "var(--qa-fg3)" }}>7 nap</div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="qa-eyebrow qa-eyebrow-accent mb-1.5">Heti AI insight</div>
+                  <p className="text-[15px] leading-relaxed" style={{ color: "var(--qa-fg)" }}>
+                    {contentItems.length > 0 || (leads as any[]).length > 0
+                      ? `${(leads as any[]).length} feliratkozó és ${contentItems.length} tartalom alapján: ütemezd előre a következő hét posztjait, és fókuszálj a legjobban teljesítő csatornára.`
+                      : "Töltsd ki az onboardingot és generálj stratégiát, hogy személyre szabott AI insight-okat kapj a vállalkozásodról."}
+                  </p>
                 </div>
               </div>
-              {pendingContent.slice(0, 4).map((c: any) => (
-                <div key={c.id} className="flex items-center justify-between py-2 border-t" style={{ borderColor: "var(--qa-border)" }}>
-                  <div className="flex items-center gap-2 min-w-0">
-                    <FileText size={13} style={{ color: "var(--qa-accent-purple)", flexShrink: 0 }} />
-                    <p className="text-xs truncate" style={{ color: "var(--qa-fg2)" }}>{c.title}</p>
-                  </div>
-                  <button onClick={() => handleApproveContent(c.id)} className="ml-2 flex-shrink-0 px-2 py-1 rounded text-xs font-semibold flex items-center gap-1" style={{ background: "oklch(from var(--qa-success) l c h / 15%)", color: "var(--qa-success)" }}>
-                    <ThumbsUp size={11} />
-                  </button>
-                </div>
-              ))}
-              {totalApproval > 4 && (
-                <button onClick={() => navigate("/tartalom-studio")} className="mt-2 text-xs flex items-center gap-1" style={{ color: "var(--qa-accent)" }}>
-                  +{totalApproval - 4} további <ArrowRight size={11} />
-                </button>
-              )}
-              {totalApproval === 0 && (
-                <p className="text-xs text-center py-3" style={{ color: "var(--qa-fg4)" }}>
-                  <CheckCircle2 size={16} className="mx-auto mb-1" style={{ color: "var(--qa-success)" }} />
-                  Nincs jóváhagyásra váró elem
-                </p>
-              )}
-            </div>
-          )}
-        </div>
 
-        {/* 2. This Week's Priorities */}
-        <div>
-          {sectionTitle("This Week's Priorities")}
-          {card(
-            <div className="space-y-2">
-              {weekPriorities.length === 0 && (
-                <div className="text-center py-4">
-                  <CheckCircle2 size={20} className="mx-auto mb-2" style={{ color: "var(--qa-success)" }} />
-                  <p className="text-xs" style={{ color: "var(--qa-fg4)" }}>Nincsenek aktív prioritások</p>
+              {/* Valós tartalom-volumen 30 nap (nem koholt reach) */}
+              <div className="mt-4">
+                <Sparkline data={contentDaily} color="var(--qa-accent)" fill height={72} strokeWidth={2} />
+                <div className="flex items-center gap-2 mt-1.5">
+                  <span className="inline-block w-3 h-0.5 rounded" style={{ background: "var(--qa-accent)" }} />
+                  <span className="text-xs" style={{ color: "var(--qa-fg4)" }}>Tartalom · 30 nap</span>
                 </div>
-              )}
-              {weekPriorities.map(p => (
-                <button key={p.id} onClick={() => navigate(p.href)} className="w-full flex items-center justify-between p-2.5 rounded-lg transition-colors text-left" style={{ background: "var(--qa-surface2)" }}
-                  onMouseEnter={(e: any) => (e.currentTarget.style.background = "var(--qa-surface3)")}
-                  onMouseLeave={(e: any) => (e.currentTarget.style.background = "var(--qa-surface2)")}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: "oklch(from var(--qa-accent) l c h / 15%)" }}>
-                      {p.type === "email" && <Mail size={12} style={{ color: "var(--qa-accent)" }} />}
-                      {p.type === "content" && <FileText size={12} style={{ color: "var(--qa-accent-purple)" }} />}
-                      {p.type === "strategy" && <BarChart3 size={12} style={{ color: "var(--qa-success)" }} />}
-                      {p.type === "leads" && <Users size={12} style={{ color: "var(--qa-warning)" }} />}
+              </div>
+
+              <div className="flex gap-2 mt-4">
+                <button onClick={() => navigate("/strategia")} className="qa-btn-primary">
+                  Stratégiában megnyitás
+                </button>
+                <button onClick={() => navigate("/analitika")} className="qa-btn-secondary">
+                  Analitika
+                </button>
+              </div>
+            </div>
+
+            {/* Jóváhagyásra vár */}
+            <div className="rounded-2xl border p-5" style={{ background: "var(--qa-surface)", borderColor: "var(--qa-border)" }}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="qa-eyebrow">Jóváhagyásra vár</span>
+                <span className="text-xs" style={{ color: "var(--qa-fg3)" }}>{totalApproval} elem</span>
+              </div>
+              {totalApproval === 0 ? (
+                <div className="text-center py-6">
+                  <CheckCircle2 size={22} className="mx-auto mb-2" style={{ color: "var(--qa-success)" }} />
+                  <p className="text-sm" style={{ color: "var(--qa-fg3)" }}>Nincs jóváhagyásra váró elem</p>
+                </div>
+              ) : (
+                <div>
+                  {pendingContent.slice(0, 4).map((c: any) => (
+                    <div key={c.id} className="flex items-center gap-3 py-3 border-b last:border-0" style={{ borderColor: "var(--qa-surface2)" }}>
+                      <span className="qa-status qa-status-scheduled flex-shrink-0" style={{ minWidth: 0 }}>
+                        {PLATFORM_LABELS[String(c.platform).toLowerCase()] ?? c.platform}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm truncate" style={{ color: "var(--qa-fg2)" }}>{c.title}</p>
+                        <p className="text-xs" style={{ color: "var(--qa-fg4)" }}>
+                          {c.scheduledAt ? new Date(c.scheduledAt).toLocaleDateString("hu-HU", { month: "short", day: "numeric" }) : "nincs időpont"}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => navigate("/tartalom-studio")}
+                        className="qa-btn-secondary flex-shrink-0"
+                        style={{ padding: "6px 12px", fontSize: 13, minHeight: 0 }}
+                      >
+                        <Eye size={13} /> Átnézés
+                      </button>
+                      <button
+                        onClick={() => handleApproveContent(c.id)}
+                        className="qa-btn-primary flex-shrink-0"
+                        style={{ padding: "6px 12px", fontSize: 13, minHeight: 0 }}
+                      >
+                        <ThumbsUp size={13} /> Jóváhagyás
+                      </button>
                     </div>
-                    <p className="text-xs font-medium" style={{ color: "var(--qa-fg2)" }}>{p.label}</p>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold px-1.5 py-0.5 rounded" style={{ background: "oklch(from var(--qa-accent) l c h / 15%)", color: "var(--qa-accent)" }}>{p.count}</span>
-                    <ChevronRight size={12} style={{ color: "var(--qa-fg4)" }} />
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* 3. Scheduled Next 7 Days */}
-        <div>
-          {sectionTitle("Scheduled Next 7 Days")}
-          {card(
-            <div>
-              {upcomingScheduled.length === 0 ? (
-                <div className="text-center py-4">
-                  <Calendar size={24} className="mx-auto mb-2" style={{ color: "var(--qa-fg4)" }} />
-                  <p className="text-xs" style={{ color: "var(--qa-fg4)" }}>Nincs ütemezett poszt a következő 7 napban</p>
-                  <button onClick={() => navigate("/content-studio")} className="mt-2 text-xs" style={{ color: "var(--qa-accent)" }}>
-                    Tartalom ütemezése →
-                  </button>
+                  ))}
+                  {totalApproval > 4 && (
+                    <button onClick={() => navigate("/tartalom-studio")} className="mt-3 text-xs flex items-center gap-1" style={{ color: "var(--qa-accent)" }}>
+                      +{totalApproval - 4} további <ArrowRight size={11} />
+                    </button>
+                  )}
                 </div>
-              ) : upcomingScheduled.map((c: any) => (
-                <div key={c.id} className="flex items-center gap-2.5 py-2 border-b last:border-0" style={{ borderColor: "var(--qa-border)" }}>
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "oklch(from var(--qa-accent-purple) l c h / 15%)" }}>
-                    <Calendar size={13} style={{ color: "var(--qa-accent-purple)" }} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium truncate" style={{ color: "var(--qa-fg2)" }}>{c.title}</p>
-                    <p className="text-xs" style={{ color: "var(--qa-fg4)" }}>
-                      {c.platform} · {c.scheduledAt ? new Date(c.scheduledAt).toLocaleDateString("hu-HU", { month: "short", day: "numeric" }) : "–"}
-                    </p>
-                  </div>
-                </div>
-              ))}
+              )}
             </div>
-          )}
-        </div>
-      </div>
+          </div>
 
-      {/* SECOND ROW: Top Insight + At-risk + KPIs */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+          {/* JOBB: napi teendők + következő 7 nap */}
+          <div className="space-y-4">
 
-        {/* 4. Top Insight */}
-        <div className="lg:col-span-2">
-          {sectionTitle("Top Insight")}
-          {card(
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(135deg, oklch(from var(--qa-accent) l c h / 20%), oklch(0.55 0.18 165 / 20%))" }}>
-                <Lightbulb size={18} style={{ color: "var(--qa-warning)" }} />
+            {/* Napi teendők */}
+            <div className="rounded-2xl border p-5" style={{ background: "var(--qa-surface)", borderColor: "var(--qa-border)" }}>
+              <div className="flex items-center justify-between mb-3">
+                <span className="qa-eyebrow">Napi teendők</span>
+                <span className="text-xs" style={{ color: "var(--qa-fg3)" }}>{prioritiesDone}/{priorities.length} kész</span>
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold mb-1" style={{ color: "var(--qa-fg2)", fontFamily: "Sora, sans-serif" }}>
-                  {activeProfile.name} – Heti AI Insight
-                </p>
-                <p className="text-xs leading-relaxed" style={{ color: "var(--qa-fg3)" }}>
-                  {contentItems.length > 0 || leads.length > 0
-                    ? `${leads.length} aktív lead és ${contentItems.length} tartalom alapján: fókuszálj a legjobb teljesítményű csatornára és ütemezd a következő hét tartalmait előre.`
-                    : "Töltsd ki az onboardingot és generálj stratégiát, hogy személyre szabott AI insight-okat kapj a vállalkozásodról."}
-                </p>
-                <div className="flex gap-2 mt-2">
-                  <button onClick={() => navigate("/strategia")} className="text-xs flex items-center gap-1" style={{ color: "var(--qa-accent)" }}>
-                    Stratégiában megnyitás <ArrowRight size={11} />
+              <div>
+                {priorities.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => navigate(p.href)}
+                    className="w-full flex items-center gap-3 py-2.5 border-b last:border-0 text-left"
+                    style={{ borderColor: "var(--qa-surface2)" }}
+                  >
+                    <span
+                      className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                      style={p.done
+                        ? { background: "var(--qa-accent)" }
+                        : { border: "1.5px solid var(--qa-border-hi)" }}
+                    >
+                      {p.done && <CheckCircle2 size={13} style={{ color: "var(--qa-accent-on)" }} />}
+                    </span>
+                    <span
+                      className="flex-1 text-sm"
+                      style={{ color: p.done ? "var(--qa-fg4)" : "var(--qa-fg2)", textDecoration: p.done ? "line-through" : "none" }}
+                    >
+                      {p.label}
+                    </span>
+                    {!p.done && p.count > 0 && (
+                      <span className="qa-status qa-status-pending flex-shrink-0">{p.count}</span>
+                    )}
+                    <ChevronRight size={14} style={{ color: "var(--qa-fg4)" }} className="flex-shrink-0" />
                   </button>
-                  <span style={{ color: "var(--qa-fg4)" }}>·</span>
-                  <button onClick={() => navigate("/intelligencia")} className="text-xs flex items-center gap-1" style={{ color: "var(--qa-success)" }}>
-                    Intelligence megtekintése <Eye size={11} />
-                  </button>
-                </div>
+                ))}
               </div>
             </div>
-          )}
+
+            {/* Következő 7 nap */}
+            <div className="rounded-2xl border p-5" style={{ background: "var(--qa-surface)", borderColor: "var(--qa-border)" }}>
+              <span className="qa-eyebrow">Következő 7 nap</span>
+              <div className="mt-3">
+                {upcomingScheduled.length === 0 ? (
+                  <div className="text-center py-6">
+                    <Calendar size={22} className="mx-auto mb-2" style={{ color: "var(--qa-fg4)" }} />
+                    <p className="text-sm" style={{ color: "var(--qa-fg3)" }}>Nincs ütemezett poszt</p>
+                    <button onClick={() => navigate("/tartalom-studio")} className="mt-2 text-xs" style={{ color: "var(--qa-accent)" }}>
+                      Tartalom ütemezése →
+                    </button>
+                  </div>
+                ) : upcomingScheduled.map((c: any) => (
+                  <div key={c.id} className="flex items-center gap-3 py-2.5 border-b last:border-0" style={{ borderColor: "var(--qa-surface2)" }}>
+                    <span className="text-xs tabular-nums flex-shrink-0" style={{ color: "var(--qa-fg3)", minWidth: 42 }}>
+                      {c.scheduledAt ? new Date(c.scheduledAt).toLocaleDateString("hu-HU", { month: "short", day: "numeric" }) : "–"}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm truncate" style={{ color: "var(--qa-fg2)" }}>{c.title}</p>
+                      <p className="text-xs" style={{ color: "var(--qa-fg4)" }}>{PLATFORM_LABELS[String(c.platform).toLowerCase()] ?? c.platform}</p>
+                    </div>
+                    <span className="qa-status qa-status-scheduled flex-shrink-0">Ütemezett</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* 5. Quick Actions — az At-risk Items helyett (email-modul kivéve) */}
-        <div>
-          {sectionTitle("Gyors műveletek")}
-          {card(
-            <div className="space-y-2">
-              <button onClick={() => navigate("/tartalom-studio")} className="w-full text-left flex items-center gap-2.5 p-2.5 rounded-lg" style={{ background: "var(--qa-surface2)" }}>
-                <FileText size={13} style={{ color: "var(--qa-accent-purple)" }} />
-                <span className="text-xs" style={{ color: "var(--qa-fg2)" }}>Új tartalom generálása</span>
-              </button>
-              <button onClick={() => navigate("/strategia")} className="w-full text-left flex items-center gap-2.5 p-2.5 rounded-lg" style={{ background: "var(--qa-surface2)" }}>
-                <BarChart3 size={13} style={{ color: "var(--qa-accent)" }} />
-                <span className="text-xs" style={{ color: "var(--qa-fg2)" }}>Stratégia áttekintés</span>
-              </button>
-              <button onClick={() => navigate("/intelligencia")} className="w-full text-left flex items-center gap-2.5 p-2.5 rounded-lg" style={{ background: "var(--qa-surface2)" }}>
-                <Brain size={13} style={{ color: "var(--qa-success)" }} />
-                <span className="text-xs" style={{ color: "var(--qa-fg2)" }}>Intelligence megnyitás</span>
-              </button>
-            </div>
-          )}
-        </div>
+        {/* AI napi teendők blokk (Mi a dolgom ma?) — teal-re hangolva */}
+        {activeProfile.id && <DailyTasksBlock profileId={activeProfile.id} />}
+
+        {/* AI Kredit widget — csak nem-super_admin */}
+        <AiCreditsWidget navigate={navigate} isSuperAdmin={isSuperAdmin} />
       </div>
-
-      {/* KPI Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        {kpis.map((k, i) => (
-          <motion.div
-            key={k.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: i * 0.08 }}
-            className="rounded-xl border p-4"
-            style={{ background: "var(--qa-surface)", borderColor: "var(--qa-border)" }}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <k.icon size={16} style={{ color: k.color }} />
-              <TrendingUp size={12} style={{ color: "var(--qa-fg4)" }} />
-            </div>
-            <p className="text-2xl font-bold" style={{ color: "var(--qa-fg)", fontFamily: "Sora, sans-serif" }}>{k.value}</p>
-            <p className="text-xs mt-0.5" style={{ color: "var(--qa-fg4)" }}>{k.label}</p>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Activity Stream + Latest Replies blokk eltávolítva — az
-          értékesítés-modul kivételével mindkettő üres maradt volna. */}
-
-      {/* AI Kredit Widget – csak nem-super_admin felhasználóknak */}
-      <AiCreditsWidget navigate={navigate} isSuperAdmin={isSuperAdmin} />
-
     </DashboardLayout>
   );
 }
@@ -342,23 +387,15 @@ function AiCreditsWidget({ navigate, isSuperAdmin }: { navigate: (path: string) 
   const pct = Math.min(100, Math.round((aiUsage.used / aiUsage.limit) * 100));
   const isWarning = aiUsage.warning;
   const isExhausted = aiUsage.remaining === 0;
-  const barColor = isExhausted
-    ? "linear-gradient(90deg, var(--qa-danger), oklch(0.7 0.2 30))"
-    : isWarning
-    ? "linear-gradient(90deg, var(--qa-warning), oklch(0.7 0.2 60))"
-    : "linear-gradient(90deg, var(--qa-accent), var(--qa-accent))";
+  const barColor = isExhausted ? "var(--qa-danger)" : isWarning ? "var(--qa-warning)" : "var(--qa-accent)";
 
   const planLabels: Record<string, string> = {
-    free: "Ingyenes",
-    starter: "Starter",
-    pro: "Pro",
-    agency: "Agency",
+    free: "Ingyenes", starter: "Starter", pro: "Pro", agency: "Agency",
   };
 
-  // Reset: first day of next month
-  const now = new Date();
-  const resetDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  const daysLeft = Math.ceil((resetDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  const nowD = new Date();
+  const resetDate = new Date(nowD.getFullYear(), nowD.getMonth() + 1, 1);
+  const daysLeft = Math.ceil((resetDate.getTime() - nowD.getTime()) / DAY_MS);
 
   const featureRows = aiUsage.featureLimits ? [
     { label: "Szöveges generálás", icon: Brain, used: (aiUsage.breakdown?.post ?? 0) + (aiUsage.breakdown?.strategy ?? 0) + (aiUsage.breakdown?.contentPlan ?? 0), limit: ((aiUsage.featureLimits as any).post ?? 0) + ((aiUsage.featureLimits as any).strategy ?? 0) + ((aiUsage.featureLimits as any).contentPlan ?? 0), color: "var(--qa-accent)" },
@@ -367,64 +404,48 @@ function AiCreditsWidget({ navigate, isSuperAdmin }: { navigate: (path: string) 
   ] : [];
 
   return (
-    <div className="mb-6">
-      <h2 className="text-xs font-bold uppercase tracking-wider mb-3" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg4)" }}>AI Kredit</h2>
-      <div className="rounded-xl border p-4" style={{ background: "var(--qa-surface)", borderColor: isExhausted ? "oklch(0.65 0.18 25 / 40%)" : isWarning ? "oklch(0.75 0.18 75 / 40%)" : "var(--qa-border)" }}>
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "oklch(from var(--qa-accent) l c h / 15%)" }}>
-              <Brain size={16} style={{ color: "var(--qa-accent)" }} />
-            </div>
-            <div>
-              <p className="text-xs font-semibold" style={{ color: "var(--qa-fg2)" }}>
-                {planLabels[aiUsage.plan] ?? aiUsage.plan} csomag
-              </p>
-              <p className="text-xs" style={{ color: "var(--qa-fg4)" }}>
-                Reset {daysLeft} nap múlva · {resetDate.toLocaleDateString("hu-HU", { month: "long", day: "numeric" })}
-              </p>
-            </div>
-          </div>
-          <div className="text-right">
-            <p className="text-lg font-bold leading-none" style={{ color: isExhausted ? "var(--qa-danger)" : "var(--qa-fg)", fontFamily: "Sora, sans-serif" }}>
-              {aiUsage.used}<span className="text-xs font-normal" style={{ color: "var(--qa-fg4)" }}>/{aiUsage.limit}</span>
-            </p>
-            <p className="text-xs mt-0.5" style={{ color: "var(--qa-fg4)" }}>generálás felhasználva</p>
-          </div>
+    <div className="rounded-2xl border p-5" style={{ background: "var(--qa-surface)", borderColor: isExhausted ? "rgba(239,68,68,.4)" : isWarning ? "rgba(245,158,11,.4)" : "var(--qa-border)" }}>
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <span className="qa-eyebrow">AI kredit</span>
+          <p className="text-xs mt-1" style={{ color: "var(--qa-fg4)" }}>
+            {planLabels[aiUsage.plan] ?? aiUsage.plan} csomag · reset {daysLeft} nap múlva
+          </p>
         </div>
-
-        {/* Progress bar */}
-        <div className="w-full h-2 rounded-full overflow-hidden mb-3" style={{ background: "var(--qa-surface3)" }}>
-          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: barColor }} />
-        </div>
-
-        {/* Per-feature breakdown */}
-        {featureRows.length > 0 && (
-          <div className="grid grid-cols-3 gap-2 mb-3">
-            {featureRows.map(row => (
-              <div key={row.label} className="rounded-lg p-2 text-center" style={{ background: "var(--qa-surface2)" }}>
-                <row.icon size={14} className="mx-auto mb-1" style={{ color: row.color }} />
-                <p className="text-xs font-bold" style={{ color: "var(--qa-fg2)" }}>{row.used}/{row.limit}</p>
-                <p className="text-xs leading-tight mt-0.5" style={{ color: "var(--qa-fg4)", fontSize: "10px" }}>{row.label}</p>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* CTA */}
-        {(isExhausted || isWarning) && (
-          <button
-            onClick={() => navigate("/beallitasok?tab=billing")}
-            className="w-full py-2 rounded-lg text-xs font-semibold transition-all"
-            style={{
-              background: isExhausted ? "oklch(from var(--qa-danger) l c h / 15%)" : "oklch(from var(--qa-warning) l c h / 15%)",
-              color: isExhausted ? "var(--qa-danger)" : "var(--qa-warning)",
-              border: `1px solid ${isExhausted ? "oklch(from var(--qa-danger) l c h / 25%)" : "oklch(from var(--qa-warning) l c h / 25%)"}`
-            }}
-          >
-            {isExhausted ? "⚡ Csomag frissítése – több AI kredit" : "⚠️ Hamarosan elfogy a kretited – frissítsd a csomagot"}
-          </button>
-        )}
+        <p className="qa-metric" style={{ fontSize: 22, color: isExhausted ? "var(--qa-danger)" : "var(--qa-fg)" }}>
+          {aiUsage.used}<span className="text-sm font-normal" style={{ color: "var(--qa-fg4)" }}>/{aiUsage.limit}</span>
+        </p>
       </div>
+
+      <div className="w-full h-2 rounded-full overflow-hidden mb-3" style={{ background: "var(--qa-surface3)" }}>
+        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: barColor }} />
+      </div>
+
+      {featureRows.length > 0 && (
+        <div className="grid grid-cols-3 gap-2 mb-3">
+          {featureRows.map(row => (
+            <div key={row.label} className="rounded-lg p-2.5 text-center" style={{ background: "var(--qa-surface2)" }}>
+              <row.icon size={15} className="mx-auto mb-1" style={{ color: row.color }} />
+              <p className="text-sm font-bold tabular-nums" style={{ color: "var(--qa-fg2)" }}>{row.used}/{row.limit}</p>
+              <p className="text-xs leading-tight mt-0.5" style={{ color: "var(--qa-fg4)" }}>{row.label}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {(isExhausted || isWarning) && (
+        <button
+          onClick={() => navigate("/beallitasok?tab=billing")}
+          className="w-full py-2.5 rounded-lg text-sm font-semibold"
+          style={{
+            background: isExhausted ? "rgba(239,68,68,.14)" : "rgba(245,158,11,.14)",
+            color: isExhausted ? "var(--qa-danger)" : "var(--qa-warning)",
+            border: `1px solid ${isExhausted ? "rgba(239,68,68,.25)" : "rgba(245,158,11,.25)"}`,
+          }}
+        >
+          {isExhausted ? "Csomag frissítése — több AI kredit" : "Hamarosan elfogy a kredited — frissítsd a csomagot"}
+        </button>
+      )}
     </div>
   );
 }
