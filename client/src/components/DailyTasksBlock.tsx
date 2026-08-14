@@ -32,7 +32,7 @@ interface DailyTasksResult {
 // ─── Config ───────────────────────────────────────────────────────────────────
 const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
   tartalom:  { bg: "oklch(0.7 0.18 300 / 15%)", text: "oklch(0.7 0.18 300)" },
-  lead:      { bg: "oklch(0.6 0.2 255 / 15%)",  text: "oklch(0.6 0.2 255)"  },
+  lead:      { bg: "var(--qa-accent-soft)",  text: "var(--qa-accent)"  },
   stratégia: { bg: "oklch(0.75 0.18 75 / 15%)", text: "oklch(0.75 0.18 75)" },
   kampány:   { bg: "oklch(0.65 0.18 165 / 15%)",text: "oklch(0.65 0.18 165)"},
   egyéb:     { bg: "oklch(0.5 0.015 240 / 20%)",text: "oklch(0.65 0.015 240)"},

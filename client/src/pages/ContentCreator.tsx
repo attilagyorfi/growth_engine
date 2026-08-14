@@ -113,7 +113,7 @@ function CalendarView({ posts, onPostClick }: { posts: Post[]; onPostClick: (p: 
     <div className="g2a-card">
       {/* Calendar Header */}
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold" style={{ color: "var(--qa-fg2)", fontFamily: "Sora, sans-serif" }}>
+        <h3 className="text-sm font-semibold" style={{ color: "var(--qa-fg2)", fontFamily: "var(--font-heading)" }}>
           {format(currentMonth, "yyyy. MMMM", { locale: hu })}
         </h3>
         <div className="flex items-center gap-1">
@@ -272,7 +272,7 @@ export default function ContentCreator() {
         ].map((s) => (
           <div key={s.label} className="g2a-card">
             <p className="text-xs mb-1" style={{ color: "var(--qa-fg3)" }}>{s.label}</p>
-            <p className="text-2xl font-bold" style={{ color: s.color, fontFamily: "Sora, sans-serif" }}>{s.value}</p>
+            <p className="text-2xl font-bold" style={{ color: s.color, fontFamily: "var(--font-heading)" }}>{s.value}</p>
           </div>
         ))}
       </div>
@@ -338,7 +338,7 @@ export default function ContentCreator() {
                   {/* Content */}
                   <div className="flex-1">
                     <div className="flex items-start justify-between gap-2 mb-1">
-                      <p className="text-sm font-semibold leading-tight" style={{ color: "var(--qa-fg2)", fontFamily: "Sora, sans-serif" }}>{post.title}</p>
+                      <p className="text-sm font-semibold leading-tight" style={{ color: "var(--qa-fg2)", fontFamily: "var(--font-heading)" }}>{post.title}</p>
                       {/* Status dropdown */}
                       <div className="relative flex-shrink-0">
                         <button onClick={() => setOpenStatusId(openStatusId === post.id ? null : post.id)}
@@ -512,7 +512,7 @@ export default function ContentCreator() {
             <div className="rounded-lg p-4" style={{ background: "var(--qa-surface2)" }}>
               <div className="flex items-center gap-2 mb-1">
                 <span style={{ color: platformConfig[schedulePost.platform].color }}>{platformConfig[schedulePost.platform].icon}</span>
-                <p className="text-sm font-semibold" style={{ color: "var(--qa-fg2)", fontFamily: "Sora, sans-serif" }}>{schedulePost.title}</p>
+                <p className="text-sm font-semibold" style={{ color: "var(--qa-fg2)", fontFamily: "var(--font-heading)" }}>{schedulePost.title}</p>
               </div>
               <p className="text-xs line-clamp-2" style={{ color: "var(--qa-fg3)" }}>{schedulePost.text.split("\n")[0]}</p>
             </div>

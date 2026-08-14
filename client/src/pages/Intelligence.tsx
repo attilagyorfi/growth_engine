@@ -231,7 +231,7 @@ export default function Intelligence() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-3" style={{ fontFamily: "Sora, sans-serif" }}>
+            <h1 className="text-2xl font-bold text-white flex items-center gap-3" style={{ fontFamily: "var(--font-heading)" }}>
               <Brain size={24} className="text-purple-400" />
               Cégintelligencia
             </h1>
@@ -425,7 +425,7 @@ export default function Intelligence() {
                               <span className="text-xs text-gray-400">Prioritás: {p.priority}/5</span>
                             </div>
                             <div className="h-1.5 rounded-full overflow-hidden mb-1.5" style={{ background: "var(--qa-surface2)" }}>
-                              <div className="h-full rounded-full" style={{ width: `${pct}%`, background: "linear-gradient(90deg, oklch(0.6 0.2 255), oklch(0.7 0.18 295))" }} />
+                              <div className="h-full rounded-full" style={{ width: `${pct}%`, background: "linear-gradient(90deg, var(--qa-accent), oklch(0.7 0.18 295))" }} />
                             </div>
                             {p.rationale && <p className="text-xs text-gray-400">{p.rationale}</p>}
                           </div>

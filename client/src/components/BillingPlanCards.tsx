@@ -162,7 +162,7 @@ export default function BillingPlanCards({ currentPlan }: Props) {
 
               {/* Price with animation */}
               <motion.div key={isYearly ? "yearly" : "monthly"} initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
-                <p className="text-lg font-bold" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>
+                <p className="text-lg font-bold" style={{ fontFamily: "var(--font-heading)", color: "var(--qa-fg)" }}>
                   {displayPrice === 0 ? "Ingyenes" : `${displayPrice.toLocaleString("hu-HU")} Ft`}
                   {displayPrice > 0 && <span className="text-xs font-normal" style={{ color: "var(--qa-fg3)" }}>/hó</span>}
                 </p>

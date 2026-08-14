@@ -33,7 +33,7 @@ export function HelpPopup({ helpKey, title, position = "bottom", className }: He
         onClick={() => setOpen((v) => !v)}
         className="w-5 h-5 rounded-full flex items-center justify-center transition-all hover:scale-110"
         style={{
-          background: open ? "oklch(0.6 0.2 255 / 30%)" : "oklch(0.28 0.04 255)",
+          background: open ? "var(--qa-accent-soft)" : "oklch(0.28 0.04 255)",
           color: open ? "oklch(0.75 0.18 255)" : "oklch(0.6 0.15 255)",
         }}
         title={lang === "hu" ? "Segítség" : "Help"}
@@ -55,7 +55,7 @@ export function HelpPopup({ helpKey, title, position = "bottom", className }: He
             style={{
               background: "oklch(0.18 0.025 255)",
               border: "1px solid oklch(0.35 0.06 255)",
-              boxShadow: "0 8px 32px oklch(0 0 0 / 60%), 0 0 0 1px oklch(0.6 0.2 255 / 20%)",
+              boxShadow: "0 8px 32px oklch(0 0 0 / 60%), 0 0 0 1px var(--qa-accent-soft)",
             }}
           >
             {/* Header */}
@@ -63,13 +63,13 @@ export function HelpPopup({ helpKey, title, position = "bottom", className }: He
               <div className="flex items-center gap-2">
                 <div
                   className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ background: "oklch(0.6 0.2 255 / 20%)", color: "oklch(0.7 0.18 255)" }}
+                  style={{ background: "var(--qa-accent-soft)", color: "oklch(0.7 0.18 255)" }}
                 >
                   <Lightbulb size={13} />
                 </div>
                 <span
                   className="text-xs font-semibold"
-                  style={{ color: "oklch(0.88 0.008 240)", fontFamily: "Sora, sans-serif" }}
+                  style={{ color: "oklch(0.88 0.008 240)", fontFamily: "var(--font-heading)" }}
                 >
                   {title ?? (lang === "hu" ? "Segítség" : "Help")}
                 </span>
@@ -123,19 +123,19 @@ export function HelpBanner({ helpKey, title, dismissible = true, className }: He
     <div
       className={cn("flex items-start gap-3 rounded-xl p-3.5 mb-4", className)}
       style={{
-        background: "oklch(0.6 0.2 255 / 8%)",
-        border: "1px solid oklch(0.6 0.2 255 / 25%)",
+        background: "var(--qa-accent-soft)",
+        border: "1px solid var(--qa-accent-soft)",
       }}
     >
       <div
         className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
-        style={{ background: "oklch(0.6 0.2 255 / 20%)", color: "oklch(0.7 0.18 255)" }}
+        style={{ background: "var(--qa-accent-soft)", color: "oklch(0.7 0.18 255)" }}
       >
         <Lightbulb size={14} />
       </div>
       <div className="flex-1 min-w-0">
         {title && (
-          <p className="text-xs font-semibold mb-1" style={{ color: "oklch(0.78 0.12 255)", fontFamily: "Sora, sans-serif" }}>
+          <p className="text-xs font-semibold mb-1" style={{ color: "oklch(0.78 0.12 255)", fontFamily: "var(--font-heading)" }}>
             {title}
           </p>
         )}
@@ -224,7 +224,7 @@ export function StepTour({ step, onClose }: StepTourProps) {
         style={{
           background: "oklch(0.16 0.025 255)",
           border: "1px solid oklch(0.35 0.06 255)",
-          boxShadow: "0 24px 64px oklch(0 0 0 / 70%), 0 0 0 1px oklch(0.6 0.2 255 / 30%)",
+          boxShadow: "0 24px 64px oklch(0 0 0 / 70%), 0 0 0 1px var(--qa-accent-soft)",
         }}
       >
         {/* Close */}
@@ -240,7 +240,7 @@ export function StepTour({ step, onClose }: StepTourProps) {
         <div className="flex items-center gap-3 mb-4">
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, oklch(0.6 0.2 255), oklch(0.55 0.18 165))" }}
+            style={{ background: "linear-gradient(135deg, var(--qa-accent), oklch(0.55 0.18 165))" }}
           >
             <Lightbulb size={18} className="text-white" />
           </div>
@@ -248,7 +248,7 @@ export function StepTour({ step, onClose }: StepTourProps) {
             <p className="text-xs font-medium" style={{ color: "oklch(0.6 0.15 255)" }}>
               {lang === "hu" ? `${step}. lépés útmutatója` : `Step ${step} guide`}
             </p>
-            <h3 className="text-sm font-bold" style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}>
+            <h3 className="text-sm font-bold" style={{ fontFamily: "var(--font-heading)", color: "oklch(0.92 0.008 240)" }}>
               {title}
             </h3>
           </div>
@@ -260,7 +260,7 @@ export function StepTour({ step, onClose }: StepTourProps) {
             <div key={i} className="flex items-start gap-2.5">
               <div
                 className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-bold"
-                style={{ background: "oklch(0.6 0.2 255 / 20%)", color: "oklch(0.7 0.18 255)" }}
+                style={{ background: "var(--qa-accent-soft)", color: "oklch(0.7 0.18 255)" }}
               >
                 {i + 1}
               </div>
@@ -275,7 +275,7 @@ export function StepTour({ step, onClose }: StepTourProps) {
         <button
           onClick={onClose}
           className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90"
-          style={{ background: "linear-gradient(135deg, oklch(0.6 0.2 255), oklch(0.55 0.18 165))" }}
+          style={{ background: "linear-gradient(135deg, var(--qa-accent), oklch(0.55 0.18 165))" }}
         >
           {lang === "hu" ? "Értettem, kezdjük!" : "Got it, let's go!"}
         </button>

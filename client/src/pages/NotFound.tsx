@@ -90,7 +90,7 @@ export default function NotFound() {
           className="font-bold mb-2 leading-none tracking-tighter"
           style={{
             color: "var(--qa-fg)",
-            fontFamily: "Sora, sans-serif",
+            fontFamily: "var(--font-heading)",
             fontSize: "clamp(96px, 20vw, 160px)",
             lineHeight: 1,
           }}
@@ -100,7 +100,7 @@ export default function NotFound() {
         <div
           className="inline-block px-3 py-1 rounded-full text-xs font-semibold mb-6"
           style={{
-            background: "oklch(0.6 0.2 255 / 15%)",
+            background: "var(--qa-accent-soft)",
             color: "var(--qa-accent)",
           }}
         >

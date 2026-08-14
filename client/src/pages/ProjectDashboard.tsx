@@ -161,7 +161,7 @@ export default function ProjectDashboard() {
               {project.name.split(" ").slice(0, 2).map(w => w[0]?.toUpperCase() ?? "").join("")}
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white" style={{ fontFamily: "Sora, sans-serif" }}>
+              <h1 className="text-2xl font-bold text-white" style={{ fontFamily: "var(--font-heading)" }}>
                 {project.name}
               </h1>
               {project.industry && (
@@ -432,7 +432,7 @@ export default function ProjectDashboard() {
             style={{ background: `${accentColor}10`, border: `1px solid ${accentColor}30` }}
           >
             <Sparkles size={28} className="mx-auto mb-3" style={{ color: accentColor }} />
-            <h3 className="text-white font-semibold mb-1" style={{ fontFamily: "Sora, sans-serif" }}>
+            <h3 className="text-white font-semibold mb-1" style={{ fontFamily: "var(--font-heading)" }}>
               Indítsd el az onboardingot
             </h3>
             <p className="text-sm mb-4" style={{ color: "var(--qa-fg3)" }}>

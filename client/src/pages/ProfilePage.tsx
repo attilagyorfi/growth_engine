@@ -48,7 +48,7 @@ function SectionHeader({ icon: Icon, title }: { icon: any; title: string }) {
       <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: `${blue.replace(")", " / 15%)")}`, color: blue }}>
         <Icon size={14} />
       </div>
-      <p className="text-sm font-semibold" style={{ fontFamily: "Sora, sans-serif", color: textPrimary }}>{title}</p>
+      <p className="text-sm font-semibold" style={{ fontFamily: "var(--font-heading)", color: textPrimary }}>{title}</p>
     </div>
   );
 }
@@ -256,10 +256,10 @@ export default function ProfilePage() {
                       value={editData.name}
                       onChange={(e) => setEditData((p) => ({ ...p, name: e.target.value }))}
                       className="text-lg font-bold bg-transparent border-b outline-none"
-                      style={{ fontFamily: "Sora, sans-serif", color: textPrimary, borderColor: blue }}
+                      style={{ fontFamily: "var(--font-heading)", color: textPrimary, borderColor: blue }}
                     />
                   ) : (
-                    <h2 className="text-lg font-bold" style={{ fontFamily: "Sora, sans-serif", color: textPrimary }}>{data.name}</h2>
+                    <h2 className="text-lg font-bold" style={{ fontFamily: "var(--font-heading)", color: textPrimary }}>{data.name}</h2>
                   )}
                   <p className="text-sm mt-0.5" style={{ color: textMuted }}>{data.industry}</p>
                   {data.website && (

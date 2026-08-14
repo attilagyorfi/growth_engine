@@ -75,7 +75,7 @@ export default function AdminUsers() {
         return (
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-              style={{ background: "oklch(0.6 0.2 255 / 15%)", color: "var(--qa-accent)" }}>
+              style={{ background: "var(--qa-accent-soft)", color: "var(--qa-accent)" }}>
               {(u.name ?? u.email)[0].toUpperCase()}
             </div>
             <div className="min-w-0">

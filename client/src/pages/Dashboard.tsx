@@ -172,7 +172,7 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout title="Irányítópult" subtitle={subtitle}>
-      <div className="ge-arculat">
+      <>
 
         {/* Onboarding retention widget (feltételes) */}
         {activeProfile.id && <OnboardingChecklist profileId={activeProfile.id} />}
@@ -372,7 +372,7 @@ export default function Dashboard() {
 
         {/* AI Kredit widget — csak nem-super_admin */}
         <AiCreditsWidget navigate={navigate} isSuperAdmin={isSuperAdmin} />
-      </div>
+      </>
     </DashboardLayout>
   );
 }

@@ -30,7 +30,7 @@ const PLANS = [
     price: "9 900 Ft",
     period: "/hó",
     icon: Rocket,
-    color: "oklch(0.6 0.2 255)",
+    color: "var(--qa-accent)",
     description: "Kis vállalkozásoknak",
     features: ["1 vállalkozás profil", "5 stratégia generálása / hó", "50 poszt generálása / hó", "3 SEO audit / hó", "Lead & kampány kezelés", "Analitika export"],
     cta: "Starter indítása",
@@ -147,10 +147,10 @@ export default function Register() {
           className="w-full max-w-md rounded-2xl border p-8 text-center"
           style={{ background: "var(--qa-surface)", borderColor: "var(--qa-border)" }}
         >
-          <div className="w-16 h-16 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: "oklch(0.58 0.19 258 / 15%)" }}>
+          <div className="w-16 h-16 rounded-full mx-auto mb-5 flex items-center justify-center" style={{ background: "var(--qa-accent-soft)" }}>
             <CheckCircle2 className="w-8 h-8" style={{ color: "var(--qa-accent)" }} />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-3" style={{ fontFamily: "Sora, sans-serif" }}>
+          <h1 className="text-2xl font-bold text-white mb-3" style={{ fontFamily: "var(--font-heading)" }}>
             Sikeres regisztráció!
           </h1>
           <p className="text-white/70 text-sm leading-relaxed mb-6">
@@ -234,14 +234,14 @@ export default function Register() {
                   <button
                     onClick={() => setIsYearly(false)}
                     className="px-5 py-2 rounded-lg text-sm font-semibold transition-all"
-                    style={!isYearly ? { background: "oklch(0.6 0.2 255)", color: "white" } : { color: "rgba(255,255,255,0.45)" }}
+                    style={!isYearly ? { background: "var(--qa-accent)", color: "white" } : { color: "rgba(255,255,255,0.45)" }}
                   >
                     Havi
                   </button>
                   <button
                     onClick={() => setIsYearly(true)}
                     className="px-5 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2"
-                    style={isYearly ? { background: "oklch(0.6 0.2 255)", color: "white" } : { color: "rgba(255,255,255,0.45)" }}
+                    style={isYearly ? { background: "var(--qa-accent)", color: "white" } : { color: "rgba(255,255,255,0.45)" }}
                   >
                     Éves
                     <span className="text-xs px-1.5 py-0.5 rounded-full font-bold" style={{ background: "oklch(0.65 0.18 165 / 30%)", color: "oklch(0.65 0.18 165)" }}>

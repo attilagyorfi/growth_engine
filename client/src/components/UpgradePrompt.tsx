@@ -28,9 +28,9 @@ const PLAN_PRICES: Record<string, string> = {
 
 const PLAN_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   starter: {
-    bg: "oklch(0.6 0.2 255 / 10%)",
+    bg: "var(--qa-accent-soft)",
     text: "oklch(0.75 0.2 255)",
-    border: "oklch(0.6 0.2 255 / 30%)",
+    border: "var(--qa-accent-soft)",
   },
   pro: {
     bg: "oklch(0.75 0.18 75 / 10%)",
@@ -109,7 +109,7 @@ export default function UpgradePrompt({
       </div>
       <h3
         className="text-lg font-bold mb-1"
-        style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}
+        style={{ fontFamily: "var(--font-heading)", color: "var(--qa-fg)" }}
       >
         {feature} – {planLabel} csomag szükséges
       </h3>

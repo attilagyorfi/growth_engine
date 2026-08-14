@@ -498,7 +498,7 @@ export default function Campaigns() {
                           {(generatingContent || generateContentMutation.isPending) ? (
                             <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Tartalmak generálása...(max 5 db)</>
                           ) : (
-                            <><Zap className="w-4 h-4 mr-2" />⚡ Tartalmak automatikus létrehozása a Content Studio-ban</>
+                            <><Zap className="w-4 h-4 mr-2" />Tartalmak automatikus létrehozása a Content Studio-ban</>
                           )}
                         </Button>
                         <p className="text-xs text-muted-foreground mt-2 text-center">Az AI a brief alapján létrehozza a tartalmakat – ezek a Content Studio-ban lesznek elérhetők</p>

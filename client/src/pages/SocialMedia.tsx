@@ -133,7 +133,7 @@ export default function SocialMedia() {
           { label: "Ütemezett Poszt", value: "0", color: "var(--qa-warning)" },
         ].map((s) => (
           <div key={s.label} className="g2a-stat-card p-4">
-            <p className="text-2xl font-bold mb-1" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>{s.value}</p>
+            <p className="text-2xl font-bold mb-1" style={{ fontFamily: "var(--font-heading)", color: "var(--qa-fg)" }}>{s.value}</p>
             <p className="text-xs" style={{ color: "var(--qa-fg3)" }}>{s.label}</p>
           </div>
         ))}
@@ -142,7 +142,7 @@ export default function SocialMedia() {
       {/* Connected Accounts */}
       {connected.length > 0 && (
         <div className="g2a-card p-5 mb-5">
-          <h3 className="text-sm font-semibold mb-4" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>
+          <h3 className="text-sm font-semibold mb-4" style={{ fontFamily: "var(--font-heading)", color: "var(--qa-fg)" }}>
             Csatlakoztatott Fiókok
           </h3>
           <div className="space-y-3">
@@ -153,7 +153,7 @@ export default function SocialMedia() {
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>{p.name}</p>
+                    <p className="text-sm font-semibold" style={{ fontFamily: "var(--font-heading)", color: "var(--qa-fg)" }}>{p.name}</p>
                     <span className="flex items-center gap-1 text-xs" style={{ color: "oklch(0.75 0.15 165)" }}>
                       <CheckCircle size={11} />Csatlakoztatva
                     </span>
@@ -161,7 +161,7 @@ export default function SocialMedia() {
                   <p className="text-xs" style={{ color: "var(--qa-fg3)" }}>@{p.handle} · Szinkron: {p.lastSync}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => handleSync(p.id)} className="p-2 rounded-lg transition-opacity hover:opacity-80" style={{ background: "oklch(0.6 0.2 255 / 12%)", color: "var(--qa-accent)" }}>
+                  <button onClick={() => handleSync(p.id)} className="p-2 rounded-lg transition-opacity hover:opacity-80" style={{ background: "var(--qa-accent-soft)", color: "var(--qa-accent)" }}>
                     <RefreshCw size={13} />
                   </button>
                   <button onClick={() => handleDisconnect(p.id)} className="p-2 rounded-lg transition-opacity hover:opacity-80" style={{ background: "oklch(0.65 0.22 25 / 12%)", color: "oklch(0.75 0.2 25)" }}>
@@ -176,7 +176,7 @@ export default function SocialMedia() {
 
       {/* Available Platforms */}
       <div className="g2a-card p-5">
-        <h3 className="text-sm font-semibold mb-4" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>
+        <h3 className="text-sm font-semibold mb-4" style={{ fontFamily: "var(--font-heading)", color: "var(--qa-fg)" }}>
           Elérhető Platformok
         </h3>
         <div className="grid grid-cols-2 gap-4">
@@ -190,7 +190,7 @@ export default function SocialMedia() {
                   <AlertCircle size={10} />Nincs csatlakoztatva
                 </span>
               </div>
-              <p className="text-sm font-bold mb-1" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>{p.name}</p>
+              <p className="text-sm font-bold mb-1" style={{ fontFamily: "var(--font-heading)", color: "var(--qa-fg)" }}>{p.name}</p>
               <p className="text-xs mb-3" style={{ color: "var(--qa-fg3)" }}>{p.description}</p>
               <div className="space-y-1 mb-4">
                 {p.features.map((f) => (
@@ -204,7 +204,7 @@ export default function SocialMedia() {
                 <button
                   onClick={() => { setConnectModal(p); setHandleInput(""); }}
                   className="flex-1 py-2 rounded-lg text-xs font-semibold transition-opacity hover:opacity-90"
-                  style={{ background: p.color, color: "white", fontFamily: "Sora, sans-serif" }}
+                  style={{ background: p.color, color: "white", fontFamily: "var(--font-heading)" }}
                 >
                   Csatlakoztatás
                 </button>
@@ -233,7 +233,7 @@ export default function SocialMedia() {
               <button onClick={() => { setConnectModal(null); setHandleInput(""); }} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: "var(--qa-surface2)", color: "var(--qa-fg2)" }}>
                 Mégse
               </button>
-              <button onClick={() => handleConnect(connectModal)} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: connectModal.color, color: "white", fontFamily: "Sora, sans-serif" }}>
+              <button onClick={() => handleConnect(connectModal)} className="px-4 py-2 rounded-lg text-sm font-semibold" style={{ background: connectModal.color, color: "white", fontFamily: "var(--font-heading)" }}>
                 Csatlakoztatás
               </button>
             </>
@@ -244,7 +244,7 @@ export default function SocialMedia() {
               <p className="text-xs mb-1" style={{ color: "var(--qa-fg3)" }}>Platform</p>
               <div className="flex items-center gap-2">
                 <span style={{ color: connectModal.color }}>{connectModal.icon}</span>
-                <p className="text-sm font-semibold" style={{ color: "var(--qa-fg2)", fontFamily: "Sora, sans-serif" }}>{connectModal.name}</p>
+                <p className="text-sm font-semibold" style={{ color: "var(--qa-fg2)", fontFamily: "var(--font-heading)" }}>{connectModal.name}</p>
               </div>
             </div>
             <div>
@@ -289,7 +289,7 @@ export default function SocialMedia() {
           }
         >
           <div className="space-y-3">
-            <p className="text-sm font-semibold" style={{ color: "var(--qa-fg2)", fontFamily: "Sora, sans-serif" }}>Elérhető funkciók:</p>
+            <p className="text-sm font-semibold" style={{ color: "var(--qa-fg2)", fontFamily: "var(--font-heading)" }}>Elérhető funkciók:</p>
             {selectedPlatform.features.map((f) => (
               <div key={f} className="flex items-center gap-2 rounded-lg p-3" style={{ background: "var(--qa-surface2)" }}>
                 <CheckCircle size={14} style={{ color: selectedPlatform.color }} />

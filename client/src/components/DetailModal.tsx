@@ -47,7 +47,7 @@ export default function DetailModal({ isOpen, onClose, title, subtitle, children
           <div>
             <h2
               className="text-base font-bold"
-              style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}
+              style={{ fontFamily: "var(--font-heading)", color: "oklch(0.92 0.008 240)" }}
             >
               {title}
             </h2>
