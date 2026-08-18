@@ -175,7 +175,7 @@ export default function ContentStudio() {
   const generateMonthlyPlanMutation = trpc.content.generateMonthlyPlan.useMutation({
     onSuccess: (data) => {
       utils.content.list.invalidate({ profileId: activeProfile.id });
-      toast.success(`✅ ${data.created} tartalom létrehozva ${MONTHS_HU[calendarMonth]} hónapra!`);
+      toast.success(`${data.created} tartalom létrehozva ${MONTHS_HU[calendarMonth]} hónapra!`);
       setGeneratingMonthlyPlan(false);
     },
     onError: (e) => {
@@ -476,7 +476,7 @@ export default function ContentStudio() {
             {PLATFORM_ICONS[post.platform]}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold truncate" style={{ color: "var(--qa-fg2)", fontFamily: "Sora, sans-serif" }}>{post.title}</p>
+            <p className="text-sm font-semibold truncate" style={{ color: "var(--qa-fg2)", fontFamily: "var(--font-heading)" }}>{post.title}</p>
             <div className="flex items-center gap-2 mt-0.5">
               <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: `${STATUS_COLORS[post.status]} / 15%`, color: STATUS_COLORS[post.status] }}>
                 {STATUS_LABELS[post.status]}
@@ -544,7 +544,7 @@ export default function ContentStudio() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>Tartalom Studio</h1>
+          <h1 className="text-xl font-bold" style={{ fontFamily: "var(--font-heading)", color: "var(--qa-fg)" }}>Tartalom Studio</h1>
           <p className="text-sm mt-0.5" style={{ color: "var(--qa-fg3)" }}>
             {activeProfile.name} · {(posts as Post[]).length} tartalom
           </p>
@@ -704,7 +704,7 @@ export default function ContentStudio() {
                       <span className="text-xs capitalize" style={{ color: "var(--qa-fg4)" }}>{template.platform}</span>
                     </div>
                   </div>
-                  <p className="text-sm font-semibold mb-1" style={{ color: "var(--qa-fg2)", fontFamily: "Sora, sans-serif" }}>{template.label}</p>
+                  <p className="text-sm font-semibold mb-1" style={{ color: "var(--qa-fg2)", fontFamily: "var(--font-heading)" }}>{template.label}</p>
                   <p className="text-xs mb-3" style={{ color: "var(--qa-fg3)" }}>{template.description}</p>
                   <div className="flex items-center gap-1 text-xs font-semibold" style={{ color: template.color }}>
                     <Wand2 size={11} /> AI generálás <ArrowRight size={11} className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -733,7 +733,7 @@ export default function ContentStudio() {
       {!isLoading && activeTab === "calendar" && (
         <div className="rounded-xl border p-5" style={{ background: cardBg, borderColor: border }}>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-bold" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg2)" }}>
+            <h2 className="text-base font-bold" style={{ fontFamily: "var(--font-heading)", color: "var(--qa-fg2)" }}>
               {MONTHS_HU[calendarMonth]} {calendarYear}
             </h2>
             <div className="flex items-center gap-2">
@@ -874,7 +874,7 @@ export default function ContentStudio() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "oklch(0 0 0 / 70%)" }}>
           <div className="w-full max-w-2xl rounded-2xl border p-6 max-h-[90vh] overflow-y-auto" style={{ background: "oklch(0.15 0.022 255)", borderColor: "var(--qa-border-hi)" }}>
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-base font-bold" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>Tartalom Szerkesztése</h3>
+              <h3 className="text-base font-bold" style={{ fontFamily: "var(--font-heading)", color: "var(--qa-fg)" }}>Tartalom Szerkesztése</h3>
               <button onClick={() => { setEditModal(false); setSelectedPost(null); }} style={{ color: "var(--qa-fg4)" }}><X size={18} /></button>
             </div>
             <div className="space-y-4">
@@ -927,7 +927,7 @@ export default function ContentStudio() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "oklch(0 0 0 / 70%)" }}>
           <div className="w-full max-w-sm rounded-2xl border p-6" style={{ background: "oklch(0.15 0.022 255)", borderColor: "var(--qa-border-hi)" }}>
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-base font-bold" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>Poszt Időzítése</h3>
+              <h3 className="text-base font-bold" style={{ fontFamily: "var(--font-heading)", color: "var(--qa-fg)" }}>Poszt Időzítése</h3>
               <button onClick={() => setScheduleModal(null)} style={{ color: "var(--qa-fg4)" }}><X size={18} /></button>
             </div>
             <p className="text-sm mb-4 font-medium truncate" style={{ color: "var(--qa-fg2)" }}>{scheduleModal.title}</p>
@@ -982,7 +982,7 @@ export default function ContentStudio() {
           <div className="w-full max-w-2xl rounded-2xl border p-6 max-h-[90vh] overflow-y-auto" style={{ background: "oklch(0.15 0.022 255)", borderColor: "var(--qa-border-hi)" }}>
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h3 className="text-base font-bold" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>
+                <h3 className="text-base font-bold" style={{ fontFamily: "var(--font-heading)", color: "var(--qa-fg)" }}>
                   {selectedTemplate ? `${selectedTemplate.label} – AI Generálás` : "Új Tartalom Létrehozása"}
                 </h3>
                 {selectedTemplate && (
@@ -1166,7 +1166,7 @@ export default function ContentStudio() {
                 <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: `${PLATFORM_COLORS[selectedPost.platform]} / 15%`, color: PLATFORM_COLORS[selectedPost.platform] }}>
                   {PLATFORM_ICONS[selectedPost.platform]}
                 </div>
-                <h3 className="text-base font-bold" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>{selectedPost.title}</h3>
+                <h3 className="text-base font-bold" style={{ fontFamily: "var(--font-heading)", color: "var(--qa-fg)" }}>{selectedPost.title}</h3>
               </div>
               <button onClick={() => setSelectedPost(null)} style={{ color: "var(--qa-fg4)" }}><X size={18} /></button>
             </div>
@@ -1206,7 +1206,7 @@ export default function ContentStudio() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)" }} onClick={() => setPublishModal(false)}>
           <div className="w-full max-w-md rounded-2xl border p-6" style={{ background: "oklch(0.15 0.022 255)", borderColor: "var(--qa-border-hi)" }} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>Közzététel</h3>
+              <h3 className="text-base font-bold" style={{ fontFamily: "var(--font-heading)", color: "var(--qa-fg)" }}>Közzététel</h3>
               <button onClick={() => setPublishModal(false)} style={{ color: "var(--qa-fg4)" }}><X size={18} /></button>
             </div>
             <p className="text-sm mb-4" style={{ color: "var(--qa-fg3)" }}>Válaszd ki, melyik fiókra szeretnéd publikálni:</p>

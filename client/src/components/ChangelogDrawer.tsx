@@ -21,7 +21,7 @@ import { Sparkles, Wrench, Shield, Bug, ArrowRight } from "lucide-react";
 import { CHANGELOG, type ChangelogCategory } from "@/lib/changelog";
 
 const CATEGORY_META: Record<ChangelogCategory, { label: string; icon: React.ReactNode; color: string; bg: string }> = {
-  feature:     { label: "Új funkció",  icon: <Sparkles size={12} />, color: "var(--qa-accent)",  bg: "oklch(0.6 0.2 255 / 15%)" },
+  feature:     { label: "Új funkció",  icon: <Sparkles size={12} />, color: "var(--qa-accent)",  bg: "var(--qa-accent-soft)" },
   improvement: { label: "Fejlesztés",  icon: <Wrench size={12} />,   color: "var(--qa-warning)", bg: "oklch(0.76 0.17 68 / 15%)" },
   security:    { label: "Biztonság",   icon: <Shield size={12} />,   color: "var(--qa-success)", bg: "oklch(0.72 0.19 145 / 15%)" },
   fix:         { label: "Hibajavítás", icon: <Bug size={12} />,      color: "var(--qa-fg3)",     bg: "var(--qa-surface2)" },
@@ -59,7 +59,7 @@ export default function ChangelogDrawer({ open, onOpenChange }: ChangelogDrawerP
         style={{ background: "var(--qa-surface)" }}
       >
         <SheetHeader className="px-6 py-5 border-b" style={{ borderColor: "var(--qa-border)" }}>
-          <SheetTitle style={{ color: "var(--qa-fg)", fontFamily: "Sora, sans-serif" }}>
+          <SheetTitle style={{ color: "var(--qa-fg)", fontFamily: "var(--font-heading)" }}>
             Újdonságok
           </SheetTitle>
           <SheetDescription style={{ color: "var(--qa-fg3)" }}>
@@ -101,7 +101,7 @@ export default function ChangelogDrawer({ open, onOpenChange }: ChangelogDrawerP
                 {/* Title */}
                 <h3
                   className="text-sm font-semibold mb-1"
-                  style={{ color: "var(--qa-fg)", fontFamily: "Sora, sans-serif" }}
+                  style={{ color: "var(--qa-fg)", fontFamily: "var(--font-heading)" }}
                 >
                   {entry.title}
                 </h3>

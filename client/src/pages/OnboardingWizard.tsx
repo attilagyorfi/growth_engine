@@ -164,7 +164,7 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
                     ? "text-white"
                     : "text-gray-500"
                 }`}
-                style={isCurrent ? { background: "linear-gradient(135deg, oklch(0.6 0.2 255), oklch(0.55 0.18 165))" } : isCompleted ? {} : { background: "oklch(0.22 0.02 255)" }}
+                style={isCurrent ? { background: "linear-gradient(135deg, var(--qa-accent), oklch(0.55 0.18 165))" } : isCompleted ? {} : { background: "oklch(0.22 0.02 255)" }}
               >
                 {isCompleted ? <Check size={18} /> : <Icon size={18} />}
               </div>
@@ -543,7 +543,7 @@ export default function OnboardingWizard() {
       await upsertSession.mutateAsync({ id: data.sessionId, profileId: data.profileId, status: "completed", currentStep: 4, completedAt: new Date() });
       update({ wowOutput: wow });
       setStep(4);
-      toast.success("🎉 Express elemzés kész!");
+      toast.success("Express elemzés kész!");
     } catch (e: unknown) {
       const errMsg = (e as { message?: string })?.message ?? "";
       const isAuthError = errMsg.includes("login") || errMsg.includes("Bejelentkezés") || errMsg.includes("10001");
@@ -743,7 +743,7 @@ export default function OnboardingWizard() {
 
         update({ wowOutput: wow });
         setStep(4);
-        toast.success("🎉 Elemzés kész! Íme a Growth Engine eredménye.");
+        toast.success("Elemzés kész! Íme a Growth Engine eredménye.");
 
         // Auto-generate strategy and monthly calendar in background
         (async () => {
@@ -852,10 +852,10 @@ export default function OnboardingWizard() {
       {/* Header */}
       <div className="border-b px-6 py-4 flex items-center justify-between" style={{ borderColor: "oklch(0.22 0.03 255)", background: "oklch(0.13 0.02 255)" }}>
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, oklch(0.6 0.2 255), oklch(0.55 0.18 165))" }}>
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "linear-gradient(135deg, var(--qa-accent), oklch(0.55 0.18 165))" }}>
             <Zap size={16} className="text-white" />
           </div>
-          <span className="font-bold text-white" style={{ fontFamily: "Sora, sans-serif" }}>G2A Growth Engine</span>
+          <span className="font-bold text-white" style={{ fontFamily: "var(--font-heading)" }}>G2A Growth Engine</span>
         </div>
         <div className="flex items-center gap-3">
           {isProjectMode && (
@@ -875,7 +875,7 @@ export default function OnboardingWizard() {
           <button
             onClick={() => setShowTour(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:opacity-80"
-            style={{ background: "oklch(0.6 0.2 255 / 15%)", color: "oklch(0.7 0.18 255)", border: "1px solid oklch(0.6 0.2 255 / 30%)" }}
+            style={{ background: "var(--qa-accent-soft)", color: "oklch(0.7 0.18 255)", border: "1px solid var(--qa-accent-soft)" }}
           >
             <span>💡</span>
             <span>{lang === "hu" ? "Lépés útmutatója" : "Step guide"}</span>
@@ -897,7 +897,7 @@ export default function OnboardingWizard() {
             <button
               onClick={() => setShowDraftBanner(false)}
               className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
-              style={{ background: "oklch(0.6 0.2 255)" }}
+              style={{ background: "var(--qa-accent)" }}
             >
               Folytatás
             </button>
@@ -918,7 +918,7 @@ export default function OnboardingWizard() {
         {step === 1 && (
           <div className="space-y-6">
             <div className="text-center mb-6">
-              <h1 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: "Sora, sans-serif" }}>
+              <h1 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: "var(--font-heading)" }}>
                 {lang === "hu" ? "Ismerjük meg a cégedet" : "Tell us about your company"}
               </h1>
               <p className="text-gray-400">{lang === "hu" ? "Add meg az alapadatokat – a weboldal elemzéssel automatikusan kitöltjük a többit" : "Enter basic data – website analysis will auto-fill the rest"}</p>
@@ -956,7 +956,7 @@ export default function OnboardingWizard() {
                   onClick={handleScrapeWebsite}
                   disabled={!data.website || isScraping}
                   className="px-4 py-3 rounded-xl font-medium text-white flex items-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
-                  style={{ background: "linear-gradient(135deg, oklch(0.6 0.2 255), oklch(0.55 0.18 165))" }}
+                  style={{ background: "linear-gradient(135deg, var(--qa-accent), oklch(0.55 0.18 165))" }}
                 >
                   {isScraping ? <Loader2 size={16} className="animate-spin" /> : <Globe size={16} />}
                   {isScraping ? "Elemzés..." : "AI Elemzés"}
@@ -1114,7 +1114,7 @@ export default function OnboardingWizard() {
         {step === 2 && (
           <div className="space-y-6">
             <div className="text-center mb-6">
-              <h1 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: "Sora, sans-serif" }}>
+              <h1 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: "var(--font-heading)" }}>
                 Brand & Kommunikáció
               </h1>
               <p className="text-gray-400">Határozd meg a márka hangát és töltsd fel a meglévő anyagokat</p>
@@ -1124,11 +1124,11 @@ export default function OnboardingWizard() {
             {showAiPreview && (data.companyName || data.description || data.services.length > 0) && (
               <div
                 className="rounded-2xl border p-5 space-y-4"
-                style={{ background: "oklch(0.16 0.04 255 / 60%)", borderColor: "oklch(0.6 0.2 255 / 40%)" }}
+                style={{ background: "oklch(0.16 0.04 255 / 60%)", borderColor: "var(--qa-accent-soft)" }}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg flex items-center justify-center text-sm" style={{ background: "oklch(0.6 0.2 255 / 20%)" }}>🤖</div>
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center text-sm" style={{ background: "var(--qa-accent-soft)" }}>🤖</div>
                     <div>
                       <p className="text-sm font-bold" style={{ color: "oklch(0.88 0.008 240)" }}>AI által feltöltött adatok</p>
                       <p className="text-xs" style={{ color: "oklch(0.55 0.015 240)" }}>A weboldal elemzés alapján – ellenőrizd és módosítsd, ha szükséges</p>
@@ -1165,7 +1165,7 @@ export default function OnboardingWizard() {
                       <p className="text-xs font-semibold mb-2" style={{ color: "oklch(0.55 0.015 240)" }}>Szolgáltatások / termékek</p>
                       <div className="flex flex-wrap gap-1.5">
                         {data.services.slice(0, 6).map((s, i) => (
-                          <span key={i} className="text-xs px-2 py-0.5 rounded-full" style={{ background: "oklch(0.6 0.2 255 / 15%)", color: "oklch(0.75 0.18 255)" }}>{s}</span>
+                          <span key={i} className="text-xs px-2 py-0.5 rounded-full" style={{ background: "var(--qa-accent-soft)", color: "oklch(0.75 0.18 255)" }}>{s}</span>
                         ))}
                       </div>
                     </div>
@@ -1218,7 +1218,7 @@ export default function OnboardingWizard() {
                     }`}
                     style={{
                       background: data.toneOfVoice === tone.value ? "oklch(0.2 0.05 255)" : "oklch(0.15 0.02 255)",
-                      borderColor: data.toneOfVoice === tone.value ? "oklch(0.6 0.2 255)" : "oklch(0.28 0.03 255)",
+                      borderColor: data.toneOfVoice === tone.value ? "var(--qa-accent)" : "oklch(0.28 0.03 255)",
                     }}
                   >
                     <div className="font-medium text-sm mb-1">{tone.label}</div>
@@ -1303,7 +1303,7 @@ export default function OnboardingWizard() {
         {step === 3 && (
           <div className="space-y-6">
             <div className="text-center mb-6">
-              <h1 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: "Sora, sans-serif" }}>
+              <h1 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: "var(--font-heading)" }}>
                 Működés & Erőforrások
               </h1>
               <p className="text-gray-400">Az utolsó lépés – ezután az AI elkészíti a teljes Growth Engine elemzést</p>
@@ -1323,9 +1323,9 @@ export default function OnboardingWizard() {
                   }}
                   className="text-xs px-3 py-1.5 rounded-lg font-medium transition-all"
                   style={{
-                    background: data.marketingPriorities.length === GOALS.length ? "oklch(0.6 0.2 255)" : "oklch(0.22 0.03 255)",
+                    background: data.marketingPriorities.length === GOALS.length ? "var(--qa-accent)" : "oklch(0.22 0.03 255)",
                     color: data.marketingPriorities.length === GOALS.length ? "white" : "oklch(0.65 0.015 240)",
-                    border: `1px solid ${data.marketingPriorities.length === GOALS.length ? "oklch(0.6 0.2 255)" : "oklch(0.32 0.03 255)"}`
+                    border: `1px solid ${data.marketingPriorities.length === GOALS.length ? "var(--qa-accent)" : "oklch(0.32 0.03 255)"}`
                   }}
                 >
                   {data.marketingPriorities.length === GOALS.length ? "✓ Minden kiválasztva" : "Minden"}
@@ -1347,13 +1347,13 @@ export default function OnboardingWizard() {
                       className={`p-3 rounded-xl border text-left text-sm transition-all ${selected ? "text-white" : "text-gray-400 hover:border-gray-500"}`}
                       style={{
                         background: selected ? "oklch(0.2 0.05 255)" : "oklch(0.15 0.02 255)",
-                        borderColor: selected ? "oklch(0.6 0.2 255)" : "oklch(0.28 0.03 255)",
+                        borderColor: selected ? "var(--qa-accent)" : "oklch(0.28 0.03 255)",
                       }}
                     >
                       <div className="flex items-center gap-2">
                         <div
                           className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0"
-                          style={{ background: selected ? "oklch(0.6 0.2 255)" : "oklch(0.22 0.03 255)", border: `1px solid ${selected ? "oklch(0.6 0.2 255)" : "oklch(0.35 0.03 255)"}` }}
+                          style={{ background: selected ? "var(--qa-accent)" : "oklch(0.22 0.03 255)", border: `1px solid ${selected ? "var(--qa-accent)" : "oklch(0.35 0.03 255)"}` }}
                         >
                           {selected && <Check size={10} className="text-white" />}
                         </div>
@@ -1384,7 +1384,7 @@ export default function OnboardingWizard() {
                     }`}
                     style={{
                       background: data.currentChannels.includes(channel) ? "oklch(0.2 0.05 255)" : "oklch(0.15 0.02 255)",
-                      borderColor: data.currentChannels.includes(channel) ? "oklch(0.6 0.2 255)" : "oklch(0.28 0.03 255)",
+                      borderColor: data.currentChannels.includes(channel) ? "var(--qa-accent)" : "oklch(0.28 0.03 255)",
                     }}
                   >
                     {data.currentChannels.includes(channel) && <Check size={12} className="inline mr-1" />}
@@ -1444,11 +1444,11 @@ export default function OnboardingWizard() {
         {step === 4 && data.wowOutput && (
           <div className="space-y-6">
             <div className="text-center mb-6">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4" style={{ background: "linear-gradient(135deg, oklch(0.6 0.2 255), oklch(0.55 0.18 165))" }}>
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4" style={{ background: "linear-gradient(135deg, var(--qa-accent), oklch(0.55 0.18 165))" }}>
                 <Sparkles size={28} className="text-white" />
               </div>
-              <h1 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: "Sora, sans-serif" }}>
-                🎉 A Growth Engine készen áll!
+              <h1 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: "var(--font-heading)" }}>
+                A Growth Engine készen áll!
               </h1>
               <p className="text-gray-400">Az AI elvégezte az elemzést. Íme a {data.companyName} Growth Engine profil:</p>
             </div>
@@ -1625,14 +1625,14 @@ export default function OnboardingWizard() {
                   style={{ background: "linear-gradient(135deg, oklch(0.65 0.2 60), oklch(0.6 0.18 30))" }}
                 >
                   {isExpressRunning ? <Loader2 size={15} className="animate-spin" /> : <Zap size={15} />}
-                  {isExpressRunning ? "Express elemzés..." : "⚡ Express mód – átugorja a 2-3. lépést"}
+                  {isExpressRunning ? "Express elemzés..." : "Express mód – átugorja a 2-3. lépést"}
                 </button>
               )}
               <button
                 onClick={handleNext}
                 disabled={isLoading || isGenerating || isExpressRunning}
                 className="flex items-center gap-2 px-8 py-3 rounded-xl font-semibold text-white transition-all hover:opacity-90 disabled:opacity-50"
-                style={{ background: "linear-gradient(135deg, oklch(0.6 0.2 255), oklch(0.55 0.18 165))" }}
+                style={{ background: "linear-gradient(135deg, var(--qa-accent), oklch(0.55 0.18 165))" }}
               >
                 {isLoading ? <Loader2 size={18} className="animate-spin" /> : null}
                 {step === 3 ? (isGenerating ? "Elemzés folyamatban..." : "Growth Engine indítása") : "Következő"}

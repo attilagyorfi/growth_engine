@@ -102,7 +102,7 @@ export default function Content() {
           { label: "Összes Csomag", value: String(packages.length), color: "var(--qa-accent)" },
         ].map((s) => (
           <div key={s.label} className="g2a-stat-card p-4">
-            <p className="text-2xl font-bold mb-1" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>{s.value}</p>
+            <p className="text-2xl font-bold mb-1" style={{ fontFamily: "var(--font-heading)", color: "var(--qa-fg)" }}>{s.value}</p>
             <p className="text-xs" style={{ color: "var(--qa-fg3)" }}>{s.label}</p>
           </div>
         ))}
@@ -111,7 +111,7 @@ export default function Content() {
       {/* Content Packages */}
       <div className="g2a-card overflow-hidden">
         <div className="px-5 py-4 border-b" style={{ borderColor: "var(--qa-border)" }}>
-          <h3 className="text-sm font-semibold" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>Tartalomcsomagok</h3>
+          <h3 className="text-sm font-semibold" style={{ fontFamily: "var(--font-heading)", color: "var(--qa-fg)" }}>Tartalomcsomagok</h3>
         </div>
         <div className="divide-y" style={{ borderColor: "var(--qa-border)" }}>
           {packages.map((pkg) => (
@@ -122,7 +122,7 @@ export default function Content() {
                     <FileText size={16} style={{ color: "var(--qa-success)" }} />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold" style={{ color: "var(--qa-fg)", fontFamily: "Sora, sans-serif" }}>{pkg.week}</p>
+                    <p className="text-sm font-semibold" style={{ color: "var(--qa-fg)", fontFamily: "var(--font-heading)" }}>{pkg.week}</p>
                     <p className="text-xs mt-0.5" style={{ color: "var(--qa-fg3)" }}>Pillér: {pkg.pillar}</p>
                   </div>
                 </div>
@@ -187,7 +187,7 @@ export default function Content() {
                 <button
                   onClick={() => { setApprovePkg(viewPkg); setViewPkg(null); }}
                   className="px-4 py-2 rounded-lg text-sm font-semibold"
-                  style={{ background: "var(--qa-success)", color: "white", fontFamily: "Sora, sans-serif" }}
+                  style={{ background: "var(--qa-success)", color: "white", fontFamily: "var(--font-heading)" }}
                 >
                   <CheckCircle size={14} className="inline mr-1.5" />
                   Jóváhagyás
@@ -215,7 +215,7 @@ export default function Content() {
             ))}
           </div>
           <div className="rounded-lg p-4" style={{ background: "var(--qa-surface2)", border: "1px solid var(--qa-border)" }}>
-            <p className="text-xs font-semibold mb-3 uppercase tracking-wider" style={{ color: "var(--qa-fg3)", fontFamily: "Sora, sans-serif" }}>
+            <p className="text-xs font-semibold mb-3 uppercase tracking-wider" style={{ color: "var(--qa-fg3)", fontFamily: "var(--font-heading)" }}>
               {platformLabels[activeTab]} Poszt
             </p>
             {((viewPkg as unknown as Record<string, string>)[activeTab] || "").split("\n").map((line: string, i: number) => (
@@ -240,7 +240,7 @@ export default function Content() {
               <button
                 onClick={() => handleApprove(approvePkg)}
                 className="px-4 py-2 rounded-lg text-sm font-semibold"
-                style={{ background: "var(--qa-success)", color: "white", fontFamily: "Sora, sans-serif" }}
+                style={{ background: "var(--qa-success)", color: "white", fontFamily: "var(--font-heading)" }}
               >
                 Igen, Jóváhagyom
               </button>
@@ -248,7 +248,7 @@ export default function Content() {
           }
         >
           <div className="rounded-lg p-4" style={{ background: "var(--qa-surface2)" }}>
-            <p className="text-sm font-semibold mb-1" style={{ color: "var(--qa-fg2)", fontFamily: "Sora, sans-serif" }}>{approvePkg.week}</p>
+            <p className="text-sm font-semibold mb-1" style={{ color: "var(--qa-fg2)", fontFamily: "var(--font-heading)" }}>{approvePkg.week}</p>
             <p className="text-xs mb-1" style={{ color: "var(--qa-fg3)" }}>Pillér: {approvePkg.pillar}</p>
             <p className="text-xs" style={{ color: "var(--qa-fg3)" }}>Platformok: {approvePkg.platforms.map((p) => platformLabels[p]).join(", ")}</p>
           </div>

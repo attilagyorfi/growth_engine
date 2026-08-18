@@ -32,7 +32,7 @@ interface DailyTasksResult {
 // ─── Config ───────────────────────────────────────────────────────────────────
 const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
   tartalom:  { bg: "oklch(0.7 0.18 300 / 15%)", text: "oklch(0.7 0.18 300)" },
-  lead:      { bg: "oklch(0.6 0.2 255 / 15%)",  text: "oklch(0.6 0.2 255)"  },
+  lead:      { bg: "var(--qa-accent-soft)",  text: "var(--qa-accent)"  },
   stratégia: { bg: "oklch(0.75 0.18 75 / 15%)", text: "oklch(0.75 0.18 75)" },
   kampány:   { bg: "oklch(0.65 0.18 165 / 15%)",text: "oklch(0.65 0.18 165)"},
   egyéb:     { bg: "oklch(0.5 0.015 240 / 20%)",text: "oklch(0.65 0.015 240)"},
@@ -134,29 +134,29 @@ export default function DailyTasksBlock({ profileId }: DailyTasksBlockProps) {
 
   return (
     <div
-      className="rounded-xl border mb-6 overflow-hidden"
-      style={{ background: "oklch(0.17 0.022 255)", borderColor: "oklch(1 0 0 / 8%)" }}
+      className="rounded-2xl border mb-4 overflow-hidden"
+      style={{ background: "var(--qa-surface)", borderColor: "var(--qa-border)" }}
     >
       {/* Header */}
       <div
         className="flex items-center justify-between px-4 py-3 border-b"
-        style={{ borderColor: "oklch(1 0 0 / 8%)", background: "oklch(0.15 0.025 255 / 60%)" }}
+        style={{ borderColor: "var(--qa-border)", background: "var(--qa-surface2)" }}
       >
         <div className="flex items-center gap-2">
           <div
             className="w-7 h-7 rounded-lg flex items-center justify-center"
-            style={{ background: "oklch(0.6 0.2 255 / 20%)" }}
+            style={{ background: "var(--qa-accent-soft, rgba(20,184,166,.14))" }}
           >
-            <Sparkles size={14} style={{ color: "oklch(0.75 0.2 255)" }} />
+            <Sparkles size={14} style={{ color: "var(--qa-accent)" }} />
           </div>
           <div>
             <h2
               className="text-sm font-bold"
-              style={{ fontFamily: "Sora, sans-serif", color: "oklch(0.92 0.008 240)" }}
+              style={{ fontFamily: "var(--font-heading)", color: "var(--qa-fg)" }}
             >
               Mi a dolgom ma?
             </h2>
-            <p className="text-xs" style={{ color: "oklch(0.5 0.015 240)" }}>
+            <p className="text-xs" style={{ color: "var(--qa-fg3)" }}>
               Kattints egy feladatra a közvetlen megnyitáshoz
             </p>
           </div>
@@ -165,7 +165,7 @@ export default function DailyTasksBlock({ profileId }: DailyTasksBlockProps) {
           onClick={handleGenerate}
           disabled={isLoading || !profileId}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-opacity disabled:opacity-50"
-          style={{ background: "oklch(0.6 0.2 255 / 20%)", color: "oklch(0.75 0.2 255)" }}
+          style={{ background: "var(--qa-accent-soft, rgba(20,184,166,.14))", color: "var(--qa-accent)" }}
         >
           {isLoading ? (
             <Loader2 size={12} className="animate-spin" />
@@ -191,7 +191,7 @@ export default function DailyTasksBlock({ profileId }: DailyTasksBlockProps) {
                 <div
                   key={i}
                   className="h-14 rounded-lg animate-pulse"
-                  style={{ background: "oklch(1 0 0 / 5%)" }}
+                  style={{ background: "var(--qa-surface2)" }}
                 />
               ))}
             </motion.div>
@@ -205,10 +205,10 @@ export default function DailyTasksBlock({ profileId }: DailyTasksBlockProps) {
               {/* Motivational message */}
               {result.motivationalMessage && (
                 <p
-                  className="text-xs mb-3 italic"
-                  style={{ color: "oklch(0.65 0.15 255)" }}
+                  className="text-xs mb-3"
+                  style={{ color: "var(--qa-accent)" }}
                 >
-                  ✨ {result.motivationalMessage}
+                  {result.motivationalMessage}
                 </p>
               )}
               {/* Task cards */}
@@ -227,15 +227,15 @@ export default function DailyTasksBlock({ profileId }: DailyTasksBlockProps) {
                       onClick={() => handleTaskClick(task, idx)}
                       className="w-full flex items-center gap-3 p-3 rounded-lg text-left transition-all group cursor-pointer"
                       style={{
-                        background: isClicked ? "oklch(0.6 0.2 255 / 12%)" : "oklch(1 0 0 / 3%)",
+                        background: isClicked ? "var(--qa-accent-soft, rgba(20,184,166,.14))" : "var(--qa-surface2)",
                         border: "1px solid transparent",
                       }}
                       onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
-                        e.currentTarget.style.background = "oklch(1 0 0 / 6%)";
-                        e.currentTarget.style.borderColor = "oklch(0.6 0.2 255 / 20%)";
+                        e.currentTarget.style.background = "var(--qa-surface3)";
+                        e.currentTarget.style.borderColor = "var(--qa-accent-ring, rgba(20,184,166,.12))";
                       }}
                       onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
-                        e.currentTarget.style.background = "oklch(1 0 0 / 3%)";
+                        e.currentTarget.style.background = "var(--qa-surface2)";
                         e.currentTarget.style.borderColor = "transparent";
                       }}
                     >
@@ -250,7 +250,7 @@ export default function DailyTasksBlock({ profileId }: DailyTasksBlockProps) {
                       {/* Task text */}
                       <p
                         className="flex-1 text-xs font-medium text-left"
-                        style={{ color: "oklch(0.85 0.008 240)" }}
+                        style={{ color: "var(--qa-fg2)" }}
                       >
                         {task.text}
                       </p>
@@ -272,7 +272,7 @@ export default function DailyTasksBlock({ profileId }: DailyTasksBlockProps) {
                         <ExternalLink
                           size={11}
                           className="opacity-30 group-hover:opacity-70 transition-opacity"
-                          style={{ color: "oklch(0.65 0.015 240)" }}
+                          style={{ color: "var(--qa-fg3)" }}
                         />
                       </div>
                     </motion.button>
@@ -281,7 +281,7 @@ export default function DailyTasksBlock({ profileId }: DailyTasksBlockProps) {
               </div>
 
               {/* Footer hint */}
-              <p className="text-xs mt-3 text-center" style={{ color: "oklch(0.4 0.015 240)" }}>
+              <p className="text-xs mt-3 text-center" style={{ color: "var(--qa-fg4)" }}>
                 Kattints egy feladatra a megfelelő modul megnyitásához
               </p>
             </motion.div>
@@ -296,18 +296,18 @@ export default function DailyTasksBlock({ profileId }: DailyTasksBlockProps) {
                 onClick={handleGenerate}
                 disabled={isLoading}
                 className="flex flex-col items-center gap-2 px-6 py-4 rounded-xl border transition-all cursor-pointer w-full"
-                style={{ background: "oklch(0.6 0.2 255 / 8%)", borderColor: "oklch(0.6 0.2 255 / 25%)", borderStyle: "dashed" }}
-                onMouseEnter={(e: any) => { e.currentTarget.style.background = "oklch(0.6 0.2 255 / 15%)"; }}
-                onMouseLeave={(e: any) => { e.currentTarget.style.background = "oklch(0.6 0.2 255 / 8%)"; }}
+                style={{ background: "var(--qa-accent-soft, rgba(20,184,166,.10))", borderColor: "var(--qa-accent-ring, rgba(20,184,166,.25))", borderStyle: "dashed" }}
+                onMouseEnter={(e: any) => { e.currentTarget.style.background = "var(--qa-accent-soft, rgba(20,184,166,.18))"; }}
+                onMouseLeave={(e: any) => { e.currentTarget.style.background = "var(--qa-accent-soft, rgba(20,184,166,.10))"; }}
               >
                 {isLoading
-                  ? <Loader2 size={24} className="animate-spin" style={{ color: "oklch(0.6 0.2 255)" }} />
-                  : <Zap size={24} style={{ color: "oklch(0.6 0.2 255)" }} />
+                  ? <Loader2 size={24} className="animate-spin" style={{ color: "var(--qa-accent)" }} />
+                  : <Zap size={24} style={{ color: "var(--qa-accent)" }} />
                 }
-                <p className="text-sm font-semibold" style={{ color: "oklch(0.75 0.015 240)" }}>
+                <p className="text-sm font-semibold" style={{ color: "var(--qa-fg2)" }}>
                   {isLoading ? "AI elemzés folyamatban..." : "Napi teendők generálása"}
                 </p>
-                <p className="text-xs" style={{ color: "oklch(0.45 0.015 240)" }}>
+                <p className="text-xs" style={{ color: "var(--qa-fg4)" }}>
                   Az AI elemzi a vállalkozásod állapotát és személyre szabott javaslatokat ad
                 </p>
               </button>

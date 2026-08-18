@@ -36,7 +36,7 @@ const INDUSTRIES = [
 // FONTOS: valódi szín-értékek (nem CSS-változók) — ezek mentődnek a DB-be,
 // és a UI-on kívül (pl. avatar háttér) is helyesen kell megjelenniük.
 const PROJECT_COLORS = [
-  { label: "Kék", value: "oklch(0.6 0.2 255)" },
+  { label: "Kék", value: "var(--qa-accent)" },
   { label: "Lila", value: "oklch(0.55 0.22 295)" },
   { label: "Zöld", value: "oklch(0.65 0.18 145)" },
   { label: "Sárga", value: "oklch(0.8 0.16 90)" },
@@ -60,7 +60,7 @@ const emptyForm: ProjectFormData = {
   website: "",
   industry: "",
   description: "",
-  color: "oklch(0.6 0.2 255)",
+  color: "var(--qa-accent)",
   logoUrl: "",
 };
 
@@ -148,7 +148,7 @@ export default function ProjectsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>
+            <h1 className="text-2xl font-bold" style={{ fontFamily: "var(--font-heading)", color: "var(--qa-fg)" }}>
               Projektek
             </h1>
             <p className="text-sm mt-0.5" style={{ color: "var(--qa-fg3)" }}>
@@ -373,7 +373,7 @@ function ProjectCard({ project, onEdit, onSetActive, onDelete, onOpen, onArchive
       {/* Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-semibold text-base" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>
+          <span className="font-semibold text-base" style={{ fontFamily: "var(--font-heading)", color: "var(--qa-fg)" }}>
             {project.name}
           </span>
           {project.isActive && (

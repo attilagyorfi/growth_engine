@@ -109,14 +109,14 @@ export default function Notifications() {
           <div className="flex items-center gap-3">
             <div
               className="w-10 h-10 rounded-lg flex items-center justify-center"
-              style={{ background: "oklch(0.6 0.2 255 / 15%)" }}
+              style={{ background: "var(--qa-accent-soft)" }}
             >
               <Bell size={20} style={{ color: "var(--qa-accent)" }} />
             </div>
             <div>
               <h1
                 className="text-2xl font-bold"
-                style={{ color: "var(--qa-fg)", fontFamily: "Sora, sans-serif" }}
+                style={{ color: "var(--qa-fg)", fontFamily: "var(--font-heading)" }}
               >
                 Értesítések
               </h1>
@@ -213,8 +213,8 @@ export default function Notifications() {
                         <div
                           className="flex items-start gap-3 p-4 rounded-xl border transition-all hover:opacity-90 cursor-pointer"
                           style={{
-                            background: n.isRead ? "var(--qa-surface)" : "oklch(0.6 0.2 255 / 6%)",
-                            borderColor: n.isRead ? "var(--qa-border)" : "oklch(0.6 0.2 255 / 25%)",
+                            background: n.isRead ? "var(--qa-surface)" : "var(--qa-accent-soft)",
+                            borderColor: n.isRead ? "var(--qa-border)" : "var(--qa-accent-soft)",
                           }}
                           onClick={() => handleClick(n.id, n.isRead, n.actionUrl)}
                         >
@@ -294,7 +294,7 @@ function ChipButton({
       onClick={onClick}
       className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors"
       style={{
-        background: active ? (iconColor ? `${iconColor}22` : "oklch(0.6 0.2 255 / 20%)") : "var(--qa-surface2)",
+        background: active ? (iconColor ? `${iconColor}22` : "var(--qa-accent-soft)") : "var(--qa-surface2)",
         color: active ? (iconColor ?? "var(--qa-accent)") : "var(--qa-fg3)",
       }}
     >

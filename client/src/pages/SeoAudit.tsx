@@ -43,7 +43,7 @@ function ScoreRing({ score }: { score: number }) {
           style={{ transition: "stroke-dasharray 0.8s ease" }} />
       </svg>
       <div className="absolute flex flex-col items-center">
-        <span className="text-2xl font-bold" style={{ color, fontFamily: "Sora, sans-serif" }}>{score}</span>
+        <span className="text-2xl font-bold" style={{ color, fontFamily: "var(--font-heading)" }}>{score}</span>
         <span className="text-xs" style={{ color: textMuted }}>/ 100</span>
       </div>
     </div>
@@ -55,7 +55,7 @@ function SeverityBadge({ severity }: { severity: "critical" | "warning" | "info"
   const map = {
     critical: { label: "Kritikus", color: red, bg: "oklch(0.65 0.22 25 / 12%)", icon: <AlertTriangle size={11} /> },
     warning: { label: "Figyelmeztetés", color: yellow, bg: "oklch(0.78 0.18 75 / 12%)", icon: <AlertTriangle size={11} /> },
-    info: { label: "Infó", color: blue, bg: "oklch(0.6 0.2 255 / 12%)", icon: <Info size={11} /> },
+    info: { label: "Infó", color: blue, bg: "var(--qa-accent-soft)", icon: <Info size={11} /> },
   };
   const { label, color, bg, icon } = map[severity];
   return (
@@ -154,7 +154,7 @@ export default function SeoAudit() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold" style={{ fontFamily: "Sora, sans-serif", color: textPrimary }}>SEO Audit</h1>
+            <h1 className="text-xl font-bold" style={{ fontFamily: "var(--font-heading)", color: textPrimary }}>SEO Audit</h1>
             <p className="text-sm mt-0.5" style={{ color: textMuted }}>Teljes körű keresőoptimalizálási elemzés és javaslatok</p>
           </div>
         </div>
@@ -217,7 +217,7 @@ export default function SeoAudit() {
               <div className="flex items-center gap-6">
                 <ScoreRing score={expanded.score ?? 0} />
                 <div className="flex-1">
-                  <p className="text-base font-bold mb-1" style={{ fontFamily: "Sora, sans-serif", color: textPrimary }}>{expanded.url}</p>
+                  <p className="text-base font-bold mb-1" style={{ fontFamily: "var(--font-heading)", color: textPrimary }}>{expanded.url}</p>
                   <p className="text-xs mb-3" style={{ color: textMuted }}>
                     {new Date(expanded.createdAt).toLocaleString("hu-HU")} •{" "}
                     {expanded.report.issues.filter(i => i.severity === "critical").length} kritikus,{" "}
@@ -395,7 +395,7 @@ export default function SeoAudit() {
                           <div className="flex items-center justify-between mb-2">
                             <p className="text-sm font-bold" style={{ color: textPrimary }}>📱 Mobil</p>
                             {m?.performanceScore !== null && m?.performanceScore !== undefined && (
-                              <span className="text-2xl font-bold" style={{ color: scoreColor(m.performanceScore), fontFamily: "Sora, sans-serif" }}>
+                              <span className="text-2xl font-bold" style={{ color: scoreColor(m.performanceScore), fontFamily: "var(--font-heading)" }}>
                                 {m.performanceScore}/100
                               </span>
                             )}
@@ -416,7 +416,7 @@ export default function SeoAudit() {
                           <div className="flex items-center justify-between mb-2">
                             <p className="text-sm font-bold" style={{ color: textPrimary }}>💻 Desktop</p>
                             {d?.performanceScore !== null && d?.performanceScore !== undefined && (
-                              <span className="text-2xl font-bold" style={{ color: scoreColor(d.performanceScore), fontFamily: "Sora, sans-serif" }}>
+                              <span className="text-2xl font-bold" style={{ color: scoreColor(d.performanceScore), fontFamily: "var(--font-heading)" }}>
                                 {d.performanceScore}/100
                               </span>
                             )}

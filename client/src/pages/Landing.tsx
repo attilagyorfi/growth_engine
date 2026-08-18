@@ -430,14 +430,14 @@ export default function Landing() {
               <button
                 onClick={() => setIsYearly(false)}
                 className="px-5 py-2 rounded-lg text-sm font-semibold transition-all"
-                style={!isYearly ? { background: "oklch(0.6 0.2 255)", color: "white" } : { color: "rgba(255,255,255,0.45)" }}
+                style={!isYearly ? { background: "var(--qa-accent)", color: "white" } : { color: "rgba(255,255,255,0.45)" }}
               >
                 Havi
               </button>
               <button
                 onClick={() => setIsYearly(true)}
                 className="px-5 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2"
-                style={isYearly ? { background: "oklch(0.6 0.2 255)", color: "white" } : { color: "rgba(255,255,255,0.45)" }}
+                style={isYearly ? { background: "var(--qa-accent)", color: "white" } : { color: "rgba(255,255,255,0.45)" }}
               >
                 Éves
                 <span className="text-xs px-1.5 py-0.5 rounded-full font-bold" style={{ background: "oklch(0.65 0.18 165 / 30%)", color: "oklch(0.65 0.18 165)" }}>

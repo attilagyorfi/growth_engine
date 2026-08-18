@@ -27,7 +27,7 @@ export default function NewsletterSection() {
 
   const sendMutation = trpc.newsletter.sendCampaign.useMutation({
     onSuccess: (data) => {
-      toast.success(`✅ Kampány elküldve — ${data.sent}/${data.total} sikeres, ${data.failed} hiba.`, { duration: 6000 });
+      toast.success(`Kampány elküldve — ${data.sent}/${data.total} sikeres, ${data.failed} hiba.`, { duration: 6000 });
       setConfirmOpen(false);
       setSubject("");
       setHtmlBody("");
@@ -52,7 +52,7 @@ export default function NewsletterSection() {
           </div>
           <span
             className="text-xs font-semibold px-2.5 py-1 rounded-full"
-            style={{ background: "oklch(0.6 0.2 255 / 15%)", color: "oklch(0.75 0.2 255)" }}
+            style={{ background: "var(--qa-accent-soft)", color: "oklch(0.75 0.2 255)" }}
           >
             {isLoading ? "…" : subscriberCount} fő
           </span>

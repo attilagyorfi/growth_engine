@@ -37,7 +37,7 @@ export function EmptyState({ icon, title, description, action, className, compac
       )}
       <h3
         className={cn("font-semibold mb-1", compact ? "text-sm" : "text-base")}
-        style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg2)" }}
+        style={{ fontFamily: "var(--font-heading)", color: "var(--qa-fg2)" }}
       >
         {title}
       </h3>

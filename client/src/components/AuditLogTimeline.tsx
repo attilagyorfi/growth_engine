@@ -30,7 +30,7 @@ const CATEGORY_META: Record<Category, { icon: React.ReactNode; color: string; bg
   create:  { icon: <Plus size={12} />,    color: "var(--qa-success)", bg: "oklch(0.72 0.19 145 / 15%)", label: "Létrehozás" },
   update:  { icon: <Pencil size={12} />,  color: "var(--qa-warning)", bg: "oklch(0.76 0.17 68 / 15%)",  label: "Módosítás" },
   delete:  { icon: <Trash2 size={12} />,  color: "var(--qa-danger)",  bg: "oklch(0.63 0.22 25 / 15%)",  label: "Törlés" },
-  publish: { icon: <Send size={12} />,    color: "var(--qa-accent)",  bg: "oklch(0.6 0.2 255 / 15%)",   label: "Publikálás" },
+  publish: { icon: <Send size={12} />,    color: "var(--qa-accent)",  bg: "var(--qa-accent-soft)",   label: "Publikálás" },
   login:   { icon: <LogIn size={12} />,   color: "oklch(0.55 0.22 295)", bg: "oklch(0.55 0.22 295 / 15%)", label: "Bejelentkezés" },
   other:   { icon: <Info size={12} />,    color: "var(--qa-fg3)",     bg: "var(--qa-surface2)",         label: "Egyéb" },
 };

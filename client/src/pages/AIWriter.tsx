@@ -125,7 +125,7 @@ export default function AIWriter() {
     <DashboardLayout>
       <div className="p-6">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white flex items-center gap-3" style={{ fontFamily: "Sora, sans-serif" }}>
+          <h1 className="text-2xl font-bold text-white flex items-center gap-3" style={{ fontFamily: "var(--font-heading)" }}>
             <Wand2 size={24} className="text-violet-400" />
             AI Writing Engine
           </h1>

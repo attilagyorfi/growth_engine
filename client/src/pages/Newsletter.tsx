@@ -17,14 +17,14 @@ export default function Newsletter() {
         <div className="flex items-center gap-3">
           <div
             className="w-10 h-10 rounded-lg flex items-center justify-center"
-            style={{ background: "oklch(0.6 0.2 255 / 15%)" }}
+            style={{ background: "var(--qa-accent-soft)" }}
           >
             <Send size={20} style={{ color: "oklch(0.75 0.2 255)" }} />
           </div>
           <div>
             <h1
               className="text-2xl font-bold"
-              style={{ color: "var(--qa-fg)", fontFamily: "Sora, sans-serif" }}
+              style={{ color: "var(--qa-fg)", fontFamily: "var(--font-heading)" }}
             >
               Hírlevél
             </h1>

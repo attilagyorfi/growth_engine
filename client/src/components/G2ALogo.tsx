@@ -115,7 +115,7 @@ export function G2ALogoOnDark({ size = "md", asLink = false, className = "" }: O
       />
       <span
         className={`font-bold tracking-tight text-white ${cfg.text}`}
-        style={{ fontFamily: "Sora, sans-serif" }}
+        style={{ fontFamily: "var(--font-heading)" }}
       >
         G2A Growth Engine
       </span>

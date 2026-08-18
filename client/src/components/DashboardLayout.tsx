@@ -176,7 +176,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
   // QA-aligned plan accent colors
   const planAccentStyle: Record<string, { bg: string; text: string; border: string }> = {
     free:    { bg: "var(--qa-surface2)", text: "var(--qa-fg3)", border: "var(--qa-border)" },
-    starter: { bg: "oklch(0.58 0.19 258 / 10%)", text: "var(--qa-accent)", border: "oklch(0.58 0.19 258 / 25%)" },
+    starter: { bg: "var(--qa-accent-soft)", text: "var(--qa-accent)", border: "var(--qa-accent-soft)" },
     pro:     { bg: "oklch(0.76 0.17 68 / 10%)", text: "var(--qa-warning)", border: "oklch(0.76 0.17 68 / 25%)" },
     agency:  { bg: "oklch(0.72 0.19 145 / 10%)", text: "var(--qa-success)", border: "oklch(0.72 0.19 145 / 25%)" },
   };
@@ -206,7 +206,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
             <div className="flex items-center gap-2.5 cursor-pointer group transition-opacity hover:opacity-80">
               <G2ALogo variant="mark" size="sm" />
               <div>
-                <p className="text-sm font-bold leading-none" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>G2A</p>
+                <p className="text-sm font-bold leading-none" style={{ fontFamily: "var(--font-heading)", color: "var(--qa-fg)" }}>G2A</p>
                 <p className="text-xs leading-none mt-0.5" style={{ color: "var(--qa-fg4)" }}>Growth Engine</p>
               </div>
             </div>
@@ -228,7 +228,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
             >
               {(user?.name ?? user?.email ?? "?")[0].toUpperCase()}
             </div>
-            <p className="text-sm font-semibold truncate" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>
+            <p className="text-sm font-semibold truncate" style={{ fontFamily: "var(--font-heading)", color: "var(--qa-fg)" }}>
               {user?.name ?? user?.email ?? "Felhasználó"}
             </p>
           </div>
@@ -412,7 +412,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
             </button>
             <div>
               {title && (
-                <h1 className="text-base font-bold leading-none" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>
+                <h1 className="text-base font-bold leading-none" style={{ fontFamily: "var(--font-heading)", color: "var(--qa-fg)" }}>
                   {title}
                 </h1>
               )}
@@ -450,7 +450,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
                 onClick={() => { setShowNotifs(v => !v); setShowUserMenu(false); }}
                 className="relative w-8 h-8 rounded-md flex items-center justify-center transition-colors"
                 style={{
-                  background: showNotifs ? "oklch(0.58 0.19 258 / 12%)" : "var(--qa-surface2)",
+                  background: showNotifs ? "var(--qa-accent-soft)" : "var(--qa-surface2)",
                   color: showNotifs ? "var(--qa-accent)" : "var(--qa-fg3)"
                 }}
               >
@@ -472,7 +472,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
                   style={{ background: "var(--qa-surface2)", border: "1px solid var(--qa-border-hi)" }}
                 >
                   <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "var(--qa-border)" }}>
-                    <p className="text-sm font-semibold" style={{ fontFamily: "Sora, sans-serif", color: "var(--qa-fg)" }}>Értesítések</p>
+                    <p className="text-sm font-semibold" style={{ fontFamily: "var(--font-heading)", color: "var(--qa-fg)" }}>Értesítések</p>
                     <div className="flex items-center gap-2">
                       {unreadCount > 0 && (
                         <button onClick={markAllNotificationsRead} className="text-xs" style={{ color: "var(--qa-accent)" }}>
@@ -494,10 +494,10 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
                         className="w-full text-left flex items-start gap-3 px-4 py-3 transition-colors border-b last:border-0"
                         style={{
                           borderColor: "var(--qa-border)",
-                          background: n.read ? "transparent" : "oklch(0.58 0.19 258 / 5%)"
+                          background: n.read ? "transparent" : "var(--qa-accent-soft)"
                         }}
                         onMouseEnter={(e) => (e.currentTarget.style.background = "oklch(1 0 0 / 3%)")}
-                        onMouseLeave={(e) => (e.currentTarget.style.background = n.read ? "transparent" : "oklch(0.58 0.19 258 / 5%)")}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = n.read ? "transparent" : "var(--qa-accent-soft)")}
                       >
                         <div
                           className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
@@ -507,7 +507,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-1">
-                            <p className="text-xs font-semibold" style={{ color: "var(--qa-fg)", fontFamily: "Sora, sans-serif" }}>{n.title}</p>
+                            <p className="text-xs font-semibold" style={{ color: "var(--qa-fg)", fontFamily: "var(--font-heading)" }}>{n.title}</p>
                             {!n.read && <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1" style={{ background: "var(--qa-accent)" }} />}
                           </div>
                           <p className="text-xs mt-0.5" style={{ color: "var(--qa-fg3)" }}>{n.message}</p>
@@ -542,8 +542,8 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
                 onClick={() => { setShowUserMenu(v => !v); setShowNotifs(false); }}
                 className="flex items-center gap-2 px-2.5 py-1.5 rounded-md transition-colors border"
                 style={{
-                  background: showUserMenu ? "oklch(0.58 0.19 258 / 10%)" : "var(--qa-surface2)",
-                  borderColor: showUserMenu ? "oklch(0.58 0.19 258 / 30%)" : "var(--qa-border)"
+                  background: showUserMenu ? "var(--qa-accent-soft)" : "var(--qa-surface2)",
+                  borderColor: showUserMenu ? "var(--qa-accent-soft)" : "var(--qa-border)"
                 }}
               >
                 <div
@@ -561,7 +561,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
                   )}
                 </div>
                 <div className="text-left hidden sm:block">
-                  <p className="text-xs font-semibold leading-none max-w-28 truncate" style={{ color: "var(--qa-fg)", fontFamily: "Sora, sans-serif" }}>
+                  <p className="text-xs font-semibold leading-none max-w-28 truncate" style={{ color: "var(--qa-fg)", fontFamily: "var(--font-heading)" }}>
                     {user?.name ?? "Felhasználó"}
                   </p>
                   <p className="text-xs leading-none mt-0.5" style={{ color: "var(--qa-fg4)" }}>Saját fiók</p>
@@ -585,7 +585,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
                         {(user?.name ?? user?.email ?? "?")[0].toUpperCase()}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold" style={{ color: "var(--qa-fg)", fontFamily: "Sora, sans-serif" }}>
+                        <p className="text-sm font-semibold" style={{ color: "var(--qa-fg)", fontFamily: "var(--font-heading)" }}>
                           {user?.name ?? "Felhasználó"}
                         </p>
                         <p className="text-xs" style={{ color: "var(--qa-fg4)" }}>{user?.email}</p>

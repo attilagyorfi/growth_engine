@@ -113,11 +113,11 @@ export default function Reports() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: "oklch(0.6 0.2 255 / 15%)" }}>
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: "var(--qa-accent-soft)" }}>
               <BarChart3 size={20} style={{ color: accent }} />
             </div>
             <div>
-              <h1 className="text-2xl font-bold" style={{ color: textPrimary, fontFamily: "Sora, sans-serif" }}>
+              <h1 className="text-2xl font-bold" style={{ color: textPrimary, fontFamily: "var(--font-heading)" }}>
                 Riportok
               </h1>
               <p className="text-sm" style={{ color: textMuted }}>
@@ -182,12 +182,12 @@ export default function Reports() {
               <button key={r.id} onClick={() => setSelectedReportId(r.id)}
                 className="w-full text-left px-3 py-2 rounded-lg text-xs transition-colors"
                 style={{
-                  background: activeReport?.id === r.id ? "oklch(0.6 0.2 255 / 15%)" : "transparent",
+                  background: activeReport?.id === r.id ? "var(--qa-accent-soft)" : "transparent",
                   color: activeReport?.id === r.id ? accent : textPrimary,
                 }}>
                 <p className="font-semibold truncate">{r.title}</p>
                 <p style={{ color: textMuted }}>
-                  {r.status === "rendering" ? "⏳ Generálás…" : r.status === "failed" ? "❌ Hiba" : "✓ Kész"}
+                  {r.status === "rendering" ? "Generálás…" : r.status === "failed" ? "Hiba" : "✓ Kész"}
                 </p>
               </button>
             ))}
@@ -204,7 +204,7 @@ export default function Reports() {
               <div className="rounded-xl border p-12 text-center" style={{ background: cardBg, borderColor: border }}>
                 {activeReport.status === "rendering"
                   ? <><Loader2 size={32} className="mx-auto mb-3 animate-spin" style={{ color: accent }} /><p className="text-sm">Riport generálása folyamatban…</p></>
-                  : <p className="text-sm" style={{ color: "var(--qa-danger)" }}>❌ A riport generálása sikertelen. Próbáld újra.</p>}
+                  : <p className="text-sm" style={{ color: "var(--qa-danger)" }}>A riport generálása sikertelen. Próbáld újra.</p>}
               </div>
             ) : (
               <div className="space-y-4">
@@ -229,7 +229,7 @@ export default function Reports() {
                     {summary.kpis.map((kpi: any) => (
                       <div key={kpi.key} className="rounded-xl border p-4" style={{ background: cardBg, borderColor: border }}>
                         <p className="text-xs mb-1" style={{ color: textMuted }}>{kpi.label}</p>
-                        <p className="text-xl font-bold" style={{ color: textPrimary, fontFamily: "Sora, sans-serif" }}>
+                        <p className="text-xl font-bold" style={{ color: textPrimary, fontFamily: "var(--font-heading)" }}>
                           {formatNumber(kpi.value, kpi.unit)}
                         </p>
                         {kpi.prevValue != null && (

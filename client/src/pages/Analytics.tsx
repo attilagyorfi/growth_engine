@@ -53,7 +53,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
     <div style={{ background: "var(--qa-surface2)", border, borderRadius: "0.5rem", padding: "0.75rem 1rem" }}>
-      <p style={{ color: textPrimary, fontFamily: "Sora, sans-serif", fontSize: "0.75rem", fontWeight: 600, marginBottom: "0.25rem" }}>{label}</p>
+      <p style={{ color: textPrimary, fontFamily: "var(--font-heading)", fontSize: "0.75rem", fontWeight: 600, marginBottom: "0.25rem" }}>{label}</p>
       {payload.map((entry: any) => (
         <p key={entry.name} style={{ color: entry.color ?? blue, fontSize: "0.75rem" }}>
           {entry.name}: <strong>{entry.value}</strong>
@@ -72,7 +72,7 @@ function StatCard({ icon: Icon, label, value, sub, color }: { icon: any; label: 
         </div>
         <TrendingUp size={14} style={{ color: green }} />
       </div>
-      <p className="text-2xl font-bold mb-0.5" style={{ fontFamily: "Sora, sans-serif", color: textPrimary }}>{value}</p>
+      <p className="text-2xl font-bold mb-0.5" style={{ fontFamily: "var(--font-heading)", color: textPrimary }}>{value}</p>
       <p className="text-xs font-medium" style={{ color: textMuted }}>{label}</p>
       <p className="text-xs mt-1" style={{ color }}>{sub}</p>
     </div>
@@ -87,7 +87,7 @@ function EmptyState({ icon: Icon, title, description, actionLabel, onAction }: {
       <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4" style={{ background: `${blue.replace(")", " / 10%)")}`, color: blue }}>
         <Icon size={24} />
       </div>
-      <p className="text-sm font-semibold mb-1" style={{ fontFamily: "Sora, sans-serif", color: textPrimary }}>{title}</p>
+      <p className="text-sm font-semibold mb-1" style={{ fontFamily: "var(--font-heading)", color: textPrimary }}>{title}</p>
       <p className="text-xs max-w-xs" style={{ color: textMuted }}>{description}</p>
       {actionLabel && onAction && (
         <button
@@ -278,7 +278,7 @@ export default function Analytics() {
                 <Users size={15} />
               </div>
               <div>
-                <p className="text-sm font-bold" style={{ fontFamily: "Sora, sans-serif", color: textPrimary }}>Lead Tölcsér</p>
+                <p className="text-sm font-bold" style={{ fontFamily: "var(--font-heading)", color: textPrimary }}>Lead Tölcsér</p>
                 <p className="text-xs" style={{ color: textMuted }}>Leadek státusz szerint</p>
               </div>
             </div>
@@ -342,7 +342,7 @@ export default function Analytics() {
                   <Layers size={15} />
                 </div>
                 <div>
-                  <p className="text-sm font-bold" style={{ fontFamily: "Sora, sans-serif", color: textPrimary }}>Tartalom platformonként</p>
+                  <p className="text-sm font-bold" style={{ fontFamily: "var(--font-heading)", color: textPrimary }}>Tartalom platformonként</p>
                   <p className="text-xs" style={{ color: textMuted }}>Létrehozott tartalmak</p>
                 </div>
               </div>
@@ -376,7 +376,7 @@ export default function Analytics() {
                   <BarChart2 size={15} />
                 </div>
                 <div>
-                  <p className="text-sm font-bold" style={{ fontFamily: "Sora, sans-serif", color: textPrimary }}>Tartalom státusza</p>
+                  <p className="text-sm font-bold" style={{ fontFamily: "var(--font-heading)", color: textPrimary }}>Tartalom státusza</p>
                   <p className="text-xs" style={{ color: textMuted }}>Vázlat → Publikált</p>
                 </div>
               </div>
@@ -427,7 +427,7 @@ export default function Analytics() {
                 <TrendingUp size={15} />
               </div>
               <div>
-                <p className="text-sm font-bold" style={{ fontFamily: "Sora, sans-serif", color: textPrimary }}>Hónapos trend</p>
+                <p className="text-sm font-bold" style={{ fontFamily: "var(--font-heading)", color: textPrimary }}>Hónapos trend</p>
                 <p className="text-xs" style={{ color: textMuted }}>Leadek, tartalmak és emailek az elmúlt 6 hónapban</p>
               </div>
             </div>
@@ -489,7 +489,7 @@ export default function Analytics() {
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style={{ background: `${color.replace(")", " / 15%)")}`, color }}>
                   <Icon size={18} />
                 </div>
-                <p className="text-sm font-bold mb-1" style={{ fontFamily: "Sora, sans-serif", color: textPrimary }}>{title}</p>
+                <p className="text-sm font-bold mb-1" style={{ fontFamily: "var(--font-heading)", color: textPrimary }}>{title}</p>
                 <p className="text-xs" style={{ color: textMuted }}>{desc}</p>
                 <div className="flex items-center gap-1 mt-3 text-xs font-semibold" style={{ color }}>
                   Megnyitás <ArrowRight size={11} />
