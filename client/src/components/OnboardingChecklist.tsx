@@ -149,7 +149,7 @@ export default function OnboardingChecklist({ profileId }: OnboardingChecklistPr
             <div className="flex items-start gap-3 min-w-0 flex-1">
               <div
                 className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{ background: "var(--qa-accent-soft, rgba(20,184,166,.14))", color: "var(--qa-accent)" }}
+                style={{ background: "var(--qa-accent-soft, rgba(139, 92, 246,.14))", color: "var(--qa-accent)" }}
               >
                 <Sparkles size={18} />
               </div>

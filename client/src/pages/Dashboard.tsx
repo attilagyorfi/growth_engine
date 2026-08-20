@@ -209,7 +209,7 @@ export default function Dashboard() {
             {/* Hero AI insight */}
             <div
               className="rounded-2xl p-5"
-              style={{ background: "var(--qa-surface)", border: "1px solid rgba(20,184,166,.28)" }}
+              style={{ background: "var(--qa-surface)", border: "1px solid rgba(139, 92, 246,.28)" }}
             >
               <div className="flex items-start gap-5">
                 <div className="flex-shrink-0">

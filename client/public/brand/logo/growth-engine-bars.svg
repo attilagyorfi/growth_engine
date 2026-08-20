@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none" role="img" aria-label="Growth Engine">
-  <rect width="32" height="32" rx="9" fill="#14B8A6"></rect>
-  <rect x="8" y="18" width="4" height="7" rx="1.4" fill="#04211D"></rect>
-  <rect x="14" y="14" width="4" height="11" rx="1.4" fill="#04211D"></rect>
-  <rect x="20" y="8" width="4" height="17" rx="1.4" fill="#04211D"></rect>
-  <path d="M9 13.5 15.5 9 21 11 26 6" stroke="#04211D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".45"></path>
+  <rect width="32" height="32" rx="9" fill="#8B5CF6"></rect>
+  <rect x="8" y="18" width="4" height="7" rx="1.4" fill="#FFFFFF"></rect>
+  <rect x="14" y="14" width="4" height="11" rx="1.4" fill="#FFFFFF"></rect>
+  <rect x="20" y="8" width="4" height="17" rx="1.4" fill="#FFFFFF"></rect>
+  <path d="M9 13.5 15.5 9 21 11 26 6" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".45"></path>
 </svg>
