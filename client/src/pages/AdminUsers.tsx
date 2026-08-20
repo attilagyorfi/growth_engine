@@ -21,6 +21,7 @@ import { useAppAuth } from "@/hooks/useAppAuth";
 import { useLocation } from "wouter";
 import { DataTable } from "@/components/DataTable";
 import type { ColumnDef } from "@tanstack/react-table";
+import DashboardLayout from "@/components/DashboardLayout";
 
 export default function AdminUsers() {
   const { user, loading } = useAppAuth();
@@ -48,9 +49,11 @@ export default function AdminUsers() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-6 h-6 animate-spin text-violet-400" />
-      </div>
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-6 h-6 animate-spin text-violet-400" />
+        </div>
+      </DashboardLayout>
     );
   }
 
@@ -171,7 +174,8 @@ export default function AdminUsers() {
   ], [updateUser]);
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <DashboardLayout>
+      <div className="max-w-6xl mx-auto">
       <div className="flex items-center gap-3 mb-8">
         <div className="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
           <Users className="w-5 h-5 text-violet-400" />
@@ -295,6 +299,7 @@ export default function AdminUsers() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }
