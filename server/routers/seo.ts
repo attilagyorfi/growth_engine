@@ -16,7 +16,10 @@
  * frontend ezeket figyelmen kívül hagyja (nincs törésalapú változtatás).
  */
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { appUserProcedure, router } from "../_core/trpc";
+import { assertProfileOwnership } from "../_core/ownership";
+import { safeFetch } from "../_core/safeFetch";
 import { invokeLLM } from "../_core/llm";
 import { ENV } from "../_core/env";
 import * as cheerio from "cheerio";
@@ -74,12 +77,12 @@ type BrokenLink = { url: string; status: number | null; source: string; type: "i
 async function checkLink(url: string): Promise<number | null> {
   try {
     // HEAD a leggyorsabb, de sok szerver 405-öt ad → fallback GET range:0-0
-    const resp = await fetch(url, { method: "HEAD", signal: AbortSignal.timeout(5000),
+    const resp = await safeFetch(url, { method: "HEAD", signal: AbortSignal.timeout(5000),
       headers: { "User-Agent": "Mozilla/5.0 (compatible; G2A-SEO-Bot/2.0)" }});
     if (resp.status >= 400 && resp.status !== 405) return resp.status;
     if (resp.status === 405) {
       // Próbáljuk GET-tel, csak az 1 byte-ot kérjük
-      const r2 = await fetch(url, { method: "GET", signal: AbortSignal.timeout(5000),
+      const r2 = await safeFetch(url, { method: "GET", signal: AbortSignal.timeout(5000),
         headers: { "User-Agent": "Mozilla/5.0 (compatible; G2A-SEO-Bot/2.0)", range: "bytes=0-0" }});
       return r2.status;
     }
@@ -92,7 +95,7 @@ async function checkLink(url: string): Promise<number | null> {
 async function fetchAndParse(url: string): Promise<{ html: string; status: number | null; loadTime: number; pageSize: number }> {
   const t0 = Date.now();
   try {
-    const resp = await fetch(url, {
+    const resp = await safeFetch(url, {
       headers: { "User-Agent": "Mozilla/5.0 (compatible; G2A-SEO-Bot/2.0)" },
       signal: AbortSignal.timeout(15_000),
     });
@@ -106,7 +109,10 @@ async function fetchAndParse(url: string): Promise<{ html: string; status: numbe
 export const seoRouter = router({
   runAudit: appUserProcedure
     .input(z.object({ profileId: z.string(), url: z.string().url() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      // Security fix (audit IDOR): eddig nem volt ownership-check — bárki futtathatott
+      // auditot más profil neve alatt (cross-tenant write + SSRF-driver). Most kötelező.
+      await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
       const { nanoid } = await import("nanoid");
       const id = nanoid();
       const { getDb } = await import("../db");
@@ -309,7 +315,9 @@ export const seoRouter = router({
 
   getAudits: appUserProcedure
     .input(z.object({ profileId: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
+      // Security fix (audit IDOR): eddig bárki lekérhette más profil SEO auditjait.
+      await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
       const { getDb: getDb2 } = await import("../db");
       const { seoAudits } = await import("../../drizzle/schema");
       const { eq: eqSeo2, desc: descSeo } = await import("drizzle-orm");
@@ -320,11 +328,18 @@ export const seoRouter = router({
 
   deleteAudit: appUserProcedure
     .input(z.object({ id: z.string() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const { getDb: getDb3 } = await import("../db");
       const { seoAudits } = await import("../../drizzle/schema");
       const { eq: eqSeo3 } = await import("drizzle-orm");
       const db3 = await getDb3();
+      // Security fix (audit IDOR): eddig SEMMILYEN scoping — bárki törölhette
+      // más tenant auditját id alapján. Most: előbb lekérjük, ownership-check,
+      // és a törlést a profileId-re is szűkítjük.
+      const existing = await db3!.select().from(seoAudits).where(eqSeo3(seoAudits.id, input.id)).limit(1);
+      const audit = existing[0];
+      if (!audit) throw new TRPCError({ code: "NOT_FOUND", message: "Az audit nem található" });
+      await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, audit.profileId, ctx.appUser.profileId);
       await db3!.delete(seoAudits).where(eqSeo3(seoAudits.id, input.id));
       return { ok: true };
     }),

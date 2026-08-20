@@ -2,7 +2,7 @@
  * G2A Growth Engine – Auth DB Helpers
  * Saját email+jelszó alapú autentikáció adatbázis segédfüggvényei
  */
-import { eq, and, gt, count } from "drizzle-orm";
+import { eq, and, gt, count, isNull } from "drizzle-orm";
 import { getDb } from "./db";
 import { appUsers, passwordResetTokens, aiUsage } from "../drizzle/schema";
 import type { AppUser, InsertAppUser } from "../drizzle/schema";
@@ -73,6 +73,11 @@ export async function getValidResetToken(token: string) {
     and(
       eq(passwordResetTokens.token, token),
       gt(passwordResetTokens.expiresAt, new Date()),
+      // SECURITY FIX (audit HIGH): SINGLE-USE kikényszerítése. A markResetTokenUsed
+      // eddig beírta a usedAt-ot, de SENKI nem olvasta → egy beváltott token a
+      // teljes 1 órás ablakban újra érvényes maradt (replay egy kiszivárgott
+      // reset-linkkel: a támadó újra és újra átállíthatta a jelszót).
+      isNull(passwordResetTokens.usedAt),
     )
   );
   return rows[0] ?? null;

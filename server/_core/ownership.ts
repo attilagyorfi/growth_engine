@@ -18,8 +18,17 @@ export async function assertProfileOwnership(
   userProfileId: string | null,
 ): Promise<void> {
   if (role === "super_admin") return; // super admin can access any profile
-  if (userProfileId && userProfileId === profileId) return; // fast path
-  // Slow path: a profile.appUserId-t ellenőrizzük (onboarding alatt is megy)
+  // Fast path: a session-ben cache-elt profileId egyezés.
+  //
+  // SECURITY (audit HIGH): ez a fast-path KORÁBBAN megkerülhető volt, mert a
+  // `completeOnboarding` ownership-check NÉLKÜL állította be az appUsers.profileId-t
+  // → egy user egy IDEGEN profilra mutathatott, és a fast-path átengedte. Ezt a
+  // completeOnboarding-ban javítottuk (most assertProfileOwnership-öl előbb), így
+  // a session profileId-je BIZONYÍTOTTAN saját profil (vagy null). A fast-path
+  // ezért ismét biztonságos, és megspórol egy DB-lekérdezést a gyakori úton.
+  if (userProfileId && userProfileId === profileId) return;
+  // Slow path: a profile.appUserId-t ellenőrizzük (onboarding alatt, amikor a
+  // session-ben még nincs profileId, ez a hiteles ellenőrzés).
   const profile = await getProfileById(profileId);
   if (profile && profile.appUserId === appUserId) return;
   throw new TRPCError({ code: "FORBIDDEN", message: "Nincs jogosultsága ehhez a profilhoz" });

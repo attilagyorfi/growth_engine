@@ -23,7 +23,19 @@ export const socialRouter = router({
       const { eq } = await import("drizzle-orm");
       const db = await getDb();
       if (!db) return [];
-      return db.select().from(socialConnections)
+      // Security fix (audit H1): SOHA ne adjuk vissza a tokeneket a kliensnek.
+      // Eddig a select().from() minden oszlopot visszaadott (accessToken +
+      // refreshToken is) → a böngésző / XSS kilophatta és a fiók nevében posztolhatott.
+      // Csak a nem-érzékeny, megjelenítendő mezők mennek ki.
+      return db.select({
+        id: socialConnections.id,
+        profileId: socialConnections.profileId,
+        platform: socialConnections.platform,
+        platformUsername: socialConnections.platformUsername,
+        platformUserId: socialConnections.platformUserId,
+        tokenExpiresAt: socialConnections.tokenExpiresAt,
+        isActive: socialConnections.isActive,
+      }).from(socialConnections)
         .where(eq(socialConnections.profileId, input.profileId));
     }),
   saveConnection: appUserProcedure
@@ -58,12 +70,18 @@ export const socialRouter = router({
     }),
   disconnect: appUserProcedure
     .input(z.object({ connectionId: z.string() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const { getDb } = await import("../db");
       const { socialConnections } = await import("../../drizzle/schema");
       const { eq } = await import("drizzle-orm");
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Adatbázis nem elérhető" });
+      // Security fix (audit IDOR): eddig ownership-check nélkül bárki
+      // deaktiválhatott egy tetszőleges connection-t id alapján (cross-tenant DoS
+      // a social publikáláson). Most: előbb lekérjük, ellenőrizzük a tulajdont.
+      const [conn] = await db.select().from(socialConnections).where(eq(socialConnections.id, input.connectionId)).limit(1);
+      if (!conn) throw new TRPCError({ code: "NOT_FOUND", message: "Social fiók nem található" });
+      await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, conn.profileId, ctx.appUser.profileId);
       await db.update(socialConnections).set({ isActive: false }).where(eq(socialConnections.id, input.connectionId));
       return { success: true };
     }),

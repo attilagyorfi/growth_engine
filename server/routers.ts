@@ -491,9 +491,19 @@ export const appRouter = router({
     list: appUserProcedure
       .input(z.object({ profileId: z.string().optional(), limit: z.number().optional() }))
       .query(async ({ input, ctx }) => {
-        // Non-admin users can only see their own profile's logs
-        const profileId = ctx.appUser.role === "super_admin" ? input.profileId : (ctx.appUser.profileId ?? undefined);
-        return getAuditLogs(profileId, input.limit ?? 50);
+        // SECURITY FIX (audit HIGH): a régi kód non-adminnál `profileId ?? undefined`-ot
+        // adott a getAuditLogs-nak, és undefined esetén az MINDEN tenant auditját
+        // visszaadta (WHERE nélkül). Egy friss (profileId=null) user így megkapta a
+        // teljes cross-tenant audit-naplót — és belőle a többi profil id-jét.
+        if (ctx.appUser.role === "super_admin") {
+          return getAuditLogs(input.profileId, input.limit ?? 50);
+        }
+        const own = ctx.appUser.profileId;
+        if (!own) return []; // nincs saját profil → nincs mit mutatni (SOSEM cross-tenant)
+        if (input.profileId && input.profileId !== own) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Nincs jogosultsága ehhez a profilhoz" });
+        }
+        return getAuditLogs(own, input.limit ?? 50);
       }),
 
     create: appUserProcedure

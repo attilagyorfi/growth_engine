@@ -12,6 +12,7 @@ import { TRPCError } from "@trpc/server";
 import { appUserProcedure, router } from "../_core/trpc";
 import { invokeLLM } from "../_core/llm";
 import { assertProfileOwnership } from "../_core/ownership";
+import { safeFetch } from "../_core/safeFetch";
 import { storagePut } from "../storage";
 import {
   getOnboardingSession, upsertOnboardingSession, saveOnboardingAnswers, getOnboardingAnswers,
@@ -24,7 +25,12 @@ import {
 export const onboardingRouter = router({
   getSession: appUserProcedure
     .input(z.object({ profileId: z.string() }))
-    .query(({ input }) => getOnboardingSession(input.profileId)),
+    .query(async ({ input, ctx }) => {
+      // Security fix (audit IDOR): eddig ownership-check nélkül bárki lekérhette
+      // más profil onboarding-session-jét (benne a sessionId-vel → getAnswers).
+      await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      return getOnboardingSession(input.profileId);
+    }),
 
   upsertSession: appUserProcedure
     .input(z.object({
@@ -34,7 +40,8 @@ export const onboardingRouter = router({
       currentStep: z.number().optional(),
       completedAt: z.coerce.date().optional(),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
       const id = input.id ?? nanoid();
       return upsertOnboardingSession({ id, profileId: input.profileId, status: input.status ?? "in_progress", currentStep: input.currentStep ?? 1, completedAt: input.completedAt ?? null });
     }),
@@ -51,7 +58,8 @@ export const onboardingRouter = router({
         userConfirmed: z.boolean().optional(),
       })),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
       const rows = input.answers.map(a => ({
         sessionId: input.sessionId,
         profileId: input.profileId,
@@ -66,7 +74,14 @@ export const onboardingRouter = router({
 
   getAnswers: appUserProcedure
     .input(z.object({ sessionId: z.string() }))
-    .query(({ input }) => getOnboardingAnswers(input.sessionId)),
+    .query(async ({ input, ctx }) => {
+      // A válaszok profileId-jából ellenőrizzük a tulajdont (a sessionId önmagában
+      // nem elég — más profil sessionId-jével nem lehet kiolvasni az adatait).
+      const answers = await getOnboardingAnswers(input.sessionId);
+      if (answers.length === 0) return [];
+      await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, answers[0].profileId, ctx.appUser.profileId);
+      return answers;
+    }),
 
   scrapeWebsite: appUserProcedure
     .input(z.object({ url: z.string().url() }))
@@ -77,7 +92,7 @@ export const onboardingRouter = router({
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000);
-        const res = await fetch(input.url, {
+        const res = await safeFetch(input.url, {
           signal: controller.signal,
           headers: {
             "User-Agent": "Mozilla/5.0 (compatible; G2A-Scraper/1.0; +https://g2a.marketing)",
@@ -200,7 +215,12 @@ export const onboardingRouter = router({
 
   getBrandAssets: appUserProcedure
     .input(z.object({ profileId: z.string() }))
-    .query(({ input }) => getBrandAssets(input.profileId)),
+    .query(async ({ input, ctx }) => {
+      // Security fix: a brand-asset lista (feltöltött fájlok URL-jei, parse-olt
+      // brand-guide szöveg) profil-érzékeny — ownership-check kötelező.
+      await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      return getBrandAssets(input.profileId);
+    }),
 
   deleteBrandAsset: appUserProcedure
     .input(z.object({ id: z.string() }))
@@ -215,9 +235,12 @@ export const onboardingRouter = router({
     .input(z.object({
       profileId: z.string(),
       platform: z.string(), // linkedin, facebook, instagram, tiktok, youtube
-      url: z.string(),
+      url: z.string().url("Érvényes URL szükséges"),
     }))
     .mutation(async ({ input, ctx }) => {
+      // Security fix: ownership-check (profil-scoped cache/adat) + SSRF-védelem
+      // a safeFetch-en keresztül (lentebb).
+      await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
       // Check cache first (1 hour TTL)
       const cached = await getSocialProfileCache(input.profileId, input.platform, input.url);
       if (cached && cached.scrapedAt) {
@@ -230,7 +253,7 @@ export const onboardingRouter = router({
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 8000);
-        const res = await fetch(input.url, {
+        const res = await safeFetch(input.url, {
           signal: controller.signal,
           headers: {
             "User-Agent": "Mozilla/5.0 (compatible; G2A-Scraper/1.0)",

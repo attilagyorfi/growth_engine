@@ -79,14 +79,13 @@ export const resetPasswordIpLimiter = new RateLimiterMemory({
  */
 export function getClientIp(req: Request | undefined): string {
   if (!req) return "unknown";
-  const forwarded = req.headers["x-forwarded-for"];
-  if (typeof forwarded === "string" && forwarded.length > 0) {
-    return forwarded.split(",")[0].trim();
-  }
-  if (Array.isArray(forwarded) && forwarded.length > 0) {
-    return forwarded[0];
-  }
-  return req.socket?.remoteAddress ?? req.ip ?? "unknown";
+  // SECURITY FIX (audit MEDIUM): a régi kód a kliens által HAMISÍTHATÓ
+  // X-Forwarded-For ELSŐ elemét vette → a támadó minden kéréshez random XFF-et
+  // küldve új rate-limit kulcsot kapott (IP-limiter bypass). Most az Express
+  // `req.ip`-jét használjuk, ami a `trust proxy` (index.ts) beállítás miatt a
+  // trusted proxy által hozzáadott, VALÓDI kliens IP — nem a hamisítható fejléc.
+  if (req.ip) return req.ip;
+  return req.socket?.remoteAddress ?? "unknown";
 }
 
 /**
