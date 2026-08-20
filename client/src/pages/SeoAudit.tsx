@@ -149,7 +149,7 @@ export default function SeoAudit() {
   }
 
   return (
-    <DashboardLayout>
+    <DashboardLayout background="seo">
       <div className="max-w-5xl mx-auto space-y-6 pb-10">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -498,7 +498,7 @@ export default function SeoAudit() {
         {/* Empty state */}
         {audits.length === 0 && !runAudit.isPending && (
           <EmptyState
-            icon={<Globe size={22} />}
+            illustration="empty-analytics"
             title="Még nincs SEO audit"
             description="Az első audit átfogó képet ad az oldalad Core Web Vitals-airól, meta tagek állapotáról és tartalmi optimalizációról. Add meg a weboldal URL-jét fent, ~30 másodperc alatt kész."
           />

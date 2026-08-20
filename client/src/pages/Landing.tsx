@@ -129,7 +129,7 @@ export default function Landing() {
   const features = [
     { icon: Brain, title: "AI-alapú Stratégia", desc: "Az AI elemzi a vállalkozásodat és teljes marketing stratégiát generál: célközönség, tartalom pillérek, havi prioritások." },
     { icon: Megaphone, title: "Tartalom Stúdió", desc: "LinkedIn, Facebook, Instagram, TikTok – ütemezd, szerkeszd és hagyd jóvá a posztjaidat egy helyen." },
-    { icon: Mail, title: "Értékesítési Ops", desc: "Lead kezelés, kimenő email kampányok és beérkező válaszok nyomon követése egyetlen felületen." },
+    { icon: Mail, title: "Hírlevél", desc: "Gyűjtsd a feliratkozókat a regisztrációs űrlapról, és küldj nekik brand-arculatú hírleveleket egyetlen felületről." },
     { icon: Target, title: "Vevői Intelligencia", desc: "Automatikus versenytárs elemzés, buyer persona generálás és márka DNA feltérképezés." },
     { icon: BarChart3, title: "Analitika & KPI", desc: "Valós idejű teljesítmény mutatók, tartalom hatékonyság és lead konverzió nyomon követése." },
     { icon: Users, title: "Ügyfél Workspace", desc: "Minden ügyfélnek saját, izolált munkaterülete van – az adataik biztonságban maradnak." },

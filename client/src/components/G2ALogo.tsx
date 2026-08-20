@@ -97,29 +97,26 @@ interface OnDarkProps {
   asLink?: boolean;
   className?: string;
 }
+// A hivatalos G2A wordmark (fehér, sötét háttérre) — a legutóbb feltöltött
+// asset (client/public/brand/logo/g2a-logo-white.png). A wordmark MÁR
+// tartalmazza a "from Great to Awesome" tagline-t, ezért nem írunk mellé szöveget.
+// 512×512 négyzetes vászon, az ábra ~49%-ot tölt ki → object-fit:contain + box.
 const ON_DARK_SIZES = {
-  sm: { mark: 24, text: "text-sm" },
-  md: { mark: 32, text: "text-lg" },
-  lg: { mark: 40, text: "text-xl" },
+  sm: 44,
+  md: 60,
+  lg: 76,
 } as const;
 
 export function G2ALogoOnDark({ size = "md", asLink = false, className = "" }: OnDarkProps) {
-  const cfg = ON_DARK_SIZES[size];
+  const box = ON_DARK_SIZES[size];
   const inner = (
-    <div className={`flex items-center gap-2.5 ${className}`}>
-      <img
-        src="/brand/mark-blue.png"
-        alt="G2A Growth Engine"
-        style={{ height: cfg.mark, width: cfg.mark, display: "block" }}
-        decoding="async"
-      />
-      <span
-        className={`font-bold tracking-tight text-white ${cfg.text}`}
-        style={{ fontFamily: "var(--font-heading)" }}
-      >
-        G2A Growth Engine
-      </span>
-    </div>
+    <img
+      src="/brand/logo/g2a-logo-white.png"
+      alt="G2A – from Great to Awesome"
+      className={className}
+      style={{ height: box, width: "auto", maxWidth: box * 1.1, objectFit: "contain", display: "block" }}
+      decoding="async"
+    />
   );
   if (asLink) {
     return (

@@ -875,7 +875,7 @@ export default function OnboardingWizard() {
           <button
             onClick={() => setShowTour(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:opacity-80"
-            style={{ background: "var(--qa-accent-soft)", color: "oklch(0.7 0.18 255)", border: "1px solid var(--qa-accent-soft)" }}
+            style={{ background: "var(--qa-accent-soft)", color: "var(--qa-accent)", border: "1px solid var(--qa-accent-soft)" }}
           >
             <span>💡</span>
             <span>{lang === "hu" ? "Lépés útmutatója" : "Step guide"}</span>
@@ -1165,7 +1165,7 @@ export default function OnboardingWizard() {
                       <p className="text-xs font-semibold mb-2" style={{ color: "oklch(0.55 0.015 240)" }}>Szolgáltatások / termékek</p>
                       <div className="flex flex-wrap gap-1.5">
                         {data.services.slice(0, 6).map((s, i) => (
-                          <span key={i} className="text-xs px-2 py-0.5 rounded-full" style={{ background: "var(--qa-accent-soft)", color: "oklch(0.75 0.18 255)" }}>{s}</span>
+                          <span key={i} className="text-xs px-2 py-0.5 rounded-full" style={{ background: "var(--qa-accent-soft)", color: "var(--qa-accent)" }}>{s}</span>
                         ))}
                       </div>
                     </div>
@@ -1591,7 +1591,7 @@ export default function OnboardingWizard() {
               <div className="space-y-2">
                 {data.wowOutput.contentIdeas.slice(0, 5).map((idea, i) => (
                   <div key={i} className="flex items-center gap-3 p-3 rounded-lg" style={{ background: "oklch(0.18 0.02 255)" }}>
-                    <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ background: "oklch(0.25 0.05 255)", color: "oklch(0.7 0.15 255)" }}>
+                    <span className="text-xs px-2 py-1 rounded-full font-medium" style={{ background: "oklch(0.25 0.05 255)", color: "var(--qa-accent)" }}>
                       {idea.platform}
                     </span>
                     <span className="text-gray-300 text-sm flex-1">{idea.title}</span>
@@ -1646,7 +1646,7 @@ export default function OnboardingWizard() {
                 <button
                   onClick={() => handleFinish("/strategia?autoGenerate=true")}
                   className="flex flex-col items-center gap-2 px-4 py-4 rounded-xl font-medium text-white transition-all hover:opacity-90 text-sm"
-                  style={{ background: "linear-gradient(135deg, oklch(0.5 0.18 255), oklch(0.45 0.16 255))" }}
+                  style={{ background: "linear-gradient(135deg, var(--qa-accent), var(--qa-accent))" }}
                 >
                   <TrendingUp size={20} />
                   Stratégia
@@ -1662,7 +1662,7 @@ export default function OnboardingWizard() {
                   <span className="text-xs opacity-70">Content calendar</span>
                 </button>
                 <button
-                  onClick={() => handleFinish("/ertekesites")}
+                  onClick={() => handleFinish("/iranyitopult")}
                   className="flex flex-col items-center gap-2 px-4 py-4 rounded-xl font-medium text-white transition-all hover:opacity-90 text-sm"
                   style={{ background: "linear-gradient(135deg, oklch(0.5 0.18 30), oklch(0.45 0.16 30))" }}
                 >

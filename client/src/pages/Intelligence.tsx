@@ -133,7 +133,7 @@ function AudienceCard({ a }: { a: Audience }) {
           {has(a.channels) && (
             <div>
               <h4 className="text-gray-400 text-xs uppercase tracking-wider mb-2">Preferált csatornák</h4>
-              <ChipList items={a.channels!} color="oklch(0.7 0.15 255)" />
+              <ChipList items={a.channels!} color="var(--qa-accent)" />
             </div>
           )}
         </div>
@@ -145,7 +145,7 @@ function AudienceCard({ a }: { a: Audience }) {
 function GoalsTimeline({ goals }: { goals: SuccessGoals }) {
   const cols: Array<{ label: string; items?: string[]; color: string }> = [
     { label: "30 nap", items: goals.thirtyDay, color: "oklch(0.7 0.15 145)" },
-    { label: "90 nap", items: goals.ninetyDay, color: "oklch(0.7 0.15 255)" },
+    { label: "90 nap", items: goals.ninetyDay, color: "var(--qa-accent)" },
     { label: "1 év", items: goals.oneYear, color: "oklch(0.7 0.18 295)" },
   ];
   return (
@@ -224,7 +224,7 @@ export default function Intelligence() {
   const has = <T,>(xs?: T[] | null): xs is T[] => Array.isArray(xs) && xs.length > 0;
 
   return (
-    <DashboardLayout>
+    <DashboardLayout background="intelligencia">
       <div className="p-6 space-y-6">
         <AiLimitBanner />
 
@@ -248,7 +248,7 @@ export default function Intelligence() {
             onClick={handleRegenerate}
             disabled={isRegenerating || isLoading}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-white font-medium transition-all hover:opacity-90 disabled:opacity-50"
-            style={{ background: "linear-gradient(135deg, oklch(0.55 0.18 285), oklch(0.5 0.15 255))" }}
+            style={{ background: "linear-gradient(135deg, oklch(0.55 0.18 285), var(--qa-accent))" }}
           >
             {isRegenerating ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
             {isRegenerating ? "Generálás..." : "Újragenerálás"}
@@ -272,7 +272,7 @@ export default function Intelligence() {
               onClick={handleRegenerate}
               disabled={isRegenerating}
               className="px-6 py-3 rounded-xl text-white font-medium transition-all hover:opacity-90"
-              style={{ background: "linear-gradient(135deg, oklch(0.55 0.18 285), oklch(0.5 0.15 255))" }}
+              style={{ background: "linear-gradient(135deg, oklch(0.55 0.18 285), var(--qa-accent))" }}
             >
               {isRegenerating ? <Loader2 size={16} className="animate-spin inline mr-2" /> : <Zap size={16} className="inline mr-2" />}
               Intelligence generálása
@@ -321,11 +321,11 @@ export default function Intelligence() {
                   )}
                   {has(bd.differentiators) && (
                     <SectionCard>
-                      <h4 className="text-xs uppercase tracking-wider mb-3" style={{ color: "oklch(0.7 0.15 255)" }}>Megkülönböztető tényezők</h4>
+                      <h4 className="text-xs uppercase tracking-wider mb-3" style={{ color: "var(--qa-accent)" }}>Megkülönböztető tényezők</h4>
                       <ul className="space-y-1.5">
                         {bd.differentiators!.map((d, i) => (
                           <li key={i} className="text-gray-300 text-sm flex items-start gap-2">
-                            <Sparkles size={12} className="mt-1 flex-shrink-0" style={{ color: "oklch(0.7 0.15 255)" }} /> {d}
+                            <Sparkles size={12} className="mt-1 flex-shrink-0" style={{ color: "var(--qa-accent)" }} /> {d}
                           </li>
                         ))}
                       </ul>

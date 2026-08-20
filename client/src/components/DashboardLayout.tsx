@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import G2ALogo from "@/components/G2ALogo";
+import GrowthEngineLogo from "@/components/GrowthEngineLogo";
 import { useAppAuth } from "@/hooks/useAppAuth";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -38,6 +38,9 @@ type NavItem = {
   icon: typeof LayoutDashboard;
   comingSoon?: boolean;
   gate?: PlanGate;
+  /** Másodlagos (kevésbé fontos) menüpont — a "Több" lenyíló alá kerül,
+      hogy a sidebar ne görgessen. */
+  secondary?: boolean;
 };
 
 const publicNavItems: NavItem[] = [
@@ -47,9 +50,9 @@ const publicNavItems: NavItem[] = [
   { href: "/tartalom-studio", label: "Tartalom Studio", icon: Layers, gate: "all" },
   { href: "/kampanyok", label: "Kampányok", icon: Megaphone, gate: "pro+" },
   { href: "/analitika", label: "Analitika", icon: TrendingUp, gate: "all" },
-  { href: "/seo", label: "SEO Audit", icon: SearchCheck, gate: "all" },
-  { href: "/riportok", label: "Riportok", icon: BarChart3, gate: "pro+" },
-  { href: "/video-studio", label: "Videókészítő", icon: Video, gate: "pro+", comingSoon: true },
+  { href: "/seo", label: "SEO Audit", icon: SearchCheck, gate: "all", secondary: true },
+  { href: "/riportok", label: "Riportok", icon: BarChart3, gate: "pro+", secondary: true },
+  { href: "/video-studio", label: "Videókészítő", icon: Video, gate: "pro+", comingSoon: true, secondary: true },
   { href: "/beallitasok", label: "Beállítások", icon: Settings, gate: "all" },
 ];
 
@@ -61,10 +64,10 @@ const adminNavItems: NavItem[] = [
   { href: "/tartalom-studio", label: "Tartalom Studio", icon: Layers },
   { href: "/kampanyok", label: "Kampányok", icon: Megaphone },
   { href: "/analitika", label: "Analitika", icon: TrendingUp },
-  { href: "/seo", label: "SEO Audit", icon: SearchCheck },
-  { href: "/riportok", label: "Riportok", icon: BarChart3 },
-  { href: "/video-studio", label: "Videókészítő", icon: Video, comingSoon: true },
-  { href: "/hirlevel", label: "Hírlevél", icon: Mail },
+  { href: "/seo", label: "SEO Audit", icon: SearchCheck, secondary: true },
+  { href: "/riportok", label: "Riportok", icon: BarChart3, secondary: true },
+  { href: "/video-studio", label: "Videókészítő", icon: Video, comingSoon: true, secondary: true },
+  { href: "/hirlevel", label: "Hírlevél", icon: Mail, secondary: true },
   { href: "/beallitasok", label: "Beállítások", icon: Settings },
 ];
 
@@ -79,9 +82,11 @@ interface DashboardLayoutProps {
   children: React.ReactNode;
   title?: string;
   subtitle?: string;
+  /** Brand oldal-háttér neve (client/public/brand/backgrounds/{name}.svg), pl. "iranyitopult". */
+  background?: string;
 }
 
-export default function DashboardLayout({ children, title, subtitle }: DashboardLayoutProps) {
+export default function DashboardLayout({ children, title, subtitle, background }: DashboardLayoutProps) {
   const [location, navigate] = useLocation();
   const [showNotifs, setShowNotifs] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -140,6 +145,56 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
         if (item.gate === "pro+") return subscription.canUseCampaigns;
         return true;
       });
+
+  // A sidebar ne görgessen: az elsődleges menüpontok mindig látszanak, a
+  // másodlagosak (secondary) egy "Több" lenyíló alá kerülnek. Ha a jelenlegi
+  // oldal egy másodlagos menüponté, a lenyíló automatikusan nyitva van.
+  const primaryNav = navItems.filter(i => !i.secondary);
+  const secondaryNav = navItems.filter(i => i.secondary);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const isNavActive = (href: string) => location === href || (href !== "/iranyitopult" && location.startsWith(href));
+  const activeInSecondary = secondaryNav.some(i => isNavActive(i.href));
+  const showMore = moreOpen || activeInSecondary;
+
+  const renderNavItem = ({ href, label, icon: Icon, comingSoon }: NavItem) => {
+    const isActive = isNavActive(href);
+    if (comingSoon) {
+      return (
+        <Tooltip key={href} delayDuration={400}>
+          <TooltipTrigger asChild>
+            <div
+              className="nav-item cursor-not-allowed opacity-50 select-none"
+              style={{ pointerEvents: "none" }}
+              aria-disabled="true"
+            >
+              <Icon size={15} />
+              <span>{label}</span>
+              <span
+                className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-full uppercase tracking-wider"
+                style={{ background: "oklch(0.75 0.18 75 / 18%)", color: "oklch(0.85 0.16 75)" }}
+              >
+                Hamarosan
+              </span>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="text-xs">{label} — hamarosan</TooltipContent>
+        </Tooltip>
+      );
+    }
+    return (
+      <Tooltip key={href} delayDuration={400}>
+        <TooltipTrigger asChild>
+          <Link href={href} className={cn("nav-item", isActive && "active")}>
+            <Icon size={15} />
+            <span>{label}</span>
+            {isActive && <ChevronRight size={12} className="ml-auto" style={{ color: "var(--qa-accent)", opacity: 0.7 }} />}
+          </Link>
+        </TooltipTrigger>
+        <TooltipContent side="right" className="text-xs">{label}</TooltipContent>
+      </Tooltip>
+    );
+  };
+
   const { restartTour } = useTour();
 
   const updateSelf = trpc.appAuth.updateSelf.useMutation({
@@ -200,14 +255,14 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
         )}
         style={{ background: "var(--qa-surface)", borderColor: "var(--qa-border)" }}
       >
-        {/* Logo */}
+        {/* Logo — a Growth Engine termék-jel (bars) + írott lockup */}
         <div className="px-4 py-4 border-b" style={{ borderColor: "var(--qa-border)" }}>
           <Link href="/iranyitopult">
-            <div className="flex items-center gap-2.5 cursor-pointer group transition-opacity hover:opacity-80">
-              <G2ALogo variant="mark" size="sm" />
+            <div className="flex items-center gap-2.5 cursor-pointer transition-opacity hover:opacity-80">
+              <GrowthEngineLogo size={30} />
               <div>
-                <p className="text-sm font-bold leading-none" style={{ fontFamily: "var(--font-heading)", color: "var(--qa-fg)" }}>G2A</p>
-                <p className="text-xs leading-none mt-0.5" style={{ color: "var(--qa-fg4)" }}>Growth Engine</p>
+                <p className="font-bold leading-none" style={{ fontFamily: "var(--font-heading)", fontSize: "15px", letterSpacing: "-0.03em", color: "var(--qa-fg)" }}>Growth Engine</p>
+                <p className="leading-none mt-1" style={{ fontFamily: "var(--font-mono)", fontSize: "9px", letterSpacing: "0.18em", color: "var(--qa-fg4)" }}>BY G2A</p>
               </div>
             </div>
           </Link>
@@ -299,51 +354,35 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
           </div>
         )}
 
-        {/* Navigation */}
+        {/* Navigation — elsődleges elemek + "Több" lenyíló a másodlagosaknak
+            (így a sidebar nem görget). */}
         <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
-          {navItems.map(({ href, label, icon: Icon, comingSoon }) => {
-            const isActive = location === href || (href !== "/iranyitopult" && location.startsWith(href));
-            // comingSoon → nem klikkelhető, "Hamarosan" badge a label mellett.
-            // A flag-et a navItems-ben jelöljük (lásd publicNavItems/adminNavItems fent).
-            if (comingSoon) {
-              return (
-                <Tooltip key={href} delayDuration={400}>
-                  <TooltipTrigger asChild>
-                    <div
-                      className="nav-item cursor-not-allowed opacity-50 select-none"
-                      style={{ pointerEvents: "none" }}
-                      aria-disabled="true"
-                    >
-                      <Icon size={15} />
-                      <span>{label}</span>
-                      <span
-                        className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-full uppercase tracking-wider"
-                        style={{
-                          background: "oklch(0.75 0.18 75 / 18%)",
-                          color: "oklch(0.85 0.16 75)",
-                        }}
-                      >
-                        Hamarosan
-                      </span>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="text-xs">{label} — hamarosan</TooltipContent>
-                </Tooltip>
-              );
-            }
-            return (
-              <Tooltip key={href} delayDuration={400}>
-                <TooltipTrigger asChild>
-                  <Link href={href} className={cn("nav-item", isActive && "active")}>
-                    <Icon size={15} />
-                    <span>{label}</span>
-                    {isActive && <ChevronRight size={12} className="ml-auto" style={{ color: "var(--qa-accent)", opacity: 0.7 }} />}
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="text-xs">{label}</TooltipContent>
-              </Tooltip>
-            );
-          })}
+          {primaryNav.map(renderNavItem)}
+
+          {secondaryNav.length > 0 && (
+            <>
+              <button
+                type="button"
+                onClick={() => setMoreOpen(o => !o)}
+                className={cn("nav-item w-full text-left", showMore && "text-[var(--qa-fg)]")}
+                aria-expanded={showMore}
+                title={showMore ? "Kevesebb" : "Több menüpont"}
+              >
+                <Menu size={15} />
+                <span>Több</span>
+                <ChevronDown
+                  size={13}
+                  className="ml-auto transition-transform"
+                  style={{ transform: showMore ? "rotate(180deg)" : "none", color: "var(--qa-fg4)" }}
+                />
+              </button>
+              {showMore && (
+                <div className="space-y-0.5">
+                  {secondaryNav.map(renderNavItem)}
+                </div>
+              )}
+            </>
+          )}
         </nav>
 
         {/* Bottom: user info + plan badge + logout */}
@@ -412,7 +451,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
             </button>
             <div>
               {title && (
-                <h1 className="text-base font-bold leading-none" style={{ fontFamily: "var(--font-heading)", color: "var(--qa-fg)" }}>
+                <h1 className="font-bold leading-none" style={{ fontFamily: "var(--font-heading)", fontSize: "17px", letterSpacing: "-0.02em", color: "var(--qa-fg)" }}>
                   {title}
                 </h1>
               )}
@@ -438,7 +477,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
               <span>Ugrás…</span>
               <kbd
                 className="hidden lg:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded"
-                style={{ background: "var(--qa-surface)", color: "var(--qa-fg4)", fontSize: "10px", fontFamily: "monospace" }}
+                style={{ background: "var(--qa-surface)", color: "var(--qa-fg4)", fontSize: "10px", fontFamily: "var(--font-mono)" }}
               >
                 ⌘K
               </kbd>
@@ -743,8 +782,25 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-6">
-          {children}
+        <main className="flex-1 overflow-y-auto p-6 relative">
+          {/* Brand oldal-háttér (design_handoff) — a fejléc + első kártyasor mögé,
+              pointer-events nélkül, a tartalom fölé z-index:1-en. */}
+          {background && (
+            <img
+              src={`/brand/backgrounds/${background}.svg`}
+              alt=""
+              aria-hidden="true"
+              style={{
+                position: "absolute", top: 0, left: 0, width: "100%", height: "auto",
+                pointerEvents: "none", zIndex: 0, opacity: 0.7,
+                maskImage: "linear-gradient(to bottom, black 55%, transparent)",
+                WebkitMaskImage: "linear-gradient(to bottom, black 55%, transparent)",
+              }}
+            />
+          )}
+          <div className="relative" style={{ zIndex: 1 }}>
+            {children}
+          </div>
         </main>
       </div>
 

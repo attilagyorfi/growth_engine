@@ -1,7 +1,14 @@
 import { cn } from "@/lib/utils";
 
+/** A design_handoff brand-illusztrációi (client/public/brand/illustrations). */
+export type BrandIllustration =
+  | "empty-content" | "empty-results" | "empty-analytics" | "empty-calendar"
+  | "coming-soon" | "all-clear" | "offline" | "error" | "ai-working" | "onboarding";
+
 interface EmptyStateProps {
   icon?: React.ReactNode;
+  /** Brand-illusztráció neve — ha megadva, az ikon-doboz helyett ezt rendereli. */
+  illustration?: BrandIllustration;
   title: string;
   description?: string;
   action?: React.ReactNode;
@@ -15,7 +22,7 @@ interface EmptyStateProps {
  * Unified empty state component used across all dashboard pages.
  * Uses QA CSS variables for consistent theming.
  */
-export function EmptyState({ icon, title, description, action, className, compact }: EmptyStateProps) {
+export function EmptyState({ icon, illustration, title, description, action, className, compact }: EmptyStateProps) {
   return (
     <div
       className={cn(
@@ -24,7 +31,17 @@ export function EmptyState({ icon, title, description, action, className, compac
         className
       )}
     >
-      {icon && (
+      {illustration ? (
+        <img
+          src={`/brand/illustrations/${illustration}.svg`}
+          alt=""
+          aria-hidden="true"
+          width={compact ? 72 : 120}
+          height={compact ? 72 : 120}
+          className="mb-4"
+          style={{ display: "block" }}
+        />
+      ) : icon && (
         <div
           className={cn(
             "flex items-center justify-center rounded-xl mb-4",

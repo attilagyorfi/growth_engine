@@ -100,18 +100,20 @@
 
   /* Text scale */
   --qa-fg:   #F5F6F8;
-  --qa-fg2:  #B4B7C0;
-  --qa-fg3:  #7C8089;
-  --qa-fg4:  #4A4E58;
+  --qa-fg2:  #C2C5CE;   /* volt #B4B7C0 — kicsit világosabb, jobb olvashatóság */
+  --qa-fg3:  #949AA6;   /* volt #7C8089 — AA-kontraszt a felületen (másodlagos szöveg) */
+  --qa-fg4:  #6E7480;   /* volt #4A4E58 — a muted/inaktív szöveg eddig ~2:1 volt (olvashatatlan), most ~3.8:1 */
 
   /* Accent: G2A teal (csere a kékről) */
-  --qa-accent:        #14B8A6;
-  --qa-accent-hover:  #0D9488;
-  --qa-accent-on:     #04211D;   /* szöveg teal háttéren */
-  --qa-accent-soft:   rgba(20, 184, 166, 0.14);
-  --qa-accent-ring:   rgba(20, 184, 166, 0.12);
-  --qa-accent-glow:   0 6px 20px rgba(20, 184, 166, 0.35);
-  --qa-accent-purple: #8B5CF6;   /* ÚJ: kategória-hue, eddig üresen resolve-ált */
+  /* Akcent: G2A lila/lilac (a landing árnyalata — a teal helyett).
+     Fehér szöveg a lila háttéren (a lila sötétebb, mint a teal volt). */
+  --qa-accent:        #8B5CF6;
+  --qa-accent-hover:  #7C3AED;
+  --qa-accent-on:     #FFFFFF;   /* szöveg/ikon a lila háttéren */
+  --qa-accent-soft:   rgba(139, 92, 246, 0.16);
+  --qa-accent-ring:   rgba(139, 92, 246, 0.35);
+  --qa-accent-glow:   0 6px 20px rgba(139, 92, 246, 0.35);
+  --qa-accent-purple: #A78BFA;   /* világosabb lila a kategória-jelöléshez (elkülönül az akcenttől) */
 
   /* Status */
   --qa-success: #22C55E;

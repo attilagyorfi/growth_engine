@@ -219,7 +219,7 @@ export default function Settings() {
   const activeTabLabel = [...BASE_TABS, ADMIN_TAB].find(t => t.id === activeTab)?.label ?? "Beállítások";
 
   return (
-    <DashboardLayout>
+    <DashboardLayout background="beallitasok">
       {/* Breadcrumb — orientáció a mély tab-struktúrában */}
       <nav aria-label="breadcrumb" className="mb-3">
         <ol className="flex flex-wrap items-center gap-1.5 text-sm" style={{ color: "var(--qa-fg3)" }}>

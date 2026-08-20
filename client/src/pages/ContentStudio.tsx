@@ -540,7 +540,7 @@ export default function ContentStudio() {
   );
 
   return (
-    <DashboardLayout>
+    <DashboardLayout background="tartalom-studio">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -818,7 +818,7 @@ export default function ContentStudio() {
         <div>
           {draftPosts.length === 0 ? (
             <EmptyState
-              icon={<FileText className="w-12 h-12" />}
+              illustration="empty-content"
               title="Nincsenek piszkozataid"
               description="Generálj AI-vel tartalmat, majd mentsd el piszkozatként szerkesztés előtt."
               action={
@@ -857,7 +857,7 @@ export default function ContentStudio() {
         <div>
           {publishedPosts.length === 0 ? (
             <EmptyState
-              icon={<CheckCircle2 className="w-12 h-12" />}
+              illustration="all-clear"
               title="Még nincs publikált tartalmad"
               description="Publikált tartalmaid itt jelennek meg az előzményekben."
             />

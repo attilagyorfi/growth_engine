@@ -145,7 +145,7 @@ export default function DailyTasksBlock({ profileId }: DailyTasksBlockProps) {
         <div className="flex items-center gap-2">
           <div
             className="w-7 h-7 rounded-lg flex items-center justify-center"
-            style={{ background: "var(--qa-accent-soft, rgba(20,184,166,.14))" }}
+            style={{ background: "var(--qa-accent-soft, rgba(139, 92, 246,.14))" }}
           >
             <Sparkles size={14} style={{ color: "var(--qa-accent)" }} />
           </div>
@@ -165,7 +165,7 @@ export default function DailyTasksBlock({ profileId }: DailyTasksBlockProps) {
           onClick={handleGenerate}
           disabled={isLoading || !profileId}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-opacity disabled:opacity-50"
-          style={{ background: "var(--qa-accent-soft, rgba(20,184,166,.14))", color: "var(--qa-accent)" }}
+          style={{ background: "var(--qa-accent-soft, rgba(139, 92, 246,.14))", color: "var(--qa-accent)" }}
         >
           {isLoading ? (
             <Loader2 size={12} className="animate-spin" />
@@ -227,12 +227,12 @@ export default function DailyTasksBlock({ profileId }: DailyTasksBlockProps) {
                       onClick={() => handleTaskClick(task, idx)}
                       className="w-full flex items-center gap-3 p-3 rounded-lg text-left transition-all group cursor-pointer"
                       style={{
-                        background: isClicked ? "var(--qa-accent-soft, rgba(20,184,166,.14))" : "var(--qa-surface2)",
+                        background: isClicked ? "var(--qa-accent-soft, rgba(139, 92, 246,.14))" : "var(--qa-surface2)",
                         border: "1px solid transparent",
                       }}
                       onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
                         e.currentTarget.style.background = "var(--qa-surface3)";
-                        e.currentTarget.style.borderColor = "var(--qa-accent-ring, rgba(20,184,166,.12))";
+                        e.currentTarget.style.borderColor = "var(--qa-accent-ring, rgba(139, 92, 246,.12))";
                       }}
                       onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
                         e.currentTarget.style.background = "var(--qa-surface2)";
@@ -296,9 +296,9 @@ export default function DailyTasksBlock({ profileId }: DailyTasksBlockProps) {
                 onClick={handleGenerate}
                 disabled={isLoading}
                 className="flex flex-col items-center gap-2 px-6 py-4 rounded-xl border transition-all cursor-pointer w-full"
-                style={{ background: "var(--qa-accent-soft, rgba(20,184,166,.10))", borderColor: "var(--qa-accent-ring, rgba(20,184,166,.25))", borderStyle: "dashed" }}
-                onMouseEnter={(e: any) => { e.currentTarget.style.background = "var(--qa-accent-soft, rgba(20,184,166,.18))"; }}
-                onMouseLeave={(e: any) => { e.currentTarget.style.background = "var(--qa-accent-soft, rgba(20,184,166,.10))"; }}
+                style={{ background: "var(--qa-accent-soft, rgba(139, 92, 246,.10))", borderColor: "var(--qa-accent-ring, rgba(139, 92, 246,.25))", borderStyle: "dashed" }}
+                onMouseEnter={(e: any) => { e.currentTarget.style.background = "var(--qa-accent-soft, rgba(139, 92, 246,.18))"; }}
+                onMouseLeave={(e: any) => { e.currentTarget.style.background = "var(--qa-accent-soft, rgba(139, 92, 246,.10))"; }}
               >
                 {isLoading
                   ? <Loader2 size={24} className="animate-spin" style={{ color: "var(--qa-accent)" }} />

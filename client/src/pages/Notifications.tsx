@@ -183,13 +183,13 @@ export default function Notifications() {
           <ListSkeleton rows={5} />
         ) : totalCount === 0 ? (
           <EmptyState
-            icon={<Bell size={22} />}
+            illustration="all-clear"
             title="Még nincs értesítésed"
             description="Új értesítést kapsz, ha egy poszt jóváhagyást igényel, új lead érkezik, vagy a stratégia frissül. Az értesítések itt gyűlnek."
           />
         ) : filteredCount === 0 ? (
           <EmptyState
-            icon={<Filter size={22} />}
+            illustration="empty-results"
             title="Nincs találat"
             description="A jelenlegi szűrők egyetlen értesítést sem adnak. Módosítsd a szűrőket vagy válaszd az 'Összes' opciót."
           />
