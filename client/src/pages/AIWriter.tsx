@@ -29,7 +29,7 @@ interface GeneratedContent {
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 const CONTENT_TYPES: { value: ContentType; label: string; icon: React.ElementType; color: string; category: "email" | "social" | "other" }[] = [
-  { value: "cold_email", label: "Hideg email", icon: Mail, color: "oklch(0.65 0.18 255)", category: "email" },
+  { value: "cold_email", label: "Hideg email", icon: Mail, color: "var(--qa-accent)", category: "email" },
   { value: "follow_up_email", label: "Follow-up email", icon: Mail, color: "oklch(0.65 0.15 220)", category: "email" },
   { value: "linkedin_post", label: "LinkedIn poszt", icon: Linkedin, color: "oklch(0.65 0.18 240)", category: "social" },
   { value: "facebook_post", label: "Facebook poszt", icon: Share2, color: "oklch(0.65 0.18 270)", category: "social" },
@@ -238,7 +238,7 @@ export default function AIWriter() {
               onClick={handleGenerate}
               disabled={isGenerating || !topic.trim()}
               className="w-full py-3 rounded-xl text-white font-semibold flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50"
-              style={{ background: "linear-gradient(135deg, oklch(0.55 0.2 285), oklch(0.5 0.18 255))" }}
+              style={{ background: "linear-gradient(135deg, oklch(0.55 0.2 285), var(--qa-accent))" }}
             >
               {isGenerating ? (
                 <><Loader2 size={18} className="animate-spin" /> Generálás folyamatban...</>
