@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import G2ALogo from "@/components/G2ALogo";
+import GrowthEngineLogo from "@/components/GrowthEngineLogo";
 import { useAppAuth } from "@/hooks/useAppAuth";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -200,14 +200,14 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
         )}
         style={{ background: "var(--qa-surface)", borderColor: "var(--qa-border)" }}
       >
-        {/* Logo */}
+        {/* Logo — a Growth Engine termék-jel (bars) + írott lockup */}
         <div className="px-4 py-4 border-b" style={{ borderColor: "var(--qa-border)" }}>
           <Link href="/iranyitopult">
-            <div className="flex items-center gap-2.5 cursor-pointer group transition-opacity hover:opacity-80">
-              <G2ALogo variant="mark" size="sm" />
+            <div className="flex items-center gap-2.5 cursor-pointer transition-opacity hover:opacity-80">
+              <GrowthEngineLogo size={30} />
               <div>
-                <p className="text-sm font-bold leading-none" style={{ fontFamily: "var(--font-heading)", color: "var(--qa-fg)" }}>G2A</p>
-                <p className="text-xs leading-none mt-0.5" style={{ color: "var(--qa-fg4)" }}>Growth Engine</p>
+                <p className="font-bold leading-none" style={{ fontFamily: "var(--font-heading)", fontSize: "15px", letterSpacing: "-0.03em", color: "var(--qa-fg)" }}>Growth Engine</p>
+                <p className="leading-none mt-1" style={{ fontFamily: "var(--font-mono)", fontSize: "9px", letterSpacing: "0.18em", color: "var(--qa-fg4)" }}>BY G2A</p>
               </div>
             </div>
           </Link>
@@ -412,7 +412,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
             </button>
             <div>
               {title && (
-                <h1 className="text-base font-bold leading-none" style={{ fontFamily: "var(--font-heading)", color: "var(--qa-fg)" }}>
+                <h1 className="font-bold leading-none" style={{ fontFamily: "var(--font-heading)", fontSize: "17px", letterSpacing: "-0.02em", color: "var(--qa-fg)" }}>
                   {title}
                 </h1>
               )}
@@ -438,7 +438,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
               <span>Ugrás…</span>
               <kbd
                 className="hidden lg:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded"
-                style={{ background: "var(--qa-surface)", color: "var(--qa-fg4)", fontSize: "10px", fontFamily: "monospace" }}
+                style={{ background: "var(--qa-surface)", color: "var(--qa-fg4)", fontSize: "10px", fontFamily: "var(--font-mono)" }}
               >
                 ⌘K
               </kbd>
