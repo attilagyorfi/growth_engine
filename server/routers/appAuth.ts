@@ -17,6 +17,7 @@ import {
 import { getProfilesByAppUser } from "../db";
 import { SignJWT, jwtVerify } from "jose";
 import { ENV } from "../_core/env";
+import { isDemoEmail, resetDemoAccountData } from "../_core/demoAccount";
 import {
   loginIpLimiter, loginEmailLimiter,
   registerIpLimiter,
@@ -222,9 +223,31 @@ export const appAuthRouter = router({
         });
       }
       await updateLastSignedIn(user.id);
+
+      // Demo/teszt fiók: minden belépéskor üresre resetel (friss onboarding-élmény).
+      // A demo mindig sima "user" jogkör, ezért ide sosem esik super_admin.
+      const isDemo = isDemoEmail(user.email);
+      if (isDemo) {
+        await resetDemoAccountData(user.id);
+      }
+
       const token = await signToken(user.id, user.role);
       ctx.res.setHeader("Set-Cookie", buildSessionCookie(token));
-      return { success: true, user: { id: user.id, email: user.email, name: user.name, role: user.role, onboardingCompleted: user.onboardingCompleted, profileId: user.profileId, subscriptionPlan: user.subscriptionPlan, subscriptionBilling: user.subscriptionBilling } };
+      return {
+        success: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          // Demo: a reset után friss állapotot adunk vissza, hogy a frontend
+          // azonnal az onboardingra irányítson (App.tsx onboardingCompleted-check).
+          onboardingCompleted: isDemo ? false : user.onboardingCompleted,
+          profileId: isDemo ? null : user.profileId,
+          subscriptionPlan: user.subscriptionPlan,
+          subscriptionBilling: user.subscriptionBilling,
+        },
+      };
     }),
 
   // ─── Kijelentkezés ───────────────────────────────────────────────────────────
