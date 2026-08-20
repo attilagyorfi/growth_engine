@@ -58,4 +58,13 @@ export const ENV = {
   // APP_URL — production base URL minden OAuth callback redirectjéhez.
   // A LinkedIn OAuth biztonsági javításával lett bevezetve (audit #2 fix).
   appUrl: (process.env.APP_URL ?? "").trim().replace(/\/+$/, ""),
+
+  // ─── Demo / teszt fiók (belső QA) ───────────────────────────────────────
+  // Ha "true", a szerver induláskor létrehoz egy NEM-admin demo fiókot
+  // (admin@growthengine.hu / admin), ami MINDEN belépéskor üresre resetel →
+  // friss onboarding-élmény. Alapból KIKAPCSOLVA: a demo fiók csak akkor
+  // létezik, ha ezt a Railway-en explicit bekapcsolod. Így NEM marad örökös
+  // gyenge-jelszavú hátsó ajtó a production configban. A fiók sima "user"
+  // jogkörű és reset-on-login, ezért a blast radius egy homokozó.
+  enableDemoAccount: process.env.ENABLE_DEMO_ACCOUNT === "true",
 };

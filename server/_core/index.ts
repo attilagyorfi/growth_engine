@@ -13,6 +13,7 @@ import { serveStatic, setupVite } from "./vite";
 import { handleStripeWebhook } from "../stripe/webhook";
 import { logLlmStartup } from "./llm";
 import { ENV } from "./env";
+import { seedDemoAccount } from "./demoAccount";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -99,6 +100,9 @@ async function startServer() {
     console.log(`Server running on port ${port} (${process.env.NODE_ENV || "development"})`);
     // Diagnosztika: melyik LLM provider aktív (openai vs. a halott manus proxy)?
     logLlmStartup();
+    // Demo/teszt fiók seed — csak ha ENABLE_DEMO_ACCOUNT=true. Non-blocking,
+    // non-fatal: a szerver akkor is fut, ha a seed elhasal (pl. nincs DB).
+    seedDemoAccount().catch(err => console.error("[demo] seed failed:", err));
   });
 }
 
