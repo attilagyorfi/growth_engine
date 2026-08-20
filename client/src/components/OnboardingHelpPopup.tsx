@@ -34,7 +34,7 @@ export function HelpPopup({ helpKey, title, position = "bottom", className }: He
         className="w-5 h-5 rounded-full flex items-center justify-center transition-all hover:scale-110"
         style={{
           background: open ? "var(--qa-accent-soft)" : "oklch(0.28 0.04 255)",
-          color: open ? "oklch(0.75 0.18 255)" : "oklch(0.6 0.15 255)",
+          color: open ? "var(--qa-accent)" : "var(--qa-accent)",
         }}
         title={lang === "hu" ? "Segítség" : "Help"}
       >
@@ -63,7 +63,7 @@ export function HelpPopup({ helpKey, title, position = "bottom", className }: He
               <div className="flex items-center gap-2">
                 <div
                   className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ background: "var(--qa-accent-soft)", color: "oklch(0.7 0.18 255)" }}
+                  style={{ background: "var(--qa-accent-soft)", color: "var(--qa-accent)" }}
                 >
                   <Lightbulb size={13} />
                 </div>
@@ -92,7 +92,7 @@ export function HelpPopup({ helpKey, title, position = "bottom", className }: He
             <button
               onClick={() => setOpen(false)}
               className="mt-3 flex items-center gap-1 text-xs font-medium transition-opacity hover:opacity-75"
-              style={{ color: "oklch(0.65 0.18 255)" }}
+              style={{ color: "var(--qa-accent)" }}
             >
               {lang === "hu" ? "Értettem" : "Got it"}
               <ChevronRight size={11} />
@@ -129,7 +129,7 @@ export function HelpBanner({ helpKey, title, dismissible = true, className }: He
     >
       <div
         className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
-        style={{ background: "var(--qa-accent-soft)", color: "oklch(0.7 0.18 255)" }}
+        style={{ background: "var(--qa-accent-soft)", color: "var(--qa-accent)" }}
       >
         <Lightbulb size={14} />
       </div>
@@ -245,7 +245,7 @@ export function StepTour({ step, onClose }: StepTourProps) {
             <Lightbulb size={18} className="text-white" />
           </div>
           <div>
-            <p className="text-xs font-medium" style={{ color: "oklch(0.6 0.15 255)" }}>
+            <p className="text-xs font-medium" style={{ color: "var(--qa-accent)" }}>
               {lang === "hu" ? `${step}. lépés útmutatója` : `Step ${step} guide`}
             </p>
             <h3 className="text-sm font-bold" style={{ fontFamily: "var(--font-heading)", color: "oklch(0.92 0.008 240)" }}>
@@ -260,7 +260,7 @@ export function StepTour({ step, onClose }: StepTourProps) {
             <div key={i} className="flex items-start gap-2.5">
               <div
                 className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-bold"
-                style={{ background: "var(--qa-accent-soft)", color: "oklch(0.7 0.18 255)" }}
+                style={{ background: "var(--qa-accent-soft)", color: "var(--qa-accent)" }}
               >
                 {i + 1}
               </div>
