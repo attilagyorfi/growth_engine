@@ -15,6 +15,7 @@ import {
   getAllAppUsers,
 } from "../authDb";
 import { getProfilesByAppUser } from "../db";
+import { assertProfileOwnership } from "../_core/ownership";
 import { SignJWT, jwtVerify } from "jose";
 import { ENV } from "../_core/env";
 import { isDemoEmail, resetDemoAccountData } from "../_core/demoAccount";
@@ -71,7 +72,10 @@ async function signToken(userId: string, role: string) {
 
 export async function verifyAppToken(token: string) {
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    // Algoritmus rögzítés (defense-in-depth): csak HS256-ot fogadunk el, hogy
+    // semmilyen alg-confusion trükk ne csússzon át (a szimmetrikus kulcs miatt
+    // a jose amúgy is HMAC-re szorít, de legyen explicit — mint az sdk-ban).
+    const { payload } = await jwtVerify(token, JWT_SECRET, { algorithms: ["HS256"] });
     return payload as { userId: string; role: string };
   } catch {
     return null;
@@ -104,8 +108,12 @@ export const appAuthRouter = router({
       // Admin-jóváhagyás: új felhasználók alapból INAKTÍVAK, az adminnak kell aktiválnia.
       // A super_admin-okat (saját címek) azonnal aktiváljuk, hogy ne legyenek kizárva.
       const isActive = isAdmin;
-      // Free plan ignorálja a billing periódust – csak fizetős csomagnál releváns
-      const billing = input.subscriptionPlan === "free" ? "monthly" : (input.subscriptionBilling ?? "monthly");
+      // SECURITY FIX (audit MEDIUM): a regisztráció eddig a KLIENS által küldött
+      // subscriptionPlan-t tárolta fizetés nélkül → bárki "agency"-vel regisztrálva
+      // ingyen megkapta a legmagasabb AI-kvótát (valós OpenAI/HeyGen költség a
+      // tulajnak). Most a fiók MINDIG "free" tier-en jön létre; fizetős csomagot
+      // csak a Stripe billing flow (webhook) állíthat be. A kért csomagot a
+      // hírlevél-lead notes mezője megőrzi (lentebb), hogy a tulaj lássa a szándékot.
       const user = await createAppUser({
         id,
         email: input.email.toLowerCase(),
@@ -115,8 +123,8 @@ export const appAuthRouter = router({
         onboardingCompleted: false,
         profileId: null,
         active: isActive,
-        subscriptionPlan: input.subscriptionPlan ?? "free",
-        subscriptionBilling: billing,
+        subscriptionPlan: "free",
+        subscriptionBilling: "monthly",
       });
       if (!user) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Regisztráció sikertelen" });
 
@@ -298,6 +306,12 @@ export const appAuthRouter = router({
     .input(z.object({ profileId: z.string() }))
     .mutation(async ({ input, ctx }) => {
       // ctx.appUser is guaranteed by appUserProcedure (works for both app_token and OAuth bridge)
+      // SECURITY FIX (audit HIGH): eddig ownership-check nélkül állította be az
+      // appUsers.profileId-t → egy user a saját session profileId-jét egy VÁLTOZÓ
+      // profilra állíthatta, és (a régi fast-path miatt) minden profil-scoped
+      // endpointon megkerülte az ownership-ellenőrzést. Most kötelező: csak SAJÁT
+      // (vagy super_adminként bármely) profilra állítható.
+      await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
       await updateAppUserOnboarding(ctx.appUser.id, input.profileId);
       return { success: true };
     }),

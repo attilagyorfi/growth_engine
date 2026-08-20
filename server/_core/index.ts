@@ -37,6 +37,34 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   const server = createServer(app);
+
+  // ─── Trust proxy (Railway/Render) ────────────────────────────────────────
+  // SECURITY FIX (audit MEDIUM): a platform egy reverse-proxy mögé teszi a
+  // containert. Enélkül a `req.ip` a proxy IP-je, és a rate-limiter a kliens
+  // által HAMISÍTHATÓ X-Forwarded-For első elemét használta → IP-limiter bypass
+  // (spam-regisztráció, reset-email flood). 1 hop = a platform egyetlen proxyja.
+  app.set("trust proxy", 1);
+
+  // ─── Biztonsági fejlécek (helmet-mentesen, dep nélkül) ────────────────────
+  // SECURITY FIX (audit HIGH): eddig SEMMILYEN security header nem volt.
+  // - X-Frame-Options + CSP frame-ancestors: clickjacking ellen (a dashboard
+  //   nem ágyazható iframe-be),
+  // - nosniff: MIME-sniffing ellen,
+  // - Referrer-Policy: reset-token / URL szivárgás csökkentése,
+  // - HSTS (prod): SSL-strip ellen.
+  // Szándékosan NINCS szigorú script-src CSP, hogy a Vite SPA ne törjön —
+  // az a következő, dedikált lépés (finomhangolt CSP).
+  app.use((_req, res, next) => {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+    res.setHeader("Content-Security-Policy", "frame-ancestors 'none'");
+    if (ENV.isProduction) {
+      res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+    }
+    next();
+  });
+
   // ─── Stripe webhook MUST be registered before express.json() ─────────────
   app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), handleStripeWebhook);
   // Configure body parser with larger size limit for file uploads
