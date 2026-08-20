@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="420" viewBox="0 0 1440 420" fill="none" role="img" aria-label="Growth Engine intel háttér">
+
+  <defs>
+    <pattern id="grid-intel" width="60" height="60" patternUnits="userSpaceOnUse">
+      <path d="M60 0H0v60" fill="none" stroke="#ffffff" stroke-opacity="0.028" stroke-width="1"></path>
+    </pattern>
+    <radialGradient id="glowA-intel" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(980 70) rotate(90) scale(460)">
+      <stop stop-color="#14B8A6" stop-opacity="0.20"></stop><stop offset="1" stop-color="#14B8A6" stop-opacity="0"></stop>
+    </radialGradient>
+    <radialGradient id="glowB-intel" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(260 340) rotate(90) scale(380)">
+      <stop stop-color="#0D9488" stop-opacity="0.13"></stop><stop offset="1" stop-color="#0D9488" stop-opacity="0"></stop>
+    </radialGradient>
+    <filter id="grain-intel" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"></feTurbulence>
+      <feColorMatrix type="saturate" values="0"></feColorMatrix>
+    </filter>
+    <linearGradient id="fade-intel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0A0B0F" stop-opacity="0"></stop><stop offset="1" stop-color="#0A0B0F" stop-opacity="0.9"></stop>
+    </linearGradient>
+  </defs>
+  <rect width="1440" height="420" fill="#0A0B0F"></rect>
+  <rect width="1440" height="420" fill="url(#grid-intel)"></rect>
+  <rect width="1440" height="420" fill="url(#glowA-intel)"></rect>
+  <rect width="1440" height="420" fill="url(#glowB-intel)"></rect>
+
+  <g stroke="#14B8A6" stroke-width="1" opacity="0.3">
+    <path d="M300 120 L470 205 M470 205 L640 140 M640 140 L820 220 M820 220 L1000 150 M1000 150 L1160 240              M300 120 L360 260 M360 260 L470 205 M640 140 L700 280 M700 280 L820 220 M1000 150 L1060 290 M1060 290 L1160 240              M360 260 L700 280 M700 280 L1060 290"></path>
+  </g>
+  <g fill="#0A0B0F" stroke="#14B8A6" stroke-width="1.6" opacity="0.75">
+    <circle cx="300" cy="120" r="7"></circle><circle cx="470" cy="205" r="9"></circle><circle cx="640" cy="140" r="6"></circle>
+    <circle cx="820" cy="220" r="10"></circle><circle cx="1000" cy="150" r="6.5"></circle><circle cx="1160" cy="240" r="8"></circle>
+    <circle cx="360" cy="260" r="5.5"></circle><circle cx="700" cy="280" r="7"></circle><circle cx="1060" cy="290" r="5.5"></circle>
+  </g>
+  <g fill="#14B8A6" opacity="0.5"><circle cx="470" cy="205" r="3"></circle><circle cx="820" cy="220" r="3.5"></circle></g>
+  <rect width="1440" height="420" fill="url(#fade-intel)"></rect>
+  <rect width="1440" height="420" filter="url(#grain-intel)" opacity="0.05"></rect>
+</svg>

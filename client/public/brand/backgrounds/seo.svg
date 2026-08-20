@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="420" viewBox="0 0 1440 420" fill="none" role="img" aria-label="Growth Engine seo háttér">
+
+  <defs>
+    <pattern id="grid-seo" width="60" height="60" patternUnits="userSpaceOnUse">
+      <path d="M60 0H0v60" fill="none" stroke="#ffffff" stroke-opacity="0.028" stroke-width="1"></path>
+    </pattern>
+    <radialGradient id="glowA-seo" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1140 80) rotate(90) scale(430)">
+      <stop stop-color="#14B8A6" stop-opacity="0.20"></stop><stop offset="1" stop-color="#14B8A6" stop-opacity="0"></stop>
+    </radialGradient>
+    <radialGradient id="glowB-seo" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(250 340) rotate(90) scale(380)">
+      <stop stop-color="#0D9488" stop-opacity="0.13"></stop><stop offset="1" stop-color="#0D9488" stop-opacity="0"></stop>
+    </radialGradient>
+    <filter id="grain-seo" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"></feTurbulence>
+      <feColorMatrix type="saturate" values="0"></feColorMatrix>
+    </filter>
+    <linearGradient id="fade-seo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0A0B0F" stop-opacity="0"></stop><stop offset="1" stop-color="#0A0B0F" stop-opacity="0.9"></stop>
+    </linearGradient>
+  </defs>
+  <rect width="1440" height="420" fill="#0A0B0F"></rect>
+  <rect width="1440" height="420" fill="url(#grid-seo)"></rect>
+  <rect width="1440" height="420" fill="url(#glowA-seo)"></rect>
+  <rect width="1440" height="420" fill="url(#glowB-seo)"></rect>
+
+  <g transform="translate(1120 180)" stroke="#14B8A6" fill="none" stroke-linecap="round">
+    <circle r="72" stroke-width="2" opacity="0.55"></circle>
+    <circle r="104" stroke-width="1" opacity="0.18"></circle>
+    <path d="M51 51 L104 104" stroke-width="3" opacity="0.55"></path>
+    <path d="M-26 6 L-6 26 L28 -18" stroke-width="2.4" opacity="0.7" stroke-linejoin="round"></path>
+  </g>
+  <g opacity="0.3">
+    <g stroke="#14B8A6" stroke-width="1.4" stroke-linecap="round">
+      <path d="M140 178h190"></path><path d="M140 238h150"></path><path d="M140 298h220"></path>
+    </g>
+    <g stroke="#ffffff" stroke-opacity="0.12" stroke-width="1.2" stroke-linecap="round">
+      <path d="M140 200h330M140 260h280M140 320h360"></path>
+    </g>
+  </g>
+  <rect width="1440" height="420" fill="url(#fade-seo)"></rect>
+  <rect width="1440" height="420" filter="url(#grain-seo)" opacity="0.05"></rect>
+</svg>

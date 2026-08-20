@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="420" viewBox="0 0 1440 420" fill="none" role="img" aria-label="Growth Engine proj háttér">
+
+  <defs>
+    <pattern id="grid-proj" width="60" height="60" patternUnits="userSpaceOnUse">
+      <path d="M60 0H0v60" fill="none" stroke="#ffffff" stroke-opacity="0.028" stroke-width="1"></path>
+    </pattern>
+    <radialGradient id="glowA-proj" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(200 60) rotate(90) scale(420)">
+      <stop stop-color="#14B8A6" stop-opacity="0.20"></stop><stop offset="1" stop-color="#14B8A6" stop-opacity="0"></stop>
+    </radialGradient>
+    <radialGradient id="glowB-proj" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1280 320) rotate(90) scale(380)">
+      <stop stop-color="#0D9488" stop-opacity="0.13"></stop><stop offset="1" stop-color="#0D9488" stop-opacity="0"></stop>
+    </radialGradient>
+    <filter id="grain-proj" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"></feTurbulence>
+      <feColorMatrix type="saturate" values="0"></feColorMatrix>
+    </filter>
+    <linearGradient id="fade-proj" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0A0B0F" stop-opacity="0"></stop><stop offset="1" stop-color="#0A0B0F" stop-opacity="0.9"></stop>
+    </linearGradient>
+  </defs>
+  <rect width="1440" height="420" fill="#0A0B0F"></rect>
+  <rect width="1440" height="420" fill="url(#grid-proj)"></rect>
+  <rect width="1440" height="420" fill="url(#glowA-proj)"></rect>
+  <rect width="1440" height="420" fill="url(#glowB-proj)"></rect>
+
+  <g opacity="0.32" stroke="#14B8A6" stroke-width="1.4">
+    <rect x="120" y="150" width="150" height="104" rx="12"></rect>
+    <rect x="300" y="150" width="150" height="104" rx="12" opacity="0.6"></rect>
+    <rect x="480" y="150" width="150" height="104" rx="12" opacity="0.38"></rect>
+    <rect x="660" y="150" width="150" height="104" rx="12" opacity="0.22"></rect>
+  </g>
+  <g fill="#14B8A6" opacity="0.5">
+    <circle cx="145" cy="176" r="5"></circle><circle cx="325" cy="176" r="5" opacity="0.6"></circle>
+    <circle cx="505" cy="176" r="5" opacity="0.4"></circle><circle cx="685" cy="176" r="5" opacity="0.25"></circle>
+  </g>
+  <rect width="1440" height="420" fill="url(#fade-proj)"></rect>
+  <rect width="1440" height="420" filter="url(#grain-proj)" opacity="0.05"></rect>
+</svg>

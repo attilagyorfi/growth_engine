@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="420" viewBox="0 0 1440 420" fill="none" role="img" aria-label="Growth Engine analytics háttér">
+
+  <defs>
+    <pattern id="grid-analytics" width="60" height="60" patternUnits="userSpaceOnUse">
+      <path d="M60 0H0v60" fill="none" stroke="#ffffff" stroke-opacity="0.028" stroke-width="1"></path>
+    </pattern>
+    <radialGradient id="glowA-analytics" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1240 60) rotate(90) scale(480)">
+      <stop stop-color="#14B8A6" stop-opacity="0.20"></stop><stop offset="1" stop-color="#14B8A6" stop-opacity="0"></stop>
+    </radialGradient>
+    <radialGradient id="glowB-analytics" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(180 350) rotate(90) scale(380)">
+      <stop stop-color="#0D9488" stop-opacity="0.13"></stop><stop offset="1" stop-color="#0D9488" stop-opacity="0"></stop>
+    </radialGradient>
+    <filter id="grain-analytics" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"></feTurbulence>
+      <feColorMatrix type="saturate" values="0"></feColorMatrix>
+    </filter>
+    <linearGradient id="fade-analytics" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0A0B0F" stop-opacity="0"></stop><stop offset="1" stop-color="#0A0B0F" stop-opacity="0.9"></stop>
+    </linearGradient>
+  </defs>
+  <rect width="1440" height="420" fill="#0A0B0F"></rect>
+  <rect width="1440" height="420" fill="url(#grid-analytics)"></rect>
+  <rect width="1440" height="420" fill="url(#glowA-analytics)"></rect>
+  <rect width="1440" height="420" fill="url(#glowB-analytics)"></rect>
+
+  <defs><linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#14B8A6" stop-opacity="0.22"></stop><stop offset="1" stop-color="#14B8A6" stop-opacity="0"></stop>
+  </linearGradient></defs>
+  <g opacity="0.9">
+    <path d="M0 358 L0 300 L110 286 L220 296 L330 248 L440 230 L550 244 L660 196 L770 176 L880 186 L990 140 L1100 116 L1210 128 L1320 84 L1440 66 L1440 358 Z" fill="url(#areaFill)"></path>
+    <path d="M0 300 L110 286 L220 296 L330 248 L440 230 L550 244 L660 196 L770 176 L880 186 L990 140 L1100 116 L1210 128 L1320 84 L1440 66" stroke="#14B8A6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"></path>
+    <path d="M0 336 L1440 300" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="5 6" opacity="0.4"></path>
+  </g>
+  <g stroke="#ffffff" stroke-opacity="0.05" stroke-width="1">
+    <path d="M0 120h1440M0 200h1440M0 280h1440M0 358h1440"></path>
+  </g>
+  <rect width="1440" height="420" fill="url(#fade-analytics)"></rect>
+  <rect width="1440" height="420" filter="url(#grain-analytics)" opacity="0.05"></rect>
+</svg>
