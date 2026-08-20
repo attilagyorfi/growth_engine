@@ -227,14 +227,14 @@ export default function Analytics() {
 
         {/* Free tier notice */}
         {!subscription.canExportData && (
-          <div className="flex items-center justify-between rounded-xl px-4 py-3 text-sm" style={{ background: "oklch(from var(--qa-accent) l c h / 8%)", border: "1px solid oklch(from var(--qa-accent) l c h / 20%)" }}>
-            <span style={{ color: "var(--qa-fg2)" }}>📊 Ingyenes csomag – Az analitika megtekinthető, de az export Starter csomagtól érhető el.</span>
-            <button onClick={handleExport} className="ml-4 px-3 py-1 rounded-lg text-xs font-medium" style={{ background: "oklch(from var(--qa-accent) l c h / 20%)", color: "oklch(0.8 0.1 255)" }}>Exportálás 🔒</button>
+          <div className="flex items-center justify-between rounded-xl px-4 py-3 text-sm" style={{ background: "var(--qa-accent-soft)", border: "1px solid var(--qa-accent-soft)" }}>
+            <span style={{ color: "var(--qa-fg2)" }}>Ingyenes csomag – az analitika megtekinthető, de az export Starter csomagtól érhető el.</span>
+            <button onClick={handleExport} className="ml-4 px-3 py-1 rounded-lg text-xs font-medium" style={{ background: "var(--qa-accent-soft)", color: "var(--qa-accent)" }}>Exportálás (Starter)</button>
           </div>
         )}
         {subscription.canExportData && (
           <div className="flex justify-end">
-            <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium" style={{ background: "oklch(from var(--qa-accent) l c h / 15%)", color: "oklch(0.8 0.1 255)", border: "1px solid oklch(from var(--qa-accent) l c h / 30%)" }}>CSV exportálás</button>
+            <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium" style={{ background: "var(--qa-accent-soft)", color: "var(--qa-accent)", border: "1px solid var(--qa-accent-soft)" }}>CSV exportálás</button>
           </div>
         )}
 
@@ -246,10 +246,10 @@ export default function Analytics() {
           variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.08 } } }}
         >
           {[
-            { icon: Users, label: "Összes lead", value: String(leads.length), sub: leads.length > 0 ? `${wonLeads} megnyert` : "Még nincs lead", color: blue },
-            { icon: Target, label: "Konverzió", value: `${conversionRate}%`, sub: leads.length > 0 ? "Lead → Ügyfél" : "Nincs elég adat", color: green },
-            { icon: Layers, label: "Tartalmak", value: String(contentItems.length), sub: publishedContent > 0 ? `${publishedContent} publikált` : "Még nincs tartalom", color: amber },
-            { icon: Users, label: "Hírlevél feliratkozók", value: String(leads.length), sub: leads.length > 0 ? "regisztráltak" : "Még nincs feliratkozó", color: red },
+            { icon: Users, label: "Feliratkozók", value: String(leads.length), sub: leads.length > 0 ? "hírlevél" : "Még nincs feliratkozó", color: blue },
+            { icon: Layers, label: "Tartalmak", value: String(contentItems.length), sub: contentItems.length > 0 ? "összesen" : "Még nincs tartalom", color: amber },
+            { icon: Target, label: "Publikált", value: String(publishedContent), sub: contentItems.length > 0 ? `${Math.round((publishedContent / contentItems.length) * 100)}% arány` : "—", color: green },
+            { icon: BarChart2, label: "Ütemezett", value: String(scheduledContent), sub: scheduledContent > 0 ? "következő posztok" : "Nincs ütemezve", color: blue },
           ].map((card, i) => (
             <motion.div key={i} variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4 } } }}>
               <StatCard icon={card.icon} label={card.label} value={card.value} sub={card.sub} color={card.color} />
@@ -263,7 +263,7 @@ export default function Analytics() {
             <EmptyState
               icon={BarChart2}
               title="Még nincs elegendő adat az analitikához"
-              description="Adj hozzá leadeket az Értékesítés menüpontban, és hozz létre tartalmakat a Tartalom Stúdióban, hogy itt megjelenjenek a teljesítmény adatok."
+              description="A hírlevél-feliratkozók és a Tartalom Stúdióban létrehozott tartalmak alapján jelennek meg itt a teljesítmény-adatok."
               actionLabel="Tartalom létrehozása"
               onAction={() => navigate("/tartalom-studio")}
             />
@@ -290,10 +290,8 @@ export default function Analytics() {
             ) : leads.length === 0 ? (
               <EmptyState
                 icon={Users}
-                title="Még nincs lead"
-                description="Adj hozzá leadeket az Értékesítés menüpontban, hogy itt megjelenjenek a konverziós adatok."
-                actionLabel="Lead hozzáadása"
-                onAction={() => navigate("/ertekesites")}
+                title="Még nincs feliratkozó"
+                description="A regisztrált hírlevél-feliratkozók itt jelennek meg, státusz szerint csoportosítva."
               />
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -353,19 +351,46 @@ export default function Analytics() {
               ) : contentByPlatform.length === 0 ? (
                 <EmptyState icon={Layers} title="Nincs tartalom" description="Hozz létre tartalmakat a Tartalom Stúdióban." actionLabel="Tartalom létrehozása" onAction={() => navigate("/tartalom-studio")} />
               ) : (
-                <ResponsiveContainer width="100%" height={180}>
-                  <BarChart data={contentByPlatform} barSize={24}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--qa-border)" vertical={false} />
-                    <XAxis dataKey="platform" tick={{ fill: textMuted, fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: textMuted, fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Bar dataKey="tartalom" name="Tartalom" radius={[4, 4, 0, 0]}>
-                      {contentByPlatform.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                <div className="flex items-center gap-5">
+                  {/* Donut — tartalom platformonként (valós adat) */}
+                  <div style={{ position: "relative", width: 150, height: 150, flexShrink: 0 }}>
+                    <ResponsiveContainer width={150} height={150}>
+                      <PieChart>
+                        <Pie
+                          data={contentByPlatform}
+                          dataKey="tartalom"
+                          nameKey="platform"
+                          cx="50%" cy="50%"
+                          innerRadius={48} outerRadius={68}
+                          paddingAngle={2}
+                          stroke="none"
+                        >
+                          {contentByPlatform.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<CustomTooltip />} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+                      <span className="qa-metric" style={{ fontSize: 22 }}>{contentItems.length}</span>
+                      <span className="text-xs" style={{ color: textMuted }}>össz.</span>
+                    </div>
+                  </div>
+                  {/* Legend értékkel + százalékkal */}
+                  <div className="flex-1 space-y-1.5 min-w-0">
+                    {contentByPlatform.map(item => (
+                      <div key={item.platform} className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: item.color }} />
+                        <span className="text-xs flex-1 truncate" style={{ color: textPrimary }}>{item.platform}</span>
+                        <span className="text-xs font-bold tabular-nums" style={{ color: textPrimary }}>{item.tartalom}</span>
+                        <span className="text-xs tabular-nums" style={{ color: textMuted, minWidth: 34, textAlign: "right" }}>
+                          {contentItems.length > 0 ? Math.round((item.tartalom / contentItems.length) * 100) : 0}%
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
 
@@ -427,8 +452,8 @@ export default function Analytics() {
                 <TrendingUp size={15} />
               </div>
               <div>
-                <p className="text-sm font-bold" style={{ fontFamily: "var(--font-heading)", color: textPrimary }}>Hónapos trend</p>
-                <p className="text-xs" style={{ color: textMuted }}>Leadek, tartalmak és emailek az elmúlt 6 hónapban</p>
+                <p className="text-sm font-bold" style={{ fontFamily: "var(--font-heading)", color: textPrimary }}>Havi trend</p>
+                <p className="text-xs" style={{ color: textMuted }}>Feliratkozók és tartalmak az elmúlt 6 hónapban</p>
               </div>
             </div>
             {isLoading ? (
@@ -442,14 +467,13 @@ export default function Analytics() {
                   <XAxis dataKey="month" tick={{ fill: textMuted, fontSize: 11 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fill: textMuted, fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
                   <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="leads" name="Leadek" fill={blue} radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="leads" name="Feliratkozók" fill={blue} radius={[3, 3, 0, 0]} />
                   <Bar dataKey="tartalom" name="Tartalom" fill={amber} radius={[3, 3, 0, 0]} />
-                  <Bar dataKey="emailek" name="Emailek" fill={red} radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
             <div className="flex items-center gap-4 mt-3">
-              {[{ color: blue, label: "Leadek" }, { color: amber, label: "Tartalom" }, { color: red, label: "Emailek" }].map(({ color, label }) => (
+              {[{ color: blue, label: "Feliratkozók" }, { color: amber, label: "Tartalom" }].map(({ color, label }) => (
                 <div key={label} className="flex items-center gap-1.5">
                   <div className="w-2.5 h-2.5 rounded-sm" style={{ background: color }} />
                   <span className="text-xs" style={{ color: textMuted }}>{label}</span>
