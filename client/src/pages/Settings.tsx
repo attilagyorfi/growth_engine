@@ -13,6 +13,7 @@ import {
   Send,
 } from "lucide-react";
 import AiMemorySection from "@/components/settings/AiMemorySection";
+import TeamSection from "@/components/settings/TeamSection";
 import { useSubscription, PLAN_FEATURES, type SubscriptionPlan } from "@/hooks/useSubscription";
 import BillingPlanCards from "@/components/BillingPlanCards";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -31,7 +32,7 @@ const BASE_TABS: { id: Tab; label: string; icon: React.ReactNode; badge?: string
   { id: "brand", label: "Brand Center", icon: <Palette size={14} /> },
   { id: "integrations", label: "Integrációk", icon: <Plug size={14} /> },
   { id: "ai-memory", label: "AI Memória", icon: <Brain size={14} /> },
-  { id: "team", label: "Csapat", icon: <Users size={14} />, badge: "Hamarosan" },
+  { id: "team", label: "Csapat", icon: <Users size={14} /> },
   { id: "audit", label: "Audit Log", icon: <ClipboardList size={14} /> },
 ];
 // A Hírlevél tab eltávolítva — átkerült a sidebar fő menübe (/hirlevel route).
@@ -653,34 +654,9 @@ export default function Settings() {
         <AiMemorySection profileId={activeProfile.id} />
       )}
 
-      {/* Team */}
-      {activeTab === "team" && (
-        <div className="space-y-4">
-          <div className="rounded-xl border p-5" style={{ background: cardBg, borderColor: border }}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-bold" style={{ color: "var(--qa-fg2)" }}>Csapattagok</h3>
-              <button onClick={() => toast.info("Csapatkezelés hamarosan")}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold" style={{ background: "oklch(from var(--qa-accent) l c h / 15%)", color: "var(--qa-accent)" }}>
-                <Plus size={12} /> Meghívó
-              </button>
-            </div>
-            <div className="text-center py-10">
-              <Users size={32} className="mx-auto mb-3" style={{ color: "var(--qa-fg4)" }} />
-              <p className="text-sm font-semibold mb-1" style={{ color: "var(--qa-fg3)" }}>Csak te vagy itt</p>
-              <p className="text-xs" style={{ color: "var(--qa-fg4)" }}>Hívj meg csapattagokat az együttműködéshez</p>
-            </div>
-          </div>
-
-          <div className="rounded-xl border p-4" style={{ background: "oklch(from var(--qa-warning) l c h / 8%)", borderColor: "oklch(from var(--qa-warning) l c h / 15%)" }}>
-            <div className="flex items-start gap-3">
-              <AlertCircle size={16} className="mt-0.5 flex-shrink-0" style={{ color: "var(--qa-warning)" }} />
-              <div>
-                <p className="text-sm font-semibold mb-1" style={{ color: "var(--qa-warning)" }}>Csapatkezelés hamarosan</p>
-                <p className="text-xs" style={{ color: "var(--qa-fg3)" }}>A csapatmeghívó és jogosultságkezelő funkció fejlesztés alatt áll.</p>
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* Team — csapat-meghívók (invite + role picker + pending lista) */}
+      {activeTab === "team" && activeProfile.id && (
+        <TeamSection profileId={activeProfile.id} />
       )}
 
       {/* Audit Log — új timeline UI (bal oldali vonal + dot marker + user avatar) */}

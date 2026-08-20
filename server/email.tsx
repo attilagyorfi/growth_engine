@@ -22,6 +22,7 @@ import PasswordResetEmail from "./emails/PasswordResetEmail";
 import AdminApprovalNeededEmail from "./emails/AdminApprovalNeededEmail";
 import NewsletterEmail from "./emails/NewsletterEmail";
 import PostReviewNotificationEmail from "./emails/PostReviewNotificationEmail";
+import TeamInviteEmail from "./emails/TeamInviteEmail";
 
 let _resend: Resend | null = null;
 function getResend(): Resend | null {
@@ -214,6 +215,46 @@ export async function sendNewsletterEmail(params: {
     return true;
   } catch (err) {
     console.error("[Email] Newsletter unexpected error:", err);
+    return false;
+  }
+}
+
+// ─── Team invite — csapat-meghívó a profile tulajtól ─────────────────────
+export async function sendTeamInviteEmail(params: {
+  to: string;
+  inviterName: string;
+  profileName: string;
+  roleLabel: string;
+  acceptUrl: string;
+  expiresLabel: string;
+}): Promise<boolean> {
+  try {
+    const resend = getResend();
+    if (!resend) return false;
+    const props = {
+      inviterName: params.inviterName,
+      profileName: params.profileName,
+      roleLabel: params.roleLabel,
+      acceptUrl: params.acceptUrl,
+      expiresLabel: params.expiresLabel,
+    };
+    const html = await render(<TeamInviteEmail {...props} />);
+    const text = await render(<TeamInviteEmail {...props} />, { plainText: true });
+
+    const { error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: params.to,
+      subject: `${params.inviterName} meghívott a(z) ${params.profileName} csapatába – ${APP_NAME}`,
+      html,
+      text,
+    });
+    if (error) {
+      console.error("[Email] Team invite email error:", error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("[Email] Team invite unexpected error:", err);
     return false;
   }
 }
