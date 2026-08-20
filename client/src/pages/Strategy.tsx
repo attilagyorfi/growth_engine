@@ -190,7 +190,7 @@ export default function Strategy() {
   }
 
   return (
-    <DashboardLayout>
+    <DashboardLayout background="strategia">
       <div className="p-6 space-y-6">
         {/* AI Limit Banner */}
         <AiLimitBanner />

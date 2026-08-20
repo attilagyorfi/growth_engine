@@ -224,7 +224,7 @@ export default function Intelligence() {
   const has = <T,>(xs?: T[] | null): xs is T[] => Array.isArray(xs) && xs.length > 0;
 
   return (
-    <DashboardLayout>
+    <DashboardLayout background="intelligencia">
       <div className="p-6 space-y-6">
         <AiLimitBanner />
 

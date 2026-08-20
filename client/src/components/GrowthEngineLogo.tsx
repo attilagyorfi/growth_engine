@@ -31,10 +31,10 @@ export default function GrowthEngineLogo({ size = 32, className }: GrowthEngineL
       aria-label="Growth Engine"
     >
       <rect width="32" height="32" rx="9" fill="var(--qa-accent)" />
-      {/* Emelkedő oszlopok — bottomjuk y=24-nél igazítva */}
-      <rect x="8"  y="18" width="4" height="6"  rx="1.4" fill="var(--qa-accent-on)" />
-      <rect x="14" y="14" width="4" height="10" rx="1.4" fill="var(--qa-accent-on)" />
-      <rect x="20" y="8"  width="4" height="16" rx="1.4" fill="var(--qa-accent-on)" />
+      {/* Emelkedő oszlopok — a shipped growth-engine-bars.svg pontos geometriája */}
+      <rect x="8"  y="18" width="4" height="7"  rx="1.4" fill="var(--qa-accent-on)" />
+      <rect x="14" y="14" width="4" height="11" rx="1.4" fill="var(--qa-accent-on)" />
+      <rect x="20" y="8"  width="4" height="17" rx="1.4" fill="var(--qa-accent-on)" />
       {/* Növekedési vonal — halvány */}
       <path
         d="M9 13.5 15.5 9 21 11 26 6"

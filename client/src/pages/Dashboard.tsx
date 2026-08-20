@@ -171,7 +171,7 @@ export default function Dashboard() {
       : now.toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric" });
 
   return (
-    <DashboardLayout title="Irányítópult" subtitle={subtitle}>
+    <DashboardLayout title="Irányítópult" subtitle={subtitle} background="iranyitopult">
       <>
 
         {/* Onboarding retention widget (feltételes) */}

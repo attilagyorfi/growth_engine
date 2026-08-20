@@ -142,7 +142,7 @@ export default function ProjectsPage() {
   };
 
   return (
-    <DashboardLayout title="Projektek" subtitle="Workspace-ek kezelése">
+    <DashboardLayout title="Projektek" subtitle="Workspace-ek kezelése" background="projektek">
       <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
 
         {/* Header */}

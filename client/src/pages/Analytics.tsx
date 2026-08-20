@@ -222,7 +222,7 @@ export default function Analytics() {
   };
 
   return (
-    <DashboardLayout title="Analitika" subtitle="Valós idejű teljesítmény áttekintő">
+    <DashboardLayout title="Analitika" subtitle="Valós idejű teljesítmény áttekintő" background="analitika">
       <div className="p-6 space-y-6 overflow-y-auto h-full">
 
         {/* Free tier notice */}

@@ -79,9 +79,11 @@ interface DashboardLayoutProps {
   children: React.ReactNode;
   title?: string;
   subtitle?: string;
+  /** Brand oldal-háttér neve (client/public/brand/backgrounds/{name}.svg), pl. "iranyitopult". */
+  background?: string;
 }
 
-export default function DashboardLayout({ children, title, subtitle }: DashboardLayoutProps) {
+export default function DashboardLayout({ children, title, subtitle, background }: DashboardLayoutProps) {
   const [location, navigate] = useLocation();
   const [showNotifs, setShowNotifs] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -743,8 +745,25 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-6">
-          {children}
+        <main className="flex-1 overflow-y-auto p-6 relative">
+          {/* Brand oldal-háttér (design_handoff) — a fejléc + első kártyasor mögé,
+              pointer-events nélkül, a tartalom fölé z-index:1-en. */}
+          {background && (
+            <img
+              src={`/brand/backgrounds/${background}.svg`}
+              alt=""
+              aria-hidden="true"
+              style={{
+                position: "absolute", top: 0, left: 0, width: "100%", height: "auto",
+                pointerEvents: "none", zIndex: 0, opacity: 0.7,
+                maskImage: "linear-gradient(to bottom, black 55%, transparent)",
+                WebkitMaskImage: "linear-gradient(to bottom, black 55%, transparent)",
+              }}
+            />
+          )}
+          <div className="relative" style={{ zIndex: 1 }}>
+            {children}
+          </div>
         </main>
       </div>
 
