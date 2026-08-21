@@ -98,11 +98,17 @@
   --qa-border:    #23262F;
   --qa-border-hi: #2E323D;
 
+  /* UI-mockup aliasok (design_handoff_growth_engine_ui) — a meglévő skálát bővítik */
+  --qa-bg-nav:    #0D0E13;   /* oldalsáv / copilot háttér — lépcső a --qa-bg és --qa-surface között */
+  --qa-inset:     #0F1117;   /* kártyán belüli mélyedés (input, idézet, token-mező) */
+  --qa-divider:   #1D2027;   /* halk elválasztó vonal kártyán belül */
+
   /* Text scale */
   --qa-fg:   #F5F6F8;
   --qa-fg2:  #C2C5CE;   /* volt #B4B7C0 — kicsit világosabb, jobb olvashatóság */
   --qa-fg3:  #949AA6;   /* volt #7C8089 — AA-kontraszt a felületen (másodlagos szöveg) */
   --qa-fg4:  #6E7480;   /* volt #4A4E58 — a muted/inaktív szöveg eddig ~2:1 volt (olvashatatlan), most ~3.8:1 */
+  --qa-fg5:  #4E535E;   /* nagyon halk — üres állapot, nav-csoportcím */
 
   /* Accent: G2A teal (csere a kékről) */
   /* Akcent: G2A lila/lilac (a landing árnyalata — a teal helyett).
@@ -396,10 +402,27 @@
     color: var(--qa-fg);
   }
 
+  /* Scrollbar elrejtése (sidebar-nav, copilot-lista) — a tartalom görgethető marad */
+  .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+  .no-scrollbar::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
   .nav-item.active {
     background: var(--qa-accent-soft);
-    color: var(--qa-accent);
+    color: var(--qa-accent-purple);   /* handoff: aktív szöveg #A78BFA — jobb kontraszt a lila tinten */
     box-shadow: inset 2px 0 0 var(--qa-accent);
+  }
+
+  /* Nav-csoportcím — Geist Mono 10px, .16em, nagyon halk (handoff) */
+  .nav-group-label {
+    padding: 0 0.75rem;
+    margin-bottom: 0.25rem;
+    font-family: var(--font-mono, 'Geist Mono', monospace);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--qa-fg5);
+    user-select: none;
   }
 
   /* ── G2A akcent gomb (teal, dark szöveg) ─────────────────────── */
