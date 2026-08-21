@@ -356,7 +356,7 @@ export default function DashboardLayout({ children, title, subtitle, background 
 
         {/* Navigation — elsődleges elemek + "Több" lenyíló a másodlagosaknak
             (így a sidebar nem görget). */}
-        <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
+        <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto no-scrollbar">
           {primaryNav.map(renderNavItem)}
 
           {secondaryNav.length > 0 && (

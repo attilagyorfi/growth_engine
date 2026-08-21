@@ -498,3 +498,9 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+/* Sidebar nav — elrejtett scrollbar. A "Több" lenyíló miatt ritkán kell
+   görgetni, és a default scrollbar csúnya (a tulaj jelezte). A görgetés
+   kerékkel/érintéssel továbbra is megy, csak a sáv nem látszik. */
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { width: 0; height: 0; display: none; }
