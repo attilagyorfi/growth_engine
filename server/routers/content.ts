@@ -11,7 +11,7 @@ import { z } from "zod";
 import { nanoid } from "nanoid";
 import { TRPCError } from "@trpc/server";
 import { appUserProcedure, router } from "../_core/trpc";
-import { invokeLLM } from "../_core/llm";
+import { invokeLLM, parseLLMJson } from "../_core/llm";
 import { assertProfileOwnership } from "../_core/ownership";
 import { checkAiUsageLimit, recordAiUsage } from "../authDb";
 import {
@@ -61,8 +61,24 @@ export const contentRouter = router({
       const post = await getContentById(input.id);
       if (!post) throw new TRPCError({ code: "NOT_FOUND", message: "A poszt nem található" });
       await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, post.profileId, ctx.appUser.profileId);
+      // AUDIT FIX: státusz-átmenet őrök. A UI korábban a generic update-en át
+      // közvetlenül "scheduled"/"published"-re állíthatott, kikerülve a
+      // jóváhagyási sorrendet (a schedulePost őre csak azon az egy úton védett).
+      // Most bármelyik úton kikényszerítjük a helyes átmenetet.
+      if (input.status && input.status !== post.status) {
+        if (input.status === "scheduled" && post.status !== "approved") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Csak jóváhagyott poszt ütemezhető." });
+        }
+        if (input.status === "published" && post.status !== "scheduled" && post.status !== "approved") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Csak jóváhagyott vagy ütemezett poszt publikálható." });
+        }
+      }
       const { id, ...updates } = input;
-      return updateContent(id, updates);
+      // Jóváhagyáskor a bírálót is rögzítjük (konzisztens az approvePost-tal).
+      const reviewFields = (input.status === "approved" && post.status !== "approved")
+        ? { reviewedBy: ctx.appUser.id, reviewedAt: new Date() }
+        : {};
+      return updateContent(id, { ...updates, ...reviewFields });
     }),
 
   delete: appUserProcedure
@@ -133,7 +149,7 @@ export const contentRouter = router({
       });
 
       const raw = response.choices[0].message.content as string;
-      const parsed = JSON.parse(raw);
+      const parsed = parseLLMJson(raw);
       const created = [];
       for (const p of parsed.posts as any[]) {
         const platformNorm = (p.platform as string).toLowerCase().replace(/[^a-z]/g, "");
@@ -265,6 +281,11 @@ export const contentRouter = router({
       const [post] = await db.select().from(contentPosts).where(eq(contentPosts.id, input.postId));
       if (!post) throw new TRPCError({ code: "NOT_FOUND", message: "Poszt nem található" });
       await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, post.profileId, ctx.appUser.profileId);
+      // AUDIT FIX: eddig előfeltétel nélkül publikált (akár draftból). Most csak
+      // jóváhagyott vagy ütemezett posztot enged publikálni.
+      if (post.status !== "scheduled" && post.status !== "approved") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Csak jóváhagyott vagy ütemezett poszt jelölhető publikáltnak." });
+      }
       await db.update(contentPosts)
         .set({ status: "published", publishedAt: new Date(), updatedAt: new Date() })
         .where(eq(contentPosts.id, input.postId));
