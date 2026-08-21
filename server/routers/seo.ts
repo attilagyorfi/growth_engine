@@ -168,9 +168,11 @@ export const seoRouter = router({
       // ── 2. Sitemap + robots.txt párhuzamosan ──────────────────────────
       let hasSitemap = false, hasRobotsTxt = false;
       if (origin) {
+        // AUDIT FIX: a sitemap/robots is a védett safeFetch-en át megy (SSRF-
+        // konzisztencia — a fő oldal már azon ment, ezek eddig sima fetch-en).
         const [sm, rb] = await Promise.allSettled([
-          fetch(`${origin}/sitemap.xml`, { signal: AbortSignal.timeout(5000) }),
-          fetch(`${origin}/robots.txt`, { signal: AbortSignal.timeout(5000) }),
+          safeFetch(`${origin}/sitemap.xml`, { signal: AbortSignal.timeout(5000) }),
+          safeFetch(`${origin}/robots.txt`, { signal: AbortSignal.timeout(5000) }),
         ]);
         hasSitemap = sm.status === "fulfilled" && sm.value.ok;
         hasRobotsTxt = rb.status === "fulfilled" && rb.value.ok;
