@@ -12,7 +12,7 @@ import { z } from "zod";
 import { nanoid } from "nanoid";
 import { TRPCError } from "@trpc/server";
 import { appUserProcedure, router } from "../_core/trpc";
-import { invokeLLM } from "../_core/llm";
+import { invokeLLM, parseLLMJson } from "../_core/llm";
 import { assertProfileOwnership } from "../_core/ownership";
 import { checkAiUsageLimit, recordAiUsage } from "../authDb";
 import {
@@ -98,7 +98,7 @@ export const strategyVersionsRouter = router({
         response_format: { type: "json_schema", json_schema: { name: "strategy_output", strict: true, schema: { type: "object", properties: { executiveSummary: { type: "string" }, channelStrategy: { type: "array", items: { type: "object", properties: { channel: { type: "string" }, priority: { type: "number" }, rationale: { type: "string" }, tactics: { type: "array", items: { type: "string" } } }, required: ["channel", "priority", "rationale", "tactics"], additionalProperties: false } }, campaignPriorities: { type: "array", items: { type: "string" } }, quickWins: { type: "array", items: { type: "object", properties: { title: { type: "string" }, description: { type: "string" }, impact: { type: "string" }, effort: { type: "string" } }, required: ["title", "description", "impact", "effort"], additionalProperties: false } }, nextActions: { type: "array", items: { type: "object", properties: { title: { type: "string" }, description: { type: "string" }, urgency: { type: "string" }, dueDate: { type: ["string", "null"] } }, required: ["title", "description", "urgency", "dueDate"], additionalProperties: false } }, quarterlyGoals: { type: "object", properties: { q1: { type: ["array", "null"], items: { type: "string" } }, q2: { type: ["array", "null"], items: { type: "string" } }, q3: { type: ["array", "null"], items: { type: "string" } }, q4: { type: ["array", "null"], items: { type: "string" } } }, required: ["q1", "q2", "q3", "q4"], additionalProperties: false }, monthlyPriorities: { type: "array", items: { type: "object", properties: { month: { type: "string" }, priorities: { type: "array", items: { type: "string" } }, kpis: { type: "array", items: { type: "object", properties: { label: { type: "string" }, target: { type: "string" } }, required: ["label", "target"], additionalProperties: false } } }, required: ["month", "priorities", "kpis"], additionalProperties: false } } }, required: ["executiveSummary", "channelStrategy", "campaignPriorities", "quickWins", "nextActions", "quarterlyGoals", "monthlyPriorities"], additionalProperties: false } } },
       });
       const content = response.choices[0]?.message?.content ?? "{}";
-      const parsed = JSON.parse(typeof content === "string" ? content : JSON.stringify(content));
+      const parsed = parseLLMJson(content);
       // Record AI usage (skip during onboarding)
       await recordAiUsage(ctx.appUser.id, "strategy", ctx.appUser.role, input.isOnboarding);
       const existing = await getStrategyVersionsByProfile(input.profileId);
@@ -239,7 +239,7 @@ export const strategyVersionsRouter = router({
         },
       });
       const content = response.choices[0]?.message?.content ?? "{}";
-      const parsed = JSON.parse(typeof content === "string" ? content : JSON.stringify(content));
+      const parsed = parseLLMJson(content);
 
       // AI usage record — ugyanaz a "strategy" feature bucket
       await recordAiUsage(ctx.appUser.id, "strategy", ctx.appUser.role);

@@ -88,15 +88,27 @@ export default function AIWriter() {
         });
         result = { type: contentType, content: r.body, subject: r.subject };
       } else {
+        // AUDIT FIX: a social ág mezőnevei eltértek a szervertől (r.content/
+        // r.callToAction → mindig undefined → ÜRES poszt); a blog/ad típus pedig
+        // érvénytelen platformot küldött → a szerver enum elutasította. Javítva:
+        // helyes mezők (caption/ctaText), és a nem-social típusokat valós platformra
+        // képezzük + formátum-hinttel (dedikált blog/ad endpoint későbbi lépés).
+        const SOCIAL = ["linkedin", "facebook", "instagram", "tiktok", "twitter"];
+        const derived = contentType.replace("_post", "").replace("_script", "");
+        const platform = (SOCIAL.includes(derived) ? derived : "linkedin") as "linkedin" | "facebook" | "instagram" | "twitter" | "tiktok";
+        const formatHint = contentType === "blog_outline" ? "Blog vázlat: bevezető, 3-5 alcím, zárás"
+          : contentType === "ad_copy" ? "Rövid hirdetési szöveg, figyelemfelkeltő headline-nal és erős CTA-val"
+          : undefined;
         const r = await generateSocialMutation.mutateAsync({
           profileId: activeProfile?.id ?? "",
-          platform: (contentType.replace("_post", "").replace("_script", "") as "linkedin" | "facebook" | "instagram" | "twitter" | "tiktok"),
+          platform,
           topic,
           pillar: targetAudience || "",
+          ...(formatHint ? { format: formatHint } : {}),
           brandVoice: profileBrandVoice ? { tone: profileBrandVoice.tone ?? "", style: profileBrandVoice.style ?? "", keywords: profileBrandVoice.keywords ?? [] } : undefined,
           targetAudience: additionalContext || undefined,
         });
-        result = { type: contentType, content: r.content, hashtags: r.hashtags, callToAction: r.callToAction };
+        result = { type: contentType, content: r.caption, hashtags: r.hashtags, callToAction: r.ctaText };
       }
       setGenerated(result);
       setEditedContent(result.content);

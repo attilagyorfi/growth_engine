@@ -38,7 +38,7 @@ import {
   getRecommendationsByProfile, getRecommendationById, createRecommendation, dismissRecommendation,
   getNotificationsByUser, getNotificationById, createNotification, markNotificationRead, markAllNotificationsRead,
 } from "./db";
-import { invokeLLM } from "./_core/llm";
+import { invokeLLM, parseLLMJson } from "./_core/llm";
 import { storagePut } from "./storage";
 import { checkAiUsageLimit, recordAiUsage } from "./authDb";
 import Stripe from "stripe";
@@ -362,7 +362,7 @@ export const appRouter = router({
           response_format: { type: "json_schema", json_schema: { name: "company_intelligence", strict: true, schema: { type: "object", properties: { companySummary: { type: "string" }, brandDna: { type: "object", properties: { coreValues: { type: "array", items: { type: "string" } }, personality: { type: "array", items: { type: "string" } }, differentiators: { type: "array", items: { type: "string" } }, brandPromise: { type: "string" } }, required: ["coreValues", "personality", "differentiators", "brandPromise"], additionalProperties: false }, offerMap: { type: "array", items: { type: "object", properties: { name: { type: "string" }, description: { type: "string" }, targetAudience: { type: "string" }, usp: { type: "string" } }, required: ["name", "description", "targetAudience", "usp"], additionalProperties: false } }, audienceMap: { type: "array", items: { type: "object", properties: { segment: { type: "string" }, description: { type: "string" }, painPoints: { type: "array", items: { type: "string" } }, goals: { type: "array", items: { type: "string" } }, channels: { type: "array", items: { type: "string" } } }, required: ["segment", "description", "painPoints", "goals", "channels"], additionalProperties: false } }, competitorSnapshot: { type: "array", items: { type: "object", properties: { name: { type: "string" }, strengths: { type: "array", items: { type: "string" } }, weaknesses: { type: "array", items: { type: "string" } }, positioning: { type: "string" } }, required: ["name", "strengths", "weaknesses", "positioning"], additionalProperties: false } }, platformPriorities: { type: "array", items: { type: "object", properties: { platform: { type: "string" }, priority: { type: "number" }, rationale: { type: "string" } }, required: ["platform", "priority", "rationale"], additionalProperties: false } }, successGoals: { type: "object", properties: { thirtyDay: { type: "array", items: { type: "string" } }, ninetyDay: { type: "array", items: { type: "string" } }, oneYear: { type: "array", items: { type: "string" } } }, required: ["thirtyDay", "ninetyDay", "oneYear"], additionalProperties: false }, aiWritingRules: { type: "object", properties: { doList: { type: "array", items: { type: "string" } }, dontList: { type: "array", items: { type: "string" } }, toneGuidelines: { type: "string" }, examplePhrases: { type: "array", items: { type: "string" } } }, required: ["doList", "dontList", "toneGuidelines", "examplePhrases"], additionalProperties: false } }, required: ["companySummary", "brandDna", "offerMap", "audienceMap", "competitorSnapshot", "platformPriorities", "successGoals", "aiWritingRules"], additionalProperties: false } } },
         });
         const content = response.choices[0]?.message?.content ?? "{}";
-        const parsed = JSON.parse(typeof content === "string" ? content : JSON.stringify(content));
+        const parsed = parseLLMJson(content);
         // Record AI usage (skip during onboarding)
         await recordAiUsage(ctx.appUser.id, "intelligence", ctx.appUser.role, input.isOnboarding);
         return upsertCompanyIntelligence({
@@ -388,7 +388,7 @@ export const appRouter = router({
           response_format: { type: "json_schema", json_schema: { name: "wow_moment", strict: true, schema: { type: "object", properties: { companySummary: { type: "string" }, topStrengths: { type: "array", items: { type: "string" } }, topRisks: { type: "array", items: { type: "string" } }, ninetyDayStrategyOutline: { type: "string" }, contentPillars: { type: "array", items: { type: "object", properties: { name: { type: "string" }, description: { type: "string" }, percentage: { type: "number" } }, required: ["name", "description", "percentage"], additionalProperties: false } }, contentIdeas: { type: "array", items: { type: "object", properties: { title: { type: "string" }, platform: { type: "string" }, format: { type: "string" }, pillar: { type: "string" } }, required: ["title", "platform", "format", "pillar"], additionalProperties: false } }, quickWins: { type: "array", items: { type: "object", properties: { title: { type: "string" }, description: { type: "string" }, impact: { type: "string" }, effort: { type: "string" } }, required: ["title", "description", "impact", "effort"], additionalProperties: false } } }, required: ["companySummary", "topStrengths", "topRisks", "ninetyDayStrategyOutline", "contentPillars", "contentIdeas", "quickWins"], additionalProperties: false } } },
         });
         const content = response.choices[0]?.message?.content ?? "{}";
-        return JSON.parse(typeof content === "string" ? content : JSON.stringify(content));
+        return parseLLMJson(content);
       }),
 
     upsert: appUserProcedure
@@ -450,9 +450,8 @@ export const appRouter = router({
           response_format: { type: "json_schema", json_schema: { name: "email_draft", strict: true, schema: { type: "object", properties: { subject: { type: "string" }, body: { type: "string" }, previewText: { type: "string" } }, required: ["subject", "body", "previewText"], additionalProperties: false } } },
         });
         const content = response.choices[0]?.message?.content ?? "{}";
-        const parsed = JSON.parse(typeof content === "string" ? content : JSON.stringify(content));
         await recordAiUsage(ctx.appUser.id, "post", ctx.appUser.role);
-        return parsed;
+        return parseLLMJson(content);
       }),
 
     generateSocialPost: appUserProcedure
@@ -495,9 +494,8 @@ export const appRouter = router({
           response_format: { type: "json_schema", json_schema: { name: "social_post", strict: true, schema: { type: "object", properties: { caption: { type: "string" }, hashtags: { type: "array", items: { type: "string" } }, visualBrief: { type: "string" }, ctaText: { type: "string" } }, required: ["caption", "hashtags", "visualBrief", "ctaText"], additionalProperties: false } } },
         });
         const content = response.choices[0]?.message?.content ?? "{}";
-        const parsed = JSON.parse(typeof content === "string" ? content : JSON.stringify(content));
         await recordAiUsage(ctx.appUser.id, "post", ctx.appUser.role);
-        return parsed;
+        return parseLLMJson(content);
       }),
   }),
 
@@ -631,9 +629,8 @@ export const appRouter = router({
           response_format: { type: "json_schema", json_schema: { name: "campaign_brief", strict: true, schema: { type: "object", properties: { hook: { type: "string" }, mainMessage: { type: "string" }, cta: { type: "string" }, contentIdeas: { type: "array", items: { type: "object", properties: { title: { type: "string" }, format: { type: "string" }, platform: { type: "string" } }, required: ["title", "format", "platform"], additionalProperties: false } }, kpis: { type: "array", items: { type: "object", properties: { label: { type: "string" }, target: { type: "string" } }, required: ["label", "target"], additionalProperties: false } } }, required: ["hook", "mainMessage", "cta", "contentIdeas", "kpis"], additionalProperties: false } } },
         });
         const content = response.choices[0]?.message?.content ?? "{}";
-        const parsed = JSON.parse(typeof content === "string" ? content : JSON.stringify(content));
         await recordAiUsage(ctx.appUser.id, "campaign", ctx.appUser.role);
-        return parsed;
+        return parseLLMJson(content);
       }),
 
     getAssets: appUserProcedure
@@ -714,7 +711,7 @@ export const appRouter = router({
             response_format: { type: "json_schema", json_schema: { name: "content_item", strict: true, schema: { type: "object", properties: { title: { type: "string" }, content: { type: "string" }, hashtags: { type: "array", items: { type: "string" } } }, required: ["title", "content", "hashtags"], additionalProperties: false } } },
           });
           const raw = response.choices[0]?.message?.content ?? "{}";
-          const parsed = JSON.parse(typeof raw === "string" ? raw : JSON.stringify(raw));
+          const parsed = parseLLMJson(raw);
           const platformKey = idea.platform.toLowerCase().replace(/\s+/g, "");
           const platform = PLATFORM_MAP[platformKey] ?? "linkedin";
           const contentId = nanoid();
@@ -887,7 +884,7 @@ export const appRouter = router({
           },
         });
         const content = response.choices[0]?.message?.content ?? "{}";
-        const parsed = JSON.parse(typeof content === "string" ? content : JSON.stringify(content));
+        const parsed = parseLLMJson(content);
 
         // Mappelés a régi magyar urgency stringekre is, ha az AI mégis azokat adná vissza
         const urgencyMap: Record<string, "high" | "medium" | "low"> = {
@@ -1020,7 +1017,7 @@ export const appRouter = router({
         const raw = response.choices[0]?.message?.content ?? "{}";
         // Record AI usage
         await recordAiUsage(ctx.appUser.id, "post", ctx.appUser.role);
-        return JSON.parse(typeof raw === "string" ? raw : JSON.stringify(raw));
+        return parseLLMJson(raw);
       }),
   }),
 
@@ -1107,7 +1104,7 @@ A link mező mindig ezek egyike legyen, ne találj ki más URL-t.`,
         });
         const raw = response.choices[0]?.message?.content ?? "{}";
         await recordAiUsage(ctx.appUser.id, "dailyTasks", ctx.appUser.role);
-        return JSON.parse(typeof raw === "string" ? raw : JSON.stringify(raw)) as {
+        return parseLLMJson(raw) as {
           tasks: { text: string; category: string; link: string; actionType: string }[];
           motivationalMessage: string;
         };

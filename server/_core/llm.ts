@@ -417,3 +417,23 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
 
   return (await response.json()) as InvokeResult;
 }
+
+/**
+ * AUDIT FIX: az AI (LLM) JSON-kimenetének BIZTONSÁGOS parse-olása.
+ * Eddig a hívók védtelen JSON.parse-t használtak → ha a model csonkolt
+ * (finish_reason:"length", pl. hosszú havi terv) vagy nem-JSON választ adott,
+ * a parse dobott, és a globális hibakezelő NÉMA 500-at adott. Most barátságos,
+ * magyar TRPCError-t kap a felhasználó, és a hiba a szerverlogban is látszik.
+ */
+export function parseLLMJson<T = any>(content: unknown): T {
+  const str = typeof content === "string" ? content : JSON.stringify(content ?? {});
+  try {
+    return JSON.parse(str) as T;
+  } catch {
+    console.error("[LLM] Érvénytelen JSON a model kimenetében (első 300 char):", String(str).slice(0, 300));
+    throw new TRPCError({
+      code: "BAD_GATEWAY",
+      message: "Az AI válasza hibás formátumú vagy megszakadt volt. Kérlek próbáld újra — ha ismétlődik, rövidítsd a bemenetet.",
+    });
+  }
+}
