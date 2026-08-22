@@ -14,7 +14,7 @@ import {
   LayoutDashboard, Users, BarChart3, Layers, TrendingUp, Settings,
   Zap, ChevronRight, Bell, X, CheckCircle, AlertCircle, Info, Mail,
   ChevronDown, LogOut, Shield, Megaphone, SearchCheck, Video,
-  User, KeyRound, UserCog, Crown, Sparkles, Menu, Brain, FolderOpen, Plus, Check,
+  User, KeyRound, UserCog, Crown, Sparkles, Menu, Brain, FolderOpen, Plus, Check, PenLine,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -37,38 +37,42 @@ type NavItem = {
   label: string;
   icon: typeof LayoutDashboard;
   comingSoon?: boolean;
+  /** Plan-láthatóság a sima user számára ("all" → mindenki). */
   gate?: PlanGate;
-  /** Másodlagos (kevésbé fontos) menüpont — a "Több" lenyíló alá kerül,
-      hogy a sidebar ne görgessen. */
-  secondary?: boolean;
+  /** Csak super_admin látja (ügynökségi / admin funkció). */
+  adminOnly?: boolean;
 };
+type NavGroup = { label: string; items: NavItem[] };
 
-const publicNavItems: NavItem[] = [
-  { href: "/iranyitopult", label: "Irányítópult", icon: LayoutDashboard, gate: "all" },
-  { href: "/intelligencia", label: "Intelligencia", icon: Brain, gate: "all" },
-  { href: "/strategia", label: "Stratégia", icon: BarChart3, gate: "starter+" },
-  { href: "/tartalom-studio", label: "Tartalom Studio", icon: Layers, gate: "all" },
-  { href: "/kampanyok", label: "Kampányok", icon: Megaphone, gate: "pro+" },
-  { href: "/analitika", label: "Analitika", icon: TrendingUp, gate: "all" },
-  { href: "/seo", label: "SEO Audit", icon: SearchCheck, gate: "all", secondary: true },
-  { href: "/riportok", label: "Riportok", icon: BarChart3, gate: "pro+", secondary: true },
-  { href: "/video-studio", label: "Videókészítő", icon: Video, gate: "pro+", comingSoon: true, secondary: true },
-  { href: "/beallitasok", label: "Beállítások", icon: Settings, gate: "all" },
-];
-
-const adminNavItems: NavItem[] = [
-  { href: "/iranyitopult", label: "Irányítópult", icon: LayoutDashboard },
-  { href: "/projektek", label: "Projektek", icon: FolderOpen },
-  { href: "/intelligencia", label: "Intelligencia", icon: Brain },
-  { href: "/strategia", label: "Stratégia", icon: BarChart3 },
-  { href: "/tartalom-studio", label: "Tartalom Studio", icon: Layers },
-  { href: "/kampanyok", label: "Kampányok", icon: Megaphone },
-  { href: "/analitika", label: "Analitika", icon: TrendingUp },
-  { href: "/seo", label: "SEO Audit", icon: SearchCheck, secondary: true },
-  { href: "/riportok", label: "Riportok", icon: BarChart3, secondary: true },
-  { href: "/video-studio", label: "Videókészítő", icon: Video, comingSoon: true, secondary: true },
-  { href: "/hirlevel", label: "Hírlevél", icon: Mail, secondary: true },
-  { href: "/beallitasok", label: "Beállítások", icon: Settings },
+// UI-mockup (design_handoff_growth_engine_ui): 5 csoportos, zsargonmentes magyar
+// navigáció a laikus KKV-tulajra hangolva. A super_admin mindent lát; a sima
+// user a plan-gate + adminOnly szerint szűrve. A régi "Több" lenyíló megszűnt —
+// a csoportosítás váltja ki (a sidebar így sem görget).
+const NAV_GROUPS: NavGroup[] = [
+  { label: "Napi munka", items: [
+    { href: "/iranyitopult", label: "Irányítópult", icon: LayoutDashboard, gate: "all" },
+    { href: "/tartalom-studio", label: "Tartalom", icon: Layers, gate: "all" },
+  ]},
+  { label: "Tervezés", items: [
+    { href: "/strategia", label: "Stratégia", icon: BarChart3, gate: "starter+" },
+    { href: "/kampanyok", label: "Kampányok", icon: Megaphone, gate: "pro+" },
+    { href: "/intelligencia", label: "Cégelemzés", icon: Brain, gate: "all" },
+  ]},
+  { label: "Gyártás", items: [
+    { href: "/ai-iro", label: "AI Író", icon: PenLine, gate: "all" },
+    { href: "/video-studio", label: "Videó stúdió", icon: Video, gate: "pro+", comingSoon: true },
+    { href: "/hirlevel", label: "Hírlevél", icon: Mail, adminOnly: true },
+  ]},
+  { label: "Mérés", items: [
+    { href: "/analitika", label: "Kimutatások", icon: TrendingUp, gate: "all" },
+    { href: "/riportok", label: "Riportok", icon: BarChart3, gate: "pro+" },
+    { href: "/seo", label: "Weboldal check", icon: SearchCheck, gate: "all" },
+  ]},
+  { label: "Rendszer", items: [
+    { href: "/projektek", label: "Ügyfeleim", icon: FolderOpen, adminOnly: true },
+    { href: "/beallitasok", label: "Beállítások", icon: Settings, gate: "all" },
+    { href: "/admin/felhasznalok", label: "Felhasználók", icon: Shield, adminOnly: true },
+  ]},
 ];
 
 const notifIcons: Record<string, React.ReactNode> = {
@@ -137,24 +141,23 @@ export default function DashboardLayout({ children, title, subtitle, background 
   // jogosult menüpontokat látja. Super_admin mindent. A canUseStrategy
   // a "starter+" gate, a canUseCampaigns a "pro+" gate vetítője — a
   // useSubscription hook már tartalmazza ezeket a flag-eket.
-  const navItems = isSuperAdmin
-    ? adminNavItems
-    : publicNavItems.filter(item => {
+  // Csoportonként szűrjük az elemeket: adminOnly → csak super_admin; a sima
+  // user a plan-gate szerint. Az üres csoportok kiesnek.
+  const visibleGroups = NAV_GROUPS
+    .map(group => ({
+      label: group.label,
+      items: group.items.filter(item => {
+        if (item.adminOnly) return isSuperAdmin;
+        if (isSuperAdmin) return true;
         if (!item.gate || item.gate === "all") return true;
         if (item.gate === "starter+") return subscription.canUseStrategy;
         if (item.gate === "pro+") return subscription.canUseCampaigns;
         return true;
-      });
+      }),
+    }))
+    .filter(group => group.items.length > 0);
 
-  // A sidebar ne görgessen: az elsődleges menüpontok mindig látszanak, a
-  // másodlagosak (secondary) egy "Több" lenyíló alá kerülnek. Ha a jelenlegi
-  // oldal egy másodlagos menüponté, a lenyíló automatikusan nyitva van.
-  const primaryNav = navItems.filter(i => !i.secondary);
-  const secondaryNav = navItems.filter(i => i.secondary);
-  const [moreOpen, setMoreOpen] = useState(false);
   const isNavActive = (href: string) => location === href || (href !== "/iranyitopult" && location.startsWith(href));
-  const activeInSecondary = secondaryNav.some(i => isNavActive(i.href));
-  const showMore = moreOpen || activeInSecondary;
 
   const renderNavItem = ({ href, label, icon: Icon, comingSoon }: NavItem) => {
     const isActive = isNavActive(href);
@@ -250,10 +253,10 @@ export default function DashboardLayout({ children, title, subtitle, background 
       <aside
         className={cn(
           "flex-shrink-0 flex flex-col border-r z-50 transition-transform duration-200",
-          "fixed md:relative inset-y-0 left-0 w-56",
+          "fixed md:relative inset-y-0 left-0 w-[252px]",
           sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         )}
-        style={{ background: "var(--qa-surface)", borderColor: "var(--qa-border)" }}
+        style={{ background: "var(--qa-bg-nav)", borderColor: "var(--qa-border)" }}
       >
         {/* Logo — a Growth Engine termék-jel (bars) + írott lockup */}
         <div className="px-4 py-4 border-b" style={{ borderColor: "var(--qa-border)" }}>
@@ -354,46 +357,20 @@ export default function DashboardLayout({ children, title, subtitle, background 
           </div>
         )}
 
-        {/* Navigation — elsődleges elemek + "Több" lenyíló a másodlagosaknak
-            (így a sidebar nem görget). */}
-        <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
-          {primaryNav.map(renderNavItem)}
-
-          {secondaryNav.length > 0 && (
-            <>
-              <button
-                type="button"
-                onClick={() => setMoreOpen(o => !o)}
-                className={cn("nav-item w-full text-left", showMore && "text-[var(--qa-fg)]")}
-                aria-expanded={showMore}
-                title={showMore ? "Kevesebb" : "Több menüpont"}
-              >
-                <Menu size={15} />
-                <span>Több</span>
-                <ChevronDown
-                  size={13}
-                  className="ml-auto transition-transform"
-                  style={{ transform: showMore ? "rotate(180deg)" : "none", color: "var(--qa-fg4)" }}
-                />
-              </button>
-              {showMore && (
-                <div className="space-y-0.5">
-                  {secondaryNav.map(renderNavItem)}
-                </div>
-              )}
-            </>
-          )}
+        {/* Navigation — 5 csoportos (UI-mockup). A csoportosítás váltja ki a
+            régi "Több" lenyílót; a sidebar így sem görget. */}
+        <nav className="flex-1 px-3 py-3 space-y-4 overflow-y-auto no-scrollbar">
+          {visibleGroups.map(group => (
+            <div key={group.label} className="space-y-0.5">
+              <p className="nav-group-label">{group.label}</p>
+              {group.items.map(renderNavItem)}
+            </div>
+          ))}
         </nav>
 
-        {/* Bottom: user info + plan badge + logout */}
+        {/* Bottom: user info + plan badge + logout
+            (a "Felhasználók" link átkerült a fenti Rendszer csoportba) */}
         <div className="px-3 py-3 border-t space-y-1" style={{ borderColor: "var(--qa-border)" }}>
-          {isSuperAdmin && (
-            <Link href="/admin/felhasznalok" className={cn("nav-item", location.startsWith("/admin") && "active")}>
-              <Shield size={15} />
-              <span>Felhasználók</span>
-              {location.startsWith("/admin") && <ChevronRight size={12} className="ml-auto" style={{ color: "var(--qa-accent)", opacity: 0.7 }} />}
-            </Link>
-          )}
           <div className="px-3 py-2 rounded-lg" style={{ background: "var(--qa-surface2)" }}>
             <p className="text-xs font-semibold truncate" style={{ color: "var(--qa-fg2)" }}>
               {user?.name ?? user?.email ?? "Felhasználó"}
