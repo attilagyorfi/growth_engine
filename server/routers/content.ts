@@ -171,7 +171,7 @@ export const contentRouter = router({
         created.push(result);
       }
 
-      await recordAiUsage(ctx.appUser.id, "monthly_content_plan", ctx.appUser.role, input.isOnboarding);
+      await recordAiUsage(ctx.appUser.id, "contentPlan", ctx.appUser.role, input.isOnboarding);
       return { created: created.length, posts: created };
     }),
   // ─── Approval Workflow ──────────────────────────────────────────────────────

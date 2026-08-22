@@ -325,22 +325,28 @@ export async function checkAiUsageLimit(
     return { allowed: true, used: 0, limit: -1, plan: `${plan}_onboarding`, warning: false };
   }
 
+  // AUDIT #2 FIX: az enforcement eddig a per-`feature` bucketet nézte, de a hívók
+  // nem adtak feature-t → "other" bucketre esett, amit a recordAiUsage szinte
+  // sosem írt → a count mindig ~0 → MINDIG engedélyezett (korlátlan generálás,
+  // valós OpenAI/DALL-E költség). Most a TELJES havi keretet nézzük (minden usage
+  // számít) — ez konzisztens az `aiUsage.status` widget kijelzésével (ott is a
+  // total limit + total count szerepel), és robusztus a feature-kulcs eltérésekre.
   const planLimits = AI_PLAN_LIMITS[plan] ?? AI_PLAN_LIMITS.free;
-  const f = feature ?? "other";
-  const limit = planLimits[f] ?? 0;
 
-  if (limit === 0) {
-    // Feature not available on this plan
+  // Hard-gate: ha a funkció ezen a csomagon KIFEJEZETTEN 0 (pl. free/starter
+  // képgenerálás/videó), akkor teljesen tiltjuk, függetlenül a total kerettől.
+  if (feature && (planLimits[feature] ?? 0) === 0) {
     return { allowed: false, used: 0, limit: 0, plan, warning: false };
   }
 
-  const used = await getMonthlyAiUsageCount(appUserId, undefined, f);
-  const warning = used >= Math.floor(limit * 0.8);
+  const totalLimit = AI_PLAN_TOTAL_LIMITS[plan] ?? AI_PLAN_TOTAL_LIMITS.free;
+  const used = await getMonthlyAiUsageCount(appUserId); // feature nélkül = teljes havi
+  const warning = used >= Math.floor(totalLimit * 0.8);
 
   return {
-    allowed: used < limit,
+    allowed: used < totalLimit,
     used,
-    limit,
+    limit: totalLimit,
     plan,
     warning,
   };

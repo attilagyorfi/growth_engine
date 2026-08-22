@@ -433,7 +433,12 @@ export const appRouter = router({
         emailGoal: z.string().optional(),
         previousContext: z.string().optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        // AUDIT #2 FIX: eddig kvóta nélkül futott. Most számít a havi keretbe.
+        const usageCheck = await checkAiUsageLimit(ctx.appUser.id, ctx.appUser.subscriptionPlan ?? "free", ctx.appUser.role, false, "post");
+        if (!usageCheck.allowed) {
+          throw new TRPCError({ code: "FORBIDDEN", message: `AI generálási limit elérve (${usageCheck.used}/${usageCheck.limit} ebben a hónapban).`, cause: { code: "AI_LIMIT_REACHED", used: usageCheck.used, limit: usageCheck.limit, plan: usageCheck.plan } });
+        }
         const brandContext = input.brandVoice
           ? `Brand voice: ${input.brandVoice.tone ?? "professional"}, Style: ${input.brandVoice.style ?? "direct"}, Keywords to use: ${(input.brandVoice.keywords ?? []).join(", ")}, Words to avoid: ${(input.brandVoice.avoidWords ?? []).join(", ")}`
           : "Use a professional, direct tone.";
@@ -445,6 +450,7 @@ export const appRouter = router({
           response_format: { type: "json_schema", json_schema: { name: "email_draft", strict: true, schema: { type: "object", properties: { subject: { type: "string" }, body: { type: "string" }, previewText: { type: "string" } }, required: ["subject", "body", "previewText"], additionalProperties: false } } },
         });
         const content = response.choices[0]?.message?.content ?? "{}";
+        await recordAiUsage(ctx.appUser.id, "post", ctx.appUser.role);
         return parseLLMJson(content);
       }),
 
@@ -464,7 +470,12 @@ export const appRouter = router({
         targetAudience: z.string().optional(),
         cta: z.string().optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        // AUDIT #2 FIX: eddig kvóta nélkül futott. Most számít a havi keretbe.
+        const usageCheck = await checkAiUsageLimit(ctx.appUser.id, ctx.appUser.subscriptionPlan ?? "free", ctx.appUser.role, false, "post");
+        if (!usageCheck.allowed) {
+          throw new TRPCError({ code: "FORBIDDEN", message: `AI generálási limit elérve (${usageCheck.used}/${usageCheck.limit} ebben a hónapban).`, cause: { code: "AI_LIMIT_REACHED", used: usageCheck.used, limit: usageCheck.limit, plan: usageCheck.plan } });
+        }
         const platformGuide: Record<string, string> = {
           linkedin: "Szakmai hangnem, 150-300 szó, 3-5 releváns hashtag, kérdéssel vagy CTA-val zárul",
           facebook: "Közvetlen, 100-200 szó, figyelemfelkeltő kezdés, 2-3 hashtag",
@@ -483,6 +494,7 @@ export const appRouter = router({
           response_format: { type: "json_schema", json_schema: { name: "social_post", strict: true, schema: { type: "object", properties: { caption: { type: "string" }, hashtags: { type: "array", items: { type: "string" } }, visualBrief: { type: "string" }, ctaText: { type: "string" } }, required: ["caption", "hashtags", "visualBrief", "ctaText"], additionalProperties: false } } },
         });
         const content = response.choices[0]?.message?.content ?? "{}";
+        await recordAiUsage(ctx.appUser.id, "post", ctx.appUser.role);
         return parseLLMJson(content);
       }),
   }),
@@ -604,14 +616,20 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        // AUDIT #2 FIX: eddig kvóta nélkül futott (korlátlan LLM-hívás). Most számít a keretbe.
+        const usageCheck = await checkAiUsageLimit(ctx.appUser.id, ctx.appUser.subscriptionPlan ?? "free", ctx.appUser.role, false, "campaign");
+        if (!usageCheck.allowed) {
+          throw new TRPCError({ code: "FORBIDDEN", message: `AI generálási limit elérve (${usageCheck.used}/${usageCheck.limit} ebben a hónapban).`, cause: { code: "AI_LIMIT_REACHED", used: usageCheck.used, limit: usageCheck.limit, plan: usageCheck.plan } });
+        }
         const response = await invokeLLM({
           messages: [
             { role: "system", content: "Te egy kampánystratéga vagy. Részletes kampány briefet készítesz. Kizárólag érvényes JSON-t adj vissza. MINDEN szöveges értéket KIZÁRÓLAG MAGYARUL írj meg." },
-            { role: "user", content: `Készíts kampány briefet a következőhöz: "${input.campaignTitle}"\nCél: ${input.objective ?? "márkaismertsség növelése"}\nCélcsoport: ${input.targetAudience ?? "általános"}\nCsatornák: ${(input.channels ?? []).join(", ") || "minden releváns csatorna"}\nVállalati kontextus: ${JSON.stringify(input.intelligenceData ?? {})}\n\nAdj vissza JSON-t: hook (figyelemfelkeltő üzenet magyarul), mainMessage (fő üzenet magyarul), cta (cselekvésre szólítás magyarul), contentIdeas (tömb: {title, format, platform} - mind magyarul), kpis (tömb: {label, target} - mind magyarul)` },
+            { role: "user", content: `Készíts kampány briefet a következőhöz: "${input.campaignTitle}"\nCél: ${input.objective ?? "márkaismertség növelése"}\nCélcsoport: ${input.targetAudience ?? "általános"}\nCsatornák: ${(input.channels ?? []).join(", ") || "minden releváns csatorna"}\nVállalati kontextus: ${JSON.stringify(input.intelligenceData ?? {})}\n\nAdj vissza JSON-t: hook (figyelemfelkeltő üzenet magyarul), mainMessage (fő üzenet magyarul), cta (cselekvésre szólítás magyarul), contentIdeas (tömb: {title, format, platform} - mind magyarul), kpis (tömb: {label, target} - mind magyarul)` },
           ],
           response_format: { type: "json_schema", json_schema: { name: "campaign_brief", strict: true, schema: { type: "object", properties: { hook: { type: "string" }, mainMessage: { type: "string" }, cta: { type: "string" }, contentIdeas: { type: "array", items: { type: "object", properties: { title: { type: "string" }, format: { type: "string" }, platform: { type: "string" } }, required: ["title", "format", "platform"], additionalProperties: false } }, kpis: { type: "array", items: { type: "object", properties: { label: { type: "string" }, target: { type: "string" } }, required: ["label", "target"], additionalProperties: false } } }, required: ["hook", "mainMessage", "cta", "contentIdeas", "kpis"], additionalProperties: false } } },
         });
         const content = response.choices[0]?.message?.content ?? "{}";
+        await recordAiUsage(ctx.appUser.id, "campaign", ctx.appUser.role);
         return parseLLMJson(content);
       }),
 
@@ -727,7 +745,7 @@ export const appRouter = router({
         } catch (err) {
           console.error("[Campaign] Calendar items bulk create failed:", err);
         }
-        await recordAiUsage(ctx.appUser.id, "campaign_content_generation", ctx.appUser.role);
+        await recordAiUsage(ctx.appUser.id, "campaign", ctx.appUser.role);
         return { created: created.length, contentIds: created, calendarItemsCreated: calendarItems.length };
       }),
   }),
@@ -940,7 +958,20 @@ export const appRouter = router({
         // az alapértelmezett 1024x1024.
         platform: z.string().optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        // AUDIT #2 FIX: eddig NULLA kvóta-ellenőrzés → free/starter is korlátlanul
+        // generálhatott DALL-E képet (valós ~15 Ft/kép költség). Most: hard-gate
+        // (free image=0 → tiltva) + total havi keret + rögzítés.
+        const usageCheck = await checkAiUsageLimit(ctx.appUser.id, ctx.appUser.subscriptionPlan ?? "free", ctx.appUser.role, false, "image");
+        if (!usageCheck.allowed) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: usageCheck.limit === 0
+              ? "A képgenerálás a jelenlegi csomagodban nem érhető el — frissíts Starter vagy magasabb csomagra."
+              : `AI generálási limit elérve (${usageCheck.used}/${usageCheck.limit} ebben a hónapban).`,
+            cause: { code: "AI_LIMIT_REACHED", used: usageCheck.used, limit: usageCheck.limit, plan: usageCheck.plan },
+          });
+        }
         const { PLATFORM_IMAGE_SIZE } = await import("./_core/imageGeneration");
         const size = input.platform
           ? PLATFORM_IMAGE_SIZE[input.platform.toLowerCase()]
@@ -952,6 +983,7 @@ export const appRouter = router({
             originalImages: [{ url: input.originalImageUrl, mimeType: "image/jpeg" as const }]
           } : {}),
         });
+        await recordAiUsage(ctx.appUser.id, "image", ctx.appUser.role);
         return { url: result.url ?? null, size: size ?? "1024x1024" };
       }),
 
@@ -984,7 +1016,7 @@ export const appRouter = router({
         });
         const raw = response.choices[0]?.message?.content ?? "{}";
         // Record AI usage
-        await recordAiUsage(ctx.appUser.id, "content", ctx.appUser.role);
+        await recordAiUsage(ctx.appUser.id, "post", ctx.appUser.role);
         return parseLLMJson(raw);
       }),
   }),
@@ -1071,7 +1103,7 @@ A link mező mindig ezek egyike legyen, ne találj ki más URL-t.`,
           },
         });
         const raw = response.choices[0]?.message?.content ?? "{}";
-        await recordAiUsage(ctx.appUser.id, "daily_tasks", ctx.appUser.role);
+        await recordAiUsage(ctx.appUser.id, "dailyTasks", ctx.appUser.role);
         return parseLLMJson(raw) as {
           tasks: { text: string; category: string; link: string; actionType: string }[];
           motivationalMessage: string;

@@ -413,6 +413,29 @@ export default function OnboardingWizard() {
   const utils = trpc.useUtils();
   const completeOnboarding = trpc.appAuth.completeOnboarding.useMutation();
   const upsertProject = trpc.projects.upsert.useMutation();
+
+  // ─── AUDIT FIX (kritikus): az onboarding elakadt az 1. lépésnél ──────────────
+  // A profil-scoped onboarding-végpontok (upsertSession/saveAnswers/scrapeSocial/
+  // uploadAsset) tulajdon-ellenőrzést kérnek, DE a clientProfiles sor korábban
+  // csak a 3. lépésben jött létre → a slow-path getProfileById üres → FORBIDDEN
+  // → "Hiba a mentés során". (A biztonsági ownership-fix mellékhatása.)
+  // Megoldás: friss (self-serve) profilnál a profilt LEGELŐSZÖR létrehozzuk,
+  // így minden későbbi hívásnak van tulajdona. Projekt/meglévő profilnál NEM
+  // nyúlunk hozzá (nehogy a valós nevét egy placeholderrel felülírjuk).
+  // Promise-memoizált: párhuzamos hívásnál is csak egyszer fut, hibánál újrapróbál.
+  const isFreshProfile = !queryProfileId && !appUser?.profileId;
+  const ensureProfilePromise = useRef<Promise<unknown> | null>(null);
+  const ensureProfileExists = (): Promise<unknown> => {
+    if (!isFreshProfile) return Promise.resolve();
+    if (!ensureProfilePromise.current) {
+      const name = data.companyName?.trim() || appUser?.name?.trim() || "Új profil";
+      const initials = (name.slice(0, 2) || "?").toUpperCase();
+      ensureProfilePromise.current = upsertProfile
+        .mutateAsync({ id: data.profileId, name, initials })
+        .catch((e) => { ensureProfilePromise.current = null; throw e; });
+    }
+    return ensureProfilePromise.current;
+  };
   const [socialScrapeStatus, setSocialScrapeStatus] = useState<Record<string, "idle" | "loading" | "done" | "error">>({}); 
   // AI előnézet: weboldal scraping eredmények megmutatása a 2. lépésben
   const [aiPreviewApproved, setAiPreviewApproved] = useState(false);
@@ -461,6 +484,7 @@ export default function OnboardingWizard() {
     const newStatus: Record<string, "idle" | "loading" | "done" | "error"> = {};
     urls.forEach(([k]) => { newStatus[k] = "loading"; });
     setSocialScrapeStatus(newStatus);
+    try { await ensureProfileExists(); } catch { /* a lenti hívások úgyis jeleznek */ } // audit fix
     let anySuccess = false;
     for (const [platform, url] of urls) {
       try {
@@ -491,6 +515,7 @@ export default function OnboardingWizard() {
     }
     setIsExpressRunning(true);
     try {
+      await ensureProfileExists(); // audit fix: a profil létezzen a mentés előtt
       // Save session and step 1 answers
       await upsertSession.mutateAsync({ id: data.sessionId, profileId: data.profileId, currentStep: 3 });
       await saveAnswers.mutateAsync({
@@ -561,6 +586,7 @@ export default function OnboardingWizard() {
 
   const handleFileUpload = async (files: FileList | null) => {
     if (!files) return;
+    try { await ensureProfileExists(); } catch { /* az uploadAsset úgyis jelez */ } // audit fix
     for (const file of Array.from(files)) {
       const tempId = nanoid();
       const newAsset: UploadedAsset = {
@@ -617,6 +643,7 @@ export default function OnboardingWizard() {
       }
       setIsLoading(true);
       try {
+        await ensureProfileExists(); // audit fix: a profil létezzen a mentés előtt
         await upsertSession.mutateAsync({ id: data.sessionId, profileId: data.profileId, currentStep: 2 });
         await saveAnswers.mutateAsync({
           sessionId: data.sessionId,
