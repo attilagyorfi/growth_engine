@@ -24,6 +24,7 @@ interface GeneratedContent {
   subject?: string;
   hashtags?: string[];
   callToAction?: string;
+  platform?: "linkedin" | "facebook" | "instagram" | "twitter" | "tiktok";
 }
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -68,6 +69,19 @@ export default function AIWriter() {
   const selectedType = CONTENT_TYPES.find(t => t.value === contentType)!;
   const isEmail = selectedType.category === "email";
 
+  // Tartalom-ellenőrző (#6) — determinisztikus, csak social posztokra, nézet
+  // módban (szerkesztés közben nem, hogy ne fusson minden leütésre).
+  const contentCheck = trpc.content.check.useQuery(
+    {
+      profileId: activeProfile?.id ?? "",
+      platform: generated?.platform ?? "linkedin",
+      content: editedContent,
+      hashtags: generated?.hashtags,
+      hasImage: false,
+    },
+    { enabled: !!generated && !isEmail && !!generated?.platform && !!activeProfile?.id && !isEditing, staleTime: 5_000 }
+  );
+
   const handleGenerate = async () => {
     if (!topic.trim()) {
       toast.error("Add meg a téma/célkitűzés mezőt!");
@@ -108,7 +122,7 @@ export default function AIWriter() {
           brandVoice: profileBrandVoice ? { tone: profileBrandVoice.tone ?? "", style: profileBrandVoice.style ?? "", keywords: profileBrandVoice.keywords ?? [] } : undefined,
           targetAudience: additionalContext || undefined,
         });
-        result = { type: contentType, content: r.caption, hashtags: r.hashtags, callToAction: r.ctaText };
+        result = { type: contentType, content: r.caption, hashtags: r.hashtags, callToAction: r.ctaText, platform };
       }
       setGenerated(result);
       setEditedContent(result.content);
@@ -344,6 +358,23 @@ export default function AIWriter() {
                     <div className="p-3 rounded-lg border-l-2" style={{ background: "oklch(0.18 0.02 255)", borderColor: "oklch(0.55 0.18 145)" }}>
                       <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Call to Action</p>
                       <p className="text-gray-200 text-sm">{generated.callToAction}</p>
+                    </div>
+                  )}
+
+                  {/* Tartalom-ellenőrző (#6) — csak social posztokra */}
+                  {contentCheck.data && contentCheck.data.length > 0 && (
+                    <div className="rounded-lg p-3 space-y-1.5" style={{ background: "oklch(0.18 0.02 255)", border: "1px solid var(--qa-surface3)" }}>
+                      <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Ellenőrzés</p>
+                      {contentCheck.data.map((c) => {
+                        const color = c.level === "ok" ? "var(--qa-success)" : c.level === "warn" ? "var(--qa-warning)" : "var(--qa-danger)";
+                        const mark = c.level === "ok" ? "✓" : c.level === "warn" ? "!" : "✕";
+                        return (
+                          <div key={c.key} className="flex items-start gap-2 text-sm">
+                            <span className="flex-shrink-0 mt-0.5" style={{ color, fontWeight: 700, width: 14, textAlign: "center" }}>{mark}</span>
+                            <span style={{ color: "var(--qa-fg2)" }}>{c.label}</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
 
