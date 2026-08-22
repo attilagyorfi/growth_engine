@@ -16,6 +16,7 @@ import { assertProfileOwnership } from "../_core/ownership";
 import { checkAiUsageLimit, recordAiUsage } from "../authDb";
 import {
   getContentByProfile, getContentById, createContent, updateContent, deleteContent,
+  createNotification, createAiMemory,
 } from "../db";
 
 export const contentRouter = router({
@@ -193,6 +194,17 @@ export const contentRouter = router({
       try {
         const [profile] = await db.select().from(clientProfiles).where(eq(clientProfiles.id, post.profileId)).limit(1);
         if (profile?.appUserId) {
+          // AUDIT FIX (#5 bekötés): in-app értesítés is — eddig a createNotification
+          // sehol nem hívódott, így a csengő/Értesítések oldal örökké üres volt.
+          await createNotification({
+            id: nanoid(),
+            appUserId: profile.appUserId,
+            profileId: post.profileId,
+            type: "approval_ready",
+            title: "Tartalom jóváhagyásra vár",
+            body: `„${post.title}" (${post.platform}) jóváhagyásra vár.`,
+            actionUrl: `/tartalom-studio?postId=${post.id}`,
+          });
           const [owner] = await db.select().from(appUsers).where(eq(appUsers.id, profile.appUserId)).limit(1);
           if (owner?.email) {
             const { sendPostReviewNotificationEmail } = await import("../email");
@@ -232,6 +244,20 @@ export const contentRouter = router({
       await db.update(contentPosts)
         .set({ status: "approved", reviewedBy: ctx.appUser.id, reviewedAt: new Date(), updatedAt: new Date() })
         .where(eq(contentPosts.id, input.postId));
+      // AUDIT FIX (#5 bekötés): AI-memória írás — eddig a createAiMemory sehol nem
+      // hívódott, így a "az AI tanul a döntéseidből" ígéret üres volt. A jóváhagyott
+      // minta most bekerül (a Beállítások → AI Memória listában látszik, és az
+      // ajánlás-generátor ebből tanul).
+      try {
+        await createAiMemory({
+          profileId: post.profileId,
+          memoryType: "approved_pattern",
+          content: (post.content ?? "").slice(0, 600),
+          context: post.title ?? undefined,
+          platform: post.platform ?? undefined,
+          pillar: post.pillar ?? undefined,
+        });
+      } catch (err) { console.error("[AI Memory] approve write failed (non-fatal):", err); }
       return { success: true };
     }),
 
@@ -249,6 +275,18 @@ export const contentRouter = router({
       await db.update(contentPosts)
         .set({ status: "rejected", rejectionReason: input.reason ?? null, reviewedBy: ctx.appUser.id, reviewedAt: new Date(), updatedAt: new Date() })
         .where(eq(contentPosts.id, input.postId));
+      // AUDIT FIX (#5 bekötés): AI-memória írás — az elutasított minta (+ indok) is
+      // bekerül, hogy az AI legközelebb elkerülje.
+      try {
+        await createAiMemory({
+          profileId: post.profileId,
+          memoryType: "rejected_pattern",
+          content: (input.reason ? `Elutasítás indoka: ${input.reason}\n` : "") + `Elutasított tartalom: ${(post.content ?? "").slice(0, 500)}`,
+          context: post.title ?? undefined,
+          platform: post.platform ?? undefined,
+          pillar: post.pillar ?? undefined,
+        });
+      } catch (err) { console.error("[AI Memory] reject write failed (non-fatal):", err); }
       return { success: true };
     }),
 
