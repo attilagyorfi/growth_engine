@@ -158,11 +158,14 @@ export default function Reports() {
               ? <><Loader2 size={14} className="animate-spin" /> Generálás…</>
               : <><Zap size={14} /> Riport generálása</>}
           </button>
-          {connections.length === 0 && (
-            <p className="text-xs" style={{ color: "oklch(0.75 0.18 75)" }}>
-              ⚠ Még nincs csatlakoztatott adatforrás — a mock adapter fut helyette (demo mode).
-            </p>
-          )}
+          {/* AUDIT #3 FIX: a riport-connector JELENLEG minden platformra mintaszámot
+              generál (a bekötött fiók valós adatát nem használja). A figyelmeztetés
+              eddig eltűnt, ha volt bekötött forrás → valós adatnak látszott. Most
+              MINDIG látszik, amíg nincs valós adapter. */}
+          <p className="text-xs font-medium" style={{ color: "var(--qa-warning)" }}>
+            DEMO adat — a riportok jelenleg mintaszámokat mutatnak (nem valós
+            hirdetési/analitika adat). A valós adatforrás-integrációk fejlesztés alatt.
+          </p>
         </div>
 
         {/* Reports list — sidebar */}
@@ -211,8 +214,16 @@ export default function Reports() {
                 {/* Report header */}
                 <div className="rounded-xl border p-5" style={{ background: cardBg, borderColor: border }}>
                   <div className="flex items-center justify-between mb-2">
-                    <h2 className="text-lg font-bold" style={{ color: textPrimary }}>{activeReport.title}</h2>
-                    <button onClick={() => window.print()} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold"
+                    <div className="flex items-center gap-2 min-w-0">
+                      <h2 className="text-lg font-bold truncate" style={{ color: textPrimary }}>{activeReport.title}</h2>
+                      {/* AUDIT #3 FIX: állandó DEMO jelvény — a riporton (és a nyomtatott
+                          verzión) is egyértelmű, hogy a számok mintaadatok. */}
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider flex-shrink-0"
+                        style={{ background: "var(--qa-warning-soft, rgba(245,158,11,.14))", color: "var(--qa-warning)" }}>
+                        Demo adat
+                      </span>
+                    </div>
+                    <button onClick={() => window.print()} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold flex-shrink-0"
                       style={{ background: "var(--qa-surface2)", color: textMuted }}>
                       <Printer size={12} /> Nyomtatás / PDF
                     </button>
@@ -220,6 +231,9 @@ export default function Reports() {
                   <p className="text-xs" style={{ color: textMuted }}>
                     <Calendar size={12} className="inline mr-1" />
                     {activeReport.periodFrom ? String(activeReport.periodFrom).slice(0, 10) : ""} → {activeReport.periodTo ? String(activeReport.periodTo).slice(0, 10) : ""}
+                  </p>
+                  <p className="text-xs mt-2" style={{ color: "var(--qa-warning)" }}>
+                    Ez a riport mintaadatot tartalmaz — ne add ki valós teljesítmény-jelentésként.
                   </p>
                 </div>
 
