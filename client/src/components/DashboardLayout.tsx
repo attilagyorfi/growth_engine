@@ -14,7 +14,7 @@ import {
   LayoutDashboard, Users, BarChart3, Layers, TrendingUp, Settings,
   Zap, ChevronRight, Bell, X, CheckCircle, AlertCircle, Info, Mail,
   ChevronDown, LogOut, Shield, Megaphone, SearchCheck, Video,
-  User, KeyRound, UserCog, Crown, Sparkles, Menu, Brain, FolderOpen, Plus, Check, PenLine,
+  User, KeyRound, UserCog, Crown, Sparkles, Menu, Brain, FolderOpen, Plus, Check, PenLine, Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -242,6 +242,22 @@ export default function DashboardLayout({ children, title, subtitle, background 
     ? { bg: "oklch(0.76 0.17 68 / 10%)", text: "var(--qa-warning)", border: "oklch(0.76 0.17 68 / 25%)" }
     : (planAccentStyle[planKey] ?? planAccentStyle.free);
 
+  // Breadcrumb a felső sávhoz (UI-mockup): [ügyfél v. csoport] › [oldal].
+  // Admin + kiválasztott projekt → ügyfélnév; egyébként az aktív menüpont
+  // csoportja. Az oldalcím a title prop, vagy fallback az aktív nav-elem címke.
+  const currentNav = NAV_GROUPS
+    .flatMap(g => g.items.map(i => ({ label: i.label, group: g.label, href: i.href })))
+    .find(i => isNavActive(i.href));
+  const breadcrumbContext = isSuperAdmin && activeProject ? activeProject.name : (currentNav?.group ?? null);
+  const pageLabel = title ?? currentNav?.label ?? "";
+
+  // Az AI Copilot panel a következő (önálló) fejlesztési kör — a topbar
+  // "Asszisztens" gombja most az érkezését jelzi.
+  const handleOpenAssistant = () =>
+    toast.info("Az AI Asszisztens hamarosan érkezik — a következő fejlesztési körben építjük be.", {
+      description: "Kontextus-tudatos segéd: látja majd, melyik oldalon vagy, és tud posztot írni, ütemezni, jóváhagyni.",
+    });
+
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "var(--qa-bg)" }}>
       {/* Mobile overlay */}
@@ -426,38 +442,62 @@ export default function DashboardLayout({ children, title, subtitle, background 
             >
               <Menu size={16} />
             </button>
-            <div>
-              {title && (
-                <h1 className="font-bold leading-none" style={{ fontFamily: "var(--font-heading)", fontSize: "17px", letterSpacing: "-0.02em", color: "var(--qa-fg)" }}>
-                  {title}
-                </h1>
-              )}
+            <div className="min-w-0">
+              {/* Breadcrumb (UI-mockup): [ügyfél v. csoport] › [oldal] */}
+              <div className="flex items-center gap-1.5 leading-none">
+                {breadcrumbContext && (
+                  <>
+                    <span className="text-xs font-medium truncate max-w-[35vw] md:max-w-[200px]" style={{ color: "var(--qa-fg4)" }}>
+                      {breadcrumbContext}
+                    </span>
+                    <ChevronRight size={12} className="flex-shrink-0" style={{ color: "var(--qa-fg5)" }} />
+                  </>
+                )}
+                {pageLabel && (
+                  <h1 className="font-bold leading-none truncate" style={{ fontFamily: "var(--font-heading)", fontSize: "17px", letterSpacing: "-0.02em", color: "var(--qa-fg)" }}>
+                    {pageLabel}
+                  </h1>
+                )}
+              </div>
               {subtitle && (
-                <p className="text-xs mt-0.5" style={{ color: "var(--qa-fg3)" }}>{subtitle}</p>
+                <p className="text-xs mt-1 truncate" style={{ color: "var(--qa-fg3)" }}>{subtitle}</p>
               )}
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Cmd+K palette trigger — vizuális "discovery" a shortcuthez */}
+            {/* Kereső-mező (⌘K parancspaletta) — a felső sáv kinézete a UI-mockup szerint */}
             <button
               onClick={() => setCmdPaletteOpen(true)}
-              className="hidden md:flex items-center gap-2 h-8 px-2.5 rounded-md text-xs transition-colors"
+              className="hidden md:flex items-center gap-2 h-8 px-2.5 rounded-md text-xs transition-colors w-[200px]"
               style={{
-                background: "var(--qa-surface2)",
-                color: "var(--qa-fg3)",
+                background: "var(--qa-inset)",
+                color: "var(--qa-fg4)",
                 border: "1px solid var(--qa-border)",
               }}
-              aria-label="Parancspaletta megnyitása (Ctrl+K)"
-              title="Parancspaletta"
+              aria-label="Keresés / parancspaletta (Ctrl+K)"
+              title="Keresés (Ctrl+K)"
             >
-              <span>Ugrás…</span>
+              <Search size={13} className="flex-shrink-0" />
+              <span className="flex-1 text-left">Keresés…</span>
               <kbd
                 className="hidden lg:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded"
-                style={{ background: "var(--qa-surface)", color: "var(--qa-fg4)", fontSize: "10px", fontFamily: "var(--font-mono)" }}
+                style={{ background: "var(--qa-surface2)", color: "var(--qa-fg4)", fontSize: "10px", fontFamily: "var(--font-mono)" }}
               >
                 ⌘K
               </kbd>
+            </button>
+
+            {/* Asszisztens — az AI Copilot belépési pontja (a panel a következő kör) */}
+            <button
+              onClick={handleOpenAssistant}
+              className="flex items-center gap-1.5 h-8 px-3 rounded-md text-xs font-semibold transition-opacity hover:opacity-90"
+              style={{ background: "var(--qa-accent)", color: "var(--qa-accent-on)", boxShadow: "var(--qa-accent-glow)" }}
+              aria-label="AI Asszisztens megnyitása"
+              title="AI Asszisztens"
+            >
+              <Sparkles size={14} className="flex-shrink-0" />
+              <span className="hidden sm:inline">Asszisztens</span>
             </button>
 
             {/* Notification Bell */}
