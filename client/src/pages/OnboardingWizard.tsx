@@ -277,6 +277,11 @@ export default function OnboardingWizard() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [isScraping, setIsScraping] = useState(false);
+  // #14 — a weboldal-scrape kiolvasott értékei, láthatóan visszaigazolva.
+  const [scrapeResult, setScrapeResult] = useState<{
+    industry?: string; services?: string[]; keyMessages?: string[];
+    companySummary?: string; targetAudience?: string; toneOfVoice?: string;
+  } | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isExpressMode, setIsExpressMode] = useState(false);
   const [isExpressRunning, setIsExpressRunning] = useState(false);
@@ -464,6 +469,10 @@ export default function OnboardingWizard() {
         targetAudience: result.targetAudience ?? "",
         competitors: result.competitorCandidates ?? [],
         description: result.companySummary ?? "",
+      });
+      setScrapeResult({
+        industry: result.industry, services: result.services, keyMessages: result.keyMessages,
+        companySummary: result.companySummary, targetAudience: result.targetAudience, toneOfVoice: result.toneOfVoice,
       });
       toast.success("Weboldal elemzés kész! Az adatok automatikusan kitöltve.");
     } catch {
@@ -996,6 +1005,49 @@ export default function OnboardingWizard() {
                 </p>
               )}
             </div>
+
+            {/* #14 — „Amit már tudok rólad": a scrape láthatóan visszaigazolt értékei */}
+            {scrapeResult && !isScraping && (
+              <div className="rounded-xl p-4 border" style={{ background: "var(--qa-accent-soft)", borderColor: "var(--qa-accent-ring)" }}>
+                <p className="text-xs uppercase tracking-wider mb-3 flex items-center gap-1.5 font-semibold" style={{ color: "var(--qa-accent-purple)" }}>
+                  <Sparkles size={12} /> Amit már tudok rólad
+                </p>
+                <div className="space-y-3">
+                  {scrapeResult.industry && (
+                    <div>
+                      <p className="text-xs mb-0.5" style={{ color: "var(--qa-fg4)" }}>Iparág</p>
+                      <p className="text-sm text-white">{scrapeResult.industry}</p>
+                    </div>
+                  )}
+                  {(scrapeResult.services?.length ?? 0) > 0 && (
+                    <div>
+                      <p className="text-xs mb-1" style={{ color: "var(--qa-fg4)" }}>Fő ajánlat</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {scrapeResult.services!.slice(0, 6).map((s, i) => (
+                          <span key={i} className="text-xs px-2 py-1 rounded-full" style={{ background: "oklch(0.2 0.03 255)", color: "var(--qa-fg2)" }}>{s}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {(scrapeResult.keyMessages?.length ?? 0) > 0 && (
+                    <div>
+                      <p className="text-xs mb-1" style={{ color: "var(--qa-fg4)" }}>Amiben erős vagy</p>
+                      <ul className="space-y-1">
+                        {scrapeResult.keyMessages!.slice(0, 4).map((m, i) => (
+                          <li key={i} className="text-sm flex items-start gap-1.5" style={{ color: "var(--qa-fg2)" }}>
+                            <Check size={13} className="mt-0.5 flex-shrink-0" style={{ color: "var(--qa-accent)" }} />
+                            <span>{m}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs mt-3" style={{ color: "var(--qa-fg4)" }}>
+                  Ezt az AI a weboldaladról olvasta ki — lentebb szabadon módosíthatod.
+                </p>
+              </div>
+            )}
 
             {/* Industry & Size */}
             <div className="grid grid-cols-2 gap-4">
