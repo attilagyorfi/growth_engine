@@ -952,3 +952,30 @@ export const teamInvites = mysqlTable("team_invites", {
 });
 export type TeamInvite = typeof teamInvites.$inferSelect;
 export type InsertTeamInvite = typeof teamInvites.$inferInsert;
+
+// ─── AI Copilot (asszisztens) ───────────────────────────────────────────────
+// Kontextus-tudatos chat-asszisztens. Egy thread / (appUser + profil): a panel
+// egy folyamatos beszélgetést tart fenn az adott ügyfél-kontextusban.
+export const assistantThreads = mysqlTable("assistant_threads", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  appUserId: varchar("appUserId", { length: 64 }).notNull(),
+  profileId: varchar("profileId", { length: 64 }),
+  title: varchar("title", { length: 255 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type AssistantThread = typeof assistantThreads.$inferSelect;
+export type InsertAssistantThread = typeof assistantThreads.$inferInsert;
+
+export const assistantMessages = mysqlTable("assistant_messages", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  threadId: varchar("threadId", { length: 64 }).notNull(),
+  // Csak user/assistant tárolódik; a system prompt hívásonként épül (kontextus).
+  role: mysqlEnum("role", ["user", "assistant"]).notNull(),
+  content: text("content").notNull(),
+  // Melyik oldalon állt a user az üzenet küldésekor (kontextus-napló).
+  page: varchar("page", { length: 128 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type AssistantMessage = typeof assistantMessages.$inferSelect;
+export type InsertAssistantMessage = typeof assistantMessages.$inferInsert;

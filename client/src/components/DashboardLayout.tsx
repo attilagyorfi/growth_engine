@@ -19,6 +19,8 @@ import {
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import GrowthEngineLogo from "@/components/GrowthEngineLogo";
+import CopilotPanel from "@/components/CopilotPanel";
+import { useProfile } from "@/contexts/ProfileContext";
 import { useAppAuth } from "@/hooks/useAppAuth";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { useSubscription } from "@/hooks/useSubscription";
@@ -99,6 +101,17 @@ export default function DashboardLayout({ children, title, subtitle, background 
   const [newName, setNewName] = useState("");
   const [showProjectMenu, setShowProjectMenu] = useState(false);
   const [cmdPaletteOpen, setCmdPaletteOpen] = useState(false);
+  // AI Copilot panel — nyitva-állapot localStorage-ban marad (handoff).
+  const [copilotOpen, setCopilotOpen] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("g2a_copilot_open") === "true";
+  });
+  const toggleCopilot = () => setCopilotOpen((v) => {
+    const next = !v;
+    try { localStorage.setItem("g2a_copilot_open", String(next)); } catch { /* ignore */ }
+    return next;
+  });
+  const { activeProfile } = useProfile();
   const changelog = useChangelog();
 
   // Globális ⌘K / Ctrl+K keyboard shortcut a parancspalettához.
@@ -250,13 +263,6 @@ export default function DashboardLayout({ children, title, subtitle, background 
     .find(i => isNavActive(i.href));
   const breadcrumbContext = isSuperAdmin && activeProject ? activeProject.name : (currentNav?.group ?? null);
   const pageLabel = title ?? currentNav?.label ?? "";
-
-  // Az AI Copilot panel a következő (önálló) fejlesztési kör — a topbar
-  // "Asszisztens" gombja most az érkezését jelzi.
-  const handleOpenAssistant = () =>
-    toast.info("Az AI Asszisztens hamarosan érkezik — a következő fejlesztési körben építjük be.", {
-      description: "Kontextus-tudatos segéd: látja majd, melyik oldalon vagy, és tud posztot írni, ütemezni, jóváhagyni.",
-    });
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "var(--qa-bg)" }}>
@@ -488,12 +494,13 @@ export default function DashboardLayout({ children, title, subtitle, background 
               </kbd>
             </button>
 
-            {/* Asszisztens — az AI Copilot belépési pontja (a panel a következő kör) */}
+            {/* Asszisztens — az AI Copilot panel nyit/zár gombja */}
             <button
-              onClick={handleOpenAssistant}
+              onClick={toggleCopilot}
               className="flex items-center gap-1.5 h-8 px-3 rounded-md text-xs font-semibold transition-opacity hover:opacity-90"
-              style={{ background: "var(--qa-accent)", color: "var(--qa-accent-on)", boxShadow: "var(--qa-accent-glow)" }}
-              aria-label="AI Asszisztens megnyitása"
+              style={{ background: "var(--qa-accent)", color: "var(--qa-accent-on)", boxShadow: copilotOpen ? "none" : "var(--qa-accent-glow)", opacity: copilotOpen ? 0.9 : 1 }}
+              aria-label="AI Asszisztens"
+              aria-pressed={copilotOpen}
               title="AI Asszisztens"
             >
               <Sparkles size={14} className="flex-shrink-0" />
@@ -820,6 +827,14 @@ export default function DashboardLayout({ children, title, subtitle, background 
           </div>
         </main>
       </div>
+
+      {/* AI Copilot panel — asztalon 344px in-flow oszlop, mobilon overlay */}
+      <CopilotPanel
+        open={copilotOpen}
+        onClose={toggleCopilot}
+        page={pageLabel || title}
+        profileId={activeProfile?.id}
+      />
 
       {/* Overlay for dropdowns */}
       {(showNotifs || showUserMenu) && (

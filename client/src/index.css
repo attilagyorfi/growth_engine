@@ -406,6 +406,17 @@
   .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
   .no-scrollbar::-webkit-scrollbar { width: 0; height: 0; display: none; }
 
+  /* Copilot chat-buborék markdown (Streamdown) — kompakt margók a keskeny panelhez */
+  .copilot-md > :first-child { margin-top: 0; }
+  .copilot-md > :last-child { margin-bottom: 0; }
+  .copilot-md p { margin: 0 0 0.5rem; line-height: 1.55; }
+  .copilot-md ul, .copilot-md ol { margin: 0.25rem 0 0.5rem; padding-left: 1.1rem; }
+  .copilot-md li { margin: 0.15rem 0; }
+  .copilot-md h1, .copilot-md h2, .copilot-md h3 { font-size: 14px; font-weight: 600; margin: 0.5rem 0 0.25rem; }
+  .copilot-md code { font-size: 12px; background: var(--qa-inset); padding: 1px 4px; border-radius: 4px; }
+  .copilot-md a { color: var(--qa-accent-purple); text-decoration: underline; }
+  .copilot-md strong { color: var(--qa-fg); }
+
   .nav-item.active {
     background: var(--qa-accent-soft);
     color: var(--qa-accent-purple);   /* handoff: aktív szöveg #A78BFA — jobb kontraszt a lila tinten */
