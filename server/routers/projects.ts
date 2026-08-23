@@ -14,7 +14,7 @@ import { superAdminProcedure, router } from "../_core/trpc";
 import {
   upsertProfile,
   getStrategyVersionsByProfile, getContentByProfile, getLeadsByProfile,
-  getOnboardingSession,
+  getOnboardingSession, getCampaignsByProfile,
 } from "../db";
 import {
   getProjectsByOwner, getProjectById, upsertProject, setActiveProject, deleteProject,
@@ -126,13 +126,15 @@ export const projectsRouter = router({
           strategy: { done: false, count: 0, latest: null as null | { id: string; title: string; createdAt: Date | null } },
           content: { done: false, count: 0, upcoming: [] as Array<{ id: string; title: string; platform: string; scheduledAt: Date | null }> },
           leads: { done: false, count: 0, latest: null as null | { id: string; company: string; contact: string; createdAt: Date | null } },
+          campaigns: { done: false, count: 0 },
         };
       }
-      const [strategies, posts, leadsData, onboardingSession] = await Promise.all([
+      const [strategies, posts, leadsData, onboardingSession, campaignsData] = await Promise.all([
         getStrategyVersionsByProfile(profileId),
         getContentByProfile(profileId),
         getLeadsByProfile(profileId),
         getOnboardingSession(profileId),
+        getCampaignsByProfile(profileId),
       ]);
       const latestStrategy = strategies[0] ?? null;
       const upcomingPosts = posts
@@ -165,6 +167,10 @@ export const projectsRouter = router({
           done: leadsData.length > 0,
           count: leadsData.length,
           latest: latestLead ? { id: latestLead.id, company: latestLead.company, contact: latestLead.contact, createdAt: latestLead.createdAt ?? null } : null,
+        },
+        campaigns: {
+          done: campaignsData.length > 0,
+          count: campaignsData.length,
         },
       };
     }),
