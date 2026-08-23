@@ -331,21 +331,6 @@ interface ProjectCardProps {
   isSettingActive: boolean;
 }
 
-function ProgressBadge({ done, icon, label, count }: { done: boolean; icon: React.ReactNode; label: string; count?: number }) {
-  return (
-    <span
-      className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium"
-      style={{
-        background: done ? "oklch(0.55 0.18 145 / 15%)" : "oklch(0.55 0.015 240 / 10%)",
-        color: done ? "oklch(0.7 0.18 145)" : "var(--qa-fg4)",
-      }}
-    >
-      {icon}
-      {label}{count !== undefined && count > 0 ? ` (${count})` : ""}
-    </span>
-  );
-}
-
 function ProjectCard({ project, onEdit, onSetActive, onDelete, onOpen, onArchive, isSettingActive }: ProjectCardProps) {
   const accentColor = project.color ?? "var(--qa-accent)";
   const { data: progress } = trpc.projects.getProgress.useQuery(
@@ -411,32 +396,42 @@ function ProjectCard({ project, onEdit, onSetActive, onDelete, onOpen, onArchive
             {project.description}
           </p>
         )}
-        {/* Progress badges */}
-        <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
-          <ProgressBadge
-            done={!!progress?.onboarding.done}
-            icon={<Sparkles size={10} />}
-            label="Onboarding"
-          />
-          <ProgressBadge
-            done={!!progress?.strategy.done}
-            icon={<TrendingUp size={10} />}
-            label="Stratégia"
-            count={progress?.strategy.count}
-          />
-          <ProgressBadge
-            done={!!progress?.content.done}
-            icon={<Calendar size={10} />}
-            label="Naptár"
-            count={progress?.content.count}
-          />
-          <ProgressBadge
-            done={!!progress?.leads.done}
-            icon={<Users size={10} />}
-            label="Leadek"
-            count={progress?.leads.count}
-          />
-        </div>
+        {/* Setup-progress + mini KPI-k (#13 ügyfél-áttekintés) */}
+        {progress && (
+          <div className="mt-3 space-y-2.5">
+            {(() => {
+              const total = progress.onboarding.totalSteps ?? 6;
+              const step = progress.onboarding.currentStep ?? 0;
+              const completed = progress.onboarding.completed;
+              const pct = completed ? 100 : Math.min(100, Math.round((step / total) * 100));
+              return (
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs" style={{ color: "var(--qa-fg4)" }}>Beállítás</span>
+                    <span className="text-xs font-medium" style={{ color: completed ? "var(--qa-success)" : "var(--qa-fg3)" }}>
+                      {completed ? "Kész" : `${step}/${total} lépés`}
+                    </span>
+                  </div>
+                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--qa-surface2)" }}>
+                    <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: completed ? "var(--qa-success)" : accentColor }} />
+                  </div>
+                </div>
+              );
+            })()}
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: "Tartalom", value: progress.content.count },
+                { label: "Feliratkozó", value: progress.leads.count },
+                { label: "Kampány", value: progress.campaigns?.count ?? 0 },
+              ].map((kpi) => (
+                <div key={kpi.label} className="rounded-lg p-2 text-center" style={{ background: "var(--qa-surface2)" }}>
+                  <p className="font-bold tabular-nums" style={{ fontSize: 17, color: "var(--qa-fg)" }}>{kpi.value}</p>
+                  <p className="text-xs" style={{ color: "var(--qa-fg4)" }}>{kpi.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Actions */}
