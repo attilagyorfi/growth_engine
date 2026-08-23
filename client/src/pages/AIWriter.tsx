@@ -25,6 +25,7 @@ interface GeneratedContent {
   hashtags?: string[];
   callToAction?: string;
   platform?: "linkedin" | "facebook" | "instagram" | "twitter" | "tiktok";
+  rationale?: string;
 }
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -122,7 +123,7 @@ export default function AIWriter() {
           brandVoice: profileBrandVoice ? { tone: profileBrandVoice.tone ?? "", style: profileBrandVoice.style ?? "", keywords: profileBrandVoice.keywords ?? [] } : undefined,
           targetAudience: additionalContext || undefined,
         });
-        result = { type: contentType, content: r.caption, hashtags: r.hashtags, callToAction: r.ctaText, platform };
+        result = { type: contentType, content: r.caption, hashtags: r.hashtags, callToAction: r.ctaText, platform, rationale: (r as any).rationale };
       }
       setGenerated(result);
       setEditedContent(result.content);
@@ -358,6 +359,16 @@ export default function AIWriter() {
                     <div className="p-3 rounded-lg border-l-2" style={{ background: "oklch(0.18 0.02 255)", borderColor: "oklch(0.55 0.18 145)" }}>
                       <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Call to Action</p>
                       <p className="text-gray-200 text-sm">{generated.callToAction}</p>
+                    </div>
+                  )}
+
+                  {/* „Miért ezt írtam?" — AI indoklás (#5) */}
+                  {generated.rationale && (
+                    <div className="p-3 rounded-lg border-l-2" style={{ background: "oklch(0.18 0.02 255)", borderColor: "var(--qa-accent)" }}>
+                      <p className="text-xs uppercase tracking-wider mb-1 flex items-center gap-1.5" style={{ color: "var(--qa-accent-purple)" }}>
+                        <Sparkles size={11} /> Miért ezt írtam?
+                      </p>
+                      <p className="text-gray-300 text-sm leading-relaxed">{generated.rationale}</p>
                     </div>
                   )}
 
