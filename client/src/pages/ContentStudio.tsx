@@ -10,7 +10,7 @@ import {
   Plus, Pencil, Trash2, X, ChevronLeft, ChevronRight, Loader2,
   Instagram, Linkedin, Facebook, Twitter, Sparkles, Image as ImageIcon,
   CalendarDays, Send, Lightbulb, Wand2, Target, Layers, ArrowRight,
-  BookOpen, TrendingUp, MessageSquare, Video, BarChart2, Zap,
+  BookOpen, TrendingUp, MessageSquare, Video, BarChart2, Zap, Columns3,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { EmptyState } from "@/components/EmptyState";
@@ -74,11 +74,12 @@ const STATUS_COLORS: Record<PostStatus, string> = {
   rejected: "var(--qa-danger)",
 };
 
-type Tab = "javasolt" | "calendar" | "drafts" | "approval" | "published";
+type Tab = "javasolt" | "calendar" | "gyartosor" | "drafts" | "approval" | "published";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "javasolt", label: "Javasolt", icon: <Lightbulb size={14} /> },
   { id: "calendar", label: "Naptár", icon: <Calendar size={14} /> },
+  { id: "gyartosor", label: "Gyártósor", icon: <Columns3 size={14} /> },
   { id: "drafts", label: "Piszkozatok", icon: <FileText size={14} /> },
   { id: "approval", label: "Jóváhagyás", icon: <Clock size={14} /> },
   { id: "published", label: "Publikált", icon: <CheckCircle2 size={14} /> },
@@ -868,6 +869,55 @@ export default function ContentStudio() {
           )}
         </div>
       )}
+
+      {/* Gyártósor (kanban) — a tartalom útja státusz szerint (#3) */}
+      {!isLoading && activeTab === "gyartosor" && (() => {
+        const cols = [
+          { key: "draft", label: "Vázlat", color: "var(--qa-fg3)", items: (posts as Post[]).filter(p => p.status === "draft") },
+          { key: "review", label: "Jóváhagyásra vár", color: "var(--qa-warning)", items: (posts as Post[]).filter(p => p.status === "review") },
+          { key: "ready", label: "Kész / Ütemezve", color: "var(--qa-accent)", items: (posts as Post[]).filter(p => p.status === "approved" || p.status === "scheduled") },
+          { key: "published", label: "Kiment", color: "var(--qa-success)", items: (posts as Post[]).filter(p => p.status === "published") },
+        ];
+        const pubTimed = (posts as Post[]).filter(p => p.status === "published" && p.publishedAt && p.createdAt);
+        const avgCycle = pubTimed.length
+          ? Math.round(pubTimed.reduce((s, p) => s + (new Date(p.publishedAt as any).getTime() - new Date(p.createdAt as any).getTime()), 0) / pubTimed.length / 86400000 * 10) / 10
+          : null;
+        return (
+          <div className="space-y-4">
+            {/* Átfutási idő */}
+            <div className="rounded-xl border p-4 flex items-center gap-4" style={{ background: "var(--qa-surface)", borderColor: "var(--qa-border)" }}>
+              <p className="qa-metric" style={{ fontSize: 30, lineHeight: 1, color: "var(--qa-accent)" }}>{avgCycle != null ? avgCycle : "—"}</p>
+              <div>
+                <p className="text-sm font-semibold" style={{ color: "var(--qa-fg2)" }}>Átlagos átfutási idő (nap)</p>
+                <p className="text-xs" style={{ color: "var(--qa-fg4)" }}>
+                  {avgCycle != null ? "ötlettől a közzétételig, a publikált posztok alapján" : "még nincs publikált poszt, amiből számolható"}
+                </p>
+              </div>
+            </div>
+            {/* Oszlopok */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+              {cols.map(col => (
+                <div key={col.key} className="rounded-xl border p-3" style={{ background: "var(--qa-bg)", borderColor: "var(--qa-border)", minHeight: 200 }}>
+                  <div className="flex items-center gap-2 mb-3 px-1">
+                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: col.color }} />
+                    <span className="text-sm font-semibold" style={{ color: "var(--qa-fg2)" }}>{col.label}</span>
+                    <span className="text-xs ml-auto px-1.5 py-0.5 rounded-full" style={{ background: "var(--qa-surface2)", color: "var(--qa-fg3)" }}>{col.items.length}</span>
+                  </div>
+                  {col.items.length === 0 ? (
+                    <div className="rounded-lg border border-dashed p-4 text-center" style={{ borderColor: "var(--qa-border)" }}>
+                      <p className="text-xs" style={{ color: "var(--qa-fg4)" }}>Üres — jó jel, semmi nem áll itt</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {col.items.map(p => <PostCard key={p.id} post={p} showActions={col.key !== "published"} />)}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Edit Modal */}
       {editModal && selectedPost && (
