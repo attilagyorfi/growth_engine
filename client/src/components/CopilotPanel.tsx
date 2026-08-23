@@ -7,7 +7,7 @@
  * mobilon jobbról becsúszó, teljes szélességű overlay.
  */
 import { useState, useEffect, useRef } from "react";
-import { Sparkles, X, Send, Loader2, Trash2, Check, PenLine, CalendarClock, ThumbsUp } from "lucide-react";
+import { Sparkles, X, Send, Loader2, Trash2, Check, PenLine, CalendarClock, ThumbsUp, Mic } from "lucide-react";
 import { Streamdown } from "streamdown";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -44,6 +44,13 @@ export default function CopilotPanel({ open, onClose, page, profileId }: Copilot
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
+
+  // #10 — hangbevitel (böngésző Web Speech API, magyar). Nincs backend/költség.
+  const [listening, setListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+  const micBaseRef = useRef("");
+  const speechSupported = typeof window !== "undefined" &&
+    (("SpeechRecognition" in window) || ("webkitSpeechRecognition" in window));
 
   const { data: history } = trpc.assistant.getMessages.useQuery(
     { profileId },
@@ -111,10 +118,47 @@ export default function CopilotPanel({ open, onClose, page, profileId }: Copilot
   const submit = (text: string) => {
     const msg = text.trim();
     if (!msg || isPending) return;
+    try { recognitionRef.current?.stop(); } catch { /* ignore */ }
     setMessages((prev) => [...prev, { role: "user", content: msg }]);
     setInput("");
     sendMutation.mutate({ message: msg, page, profileId });
   };
+
+  // Mikrofon indítás/leállítás — a felismert szöveg a beviteli mezőbe kerül.
+  const toggleMic = () => {
+    if (!speechSupported || isPending) return;
+    if (listening) { try { recognitionRef.current?.stop(); } catch { /* ignore */ } return; }
+    try {
+      const SR: any = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      const rec = new SR();
+      rec.lang = "hu-HU";
+      rec.interimResults = true;
+      rec.continuous = false;
+      micBaseRef.current = input ? input.trim() + " " : "";
+      rec.onresult = (e: any) => {
+        let transcript = "";
+        for (let i = 0; i < e.results.length; i++) transcript += e.results[i][0].transcript;
+        setInput(micBaseRef.current + transcript);
+      };
+      rec.onerror = (e: any) => {
+        setListening(false);
+        if (e?.error === "not-allowed" || e?.error === "service-not-allowed") {
+          toast.error("A mikrofon-hozzáférés le van tiltva a böngészőben.");
+        }
+      };
+      rec.onend = () => setListening(false);
+      recognitionRef.current = rec;
+      rec.start();
+      setListening(true);
+      setTimeout(() => taRef.current?.focus(), 0);
+    } catch {
+      setListening(false);
+      toast.error("A hangbevitel nem indítható ebben a böngészőben.");
+    }
+  };
+
+  // Leállítás a panel unmountjánál / bezárásánál.
+  useEffect(() => () => { try { recognitionRef.current?.stop(); } catch { /* ignore */ } }, []);
 
   const remaining = aiUsage && !aiUsage.unlimited && aiUsage.limit !== -1
     ? Math.max(0, aiUsage.limit - aiUsage.used)
@@ -290,10 +334,22 @@ export default function CopilotPanel({ open, onClose, page, profileId }: Copilot
                 if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(input); }
               }}
               rows={1}
-              placeholder="Írj egy kérdést…"
+              placeholder={listening ? "Hallgatlak… beszélj magyarul" : "Írj egy kérdést…"}
               className="flex-1 bg-transparent resize-none outline-none text-sm max-h-28"
               style={{ color: "var(--qa-fg)" }}
             />
+            {speechSupported && (
+              <button
+                onClick={toggleMic}
+                disabled={isPending}
+                className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors disabled:opacity-40"
+                style={{ background: listening ? "var(--qa-danger)" : "var(--qa-surface2)", color: listening ? "#fff" : "var(--qa-fg3)" }}
+                aria-label={listening ? "Hangbevitel leállítása" : "Hangbevitel indítása"}
+                title={listening ? "Leállítás" : "Beszélj — magyarul"}
+              >
+                <Mic size={15} className={listening ? "animate-pulse" : ""} />
+              </button>
+            )}
             <button
               onClick={() => submit(input)}
               disabled={!input.trim() || isPending}
