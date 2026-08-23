@@ -7,13 +7,21 @@
  * mobilon jobbról becsúszó, teljes szélességű overlay.
  */
 import { useState, useEffect, useRef } from "react";
-import { Sparkles, X, Send, Loader2, Trash2 } from "lucide-react";
+import { Sparkles, X, Send, Loader2, Trash2, Check, PenLine, CalendarClock, ThumbsUp } from "lucide-react";
 import { Streamdown } from "streamdown";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-type ChatMessage = { role: "user" | "assistant"; content: string };
+type ProposedAction = { type: "draft_post" | "approve_post" | "schedule_post"; params: Record<string, any>; summary: string };
+type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+  action?: ProposedAction | null;
+  actionState?: "pending" | "done" | "cancelled";
+};
+
+const ACTION_ICON = { draft_post: PenLine, approve_post: ThumbsUp, schedule_post: CalendarClock } as const;
 
 interface CopilotPanelProps {
   open: boolean;
@@ -43,13 +51,21 @@ export default function CopilotPanel({ open, onClose, page, profileId }: Copilot
   );
   const { data: aiUsage } = trpc.aiUsage.status.useQuery(undefined, { enabled: open, staleTime: 30_000 });
 
-  // A szerver-előzményt egyszer betöltjük a helyi állapotba.
+  // A szerver-előzményt CSAK egyszer töltjük be (üres állapotból) — így egy
+  // háttér-refetch nem írja felül az élő beszélgetést / a függő javaslat-kártyát.
   useEffect(() => {
-    if (history) setMessages(history.map((m) => ({ role: m.role, content: m.content })));
+    if (history && history.length > 0) {
+      setMessages((prev) => (prev.length === 0 ? history.map((m) => ({ role: m.role, content: m.content })) : prev));
+    }
   }, [history]);
 
   const sendMutation = trpc.assistant.send.useMutation({
-    onSuccess: (res) => setMessages((prev) => [...prev, { role: "assistant", content: res.reply }]),
+    onSuccess: (res: any) => setMessages((prev) => [...prev, {
+      role: "assistant",
+      content: res.reply,
+      action: res.proposedAction ?? null,
+      actionState: res.proposedAction ? "pending" : undefined,
+    }]),
     onError: (e) => {
       // A már megjelenített user-üzenetet visszaléptetjük, hogy újra tudja próbálni.
       setMessages((prev) => (prev[prev.length - 1]?.role === "user" ? prev.slice(0, -1) : prev));
@@ -61,6 +77,29 @@ export default function CopilotPanel({ open, onClose, page, profileId }: Copilot
     onSuccess: () => { setMessages([]); toast.success("Beszélgetés törölve"); },
     onError: (e) => toast.error(e.message),
   });
+
+  // Egy javaslat megerősített végrehajtása (az idx a per-hívás callbackben zár be).
+  const [execIdx, setExecIdx] = useState<number | null>(null);
+  const executeMutation = trpc.assistant.executeAction.useMutation();
+
+  const confirmAction = (idx: number, action: ProposedAction) => {
+    setExecIdx(idx);
+    executeMutation.mutate(
+      { profileId, action: { type: action.type, params: action.params } },
+      {
+        onSuccess: (res: any) => {
+          setMessages((prev) => prev
+            .map((m, i) => (i === idx ? { ...m, actionState: "done" as const } : m))
+            .concat([{ role: "assistant", content: `✓ ${res.message}` }]));
+          setExecIdx(null);
+        },
+        onError: (e: any) => { toast.error(e.message); setExecIdx(null); },
+      }
+    );
+  };
+  const cancelAction = (idx: number) => {
+    setMessages((prev) => prev.map((m, i) => (i === idx ? { ...m, actionState: "cancelled" as const } : m)));
+  };
 
   const isPending = sendMutation.isPending;
 
@@ -158,22 +197,75 @@ export default function CopilotPanel({ open, onClose, page, profileId }: Copilot
             </div>
           ) : (
             messages.map((m, i) => (
-              <div key={i} className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}>
-                {m.role === "user" ? (
-                  <div
-                    className="max-w-[85%] px-3 py-2 text-sm"
-                    style={{ background: "var(--qa-accent)", color: "var(--qa-accent-on)", borderRadius: "14px 14px 4px 14px" }}
-                  >
-                    {m.content}
-                  </div>
-                ) : (
-                  <div
-                    className="max-w-[92%] px-3 py-2 text-sm copilot-md"
-                    style={{ background: "var(--qa-surface)", color: "var(--qa-fg)", border: "1px solid var(--qa-border)", borderRadius: "14px 14px 14px 4px" }}
-                  >
-                    <Streamdown>{m.content}</Streamdown>
-                  </div>
-                )}
+              <div key={i} className="space-y-2">
+                <div className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}>
+                  {m.role === "user" ? (
+                    <div
+                      className="max-w-[85%] px-3 py-2 text-sm whitespace-pre-wrap"
+                      style={{ background: "var(--qa-accent)", color: "var(--qa-accent-on)", borderRadius: "14px 14px 4px 14px" }}
+                    >
+                      {m.content}
+                    </div>
+                  ) : (
+                    <div
+                      className="max-w-[92%] px-3 py-2 text-sm copilot-md"
+                      style={{ background: "var(--qa-surface)", color: "var(--qa-fg)", border: "1px solid var(--qa-border)", borderRadius: "14px 14px 14px 4px" }}
+                    >
+                      <Streamdown>{m.content}</Streamdown>
+                    </div>
+                  )}
+                </div>
+
+                {/* Megerősítő kártya (Fázis 2) — az asszisztens javaslata */}
+                {m.role === "assistant" && m.action && (() => {
+                  const ActIcon = ACTION_ICON[m.action.type];
+                  const st = m.actionState ?? "pending";
+                  return (
+                    <div className="flex justify-start">
+                      <div className="max-w-[92%] rounded-xl p-3" style={{ background: "var(--qa-inset)", border: "1px solid var(--qa-accent-ring)" }}>
+                        <div className="flex items-start gap-2">
+                          <div className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: "var(--qa-accent-soft)" }}>
+                            <ActIcon size={13} style={{ color: "var(--qa-accent-purple)" }} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="qa-eyebrow qa-eyebrow-accent mb-0.5">Javasolt művelet</p>
+                            <p className="text-xs" style={{ color: "var(--qa-fg2)" }}>{m.action.summary}</p>
+                            {m.action.type === "draft_post" && m.action.params?.content && (
+                              <p className="text-xs mt-1.5 whitespace-pre-wrap" style={{ color: "var(--qa-fg4)" }}>
+                                {String(m.action.params.content).slice(0, 240)}{String(m.action.params.content).length > 240 ? "…" : ""}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        {st === "pending" ? (
+                          <div className="flex gap-2 mt-3">
+                            <button
+                              onClick={() => confirmAction(i, m.action!)}
+                              disabled={execIdx !== null}
+                              className="flex-1 h-8 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-opacity disabled:opacity-50"
+                              style={{ background: "var(--qa-accent)", color: "var(--qa-accent-on)" }}
+                            >
+                              {execIdx === i ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                              Megerősítés
+                            </button>
+                            <button
+                              onClick={() => cancelAction(i)}
+                              disabled={execIdx !== null}
+                              className="h-8 px-3 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                              style={{ background: "var(--qa-surface)", color: "var(--qa-fg3)", border: "1px solid var(--qa-border)" }}
+                            >
+                              Mégse
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="text-xs mt-2 flex items-center gap-1.5" style={{ color: st === "done" ? "var(--qa-success)" : "var(--qa-fg4)" }}>
+                            {st === "done" ? <><Check size={12} /> Végrehajtva</> : "Elvetve"}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             ))
           )}
