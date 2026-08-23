@@ -40,6 +40,7 @@ import {
   getNotificationsByUser, getNotificationById, createNotification, markNotificationRead, markAllNotificationsRead,
 } from "./db";
 import { invokeLLM, parseLLMJson } from "./_core/llm";
+import { buildBusinessContext, ANTI_GENERIC_HU } from "./_core/businessContext";
 import { storagePut } from "./storage";
 import { checkAiUsageLimit, recordAiUsage } from "./authDb";
 import Stripe from "stripe";
@@ -485,11 +486,12 @@ export const appRouter = router({
           tiktok: "Trendi, laza, 50-100 szó felirat, 3-5 trending hashtag",
         };
         const brandContext = input.brandVoice
-          ? `Márka hangnem: ${input.brandVoice.tone ?? "professzionális"}, Stílus: ${input.brandVoice.style ?? "közvetlen"}`
+          ? `Márka hangnem: ${input.brandVoice.tone ?? "professzionális"}, stílus: ${input.brandVoice.style ?? "közvetlen"}.`
           : "";
+        const businessContext = await buildBusinessContext(input.profileId);
         const response = await invokeLLM({
           messages: [
-            { role: "system", content: `Te egy közösségi média tartalomszakértő vagy. Hozz létre minden platformra optimalizált, vonzó bejegyzéseket. Mindig magyarul válaszolj. ${brandContext}` },
+            { role: "system", content: `Te egy közösségi média tartalomszakértő vagy. Hozz létre a megadott cégre SZABOTT, konkrét, platformra optimalizált bejegyzéseket. Mindig magyarul válaszolj. ${brandContext}\n\n${businessContext}\n\n${ANTI_GENERIC_HU}` },
             { role: "user", content: `Hozz létre egy ${input.platform} bejegyzést a következő témában: "${input.topic}" a "${input.pillar}" tartalmi pillérhez.\nCélközönség: ${input.targetAudience ?? "üzleti szakemberek"}.\nFormátum: ${input.format ?? "standard bejegyzés"}.\nCTA: ${input.cta ?? "interakció a tartalommal"}.\nPlatform irányelvek: ${platformGuide[input.platform]}.\n\nAdj vissza JSON-t (MINDEN szöveg magyarul): caption (bejegyzés szövege magyarul), hashtags (hashtagek tömbje), visualBrief (vizuális brief leírása magyarul), ctaText (cselekvésre szólítás magyarul)` },
           ],
           response_format: { type: "json_schema", json_schema: { name: "social_post", strict: true, schema: { type: "object", properties: { caption: { type: "string" }, hashtags: { type: "array", items: { type: "string" } }, visualBrief: { type: "string" }, ctaText: { type: "string" } }, required: ["caption", "hashtags", "visualBrief", "ctaText"], additionalProperties: false } } },
@@ -1010,7 +1012,7 @@ export const appRouter = router({
         const currentDateStr = now.toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric" });
         const response = await invokeLLM({
           messages: [
-            { role: "system", content: `Te egy tapasztalt közösségi média tartalomkészítő vagy. KIZÁRÓLAG MAGYARUL írj. A mai dátum: ${currentDateStr}. Adj vissza JSON-t a következő mezőkkel: title (rövid, figyelemfelkeltő cím), content (teljes poszt szöveg a platformnak megfelelő stílusban, max 280 karakter Twitter/TikTok esetén, max 3000 LinkedIn esetén), hashtags (string tömb, max 8 hashtag), imagePrompt (angol nyelvű képgenerálási prompt, részletes, vizuálisan leíró), visualBrief (vizuális brief: mit ábrázoljon a kép/videó, milyen stílusban, milyen elemekkel – magyarul), ctaText (cselekvésre szólítás szövege a poszthoz – rövid, konkrét, magyarul).` },
+            { role: "system", content: `Te egy tapasztalt közösségi média tartalomkészítő vagy. KIZÁRÓLAG MAGYARUL írj. A mai dátum: ${currentDateStr}. Adj vissza JSON-t a következő mezőkkel: title (rövid, figyelemfelkeltő cím), content (teljes poszt szöveg a platformnak megfelelő stílusban, max 280 karakter Twitter/TikTok esetén, max 3000 LinkedIn esetén), hashtags (string tömb, max 8 hashtag), imagePrompt (angol nyelvű képgenerálási prompt, részletes, vizuálisan leíró), visualBrief (vizuális brief: mit ábrázoljon a kép/videó, milyen stílusban, milyen elemekkel – magyarul), ctaText (cselekvésre szólítás szövege a poszthoz – rövid, konkrét, magyarul).\n\n${ANTI_GENERIC_HU}` },
             { role: "user", content: `Cég: ${input.companyName ?? "ismeretlen"}\nIparág: ${input.industry ?? "általános"}\nPlatform: ${input.platform}\nTartalom típusa: ${input.contentType}\nTartalmi pillér: ${input.pillar ?? "általános"}\nHang/Tone: ${input.tone ?? "professzionális, barátságos"}\n${input.intelligenceSummary ? `Cég összefoglaló: ${input.intelligenceSummary}` : ""}\n${input.strategyContext ? `Stratégiai kontextus: ${input.strategyContext}` : ""}\n${input.additionalContext ? `Kiegészítő instrukciók: ${input.additionalContext}` : ""}\n\nGenerálj egy ${input.platform} posztot.` },
           ],
           response_format: { type: "json_schema", json_schema: { name: "post_content", strict: true, schema: { type: "object", properties: { title: { type: "string" }, content: { type: "string" }, hashtags: { type: "array", items: { type: "string" } }, imagePrompt: { type: "string" }, visualBrief: { type: "string" }, ctaText: { type: "string" } }, required: ["title", "content", "hashtags", "imagePrompt", "visualBrief", "ctaText"], additionalProperties: false } } },
