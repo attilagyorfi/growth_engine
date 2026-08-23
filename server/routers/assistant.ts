@@ -15,6 +15,7 @@ import { and, eq, isNull, asc, desc } from "drizzle-orm";
 import { appUserProcedure, router } from "../_core/trpc";
 import { assertProfileOwnership } from "../_core/ownership";
 import { invokeLLM, type Tool } from "../_core/llm";
+import { buildBusinessContext, ANTI_GENERIC_HU } from "../_core/businessContext";
 import { checkAiUsageLimit, recordAiUsage } from "../authDb";
 import { assistantThreads, assistantMessages } from "../../drizzle/schema";
 
@@ -127,19 +128,12 @@ async function buildSystemPrompt(profileId: string | null, page: string | null):
   let actionsCtx = "";
   if (profileId) {
     try {
-      const { getProfileById, getContentByProfile } = await import("../db");
-      const p: any = await getProfileById(profileId);
-      if (p) {
-        const bits: string[] = [];
-        if (p.name) bits.push(`Cég: ${p.name}`);
-        if (p.industry) bits.push(`Iparág: ${p.industry}`);
-        if (p.description) bits.push(`Leírás: ${String(p.description).slice(0, 400)}`);
-        if (p.brandVoice?.tone) bits.push(`Márka hangnem: ${p.brandVoice.tone}${p.brandVoice.style ? `, ${p.brandVoice.style}` : ""}`);
-        if (Array.isArray(p.contentPillars) && p.contentPillars.length) {
-          bits.push(`Tartalmi pillérek: ${p.contentPillars.map((x: any) => x?.name).filter(Boolean).slice(0, 6).join(", ")}`);
-        }
-        if (bits.length) ctx = `\n\nAmit az ügyfélről tudsz (használd, ha releváns):\n- ${bits.join("\n- ")}`;
-      }
+      const { getContentByProfile } = await import("../db");
+      // Gazdag, cég-specifikus kontextus (profil + company_intelligence) — ugyanaz
+      // a helper, amit a tartalom-generálás használ, hogy a Copilot javaslatai is
+      // konkrétak legyenek, ne általánosak.
+      const business = await buildBusinessContext(profileId);
+      if (business) ctx = `\n\n${business}`;
       // Művelethető posztok — az approve_post/schedule_post CSAK ezekre hívható.
       const posts: any[] = await getContentByProfile(profileId);
       const lines: string[] = [];
@@ -167,6 +161,8 @@ Amit MEG TUDSZ tenni (mindig a felhasználó megerősítésével — a rendszer 
 - approve_post: jóváhagyásra váró posztot hagysz jóvá — kizárólag a lenti listából, a pontos postId-vel.
 - schedule_post: már jóváhagyott posztot ütemezel — kizárólag a lenti listából.
 Ha a felhasználó ilyet kér, hívd a megfelelő tool-t a pontos paraméterekkel. Ne állítsd, hogy „kész" vagy „elküldtem" — a tényleges művelet csak a megerősítés után történik meg; te javaslatot teszel. Ha a listában nincs megfelelő poszt az approve/schedule-hoz, mondd el, és ajánld fel, hogy írsz egy új vázlatot.
+
+Amikor posztot írsz (draft_post), a fenti cég-adatokra építs, és tartsd be: ${ANTI_GENERIC_HU}
 
 FONTOS korlátok:
 - Csak azt állítsd, amit biztosan tudsz. NE találj ki számokat, statisztikákat vagy eredményeket. Ha nincs adatod, mondd meg őszintén, és irányítsd a felhasználót, hol nézheti meg a felületen.
