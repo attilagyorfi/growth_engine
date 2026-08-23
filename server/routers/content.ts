@@ -15,8 +15,11 @@ import { invokeLLM, parseLLMJson } from "../_core/llm";
 import { assertProfileOwnership } from "../_core/ownership";
 import { checkAiUsageLimit, recordAiUsage } from "../authDb";
 import {
-  getContentByProfile, getContentById, createContent, updateContent, deleteContent,
+  getContentByProfile, getContentById, createContent, updateContent, deleteContent, getProfileById,
 } from "../db";
+
+type CheckLevel = "ok" | "warn" | "error";
+type CheckItem = { key: string; level: CheckLevel; label: string };
 
 export const contentRouter = router({
   list: appUserProcedure
@@ -41,6 +44,86 @@ export const contentRouter = router({
     .mutation(async ({ input, ctx }) => {
       await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
       return createContent({ ...input, id: nanoid(), status: "draft" });
+    }),
+
+  /**
+   * Tartalom-ellenőrző (#6) — DETERMINISZTIKUS szabályok (nincs AI-hívás, nincs
+   * kredit-költség): kerülendő szó, hossz a platform szerint, kép, hashtag, CTA,
+   * és a márka-kulcsszavak jelenléte. A friss (még nem mentett) generált poszton
+   * is fut, mert a mezőket közvetlenül kapja.
+   */
+  check: appUserProcedure
+    .input(z.object({
+      profileId: z.string(),
+      platform: z.enum(["linkedin", "facebook", "instagram", "twitter", "tiktok"]),
+      content: z.string(),
+      hashtags: z.array(z.string()).optional(),
+      hasImage: z.boolean().optional(),
+    }))
+    .query(async ({ input, ctx }): Promise<CheckItem[]> => {
+      await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      const profile: any = await getProfileById(input.profileId);
+      const bv: any = profile?.brandVoice ?? {};
+
+      const avoidRaw = bv.avoid;
+      const avoid = (Array.isArray(avoidRaw) ? avoidRaw.map((s: any) => String(s))
+        : typeof avoidRaw === "string" ? avoidRaw.split(/[,;\n]/) : [])
+        .map((w: string) => w.trim().toLowerCase()).filter((w: string) => w.length > 1);
+      const keywords = (Array.isArray(bv.keywords) ? bv.keywords : [])
+        .map((s: any) => String(s).trim().toLowerCase()).filter((w: string) => w.length > 0);
+
+      const text = input.content ?? "";
+      const lower = text.toLowerCase();
+      const len = text.length;
+      const checks: CheckItem[] = [];
+
+      // 1) Kerülendő szavak (a márka „mit ne írjunk" listája)
+      const hits = avoid.filter((w: string) => lower.includes(w));
+      checks.push(hits.length
+        ? { key: "avoid", level: "error", label: `Kerülendő szó a szövegben: ${hits.slice(0, 3).join(", ")}` }
+        : { key: "avoid", level: "ok", label: "Nincs kerülendő szó" });
+
+      // 2) Hossz a platform szerint
+      if (input.platform === "twitter" && len > 280) {
+        checks.push({ key: "length", level: "error", label: `Túl hosszú X-hez: ${len}/280 karakter` });
+      } else {
+        const rec: Record<string, number> = { twitter: 280, instagram: 2200, tiktok: 2200, facebook: 2000, linkedin: 3000 };
+        const limit = rec[input.platform] ?? 3000;
+        if (len === 0) checks.push({ key: "length", level: "error", label: "A szöveg üres" });
+        else if (len > limit) checks.push({ key: "length", level: "warn", label: `Hosszú (${len} karakter) — ${input.platform === "instagram" ? "az Instagram" : "a platform"} ajánlott hossza ~${limit}` });
+        else if (len < 40) checks.push({ key: "length", level: "warn", label: `Rövid (${len} karakter) — érdemes bővíteni` });
+        else checks.push({ key: "length", level: "ok", label: `Megfelelő hossz (${len} karakter)` });
+      }
+
+      // 3) Kép
+      checks.push(input.hasImage
+        ? { key: "image", level: "ok", label: "Van kép" }
+        : { key: "image", level: "warn", label: "Nincs kép — a képes posztok jobban teljesítenek" });
+
+      // 4) Hashtag (ahol számít)
+      const hasHash = (input.hashtags?.length ?? 0) > 0 || /#\w/.test(text);
+      if (["instagram", "twitter", "linkedin"].includes(input.platform)) {
+        checks.push(hasHash
+          ? { key: "hashtag", level: "ok", label: "Vannak hashtagek" }
+          : { key: "hashtag", level: "warn", label: "Nincs hashtag — nehezebb megtalálni" });
+      }
+
+      // 5) CTA / cselekvésre ösztönzés
+      const hasCta = /https?:\/\//.test(text) || text.includes("?")
+        || /(kattints|iratkozz|tudj meg|keress|hívj|foglalj|nézd meg|olvasd|próbáld|regisztrálj|jelentkezz|kövess|írj|rendelj)/i.test(text);
+      checks.push(hasCta
+        ? { key: "cta", level: "ok", label: "Van cselekvésre ösztönzés" }
+        : { key: "cta", level: "warn", label: "Nincs egyértelmű CTA (kérdés, link vagy felszólítás)" });
+
+      // 6) Hangvétel — a márka kulcsszavai (ha meg vannak adva)
+      if (keywords.length) {
+        const kwHit = keywords.some((k: string) => lower.includes(k));
+        checks.push(kwHit
+          ? { key: "tone", level: "ok", label: "A márka kulcsszavaiból van a szövegben" }
+          : { key: "tone", level: "warn", label: "Fontold meg a márka kulcsszavait" });
+      }
+
+      return checks;
     }),
 
   update: appUserProcedure
