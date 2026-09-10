@@ -365,16 +365,26 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     payload.tool_choice = normalizedToolChoice;
   }
 
-  payload.max_tokens = params.maxTokens ?? params.max_tokens ?? 32768;
-  // FONTOS: az OpenAI gpt-4o-mini maximum kimeneti tokenje 16384. A 32768-as
-  // default ezért 400-as hibát ad ("max_tokens is too large"), és emiatt MINDEN
-  // szöveges AI-hívás elhasalt az OpenAI-ra váltás után. OpenAI-nál levágjuk.
-  if (
-    target.provider === "openai" &&
-    typeof payload.max_tokens === "number" &&
-    payload.max_tokens > 16384
-  ) {
-    payload.max_tokens = 16384;
+  const requestedMaxTokens = params.maxTokens ?? params.max_tokens ?? 32768;
+  if (target.provider === "openai") {
+    // FONTOS: az OpenAI kimeneti token-cap (a gpt-4o-mini 16384). A 32768-as
+    // default 400-as hibát ad ("max_tokens is too large"), ezért levágjuk. A
+    // mi hívásaink jóval ez alatt vannak, tehát nem vág le semmi valósat.
+    const capped = Math.min(requestedMaxTokens, 16384);
+    // A gpt-5 / o-széria / újabb modellek NEM fogadják el a `max_tokens`-t —
+    // `max_completion_tokens`-t követelnek (400: "Unsupported parameter"). A
+    // gpt-4.x / gpt-3.5 viszont a régi `max_tokens`-t várja. A modellnév alapján
+    // választunk: gpt-4* / gpt-3.5* → max_tokens; minden más (gpt-5*, o*, jövőbeli)
+    // → max_completion_tokens. Így a jelenleg működő gpt-4o-mini path változatlan.
+    const modelName = String(payload.model ?? "");
+    if (/^(gpt-4|gpt-3\.5)/i.test(modelName)) {
+      payload.max_tokens = capped;
+    } else {
+      payload.max_completion_tokens = capped;
+    }
+  } else {
+    // Manus Forge (OpenAI-kompatibilis proxy) — a régi max_tokens-t várja.
+    payload.max_tokens = requestedMaxTokens;
   }
   // A Manus Forge proxy specifikus thinking budget paraméter — más providereknél
   // ignorált vagy hibát adhat, ezért csak Manus esetén küldjük
