@@ -15,7 +15,7 @@
 import { useLocation } from "wouter";
 import {
   ChevronRight, Calendar, CheckCircle2, ArrowRight, Eye, ThumbsUp,
-  Brain, Image, Video, Target, FileText, Clock, Send,
+  Brain, Image, Video, Target, FileText, Clock, Send, Sparkles,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useData } from "@/contexts/DataContext";
@@ -160,6 +160,31 @@ export default function Dashboard() {
       ? `Aktív ügyfél: ${activeProfile.name}`
       : null;
 
+  // ─── Havi insight (#8) — DETERMINISZTIKUS, valós adatból (nincs AI/kredit) ──
+  const publishedThisMonth = contentItems.filter((c: any) => c.status === "published" && (toTime(c.publishedAt) ?? 0) >= monthStart).length;
+  const createdThisMonth = contentItems.filter((c: any) => (toTime(c.createdAt) ?? 0) >= monthStart).length;
+  const platformCounts: Record<string, number> = {};
+  for (const c of contentItems as any[]) {
+    if ((toTime(c.createdAt) ?? 0) >= monthStart) {
+      const key = String(c.platform).toLowerCase();
+      platformCounts[key] = (platformCounts[key] ?? 0) + 1;
+    }
+  }
+  const topPlatformKey = Object.entries(platformCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
+  const topPlatform = topPlatformKey ? (PLATFORM_LABELS[topPlatformKey] ?? topPlatformKey) : null;
+
+  const insightQuiet = createdThisMonth === 0 && publishedThisMonth === 0 && leadsThisMonth === 0;
+  const insightSummary = insightQuiet
+    ? "Ebben a hónapban egyelőre csend van — még nincs új tartalom vagy feliratkozó."
+    : `Ebben a hónapban ${publishedThisMonth} poszt ment ki${topPlatform ? ` (legaktívabb csatorna: ${topPlatform})` : ""}, ${leadsThisMonth > 0 ? `+${leadsThisMonth} feliratkozó érkezett` : "feliratkozó még nem érkezett"}.`;
+  const insightTip = totalApproval > 0
+    ? `Kezdd a ${totalApproval} jóváhagyásra váró tartalommal — az a leggyorsabb lépés előre.`
+    : upcomingScheduled.length === 0
+      ? "Nincs jövő heti tartalom ütemezve — tervezz be legalább 2 posztot a folyamatos jelenlétért."
+      : createdThisMonth === 0
+        ? "Írj egy új posztot az AI Íróval, hogy meginduljon a hónap."
+        : "Jó az ütem — tartsd meg, és a legjobban teljesítő csatornára fókuszálj.";
+
   return (
     <DashboardLayout title="Irányítópult" background="iranyitopult">
       <>
@@ -270,6 +295,22 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ─── Havi insight (#8) — determinisztikus összegzés + tipp ────────── */}
+        <div className="rounded-2xl p-5 mb-4" style={{ background: "var(--qa-accent-soft)", border: "1px solid var(--qa-accent-ring)" }}>
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "var(--qa-accent)" }}>
+              <Sparkles size={16} style={{ color: "var(--qa-accent-on)" }} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="qa-eyebrow qa-eyebrow-accent mb-1">Havi insight</p>
+              <p className="text-sm" style={{ color: "var(--qa-fg)", lineHeight: 1.55 }}>{insightSummary}</p>
+              <p className="text-sm mt-1.5" style={{ color: "var(--qa-fg2)", lineHeight: 1.55 }}>
+                <span className="font-semibold" style={{ color: "var(--qa-accent-purple)" }}>Tipp: </span>{insightTip}
+              </p>
             </div>
           </div>
         </div>
