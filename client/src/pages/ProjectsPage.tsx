@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import {
   FolderOpen, Plus, Globe, Building2, Pencil, Trash2,
   CheckCircle, Circle, Loader2, X, Save, ExternalLink, LayoutDashboard,
-  Sparkles, TrendingUp, Calendar, Users, Archive, RotateCcw,
+  Archive, RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

@@ -29,7 +29,6 @@ export function useActiveProject() {
     { enabled: isSuperAdmin, staleTime: 30_000 }
   );
 
-  const utils = trpc.useUtils();
 
   const setActiveMutation = trpc.projects.setActive.useMutation({
     onSuccess: () => refetch(),

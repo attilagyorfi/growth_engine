@@ -9,9 +9,9 @@ import DashboardLayout from "@/components/DashboardLayout";
 import DetailModal from "@/components/DetailModal";
 import { useProfile, ClientProfile, ContentPillar, SocialAccount } from "@/contexts/ProfileContext";
 import {
-  Building2, Globe, Palette, Mic2, LayoutList, Share2,
+  Globe, Palette, Mic2, LayoutList, Share2,
   Plus, Edit2, Trash2, Check, X, ChevronRight, Linkedin,
-  Facebook, Instagram, Twitter, Music2, ExternalLink, Users, Link,
+  Facebook, Instagram, Twitter, Music2, ExternalLink, Link,
 } from "lucide-react";
 import { toast } from "sonner";
 

@@ -8,9 +8,8 @@ import { useLocation } from "wouter";
 import confetti from "canvas-confetti";
 import {
   Palette, Plug, Users, ClipboardList, X, Loader2, Plus,
-  Save, Globe, Mail, Check, AlertCircle, Settings2, Eye, EyeOff, PlayCircle,
-  CreditCard, Sparkles, Rocket, Building2, Crown, CheckCircle2, Zap, Brain,
-  Send,
+  Save, Globe, Check, AlertCircle, Settings2, Eye, EyeOff, PlayCircle,
+  CreditCard, Sparkles, Rocket, Building2, Crown, CheckCircle2, Brain,
 } from "lucide-react";
 import AiMemorySection from "@/components/settings/AiMemorySection";
 import TeamSection from "@/components/settings/TeamSection";
@@ -133,23 +132,11 @@ export default function Settings() {
     }
   });
 
-  const { data: emailIntegration } = trpc.emailIntegration.get.useQuery(
-    { profileId: activeProfile.id }, { enabled: !!activeProfile.id }
-  );
-
   const { data: auditLogs, isLoading: auditLoading } = trpc.auditLog.list.useQuery(
     { profileId: activeProfile.id },
     { enabled: !!activeProfile.id && activeTab === "audit" }
   );
 
-  const upsertEmailIntegration = trpc.emailIntegration.upsert.useMutation({
-    onSuccess: () => {
-      utils.emailIntegration.get.invalidate({ profileId: activeProfile.id });
-      toast.success("Email integráció mentve");
-    }
-  });
-
-  const [emailForm, setEmailForm] = useState<any>({ provider: "gmail", email: "" });
   // Social connections
   const { data: socialConnections = [], refetch: refetchSocial } = trpc.social.listConnections.useQuery(
     { profileId: activeProfile.id },

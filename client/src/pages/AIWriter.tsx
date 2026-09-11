@@ -10,8 +10,8 @@ import { useProfile } from "@/contexts/ProfileContext";
 import { toast } from "sonner";
 import {
   Wand2, Mail, Share2, FileText, Loader2, Copy, Check,
-  RefreshCw, Send, Save, ChevronDown, Sparkles, Edit3,
-  Linkedin, Twitter, Instagram, Video, Plus, X
+  RefreshCw, Sparkles, Edit3,
+  Linkedin, Instagram, Video
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -145,7 +145,6 @@ export default function AIWriter() {
   // nincs hova menteni. A user a "Vágólapra" gombbal viszi át a tartalmat
   // a saját email-szolgáltatójába.
 
-  const displayContent = isEditing ? editedContent : (generated?.content ?? "");
 
   return (
     <DashboardLayout>

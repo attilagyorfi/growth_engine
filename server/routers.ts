@@ -21,35 +21,25 @@ import { TRPCError } from "@trpc/server";
 import {
   getAllProfiles, getProfileById, getProfilesByAppUser, upsertProfile, deleteProfile,
   getLeadsByProfile, getLeadById, createLead, updateLead, deleteLead,
-  getContentByProfile, getContentById, createContent, updateContent, deleteContent,
+  createContent,
   getStrategiesByProfile, getStrategyById, createStrategy, updateStrategy,
   getEmailIntegration, upsertEmailIntegration,
-  getOnboardingSession, upsertOnboardingSession, saveOnboardingAnswers, getOnboardingAnswers,
-  getBrandAssets, getBrandAssetById, createBrandAsset, updateBrandAssetParsed, deleteBrandAsset,
   getCompanyIntelligence, upsertCompanyIntelligence,
-  getCompetitors, upsertCompetitor, deleteCompetitor,
-  getPersonas, upsertPersona, deletePersona,
-  getStrategyTasks, upsertStrategyTask, getStrategyTaskById, updateStrategyTaskStatus,
+  getCompetitors,
+  getPersonas,
   getCalendarItemsByProfile, bulkCreateCalendarItems,
-  getAiMemories, createAiMemory, getAiMemoryById, deleteAiMemory,
+  getAiMemories, getAiMemoryById, deleteAiMemory,
   createAuditLog, getAuditLogs,
-  getStrategyVersionsByProfile, getStrategyVersionById, getActiveStrategyVersion, upsertStrategyVersion, setActiveStrategyVersion, archiveStrategyVersion,
+  getActiveStrategyVersion,
   getCampaignsByProfile, getCampaignById, upsertCampaign, deleteCampaign,
   getCampaignAssets, upsertCampaignAsset,
   getRecommendationsByProfile, getRecommendationById, createRecommendation, dismissRecommendation,
-  getNotificationsByUser, getNotificationById, createNotification, markNotificationRead, markAllNotificationsRead,
+  getNotificationsByUser, getNotificationById, markNotificationRead, markAllNotificationsRead,
 } from "./db";
 import { invokeLLM, parseLLMJson } from "./_core/llm";
 import { buildBusinessContext, ANTI_GENERIC_HU } from "./_core/businessContext";
-import { storagePut } from "./storage";
 import { checkAiUsageLimit, recordAiUsage } from "./authDb";
 import Stripe from "stripe";
-import {
-  getProjectsByOwner, getProjectById, upsertProject, setActiveProject, deleteProject, getActiveProjectByOwner,
-  archiveProject, restoreProject, getArchivedProjectsByOwner,
-  getSocialProfileCache, upsertSocialProfileCache, getSocialProfilesByProfile,
-} from "./projectsDb";
-
 // Profile ownership helper moved to ./_core/ownership for cross-router reuse
 import { assertProfileOwnership } from "./_core/ownership";
 

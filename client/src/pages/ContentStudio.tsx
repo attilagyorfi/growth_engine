@@ -4,7 +4,6 @@
  */
 
 import { useState, useMemo } from "react";
-import { motion } from "framer-motion";
 import {
   Calendar, FileText, Clock, CheckCircle2, ThumbsUp, ThumbsDown,
   Plus, Pencil, Trash2, X, ChevronLeft, ChevronRight, Loader2,
@@ -289,14 +288,6 @@ export default function ContentStudio() {
     ).slice(0, 6).concat(CONTENT_TEMPLATES.filter(t => !strategyChannels.some(ch => ch.includes(t.platform))).slice(0, 2));
   }, [contentPillarsFull, strategyChannels]);
 
-  const handleApprove = async (post: Post) => {
-    await updateMutation.mutateAsync({ id: post.id, status: "approved" });
-    toast.success("Tartalom jóváhagyva");
-  };
-  const handleReject = async (post: Post) => {
-    await updateMutation.mutateAsync({ id: post.id, status: "rejected" });
-    toast.error("Tartalom elutasítva");
-  };
   const handleDelete = async (id: string) => {
     await deleteMutation.mutateAsync({ id });
     toast.success("Tartalom törölve");
@@ -446,7 +437,6 @@ export default function ContentStudio() {
   }, [posts, calendarYear, calendarMonth]);
 
   const draftPosts = (posts as Post[]).filter(p => p.status === "draft" || p.status === "review");
-  const reviewPosts = (posts as Post[]).filter(p => p.status === "review");
   const approvalPosts = (posts as Post[]).filter(p => p.status === "approved");
   const publishedPosts = (posts as Post[]).filter(p => p.status === "published");
 

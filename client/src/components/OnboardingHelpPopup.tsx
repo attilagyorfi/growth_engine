@@ -115,7 +115,7 @@ interface HelpBannerProps {
 
 export function HelpBanner({ helpKey, title, dismissible = true, className }: HelpBannerProps) {
   const [dismissed, setDismissed] = useState(false);
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
 
   if (dismissed) return null;
 

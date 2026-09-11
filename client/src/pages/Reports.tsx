@@ -18,7 +18,7 @@ import { toast } from "sonner";
 import { Streamdown } from "streamdown";
 import {
   BarChart3, Plus, Loader2, FileText, Zap, Calendar,
-  Facebook, Search, TrendingUp, X, Printer, Trash2, RefreshCw,
+  Facebook, Search, TrendingUp, X, Printer, Trash2,
 } from "lucide-react";
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,

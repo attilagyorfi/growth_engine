@@ -15,7 +15,7 @@
  */
 import { useMemo } from "react";
 import {
-  Plus, Pencil, Trash2, LogIn, Send, Zap, Info,
+  Plus, Pencil, Trash2, LogIn, Send, Info,
   ClipboardList, User,
 } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";

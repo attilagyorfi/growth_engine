@@ -4,10 +4,9 @@
  * Seed data is inserted on first load if the profile has no data.
  */
 
-import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, ReactNode } from "react";
 import { useProfile } from "./ProfileContext";
 import { trpc } from "@/lib/trpc";
-import { nanoid } from "nanoid";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

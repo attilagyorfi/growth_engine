@@ -6,7 +6,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
-import { router, publicProcedure, protectedProcedure, appUserProcedure, superAdminProcedure } from "../_core/trpc";
+import { router, publicProcedure, appUserProcedure, superAdminProcedure } from "../_core/trpc";
 import { sendPasswordResetEmail, sendWelcomeEmail, sendAdminApprovalNeededEmail } from "../email";
 import {
   createAppUser, getAppUserByEmail, getAppUserById,
