@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import {
-  Sparkles, RefreshCw, ArrowRight, CheckCircle2, Loader2, Zap,
+  Sparkles, RefreshCw, Loader2, Zap,
   TrendingUp, FileText, Users, Megaphone, Brain, LayoutDashboard,
   ExternalLink,
 } from "lucide-react";

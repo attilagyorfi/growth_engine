@@ -14,7 +14,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 import {
-  TrendingUp, Mail, Users, Layers, BarChart2,
+  TrendingUp, Users, Layers, BarChart2,
   Target, Zap, ArrowRight,
 } from "lucide-react";
 import { useLocation } from "wouter";

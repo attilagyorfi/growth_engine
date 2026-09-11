@@ -361,7 +361,6 @@ import {
   targetPersonas, InsertTargetPersona,
   strategyTasks, InsertStrategyTask,
   contentCalendarItems, InsertContentCalendarItem,
-  contentFeedback, InsertContentFeedback,
   aiMemories, InsertAiMemory,
   auditLogs, InsertAuditLog,
 } from "../drizzle/schema";

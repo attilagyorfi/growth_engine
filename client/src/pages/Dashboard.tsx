@@ -14,7 +14,7 @@
 
 import { useLocation } from "wouter";
 import {
-  ChevronRight, Calendar, CheckCircle2, ArrowRight, Eye, ThumbsUp,
+  Calendar, CheckCircle2, ArrowRight, Eye, ThumbsUp,
   Brain, Image, Video, Target, FileText, Clock, Send, Sparkles,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";

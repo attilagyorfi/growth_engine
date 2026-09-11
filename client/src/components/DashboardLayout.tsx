@@ -11,7 +11,7 @@ import CommandPalette from "@/components/CommandPalette";
 import ChangelogDrawer from "@/components/ChangelogDrawer";
 import { useChangelog } from "@/hooks/useChangelog";
 import {
-  LayoutDashboard, Users, BarChart3, Layers, TrendingUp, Settings,
+  LayoutDashboard, BarChart3, Layers, TrendingUp, Settings,
   Zap, ChevronRight, Bell, X, CheckCircle, AlertCircle, Info, Mail,
   ChevronDown, LogOut, Shield, Megaphone, SearchCheck, Video,
   User, KeyRound, UserCog, Crown, Sparkles, Menu, Brain, FolderOpen, Plus, Check, PenLine, Search,
@@ -24,7 +24,6 @@ import { useProfile } from "@/contexts/ProfileContext";
 import { useAppAuth } from "@/hooks/useAppAuth";
 import { useActiveProject } from "@/hooks/useActiveProject";
 import { useSubscription } from "@/hooks/useSubscription";
-import { useTour } from "@/hooks/useTour";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 
@@ -211,7 +210,6 @@ export default function DashboardLayout({ children, title, subtitle, background 
     );
   };
 
-  const { restartTour } = useTour();
 
   const updateSelf = trpc.appAuth.updateSelf.useMutation({
     onSuccess: () => { toast.success("Név frissítve!"); setEditingName(false); refetch?.(); },

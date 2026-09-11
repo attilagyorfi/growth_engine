@@ -12,7 +12,7 @@
  *   (pl. régebbi bug-fix dokumentálása), NEM triggerel badge-et
  * - Elég pontos: dátum-mp precizítás nem kell
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { CHANGELOG } from "@/lib/changelog";
 
 const STORAGE_KEY = "g2a_changelog_last_seen";

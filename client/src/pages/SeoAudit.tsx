@@ -12,7 +12,7 @@ import { Streamdown } from "streamdown";
 import {
   Search, Globe, AlertTriangle, CheckCircle, Info,
   Trash2, ChevronDown, ChevronUp, Loader2, RefreshCw,
-  BarChart2, FileText, Zap, Shield, Image, Link2,
+  BarChart2, FileText, Zap, Shield,
 } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
 import { motion, AnimatePresence } from "framer-motion";

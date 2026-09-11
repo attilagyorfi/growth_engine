@@ -53,7 +53,7 @@ function bucketOf(date: Date): Bucket {
 
 export default function Notifications() {
   const utils = trpc.useUtils();
-  const { data: notifs = [], isLoading, refetch } = trpc.notifications.list.useQuery(
+  const { data: notifs = [], isLoading } = trpc.notifications.list.useQuery(
     undefined,
     { staleTime: 30_000 }
   );

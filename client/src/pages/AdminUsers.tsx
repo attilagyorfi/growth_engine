@@ -26,7 +26,6 @@ import DashboardLayout from "@/components/DashboardLayout";
 export default function AdminUsers() {
   const { user, loading } = useAppAuth();
   const [, navigate] = useLocation();
-  const [search, setSearch] = useState("");
   const [editUser, setEditUser] = useState<{ id: string; name: string | null; active: boolean } | null>(null);
   const [resetUser, setResetUser] = useState<{ id: string; email: string } | null>(null);
   const [newPassword, setNewPassword] = useState("");

@@ -11,9 +11,9 @@ import { HelpBanner, HelpPopup, StepTour } from "@/components/OnboardingHelpPopu
 import { useLanguage } from "@/contexts/LanguageContext";
 import {
   Globe, Upload, Zap, ChevronRight, ChevronLeft,
-  Check, Loader2, Building2, Users, Target,
+  Check, Loader2, Building2, Target,
   Sparkles, TrendingUp, Star, AlertTriangle,
-  FileText, Image, BarChart3, X, Plus, Trash2,
+  FileText, BarChart3, X,
   MessageSquare, Palette, Settings, Search
 } from "lucide-react";
 import { nanoid } from "nanoid";
@@ -138,7 +138,7 @@ const GOALS = [
 
 // ─── Step Indicator ───────────────────────────────────────────────────────────
 
-function StepIndicator({ current, total }: { current: number; total: number }) {
+function StepIndicator({ current }: { current: number; total: number }) {
   const steps = [
     { label: "Alapadatok", icon: Building2 },
     { label: "Brand & Hang", icon: Palette },
@@ -283,7 +283,6 @@ export default function OnboardingWizard() {
     companySummary?: string; targetAudience?: string; toneOfVoice?: string;
   } | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isExpressMode, setIsExpressMode] = useState(false);
   const [isExpressRunning, setIsExpressRunning] = useState(false);
   const [showTour, setShowTour] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1136,7 +1135,7 @@ export default function OnboardingWizard() {
                   { key: "instagram" as const, label: "Instagram", placeholder: "https://instagram.com/cegnev", icon: "ig" },
                   { key: "tiktok" as const, label: "TikTok", placeholder: "https://tiktok.com/@cegnev", icon: "tt" },
                   { key: "youtube" as const, label: "YouTube", placeholder: "https://youtube.com/@cegnev", icon: "yt" },
-                ].map(({ key, label, placeholder, icon }) => (
+                ].map(({ key, placeholder, icon }) => (
                   <div key={key} className="flex items-center gap-3">
                     <div
                       className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold text-white"
