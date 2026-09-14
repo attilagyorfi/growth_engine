@@ -76,37 +76,9 @@ describe("Ownership checks – Leads", () => {
   });
 });
 
-describe("Ownership checks – Outbound emails", () => {
-  it("outbound.update fetches before mutating", async () => {
-    const caller = appRouter.createCaller(createContext());
-    await expect(
-      caller.outbound.update({ id: FOREIGN_ID, status: "sent" })
-    ).rejects.toThrowError(/nem található|NOT_FOUND/i);
-  });
-
-  it("outbound.delete fetches before deleting", async () => {
-    const caller = appRouter.createCaller(createContext());
-    await expect(
-      caller.outbound.delete({ id: FOREIGN_ID })
-    ).rejects.toThrowError(/nem található|NOT_FOUND/i);
-  });
-});
-
-describe("Ownership checks – Inbound emails", () => {
-  it("inbound.markRead fetches before mutating", async () => {
-    const caller = appRouter.createCaller(createContext());
-    await expect(
-      caller.inbound.markRead({ id: FOREIGN_ID })
-    ).rejects.toThrowError(/nem található|NOT_FOUND/i);
-  });
-
-  it("inbound.updateCategory fetches before mutating", async () => {
-    const caller = appRouter.createCaller(createContext());
-    await expect(
-      caller.inbound.updateCategory({ id: FOREIGN_ID, category: "interested" })
-    ).rejects.toThrowError(/nem található|NOT_FOUND/i);
-  });
-});
+// Az inbound/outbound (értékesítési email) modul megszűnt — a hozzá tartozó
+// ownership-tesztek eltávolítva, mert a végpontok (outbound.*, inbound.*) már
+// nem léteznek. A többi entitás ownership-ellenőrzése lentebb marad.
 
 describe("Ownership checks – Content posts", () => {
   it("content.update fetches before mutating (was vulnerable: anyone could update any post)", async () => {
