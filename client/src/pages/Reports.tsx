@@ -71,6 +71,11 @@ export default function Reports() {
   const { data: reports = [], refetch: refetchReports } = trpc.reports.list.useQuery(
     { profileId }, { enabled: !!profileId }
   );
+  // A mérési adat forrása a szerverből — a DEMO-jelölést EZ vezérli (nem beégetett
+  // szöveg). Ismeretlen/betöltés alatt → DEMO (biztonságos default). Amikor a valós
+  // adapterek élnek (demo:false), a DEMO-jelzések automatikusan eltűnnek.
+  const { data: dataSource } = trpc.reports.dataSource.useQuery();
+  const isDemo = dataSource?.demo !== false;
   const { data: selectedReport } = trpc.reports.get.useQuery(
     { profileId, reportId: selectedReportId ?? "" },
     { enabled: !!profileId && !!selectedReportId }
@@ -158,14 +163,15 @@ export default function Reports() {
               ? <><Loader2 size={14} className="animate-spin" /> Generálás…</>
               : <><Zap size={14} /> Riport generálása</>}
           </button>
-          {/* AUDIT #3 FIX: a riport-connector JELENLEG minden platformra mintaszámot
-              generál (a bekötött fiók valós adatát nem használja). A figyelmeztetés
-              eddig eltűnt, ha volt bekötött forrás → valós adatnak látszott. Most
-              MINDIG látszik, amíg nincs valós adapter. */}
-          <p className="text-xs font-medium" style={{ color: "var(--qa-warning)" }}>
-            DEMO adat — a riportok jelenleg mintaszámokat mutatnak (nem valós
-            hirdetési/analitika adat). A valós adatforrás-integrációk fejlesztés alatt.
-          </p>
+          {/* A DEMO-figyelmeztetést a szerver dataSource-flagje vezérli: amíg a
+              connector mock adatot ad (isDemo), MINDIG látszik; a valós adapterek
+              élesítésekor (demo:false) automatikusan eltűnik. */}
+          {isDemo && (
+            <p className="text-xs font-medium" style={{ color: "var(--qa-warning)" }}>
+              DEMO adat — a riportok jelenleg mintaszámokat mutatnak (nem valós
+              hirdetési/analitika adat). A valós adatforrás-integrációk fejlesztés alatt.
+            </p>
+          )}
         </div>
 
         {/* Reports list — sidebar */}
@@ -216,12 +222,14 @@ export default function Reports() {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2 min-w-0">
                       <h2 className="text-lg font-bold truncate" style={{ color: textPrimary }}>{activeReport.title}</h2>
-                      {/* AUDIT #3 FIX: állandó DEMO jelvény — a riporton (és a nyomtatott
-                          verzión) is egyértelmű, hogy a számok mintaadatok. */}
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider flex-shrink-0"
-                        style={{ background: "var(--qa-warning-soft, rgba(245,158,11,.14))", color: "var(--qa-warning)" }}>
-                        Demo adat
-                      </span>
+                      {/* DEMO jelvény — a szerver dataSource-flagje vezérli; a
+                          nyomtatott/PDF verzión is látszik, amíg mintaadat a forrás. */}
+                      {isDemo && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider flex-shrink-0"
+                          style={{ background: "var(--qa-warning-soft, rgba(245,158,11,.14))", color: "var(--qa-warning)" }}>
+                          Demo adat
+                        </span>
+                      )}
                     </div>
                     <button onClick={() => window.print()} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold flex-shrink-0"
                       style={{ background: "var(--qa-surface2)", color: textMuted }}>
