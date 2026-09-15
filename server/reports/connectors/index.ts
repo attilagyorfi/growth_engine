@@ -90,11 +90,42 @@ const METRIC_CONFIG: Record<string, Array<{ key: string; base: number; variance:
  * A hívó `insertReportMetrics(profileId, rows)`-szal írja be — a
  * `profileId`-t az `id, profileId, createdAt` mezőket a helper egészíti ki.
  */
+// ─── Adapter-forrás: éles-ready kapcsoló ─────────────────────────────────────
+// A valós adapterek (GA4, Google Ads, Search Console, Meta Ads) ide kerülnek be,
+// MIUTÁN a Google Cloud OAuth verification + Meta Ads Insights review lezárul.
+// Amíg ez a lista üres, MINDEN platform mock adatot ad → a UI DEMO-t jelöl.
+// Élesítéskor egy platformhoz: (1) vedd fel ide, (2) implementáld a valós
+// lekérést a fetchMetrics eleji ágban. Így a váltás egyetlen, jól látható pont.
+export const LIVE_METRIC_PLATFORMS = new Set<DataConnection["platform"]>([
+  // "google_ads", "ga4", "search_console", "meta_ads",
+]);
+
+export type MetricsSource = "mock" | "live" | "mixed";
+
+/** A metrikák jelenlegi forrása a UI/label számára (üres élő-lista → "mock"). */
+export function getMetricsSource(): MetricsSource {
+  const all: DataConnection["platform"][] = ["google_ads", "ga4", "search_console", "meta_ads"];
+  const liveCount = all.filter((p) => LIVE_METRIC_PLATFORMS.has(p)).length;
+  if (liveCount === 0) return "mock";
+  if (liveCount === all.length) return "live";
+  return "mixed";
+}
+
+/** Igaz, amíg BÁRMELY platform mock adatot ad — a UI ilyenkor DEMO-t jelöl. */
+export function isDemoData(): boolean {
+  return getMetricsSource() !== "live";
+}
+
 export async function fetchMetrics(
   conn: DataConnection,
   from: string,
   to: string,
 ): Promise<Array<Omit<NormalizedMetricRow, "platform"> & { platform: DataConnection["platform"] }>> {
+  // Éles seam: ha ez a platform már élő, ide jön a valós API-hívás. Amíg a
+  // valós adapter nincs implementálva, hangosan jelezzük (nem csúszik át némán).
+  if (LIVE_METRIC_PLATFORMS.has(conn.platform)) {
+    throw new Error(`[metrics] Live adapter for '${conn.platform}' is enabled but not implemented yet`);
+  }
   const config = METRIC_CONFIG[conn.platform] ?? [];
   const days = daysBetween(from, to);
   const rows: Array<Omit<NormalizedMetricRow, "platform"> & { platform: DataConnection["platform"] }> = [];

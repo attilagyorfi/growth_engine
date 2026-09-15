@@ -30,7 +30,7 @@ import {
 } from "../db";
 import { generateReportSummary } from "../ai/reportSummary";
 import { renderReportPdf } from "../reports/pdf";
-import { fetchMetrics } from "../reports/connectors";
+import { fetchMetrics, getMetricsSource, isDemoData } from "../reports/connectors";
 
 const platformEnum = z.enum(["google_ads", "ga4", "search_console", "meta_ads"]);
 
@@ -168,6 +168,17 @@ export const reportsRouter = router({
       await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
       return getReportById(input.profileId, input.reportId);
     }),
+
+  /**
+   * A mérési adat forrása (mock/live) — a UI EZ ALAPJÁN jelöl DEMO-t, nem
+   * beégetett szöveggel. Amíg a valós adapterek (Google/Meta OAuth) nem élnek,
+   * `demo: true`; élesítéskor a connector LIVE_METRIC_PLATFORMS bővítésével
+   * `demo: false` lesz, és a DEMO-jelölés automatikusan eltűnik a felületről.
+   */
+  dataSource: appUserProcedure.query(() => ({
+    source: getMetricsSource(),
+    demo: isDemoData(),
+  })),
 
   // ─── Havi ütemezés ───────────────────────────────────────────────────────
   schedule: appUserProcedure
