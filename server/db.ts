@@ -14,6 +14,7 @@ import {
 } from "../drizzle/schema";
 import type { InboundEmail } from "../drizzle/schema";
 import { ENV } from './_core/env';
+import { encryptToken } from './_core/tokenCrypto';
 
 let _db: MySql2Database | null = null;
 let _dbPromise: Promise<MySql2Database | null> | null = null;
@@ -822,7 +823,14 @@ export async function upsertDataConnection(input: Omit<InsertDataConnection, "id
     ),
   ).limit(1);
   const id = existing[0]?.id ?? nanoid();
-  const values = { ...input, id, connected: input.connected ?? true };
+  // A tokeneket titkosítva tároljuk (at rest). A decrypt a felhasználás
+  // helyén történik (jelenleg a mock connector nem olvassa; a jövőbeli valós
+  // adapter a decryptToken-nel fejti vissza).
+  const values = {
+    ...input, id, connected: input.connected ?? true,
+    accessToken: encryptToken(input.accessToken ?? null),
+    refreshToken: encryptToken(input.refreshToken ?? null),
+  };
   if (existing[0]) {
     await db.update(dataConnections).set(values).where(eq(dataConnections.id, id));
   } else {

@@ -42,6 +42,7 @@ import { ENV } from "./_core/env";
 import { verifyAppToken } from "./routers/appAuth";
 import { assertProfileOwnership } from "./_core/ownership";
 import { getAppUserById } from "./authDb";
+import { encryptToken } from "./_core/tokenCrypto";
 
 const META_GRAPH_VERSION = "v18.0";
 const FB_AUTH_URL = `https://www.facebook.com/${META_GRAPH_VERSION}/dialog/oauth`;
@@ -268,7 +269,7 @@ export function registerFacebookOAuthRoutes(app: Express) {
           id: nanoid(),
           profileId,
           platform: "facebook",
-          accessToken: page.access_token,
+          accessToken: encryptToken(page.access_token),
           refreshToken: null,
           tokenExpiresAt: tokenExpiresAt.toISOString(),
           platformUserId: page.id,
@@ -296,7 +297,7 @@ export function registerFacebookOAuthRoutes(app: Express) {
             id: nanoid(),
             profileId,
             platform: "instagram",
-            accessToken: page.access_token,                  // Page-token IG-hoz is
+            accessToken: encryptToken(page.access_token),                  // Page-token IG-hoz is
             refreshToken: null,
             tokenExpiresAt: tokenExpiresAt.toISOString(),
             platformUserId: page.instagram_business_account.id,

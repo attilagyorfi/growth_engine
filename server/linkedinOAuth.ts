@@ -32,6 +32,7 @@ import { ENV } from "./_core/env";
 import { verifyAppToken } from "./routers/appAuth";
 import { assertProfileOwnership } from "./_core/ownership";
 import { getAppUserById } from "./authDb";
+import { encryptToken } from "./_core/tokenCrypto";
 
 const LINKEDIN_AUTH_URL = "https://www.linkedin.com/oauth/v2/authorization";
 const LINKEDIN_TOKEN_URL = "https://www.linkedin.com/oauth/v2/accessToken";
@@ -258,8 +259,8 @@ export function registerLinkedInOAuthRoutes(app: Express) {
       await db.insert(socialConnections).values({
         profileId,
         platform: "linkedin",
-        accessToken: tokenData.access_token,
-        refreshToken: tokenData.refresh_token ?? null,
+        accessToken: encryptToken(tokenData.access_token),
+        refreshToken: encryptToken(tokenData.refresh_token ?? null),
         tokenExpiresAt: expiresAt.toISOString(),
         platformUserId,
         platformUsername,
