@@ -161,10 +161,63 @@ export async function upsertProfile(profile: InsertClientProfile) {
   return getProfileById(profile.id);
 }
 
+/**
+ * Egy profil TELJES törlése kaszkáddal (GDPR „elfeledtetéshez való jog" +
+ * adat-integritás). A korábbi verzió csak a clientProfiles sort törölte, így
+ * ~35 kapcsolódó tábla adata árván maradt.
+ *
+ * Szabályok:
+ *  - A profilhoz TARTOZÓ adatot töröljük (profileId = id).
+ *  - Az assistant-üzenetek a threadeken keresztül kapcsolódnak (threadId).
+ *  - A NEM-tulajdon hivatkozásokat NULLÁZZUK, nem töröljük:
+ *      appUsers.profileId (a user „aktív profil" mutatója) — a usert megtartjuk,
+ *      projects.profileId (ügynökségi projekt linkje) — a projektet megtartjuk.
+ *  - Mindez egy tranzakcióban (all-or-nothing).
+ */
+// A profilhoz tartozó (profileId-vel rendelkező) táblák — mind törlődik a profillal.
+// Exportált, hogy a teszt ellenőrizhesse: minden profileId-s tábla le van fedve.
+export const PROFILE_OWNED_TABLES = [
+  "leads", "outboundEmails", "inboundEmails", "contentPosts", "strategies",
+  "emailIntegrations", "onboardingSessions", "onboardingAnswers", "uploadedBrandAssets",
+  "companyIntelligence", "competitorProfiles", "targetPersonas", "strategyTasks",
+  "contentCalendarItems", "contentFeedback", "socialTokens", "publishingLogs",
+  "analyticsSnapshots", "aiMemories", "auditLogs", "strategyVersions", "campaigns",
+  "campaignAssets", "recommendations", "appNotifications", "socialConnections",
+  "scheduledPosts", "socialProfileCache", "seoAudits", "heygenVideos", "dataConnections",
+  "reportMetrics", "reports", "reportSchedules", "teamInvites", "assistantThreads",
+] as const;
+
 export async function deleteProfile(id: string) {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
-  await db.delete(clientProfiles).where(eq(clientProfiles.id, id));
+  const schema: any = await import("../drizzle/schema");
+  const { eq, inArray } = await import("drizzle-orm");
+
+  await db.transaction(async (tx: any) => {
+    // 1) Assistant-üzenetek a profil threadjein keresztül (threadId, nem profileId).
+    const threads = await tx.select({ id: schema.assistantThreads.id })
+      .from(schema.assistantThreads)
+      .where(eq(schema.assistantThreads.profileId, id));
+    const threadIds = threads.map((t: any) => t.id);
+    if (threadIds.length) {
+      await tx.delete(schema.assistantMessages).where(inArray(schema.assistantMessages.threadId, threadIds));
+    }
+
+    // 2) Minden profil-tulajdonú tábla (profileId = id).
+    for (const name of PROFILE_OWNED_TABLES) {
+      const table = schema[name];
+      if (table?.profileId) {
+        await tx.delete(table).where(eq(table.profileId, id));
+      }
+    }
+
+    // 3) Nem-tulajdon hivatkozások NULLÁZÁSA — a user/projekt megmarad.
+    await tx.update(schema.appUsers).set({ profileId: null }).where(eq(schema.appUsers.profileId, id));
+    await tx.update(schema.projects).set({ profileId: null }).where(eq(schema.projects.profileId, id));
+
+    // 4) Végül maga a profil.
+    await tx.delete(clientProfiles).where(eq(clientProfiles.id, id));
+  });
 }
 
 // ─── Leads ────────────────────────────────────────────────────────────────────
