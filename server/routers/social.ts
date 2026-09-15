@@ -12,6 +12,7 @@ import { nanoid } from "nanoid";
 import { TRPCError } from "@trpc/server";
 import { publicProcedure, appUserProcedure, router } from "../_core/trpc";
 import { assertProfileOwnership } from "../_core/ownership";
+import { encryptToken, decryptToken } from "../_core/tokenCrypto";
 
 export const socialRouter = router({
   listConnections: appUserProcedure
@@ -59,8 +60,8 @@ export const socialRouter = router({
         id,
         profileId: input.profileId,
         platform: input.platform,
-        accessToken: input.accessToken,
-        refreshToken: input.refreshToken ?? null,
+        accessToken: encryptToken(input.accessToken),
+        refreshToken: encryptToken(input.refreshToken ?? null),
         tokenExpiresAt: input.tokenExpiresAt ?? null,
         platformUserId: input.platformUserId ?? null,
         platformUsername: input.platformUsername ?? null,
@@ -110,6 +111,13 @@ export const socialRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "A social fiók nem ehhez a profilhoz tartozik" });
       }
 
+      // A tárolt token vissza van fejtve használat előtt (a régi plaintext
+      // tokeneket a decryptToken változatlanul visszaadja — backward-kompat).
+      const accessToken = decryptToken(conn.accessToken);
+      if (!accessToken) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "A hozzáférési token hiányzik vagy sérült — csatlakoztasd újra a fiókot" });
+      }
+
       // Platform-alapú routolás. Mindegyik publisher a saját API-t hívja,
       // egyseges { postId } shape-ben tér vissza.
       const {
@@ -119,14 +127,14 @@ export const socialRouter = router({
       let postId: string;
       try {
         if (conn.platform === "linkedin") {
-          ({ postId } = await publishToLinkedIn(conn.accessToken, conn.platformUserId ?? "", input.text, input.imageUrl));
+          ({ postId } = await publishToLinkedIn(accessToken, conn.platformUserId ?? "", input.text, input.imageUrl));
         } else if (conn.platform === "facebook") {
           if (!conn.platformUserId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "A Facebook Page ID hiányzik a csatlakozásból — csatlakoztasd újra a fiókot" });
-          ({ postId } = await publishToFacebook(conn.accessToken, conn.platformUserId, input.text, input.imageUrl));
+          ({ postId } = await publishToFacebook(accessToken, conn.platformUserId, input.text, input.imageUrl));
         } else if (conn.platform === "instagram") {
           if (!conn.platformUserId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Az Instagram Business Account ID hiányzik — csatlakoztasd újra a Facebook Page-en keresztül" });
           if (!input.imageUrl) throw new TRPCError({ code: "BAD_REQUEST", message: "Instagram poszthoz kép szükséges (text-only nem megy)" });
-          ({ postId } = await publishToInstagram(conn.accessToken, conn.platformUserId, input.text, input.imageUrl));
+          ({ postId } = await publishToInstagram(accessToken, conn.platformUserId, input.text, input.imageUrl));
         } else {
           // tiktok: a #66 PR schema-bővítés után jön külön PR-ben (videó-input hiányzik)
           // twitter: nincs implementálva, ha valaki mégis csatlakoztatná

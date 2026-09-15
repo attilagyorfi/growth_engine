@@ -30,6 +30,7 @@ import { ENV } from "./_core/env";
 import { verifyAppToken } from "./routers/appAuth";
 import { assertProfileOwnership } from "./_core/ownership";
 import { getAppUserById } from "./authDb";
+import { encryptToken } from "./_core/tokenCrypto";
 
 const TIKTOK_AUTH_URL = "https://www.tiktok.com/v2/auth/authorize/";
 const TIKTOK_TOKEN_URL = "https://open.tiktokapis.com/v2/oauth/token/";
@@ -240,8 +241,8 @@ export function registerTikTokOAuthRoutes(app: Express) {
         id: nanoid(),
         profileId,
         platform: "tiktok",
-        accessToken: tokenData.access_token,
-        refreshToken: tokenData.refresh_token ?? null,
+        accessToken: encryptToken(tokenData.access_token),
+        refreshToken: encryptToken(tokenData.refresh_token ?? null),
         tokenExpiresAt: expiresAt.toISOString(),
         platformUserId,
         platformUsername: platformUsername || platformUserId,
