@@ -406,6 +406,31 @@
   .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
   .no-scrollbar::-webkit-scrollbar { width: 0; height: 0; display: none; }
 
+  /* ── Nyomtatás / PDF-export (Riportok) ───────────────────────────────
+     A „PDF letöltése" gomb window.print()-et hív; a böngésző „Mentés PDF-ként"
+     valódi PDF-et ad. Nyomtatáskor CSAK a riport-terület látszik, világosra
+     fordítva (a diagramok SVG-fill színe megmarad). */
+  .print-only { display: none; }
+  @media print {
+    body * { visibility: hidden !important; }
+    #report-print-area, #report-print-area * { visibility: visible !important; }
+    #report-print-area {
+      position: absolute; left: 0; top: 0; width: 100%;
+      padding: 0 4mm;
+    }
+    /* Sötét téma → világos nyomtatás */
+    #report-print-area, #report-print-area * {
+      color: #1a1a1a !important;
+      background: transparent !important;
+      border-color: #e2e2e2 !important;
+      box-shadow: none !important;
+    }
+    #report-print-area { background: #ffffff !important; }
+    .no-print { display: none !important; }
+    .print-only { display: block !important; }
+    @page { size: A4; margin: 14mm; }
+  }
+
   /* Copilot chat-buborék markdown (Streamdown) — kompakt margók a keskeny panelhez */
   .copilot-md > :first-child { margin-top: 0; }
   .copilot-md > :last-child { margin-bottom: 0; }
