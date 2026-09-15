@@ -1,4 +1,6 @@
+import "./instrument"; // Sentry init — MUSZÁJ az első import (auto-instrumentáció)
 import "dotenv/config";
+import * as Sentry from "@sentry/node";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
@@ -110,6 +112,10 @@ async function startServer() {
   } else {
     serveStatic(app);
   }
+
+  // Sentry Express error-handler — MINDEN route/middleware UTÁN, a listen ELŐTT.
+  // Production-ban rögzíti a nem kezelt hibákat; DSN/init nélkül no-op.
+  Sentry.setupExpressErrorHandler(app);
 
   const preferredPort = parseInt(process.env.PORT || "3000");
   // Production (Railway, Render, stb.): a platform által megadott PORT-on
