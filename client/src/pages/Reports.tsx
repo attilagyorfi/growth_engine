@@ -216,7 +216,15 @@ export default function Reports() {
                   : <p className="text-sm" style={{ color: "var(--qa-danger)" }}>A riport generálása sikertelen. Próbáld újra.</p>}
               </div>
             ) : (
-              <div className="space-y-4">
+              <div id="report-print-area" className="space-y-4">
+                {/* Csak NYOMTATÁSBAN látszó, márkás fejléc — az app-kereten kívül,
+                    hogy a mentett PDF-en is ott legyen a brand. */}
+                <div className="print-only" style={{ marginBottom: 4 }}>
+                  <div style={{ fontWeight: 700, fontSize: 16, letterSpacing: "-0.02em" }}>Growth Engine</div>
+                  <div style={{ fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: "#888" }}>
+                    BY G2A · Marketing riport
+                  </div>
+                </div>
                 {/* Report header */}
                 <div className="rounded-xl border p-5" style={{ background: cardBg, borderColor: border }}>
                   <div className="flex items-center justify-between mb-2">
@@ -231,18 +239,21 @@ export default function Reports() {
                         </span>
                       )}
                     </div>
-                    <button onClick={() => window.print()} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold flex-shrink-0"
-                      style={{ background: "var(--qa-surface2)", color: textMuted }}>
-                      <Printer size={12} /> Nyomtatás / PDF
+                    <button onClick={() => window.print()} className="no-print flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold flex-shrink-0"
+                      style={{ background: "var(--qa-accent)", color: "var(--qa-accent-on)" }}
+                      title="A megnyíló ablakban válaszd a „Mentés PDF-ként” opciót">
+                      <Printer size={13} /> PDF letöltése
                     </button>
                   </div>
                   <p className="text-xs" style={{ color: textMuted }}>
                     <Calendar size={12} className="inline mr-1" />
                     {activeReport.periodFrom ? String(activeReport.periodFrom).slice(0, 10) : ""} → {activeReport.periodTo ? String(activeReport.periodTo).slice(0, 10) : ""}
                   </p>
-                  <p className="text-xs mt-2" style={{ color: "var(--qa-warning)" }}>
-                    Ez a riport mintaadatot tartalmaz — ne add ki valós teljesítmény-jelentésként.
-                  </p>
+                  {isDemo && (
+                    <p className="text-xs mt-2" style={{ color: "var(--qa-warning)" }}>
+                      Ez a riport mintaadatot tartalmaz — ne add ki valós teljesítmény-jelentésként.
+                    </p>
+                  )}
                 </div>
 
                 {/* KPI kártyák */}

@@ -1,21 +1,17 @@
 /**
- * G2A Growth Engine – Report PDF renderer (STUB)
+ * G2A Growth Engine – Report PDF renderer (server-side placeholder)
  *
- * A `reports.generate` mutation ezt hívja meg a summary + AI-narratíva után.
- * A production impl a Playwright-tal fog HTML→PDF konvertálni:
+ * JELENLEGI PDF-MEGOLDÁS (élő): a frontend a riport-előnézetet nyomtatás-
+ * optimalizált CSS-sel exportálja — a „PDF letöltése" gomb window.print()-et
+ * hív, és a böngésző „Mentés PDF-ként" valódi PDF-et ad, tökéletes magyar
+ * ékezettel és a valós diagramokkal. (Reports.tsx #report-print-area + a
+ * @media print szabályok az index.css-ben.) Nulla szerver-oldali függőség.
  *
- *   TODO (későbbi PR, ha a Playwright-ot bevesszük):
- *   1. `pnpm add -D playwright && npx playwright install chromium`
- *   2. Belső token-védett route: `/api/reports/:id/render` → HTML page a
- *      report.summaryData-jából (Recharts + brand-frame)
- *   3. `chromium.launch()` → `page.goto(...)` → `page.pdf({ format: 'A4' })`
- *   4. Vercel Blob-ra upload → visszaadja a publikus URL-t
- *   5. `updateReport(id, { pdfUrl: url })`
- *
- * JELENLEG: nem generál valódi PDF-et — placeholder URL-t ad vissza. A
- * frontend a `summaryData`-ból tud renderelni preview-t Recharts-tal;
- * a PDF download gombja a preview-t nyomtatható CSS-sel exportálja
- * (window.print()) amíg a Playwright bekötése meg nem történik.
+ * Ez a függvény egy szerver-oldalon GENERÁLT .pdf FÁJL helye — ez akkor kell
+ * majd, ha az automatikus, EMAILBEN küldött havi riportok (reportSchedules)
+ * élesednek (a mellékletet nem lehet böngésző-nyomtatással előállítani).
+ * Terv: pdf-lib + beágyazott Unicode betűkészlet (dejavu) → Vercel Blob upload.
+ * Addig placeholder URL-t ad, amit a frontend figyelmen kívül hagy.
  */
 
 export async function renderReportPdf(params: {
