@@ -76,6 +76,21 @@ export async function buildBusinessContext(profileId: string): Promise<string> {
     if (rules?.examplePhrases?.length) lines.push(`Példák a cég valódi hangjára: „${rules.examplePhrases.slice(0, 3).join("” / „")}”`);
   }
 
-  if (!lines.length) return "";
-  return `A CÉG VALÓS ADATAI (ezekre építs, NE általánosságokra):\n- ${lines.join("\n- ")}`;
+  // Hangminta (few-shot) — a felhasználó saját, jó posztjai. A legerősebb
+  // személyre-szabó jel: a generált szöveg KÖVESSE ezek stílusát/ritmusát.
+  const bv: any = p?.brandVoice ?? {};
+  const samples: string[] = Array.isArray(bv.voiceSamples)
+    ? bv.voiceSamples.map((s: any) => String(s).trim()).filter(Boolean).slice(0, 3)
+    : [];
+
+  if (!lines.length && !samples.length) return "";
+
+  const base = lines.length
+    ? `A CÉG VALÓS ADATAI (ezekre építs, NE általánosságokra):\n- ${lines.join("\n- ")}`
+    : "";
+  const samplesBlock = samples.length
+    ? `\n\nA FELHASZNÁLÓ SAJÁT, JÓ POSZTJAI (HANGMINTA) — a generált szöveg KÖVESSE ezek stílusát, hangnemét, ritmusát, mondathosszát és zsargonját, de NE másold szó szerint, és a témát a kérés szerint alakítsd:\n${samples.map((s, i) => `— Minta ${i + 1} —\n${trunc(s, 800)}`).join("\n\n")}`
+    : "";
+
+  return base + samplesBlock;
 }

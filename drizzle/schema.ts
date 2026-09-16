@@ -35,6 +35,9 @@ export const clientProfiles = mysqlTable("client_profiles", {
   brandGuidelineUrl: varchar("brandGuidelineUrl", { length: 500 }),
   brandVoice: json("brandVoice").$type<{
     tone: string; style: string; avoid: string; keywords: string[];
+    // Hangminta (#few-shot): a felhasználó 1-3 saját, jó posztja — a generálás
+    // ezek stílusát/hangját utánozza (buildBusinessContext injektálja).
+    voiceSamples?: string[];
   }>(),
   contentPillars: json("contentPillars").$type<Array<{
     id: string; name: string; description: string; active: boolean; percentage: number;
