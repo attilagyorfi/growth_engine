@@ -15,6 +15,7 @@ import { newsletterRouter } from "./routers/newsletter";
 import { reportsRouter } from "./routers/reports";
 import { teamRouter } from "./routers/team";
 import { assistantRouter } from "./routers/assistant";
+import { ideasRouter } from "./routers/ideas";
 import { generateImage } from "./_core/imageGeneration";
 import { nanoid } from "nanoid";
 import { TRPCError } from "@trpc/server";
@@ -1148,6 +1149,7 @@ A link mező mindig ezek egyike legyen, ne találj ki más URL-t.`,
 
   // ─── AI Copilot (asszisztens) — Fázis 1: kontextus-chat ────────────────────
   assistant: assistantRouter,
+  ideas: ideasRouter,
 
   // ─── AI Usage Status ─────────────────────────────────────────────────────────────────────────────
   aiUsage: router({

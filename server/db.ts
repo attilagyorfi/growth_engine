@@ -11,6 +11,7 @@ import {
   contentPosts, InsertContentPost,
   strategies, InsertStrategy,
   emailIntegrations, InsertEmailIntegration,
+  contentIdeas, InsertContentIdea,
 } from "../drizzle/schema";
 import type { InboundEmail } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -186,6 +187,7 @@ export const PROFILE_OWNED_TABLES = [
   "campaignAssets", "recommendations", "appNotifications", "socialConnections",
   "scheduledPosts", "socialProfileCache", "seoAudits", "heygenVideos", "dataConnections",
   "reportMetrics", "reports", "reportSchedules", "teamInvites", "assistantThreads",
+  "contentIdeas",
 ] as const;
 
 export async function deleteProfile(id: string) {
@@ -1061,4 +1063,40 @@ export async function updateTeamInviteStatus(id: string, status: TeamInvite["sta
   const db = await getDb();
   if (!db) return;
   await db.update(teamInvites).set({ status }).where(eq(teamInvites.id, id));
+}
+
+// ─── Ötletbank (#11) ──────────────────────────────────────────────────────────
+export async function getIdeasByProfile(profileId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(contentIdeas).where(eq(contentIdeas.profileId, profileId)).orderBy(desc(contentIdeas.createdAt));
+}
+export async function getIdeaById(id: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const r = await db.select().from(contentIdeas).where(eq(contentIdeas.id, id)).limit(1);
+  return r[0];
+}
+export async function createIdea(idea: InsertContentIdea) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.insert(contentIdeas).values(idea);
+  return getIdeaById(idea.id);
+}
+export async function createIdeas(ideas: InsertContentIdea[]) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  if (ideas.length) await db.insert(contentIdeas).values(ideas);
+  return ideas.length;
+}
+export async function updateIdea(id: string, updates: Partial<InsertContentIdea>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(contentIdeas).set(updates).where(eq(contentIdeas.id, id));
+  return getIdeaById(id);
+}
+export async function deleteIdea(id: string) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(contentIdeas).where(eq(contentIdeas.id, id));
 }

@@ -73,10 +73,11 @@ const STATUS_COLORS: Record<PostStatus, string> = {
   rejected: "var(--qa-danger)",
 };
 
-type Tab = "javasolt" | "calendar" | "gyartosor" | "drafts" | "approval" | "published";
+type Tab = "javasolt" | "otletbank" | "calendar" | "gyartosor" | "drafts" | "approval" | "published";
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "javasolt", label: "Javasolt", icon: <Lightbulb size={14} /> },
+  { id: "otletbank", label: "Ötletbank", icon: <BookOpen size={14} /> },
   { id: "calendar", label: "Naptár", icon: <Calendar size={14} /> },
   { id: "gyartosor", label: "Gyártósor", icon: <Columns3 size={14} /> },
   { id: "drafts", label: "Piszkozatok", icon: <FileText size={14} /> },
@@ -453,6 +454,27 @@ export default function ContentStudio() {
     onError: () => toast.error("Hiba az elutasítás során"),
   });
 
+  // #11 – Ötletbank
+  const { data: ideas = [] } = trpc.ideas.list.useQuery({ profileId: activeProfile.id }, { enabled: !!activeProfile.id });
+  const [newIdeaTitle, setNewIdeaTitle] = useState("");
+  const [generatingIdeas, setGeneratingIdeas] = useState(false);
+  const generateIdeasMutation = trpc.ideas.generate.useMutation({
+    onSuccess: (r) => { utils.ideas.list.invalidate({ profileId: activeProfile.id }); toast.success(`${r.created} ötlet generálva`); setGeneratingIdeas(false); },
+    onError: (e) => { toast.error(e.message); setGeneratingIdeas(false); },
+  });
+  const createIdeaMutation = trpc.ideas.create.useMutation({
+    onSuccess: () => { utils.ideas.list.invalidate({ profileId: activeProfile.id }); setNewIdeaTitle(""); },
+    onError: (e) => toast.error(e.message),
+  });
+  const deleteIdeaMutation = trpc.ideas.delete.useMutation({
+    onSuccess: () => utils.ideas.list.invalidate({ profileId: activeProfile.id }),
+  });
+  const convertIdeaMutation = trpc.ideas.convertToDraft.useMutation({
+    onSuccess: () => { utils.ideas.list.invalidate({ profileId: activeProfile.id }); utils.content.list.invalidate({ profileId: activeProfile.id }); toast.success("Vázlat létrehozva a Piszkozatok között"); setActiveTab("drafts"); },
+    onError: (e) => toast.error(e.message),
+  });
+  const activeIdeas = (ideas as any[]).filter((i) => i.status !== "archived");
+
   const cardBg = "var(--qa-surface)";
   const border = "var(--qa-border)";
 
@@ -721,6 +743,68 @@ export default function ContentStudio() {
       )}
 
       {/* Calendar Tab */}
+      {/* Ötletbank (#11) */}
+      {!isLoading && activeTab === "otletbank" && (
+        <div className="space-y-4">
+          <div className="rounded-xl border p-4" style={{ background: cardBg, borderColor: border }}>
+            <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+              <div>
+                <h2 className="text-base font-bold" style={{ fontFamily: "var(--font-heading)", color: "var(--qa-fg2)" }}>Ötletbank</h2>
+                <p className="text-xs" style={{ color: "var(--qa-fg3)" }}>Tartalom-ötletek gyűjtőhelye — egy kattintással vázlat lesz belőlük.</p>
+              </div>
+              {!isReadOnly && (
+                <button onClick={() => { setGeneratingIdeas(true); generateIdeasMutation.mutate({ profileId: activeProfile.id, count: 6 }); }}
+                  disabled={generatingIdeas}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-white disabled:opacity-50" style={{ background: "var(--qa-accent)" }}>
+                  {generatingIdeas ? <><Loader2 size={13} className="animate-spin" /> Generálás…</> : <><Sparkles size={13} /> AI-ötletek generálása</>}
+                </button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <input value={newIdeaTitle} onChange={e => setNewIdeaTitle(e.target.value)} placeholder="Saját ötlet hozzáadása…"
+                onKeyDown={e => { if (e.key === "Enter" && newIdeaTitle.trim()) createIdeaMutation.mutate({ profileId: activeProfile.id, title: newIdeaTitle.trim() }); }}
+                className="flex-1 px-3 py-2 rounded-lg text-sm border" style={{ background: "var(--qa-surface2)", borderColor: border, color: "var(--qa-fg2)" }} />
+              <button onClick={() => { if (newIdeaTitle.trim()) createIdeaMutation.mutate({ profileId: activeProfile.id, title: newIdeaTitle.trim() }); }}
+                className="px-3 py-2 rounded-lg text-sm flex-shrink-0" style={{ background: "var(--qa-surface2)", color: "var(--qa-fg2)" }} title="Hozzáadás"><Plus size={14} /></button>
+            </div>
+          </div>
+
+          {activeIdeas.length === 0 ? (
+            <EmptyState icon={<Lightbulb className="w-12 h-12" />} title="Még nincs ötleted"
+              description="Generálj AI-ötleteket a cégedhez, vagy adj hozzá sajátot fent." />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {activeIdeas.map((idea) => (
+                <div key={idea.id} className="rounded-xl border p-4 flex flex-col" style={{ background: cardBg, borderColor: border, opacity: idea.status === "used" ? 0.6 : 1 }}>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full flex-shrink-0"
+                      style={{ background: idea.source === "ai" ? "var(--qa-accent-soft)" : "var(--qa-surface2)", color: idea.source === "ai" ? "var(--qa-accent)" : "var(--qa-fg4)" }}>
+                      {idea.source === "ai" ? "AI" : "Saját"}
+                    </span>
+                    {idea.status === "used" && (
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ background: "var(--qa-success-soft, rgba(34,197,94,.14))", color: "var(--qa-success)" }}>Felhasználva</span>
+                    )}
+                    <button onClick={() => deleteIdeaMutation.mutate({ id: idea.id })} className="ml-auto flex-shrink-0" style={{ color: "var(--qa-fg4)" }} title="Törlés"><Trash2 size={13} /></button>
+                  </div>
+                  <p className="text-sm font-semibold" style={{ color: "var(--qa-fg2)" }}>{idea.title}</p>
+                  {idea.description && <p className="text-xs mt-1 flex-1" style={{ color: "var(--qa-fg3)" }}>{idea.description}</p>}
+                  <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                    {idea.pillar && <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: "var(--qa-surface2)", color: "var(--qa-fg3)" }}>{idea.pillar}</span>}
+                    {idea.platform && <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: "var(--qa-surface2)", color: "var(--qa-fg3)" }}>{idea.platform}</span>}
+                  </div>
+                  {idea.status !== "used" && !isReadOnly && (
+                    <button onClick={() => convertIdeaMutation.mutate({ id: idea.id })}
+                      className="mt-3 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold" style={{ background: "var(--qa-accent-soft)", color: "var(--qa-accent)" }}>
+                      <ArrowRight size={13} /> Vázlat lesz belőle
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {!isLoading && activeTab === "calendar" && (
         <div className="rounded-xl border p-5" style={{ background: cardBg, borderColor: border }}>
           <div className="flex items-center justify-between mb-4">
