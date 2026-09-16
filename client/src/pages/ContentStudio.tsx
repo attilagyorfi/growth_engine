@@ -440,6 +440,23 @@ export default function ContentStudio() {
   const approvalPosts = (posts as Post[]).filter(p => p.status === "approved");
   const publishedPosts = (posts as Post[]).filter(p => p.status === "published");
 
+  // #12 – naptár drag-and-drop: poszt áthúzása másik napra (csak nem-publikált).
+  // Csak a dátum változik, az eredeti időpont órája/perce megmarad. A státusz
+  // nem változik (a content.update őre csak státusz-váltásra fut).
+  const [draggedPost, setDraggedPost] = useState<Post | null>(null);
+  const [dragOverDay, setDragOverDay] = useState<number | null>(null);
+  const handleReschedule = (day: number) => {
+    const p = draggedPost;
+    setDraggedPost(null);
+    setDragOverDay(null);
+    if (!p || !day) return;
+    const orig = p.scheduledAt ? new Date(p.scheduledAt) : new Date();
+    const next = new Date(calendarYear, calendarMonth, day, orig.getHours(), orig.getMinutes());
+    if (p.scheduledAt && new Date(p.scheduledAt).getTime() === next.getTime()) return; // nincs változás
+    updateMutation.mutate({ id: p.id, scheduledAt: next });
+    toast.success(`„${p.title}" áthelyezve: ${MONTHS_HU[calendarMonth]} ${day}.`);
+  };
+
   const submitForReviewMutation = trpc.content.submitForReview.useMutation({
     onSuccess: () => { utils.content.list.invalidate(); toast.success("Poszt beküldve jóváhagyásra"); },
     onError: () => toast.error("Hiba a beküldés során"),
@@ -770,6 +787,9 @@ export default function ContentStudio() {
               </button>
             </div>
           </div>
+          <p className="text-xs mb-2" style={{ color: "var(--qa-fg4)" }}>
+            Húzd a posztokat egy másik napra az átütemezéshez (a publikáltak nem mozdíthatók).
+          </p>
           <div className="grid grid-cols-7 gap-1 mb-2">
             {DAYS_HU.map(d => (
               <div key={d} className="text-center text-xs font-semibold py-1" style={{ color: "var(--qa-fg4)" }}>{d}</div>
@@ -780,15 +800,30 @@ export default function ContentStudio() {
               const isToday = day !== null && new Date().getDate() === day && new Date().getMonth() === calendarMonth && new Date().getFullYear() === calendarYear;
               const dayPosts = day !== null ? (scheduledByDay[day.toString()] ?? []) : [];
               return (
-                <div key={i} className="min-h-[72px] rounded-lg p-1.5" style={{ background: day !== null ? "var(--qa-surface2)" : "transparent", border: isToday ? "1px solid var(--qa-accent)" : "1px solid transparent" }}>
+                <div key={i}
+                  className="min-h-[72px] rounded-lg p-1.5 transition-colors"
+                  style={{
+                    background: dragOverDay === day && day !== null ? "var(--qa-accent-soft)" : day !== null ? "var(--qa-surface2)" : "transparent",
+                    border: dragOverDay === day && day !== null ? "1px dashed var(--qa-accent)" : isToday ? "1px solid var(--qa-accent)" : "1px solid transparent",
+                  }}
+                  onDragOver={(e) => { if (draggedPost && day !== null) { e.preventDefault(); if (dragOverDay !== day) setDragOverDay(day); } }}
+                  onDragLeave={() => { if (dragOverDay === day) setDragOverDay(null); }}
+                  onDrop={() => { if (day !== null) handleReschedule(day); }}>
                   {day !== null && (
                     <>
                       <p className="text-xs font-semibold mb-1" style={{ color: isToday ? "var(--qa-accent)" : "var(--qa-fg3)" }}>{day}</p>
                       {dayPosts.slice(0, 2).map(p => {
                         const statusDot = p.status === "published" ? "var(--qa-success)" : p.status === "scheduled" ? "var(--qa-accent)" : p.status === "approved" ? "var(--qa-warning)" : "var(--qa-fg3)";
+                        const canDrag = p.status !== "published";
                         return (
-                          <div key={p.id} className="text-xs px-1 py-0.5 rounded mb-0.5 truncate cursor-pointer flex items-center gap-1" style={{ background: `var(--qa-surface3)`, color: "var(--qa-fg2)" }}
-                            onClick={() => setSelectedPost(p)}>
+                          <div key={p.id}
+                            draggable={canDrag}
+                            onDragStart={(e) => { setDraggedPost(p); e.dataTransfer.effectAllowed = "move"; }}
+                            onDragEnd={() => { setDraggedPost(null); setDragOverDay(null); }}
+                            className="text-xs px-1 py-0.5 rounded mb-0.5 truncate flex items-center gap-1"
+                            style={{ background: `var(--qa-surface3)`, color: "var(--qa-fg2)", cursor: canDrag ? "grab" : "pointer" }}
+                            onClick={() => setSelectedPost(p)}
+                            title={canDrag ? "Húzd másik napra az átütemezéshez" : undefined}>
                             <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: statusDot }} />
                             <span className="truncate">{p.title}</span>
                           </div>
