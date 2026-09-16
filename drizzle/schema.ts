@@ -982,3 +982,19 @@ export const assistantMessages = mysqlTable("assistant_messages", {
 });
 export type AssistantMessage = typeof assistantMessages.$inferSelect;
 export type InsertAssistantMessage = typeof assistantMessages.$inferInsert;
+
+// ─── Ötletbank (#11) — tartalom-ötletek (AI-javasolt + saját) ─────────────────
+export const contentIdeas = mysqlTable("content_ideas", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  profileId: varchar("profileId", { length: 64 }).notNull(),
+  title: varchar("title", { length: 300 }).notNull(),
+  description: text("description"),
+  pillar: varchar("pillar", { length: 120 }),
+  platform: varchar("platform", { length: 40 }),
+  source: mysqlEnum("source", ["ai", "user"]).default("user").notNull(),
+  status: mysqlEnum("status", ["new", "used", "archived"]).default("new").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type ContentIdea = typeof contentIdeas.$inferSelect;
+export type InsertContentIdea = typeof contentIdeas.$inferInsert;
