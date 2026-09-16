@@ -108,6 +108,7 @@ export const appRouter = router({
           style: z.string(),
           avoid: z.string(),
           keywords: z.array(z.string()),
+          voiceSamples: z.array(z.string()).optional(),
         }).optional(),
         contentPillars: z.array(z.object({
           id: z.string(),

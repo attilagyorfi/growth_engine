@@ -401,6 +401,39 @@ export default function Settings() {
                   </button>
                 </div>
               </div>
+
+              {/* Hangminta (few-shot) — a saját, jó posztok, amiket az AI utánoz */}
+              <div>
+                <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--qa-fg3)" }}>
+                  Hangminta — a saját, jó posztjaid (max 3)
+                </label>
+                <p className="text-xs mb-2" style={{ color: "var(--qa-fg4)" }}>
+                  Illessz be 1-3 korábbi, neked tetsző posztot. Az AI ezek stílusát és hangnemét követi a generálásnál — így „hozzád hasonlít", nem általános.
+                </p>
+                <div className="space-y-2">
+                  {(brandForm.brandVoice?.voiceSamples ?? []).map((s: string, i: number) => (
+                    <div key={i} className="flex gap-2 items-start">
+                      <textarea
+                        value={s}
+                        onChange={e => setBrandForm((f: any) => ({ ...f, brandVoice: { ...f.brandVoice, voiceSamples: (f.brandVoice?.voiceSamples ?? []).map((v: string, j: number) => j === i ? e.target.value : v) } }))}
+                        rows={3}
+                        placeholder="Illeszd be egy korábbi posztod szövegét…"
+                        className="flex-1 px-3 py-2 rounded-lg text-sm border resize-y"
+                        style={{ background: "var(--qa-surface2)", borderColor: "var(--qa-border)", color: "var(--qa-fg2)" }} />
+                      <button onClick={() => setBrandForm((f: any) => ({ ...f, brandVoice: { ...f.brandVoice, voiceSamples: (f.brandVoice?.voiceSamples ?? []).filter((_: any, j: number) => j !== i) } }))}
+                        className="p-2 rounded-lg flex-shrink-0" style={{ background: "var(--qa-surface2)", color: "var(--qa-fg4)" }} title="Minta törlése">
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                {(brandForm.brandVoice?.voiceSamples ?? []).length < 3 && (
+                  <button onClick={() => setBrandForm((f: any) => ({ ...f, brandVoice: { ...f.brandVoice, voiceSamples: [...(f.brandVoice?.voiceSamples ?? []), ""] } }))}
+                    className="mt-2 flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm" style={{ background: "oklch(from var(--qa-accent) l c h / 15%)", color: "var(--qa-accent)" }}>
+                    <Plus size={14} /> Hangminta hozzáadása
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
