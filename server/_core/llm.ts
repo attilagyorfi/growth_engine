@@ -380,7 +380,14 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     if (/^(gpt-4|gpt-3\.5)/i.test(modelName)) {
       payload.max_tokens = capped;
     } else {
-      payload.max_completion_tokens = capped;
+      // gpt-5 / o-széria REASONING modellek: a belső gondolkodási (reasoning)
+      // tokenek is beleszámítanak a max_completion_tokens-be. Egy alacsony hívói
+      // cap (pl. az assistant.send 1200-a) így kiéheztetheti a modellt: minden
+      // token elmegy gondolkodásra, és ÜRES válasz jön vissza → 502 „Az AI üres
+      // választ adott". Ezért reasoning-modellnél biztonságos alsó korlátot (8192)
+      // tartunk, felül marad a 16384-es OpenAI kimeneti cap. A gpt-4x/3.5 path
+      // változatlan; a bőven kérő hívók (default 32768→16384) sem módosulnak.
+      payload.max_completion_tokens = Math.min(Math.max(capped, 8192), 16384);
     }
   } else {
     // Manus Forge (OpenAI-kompatibilis proxy) — a régi max_tokens-t várja.
