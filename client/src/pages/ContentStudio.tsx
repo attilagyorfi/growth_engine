@@ -597,12 +597,12 @@ export default function ContentStudio() {
       <AiLimitBanner />
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 p-1 rounded-xl overflow-x-auto" style={{ background: "var(--qa-surface)" }}>
+      <div className="flex gap-1 mb-6 p-1 rounded-xl overflow-x-auto no-scrollbar" style={{ background: "var(--qa-surface)" }}>
         {TABS.map(tab => {
           const count = tab.id === "drafts" ? draftPosts.length : tab.id === "approval" ? approvalPosts.length : tab.id === "published" ? publishedPosts.length : null;
           return (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-sm font-medium transition-all whitespace-nowrap"
+              className="flex-none sm:flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-sm font-medium transition-all whitespace-nowrap"
               style={{
                 background: activeTab === tab.id ? "var(--qa-accent)" : "transparent",
                 color: activeTab === tab.id ? "white" : "var(--qa-fg3)",
