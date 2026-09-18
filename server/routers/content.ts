@@ -16,10 +16,43 @@ import { assertProfileOwnership } from "../_core/ownership";
 import { checkAiUsageLimit, recordAiUsage } from "../authDb";
 import {
   getContentByProfile, getContentById, createContent, updateContent, deleteContent, getProfileById,
+  createNotification,
 } from "../db";
 
 type CheckLevel = "ok" | "warn" | "error";
 type CheckItem = { key: string; level: CheckLevel; label: string };
+
+/**
+ * In-app értesítés az approval-workflow eseményeire (submit / approve / reject),
+ * hogy a csengő ténylegesen jelezzen. A címzett a profil tulajdonosa
+ * (clientProfiles.appUserId); ha nincs (pl. super_admin saját profilja), a
+ * művelet végrehajtója kapja, így a csengő egyszereplős tesztben is működik.
+ * Non-fatal — semmilyen hibája nem akadályozhatja a státuszváltást.
+ */
+async function notifyApproval(
+  db: any,
+  post: { id: string; title: string; platform: string; profileId: string },
+  actorId: string,
+  n: { type: "approval_ready" | "system"; title: string; body?: string },
+) {
+  try {
+    const { clientProfiles } = await import("../../drizzle/schema");
+    const { eq } = await import("drizzle-orm");
+    const [profile] = await db.select().from(clientProfiles).where(eq(clientProfiles.id, post.profileId)).limit(1);
+    const recipient = profile?.appUserId || actorId;
+    await createNotification({
+      id: nanoid(),
+      appUserId: recipient,
+      profileId: post.profileId,
+      type: n.type,
+      title: n.title,
+      body: n.body ?? null,
+      actionUrl: "/tartalom-studio",
+    });
+  } catch (err) {
+    console.error("[Approval Notification] non-fatal:", err);
+  }
+}
 
 export const contentRouter = router({
   list: appUserProcedure
@@ -298,6 +331,12 @@ export const contentRouter = router({
         console.error("[Approval Email] Unexpected error:", err);
       }
 
+      await notifyApproval(db, post, ctx.appUser.id, {
+        type: "approval_ready",
+        title: `Jóváhagyásra vár: ${post.title}`,
+        body: `Egy ${post.platform} poszt jóváhagyásra vár.`,
+      });
+
       return { success: true };
     }),
 
@@ -315,6 +354,11 @@ export const contentRouter = router({
       await db.update(contentPosts)
         .set({ status: "approved", reviewedBy: ctx.appUser.id, reviewedAt: new Date(), updatedAt: new Date() })
         .where(eq(contentPosts.id, input.postId));
+      await notifyApproval(db, post, ctx.appUser.id, {
+        type: "system",
+        title: `Jóváhagyva: ${post.title}`,
+        body: `A(z) ${post.platform} poszt jóváhagyva — ütemezhető közzétételre.`,
+      });
       return { success: true };
     }),
 
@@ -332,6 +376,11 @@ export const contentRouter = router({
       await db.update(contentPosts)
         .set({ status: "rejected", rejectionReason: input.reason ?? null, reviewedBy: ctx.appUser.id, reviewedAt: new Date(), updatedAt: new Date() })
         .where(eq(contentPosts.id, input.postId));
+      await notifyApproval(db, post, ctx.appUser.id, {
+        type: "system",
+        title: `Elutasítva: ${post.title}`,
+        body: input.reason ? `Indok: ${input.reason}` : undefined,
+      });
       return { success: true };
     }),
 
