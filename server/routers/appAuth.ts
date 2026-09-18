@@ -195,7 +195,10 @@ export const appAuthRouter = router({
   // ─── Bejelentkezés ───────────────────────────────────────────────────────────
   login: publicProcedure
     .input(z.object({
-      email: z.string().email(),
+      // Nem kényszerítünk email-formátumot: a belépés exact-match az azonosítóra,
+      // így felhasználónévvel is működik (pl. a "teszt" belső teszt-fiók). A
+      // biztonságot a jelszó-ellenőrzés + rate-limit adja, nem a formátum.
+      email: z.string().min(1).max(255),
       password: z.string().min(1),
     }))
     .mutation(async ({ input, ctx }) => {

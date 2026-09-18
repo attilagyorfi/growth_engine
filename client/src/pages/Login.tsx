@@ -69,14 +69,14 @@ export default function Login() {
               )}
 
               <div className="space-y-1.5">
-                <Label className="text-sm" style={{ color: "var(--qa-fg2)" }}>Email cím</Label>
+                <Label className="text-sm" style={{ color: "var(--qa-fg2)" }}>Email cím vagy felhasználónév</Label>
                 <Input
-                  type="email"
+                  type="text"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="email@ceg.hu"
                   required
-                  autoComplete="email"
+                  autoComplete="username"
                 />
               </div>
 
