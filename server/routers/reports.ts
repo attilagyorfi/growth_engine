@@ -180,6 +180,31 @@ export const reportsRouter = router({
     demo: isDemoData(),
   })),
 
+  // ─── #15 Csatorna-teljesítmény ───────────────────────────────────────────
+  // Csatornánkénti összevetés (költés/megjelenés/kattintás/CTR/CPC/konverzió/
+  // költség-per-konverzió). DEMO módban a mock generátor adja; élesben a valós
+  // report_metrics. A `demo` flag vezérli a felület DEMO-jelölését.
+  channelPerformance: appUserProcedure
+    .input(z.object({ profileId: z.string(), from: z.string().optional(), to: z.string().optional() }))
+    .query(async ({ input, ctx }) => {
+      await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      const range = resolveRange(input.from, input.to);
+      const { rows, demo } = await getViewMetrics(input.profileId, range.from, range.to);
+      return { demo, source: getMetricsSource(), ...range, ...buildChannelPerformance(rows) };
+    }),
+
+  // ─── #16 Konverzió ───────────────────────────────────────────────────────
+  // Tölcsér (megjelenés → kattintás → konverzió), konverziós ráta, költség/
+  // konverzió, napi trend és csatornánkénti konverzió-hozzájárulás.
+  conversion: appUserProcedure
+    .input(z.object({ profileId: z.string(), from: z.string().optional(), to: z.string().optional() }))
+    .query(async ({ input, ctx }) => {
+      await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      const range = resolveRange(input.from, input.to);
+      const { rows, demo } = await getViewMetrics(input.profileId, range.from, range.to);
+      return { demo, source: getMetricsSource(), ...range, ...buildConversion(rows) };
+    }),
+
   // ─── Havi ütemezés ───────────────────────────────────────────────────────
   schedule: appUserProcedure
     .input(z.object({
@@ -244,4 +269,119 @@ export function buildSummary(current: Metric[]) {
   }));
 
   return { kpis, series, byPlatform };
+}
+
+// ─── #15/#16 nézetek adat-rétege ─────────────────────────────────────────────
+
+/** A UI-ban megjelenő csatornák (fix sorrend + magyar/olvasható címke). */
+const VIEW_CHANNELS: { platform: string; label: string; paid: boolean }[] = [
+  { platform: "google_ads", label: "Google Ads", paid: true },
+  { platform: "meta_ads", label: "Meta Ads", paid: true },
+  { platform: "ga4", label: "GA4 (analitika)", paid: false },
+  { platform: "search_console", label: "Search Console", paid: false },
+];
+
+/** Alapértelmezett időszak: utolsó 30 nap (YYYY-MM-DD). */
+function resolveRange(from?: string, to?: string): { from: string; to: string } {
+  const toD = to ? new Date(to) : new Date();
+  const fromD = from ? new Date(from) : new Date(toD.getTime() - 29 * 86_400_000);
+  return { from: fromD.toISOString().slice(0, 10), to: toD.toISOString().slice(0, 10) };
+}
+
+/**
+ * A #15/#16 nézetek metrikái. ÉLES módban (LIVE_METRIC_PLATFORMS feltöltve) a
+ * valós, szinkronizált report_metrics. DEMO módban a determinisztikus mock
+ * generátor mind a 4 platformra — így kapcsolat nélkül is látszik érdemi adat.
+ * Amint az OAuth-verifikáció kész és a lista feltöltődik, demo=false lesz és a
+ * felület DEMO-jelölése automatikusan eltűnik (egyetlen kapcsoló, nincs UI-módosítás).
+ */
+async function getViewMetrics(profileId: string, from: string, to: string): Promise<{ rows: Metric[]; demo: boolean }> {
+  if (!isDemoData()) {
+    const real = await getMetricsByProfile(profileId, from, to);
+    return { rows: real as unknown as Metric[], demo: false };
+  }
+  const rows: Metric[] = [];
+  for (const c of VIEW_CHANNELS) {
+    const conn = { id: `demo-${profileId}-${c.platform}`, platform: c.platform } as any;
+    const r = await fetchMetrics(conn, from, to);
+    rows.push(...(r as unknown as Metric[]));
+  }
+  return { rows, demo: true };
+}
+
+const sumBy = (rows: Metric[], key: string, platform?: string) =>
+  rows.filter((r) => r.metricKey === key && (!platform || r.platform === platform)).reduce((a, r) => a + r.value, 0);
+
+/** #15 — csatornánkénti teljesítmény + „legjobb a pénzért" (legalacsonyabb költség/konverzió). */
+export function buildChannelPerformance(rows: Metric[]) {
+  const channels = VIEW_CHANNELS.map((c) => {
+    const spend = sumBy(rows, "spend", c.platform);
+    const impressions = sumBy(rows, "impressions", c.platform);
+    const clicks = sumBy(rows, "clicks", c.platform);
+    const conversions = sumBy(rows, "conversions", c.platform);
+    return {
+      platform: c.platform,
+      label: c.label,
+      paid: c.paid,
+      spend: Math.round(spend),
+      impressions: Math.round(impressions),
+      clicks: Math.round(clicks),
+      conversions: Math.round(conversions),
+      ctr: impressions > 0 ? clicks / impressions : null,
+      cpc: clicks > 0 && spend > 0 ? spend / clicks : null,
+      costPerConversion: conversions > 0 && spend > 0 ? spend / conversions : null,
+    };
+  }).filter((c) => c.spend || c.impressions || c.clicks || c.conversions);
+
+  const totals = {
+    spend: Math.round(sumBy(rows, "spend")),
+    impressions: Math.round(sumBy(rows, "impressions")),
+    clicks: Math.round(sumBy(rows, "clicks")),
+    conversions: Math.round(sumBy(rows, "conversions")),
+  };
+
+  // „Legjobb csatorna a pénzért": a fizetett csatornák közül a legalacsonyabb
+  // költség/konverzió (ha van értelmezhető adat).
+  const paidWithCpa = channels.filter((c) => c.paid && c.costPerConversion != null);
+  const best = paidWithCpa.length
+    ? paidWithCpa.reduce((a, b) => (a.costPerConversion! <= b.costPerConversion! ? a : b)).platform
+    : null;
+
+  return { channels, totals, best };
+}
+
+/** #16 — konverziós tölcsér, ráták, napi trend és csatornánkénti hozzájárulás. */
+export function buildConversion(rows: Metric[]) {
+  const impressions = Math.round(sumBy(rows, "impressions"));
+  const clicks = Math.round(sumBy(rows, "clicks"));
+  const conversions = Math.round(sumBy(rows, "conversions"));
+  const spend = sumBy(rows, "spend");
+
+  // Napi konverzió-trend.
+  const trendMap = new Map<string, number>();
+  for (const r of rows) {
+    if (r.metricKey !== "conversions") continue;
+    const d = r.date instanceof Date ? r.date.toISOString().slice(0, 10) : String(r.date).slice(0, 10);
+    trendMap.set(d, (trendMap.get(d) ?? 0) + r.value);
+  }
+  const trend = Array.from(trendMap.entries())
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([date, value]) => ({ date, conversions: Math.round(value) }));
+
+  // Csatornánkénti konverzió-hozzájárulás (csak ahol van konverzió).
+  const byChannel = VIEW_CHANNELS
+    .map((c) => ({ platform: c.platform, label: c.label, conversions: Math.round(sumBy(rows, "conversions", c.platform)) }))
+    .filter((c) => c.conversions > 0)
+    .map((c) => ({ ...c, share: conversions > 0 ? c.conversions / conversions : 0 }))
+    .sort((a, b) => b.conversions - a.conversions);
+
+  return {
+    funnel: { impressions, clicks, conversions },
+    clickThroughRate: impressions > 0 ? clicks / impressions : null,
+    conversionRate: clicks > 0 ? conversions / clicks : null,
+    costPerConversion: conversions > 0 && spend > 0 ? spend / conversions : null,
+    spend: Math.round(spend),
+    trend,
+    byChannel,
+  };
 }

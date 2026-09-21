@@ -15,12 +15,14 @@ import {
 } from "recharts";
 import {
   TrendingUp, Users, Layers, BarChart2,
-  Target, Zap, ArrowRight,
+  Target, Zap, ArrowRight, LayoutGrid, Radio, Filter,
 } from "lucide-react";
 import { useLocation } from "wouter";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import ChannelPerformance from "@/components/analytics/ChannelPerformance";
+import ConversionAnalytics from "@/components/analytics/ConversionAnalytics";
 
 // ─── Style tokens ──────────────────────────────────────────────────────────────
 const cardBg = "var(--qa-surface)";
@@ -48,6 +50,14 @@ const STATUS_COLORS: Record<string, string> = {
   closed_won: green,
   closed_lost: red,
 };
+
+// Fülek: Áttekintés (belső adat) / Csatornák (#15) / Konverzió (#16).
+const ANALYTICS_TABS = [
+  { id: "overview" as const, label: "Áttekintés", icon: LayoutGrid },
+  { id: "channels" as const, label: "Csatornák", icon: Radio },
+  { id: "conversion" as const, label: "Konverzió", icon: Filter },
+];
+type AnalyticsTab = (typeof ANALYTICS_TABS)[number]["id"];
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -106,6 +116,7 @@ export default function Analytics() {
   const { activeProfile } = useProfile();
   const [, navigate] = useLocation();
   const subscription = useSubscription();
+  const [tab, setTab] = useState<AnalyticsTab>("overview");
 
   const { data: leads = [], isLoading: leadsLoading } = trpc.leads.list.useQuery(
     { profileId: activeProfile.id },
@@ -224,6 +235,22 @@ export default function Analytics() {
   return (
     <DashboardLayout title="Analitika" subtitle="Valós idejű teljesítmény áttekintő" background="analitika">
       <div className="p-6 space-y-6 overflow-y-auto h-full">
+
+        {/* Fülek: Áttekintés / Csatornák (#15) / Konverzió (#16) */}
+        <div className="flex gap-1 p-1 rounded-xl overflow-x-auto no-scrollbar" style={{ background: cardBg, width: "fit-content", maxWidth: "100%" }}>
+          {ANALYTICS_TABS.map((t) => (
+            <button key={t.id} onClick={() => setTab(t.id)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all flex-shrink-0"
+              style={{ background: tab === t.id ? "var(--qa-accent)" : "transparent", color: tab === t.id ? "white" : textMuted }}>
+              <t.icon size={14} /> {t.label}
+            </button>
+          ))}
+        </div>
+
+        {tab === "channels" && <ChannelPerformance />}
+        {tab === "conversion" && <ConversionAnalytics />}
+
+        {tab === "overview" && (<>
 
         {/* Free tier notice */}
         {!subscription.canExportData && (
@@ -522,6 +549,8 @@ export default function Analytics() {
             ))}
           </div>
         )}
+
+        </>)}
 
       </div>
     </DashboardLayout>
