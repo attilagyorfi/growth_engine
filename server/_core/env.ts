@@ -20,7 +20,7 @@ export const ENV = {
   ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
   isProduction: process.env.NODE_ENV === "production",
   // ─── LLM providers ─────────────────────────────────────────────────────
-  // LLM_PROVIDER lehet: "openai", "manus" (régi Forge proxy), "anthropic" (TODO).
+  // LLM_PROVIDER lehet: "openai", "manus" (régi Forge proxy), "anthropic" (Claude).
   // Alapértelmezés: ha LLM_PROVIDER nincs megadva, de van OPENAI_API_KEY, akkor
   // automatikusan "openai" (a Manusról lemigráltunk). Csak ha OPENAI_API_KEY sincs,
   // akkor esik vissza a régi "manus" (Forge) providerre — visszafelé kompatibilitásból.
@@ -34,7 +34,8 @@ export const ENV = {
   // OpenAI (vagy bármilyen OpenAI-kompatibilis endpoint, pl. Together / Groq / Anyscale)
   openaiApiUrl: process.env.OPENAI_API_URL ?? "https://api.openai.com",
   openaiApiKey: process.env.OPENAI_API_KEY ?? "",
-  // Anthropic (még nincs implementálva)
+  // Anthropic (Claude) — LLM_PROVIDER=anthropic esetén aktív, az anthropicAdapter.ts
+  // használja. A modellt a LLM_MODEL adja (alapért. claude-opus-5-5).
   anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
   // ─── Egyéb ─────────────────────────────────────────────────────────────
   resendApiKey: process.env.RESEND_API_KEY ?? "",

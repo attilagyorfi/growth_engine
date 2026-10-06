@@ -214,7 +214,7 @@ const normalizeToolChoice = (
 // A Manus Forge `/v1/chat/completions` séma OpenAI-kompatibilis, ezért
 // lényegében csak a base URL + Bearer token + default model változik a két
 // provider között. Az Anthropic más API formátumot (/v1/messages) használ,
-// ezért ahhoz külön adapter kell — egyelőre nincs implementálva.
+// ezért azt a dedikált anthropicAdapter.ts kezeli (az invokeLLM átirányít oda).
 
 export type LlmProvider = "manus" | "openai" | "anthropic";
 
@@ -270,9 +270,17 @@ const resolveProvider = (): ResolvedProvider => {
     };
   }
   if (provider === "anthropic") {
-    throw new Error(
-      "LLM_PROVIDER=anthropic is not yet implemented — Anthropic uses a different API (/v1/messages) and needs a dedicated adapter. Use 'manus' or 'openai' for now.",
-    );
+    if (!ENV.anthropicApiKey) {
+      throw new Error("LLM_PROVIDER=anthropic but ANTHROPIC_API_KEY is not configured");
+    }
+    // Az Anthropic Messages API-t a dedikált anthropicAdapter.ts kezeli (nem ez a
+    // fetch-út), ezért az url/authHeader itt üres — az invokeLLM átirányít oda.
+    return {
+      provider: "anthropic",
+      url: "",
+      authHeader: "",
+      defaultModel: ENV.llmModel || "claude-opus-5-5",
+    };
   }
   // Default: Manus Forge (OpenAI-kompatibilis proxy)
   if (!ENV.forgeApiKey) {
@@ -347,6 +355,25 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     responseFormat,
     response_format,
   } = params;
+
+  // ─── Anthropic (Claude): dedikált adapter ──────────────────────────────────
+  // Az Anthropic Messages API más formátumú, ezért a hívást az anthropicAdapter
+  // fordítja oda-vissza. A dinamikus import miatt a @anthropic-ai/sdk csak akkor
+  // töltődik be, ha tényleg anthropic providert használunk (az OpenAI-út nem fizet érte).
+  if (target.provider === "anthropic") {
+    const normalizedResponseFormat = normalizeResponseFormat({
+      responseFormat, response_format, outputSchema, output_schema,
+    });
+    const { invokeAnthropic } = await import("./anthropicAdapter");
+    return invokeAnthropic({
+      messages,
+      tools,
+      toolChoice: toolChoice || tool_choice,
+      responseFormat: normalizedResponseFormat,
+      maxTokens: params.maxTokens ?? params.max_tokens ?? 32768,
+      model: target.defaultModel,
+    });
+  }
 
   const payload: Record<string, unknown> = {
     model: target.defaultModel,
