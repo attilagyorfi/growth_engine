@@ -159,7 +159,10 @@ export async function getProfileById(id: string) {
 export async function upsertProfile(profile: InsertClientProfile) {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
-  await db.insert(clientProfiles).values(profile).onDuplicateKeyUpdate({ set: profile });
+  // Biztonsági háló: frissítéskor az azonosító és a tulajdonos (appUserId) soha nem
+  // íródik felül, csak új profil létrehozásakor kerül be.
+  const { id: _id, appUserId: _owner, ...updatable } = profile;
+  await db.insert(clientProfiles).values(profile).onDuplicateKeyUpdate({ set: updatable });
   return getProfileById(profile.id);
 }
 

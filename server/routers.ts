@@ -127,8 +127,19 @@ export const appRouter = router({
         })).optional(),
       }))
       .mutation(async ({ input, ctx }) => {
+        // SECURITY (IDOR): létező profil mentésekor tulajdonos-ellenőrzés kell, és a
+        // tulajdonos (appUserId) nem változhat. Korábban bárki, aki ismert egy
+        // profil-azonosítót, a mentéssel magához rendelhette egy másik ügyfél profilját
+        // (és super_admin szerkesztéskor is leválasztotta a profilt az ügyfélről).
+        if (input.id) {
+          const existing = await getProfileById(input.id);
+          if (existing) {
+            await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.id, ctx.appUser.profileId);
+            return upsertProfile({ ...input, id: input.id, appUserId: existing.appUserId });
+          }
+        }
+        // Új profil: a létrehozó a tulajdonos.
         const id = input.id ?? nanoid();
-        // Attach appUserId for new profiles
         return upsertProfile({ ...input, id, appUserId: ctx.appUser.id });
       }),
 
