@@ -92,7 +92,8 @@ export default function DailyTasksBlock({ profileId }: DailyTasksBlockProps) {
 
   const handleGenerate = () => {
     if (!profileId) return;
-    generateMutation.mutate({ profileId });
+    // „Frissítés” = új generálás (a havi AI-keretből); az első napi generálás ingyenes.
+    generateMutation.mutate({ profileId, force: generated });
   };
 
   // Mount: 1) próbáljuk a napi cache-t, 2) ha nincs, automatikusan generáljunk

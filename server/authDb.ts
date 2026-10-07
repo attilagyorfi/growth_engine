@@ -2,7 +2,8 @@
  * G2A Growth Engine – Auth DB Helpers
  * Saját email+jelszó alapú autentikáció adatbázis segédfüggvényei
  */
-import { eq, and, gt, count, isNull } from "drizzle-orm";
+import { eq, ne, and, gt, count, isNull } from "drizzle-orm";
+import { TRPCError } from "@trpc/server";
 import { getDb } from "./db";
 import { appUsers, passwordResetTokens, aiUsage } from "../drizzle/schema";
 import type { AppUser, InsertAppUser } from "../drizzle/schema";
@@ -240,11 +241,35 @@ export function getCurrentMonth(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
-/** Count AI usages for a user in the current month, optionally filtered by feature */
+/**
+ * Onboarding-keret: az onboarding AI-hívásai (weboldal- és közösségimédia-elemzés,
+ * feltöltött anyagok, intelligencia, WOW, első stratégia és tartalomnaptár) NEM
+ * a havi csomagkeretből mennek, hanem ebből a felhasználónkénti havi keretből.
+ *
+ * Korábban a kliens által küldött `isOnboarding: true` KORLÁTLAN, nem számolt
+ * AI-hívást adott. Most a szerver számolja ("onboarding" sorok az ai_usage-ben),
+ * és ha a keret elfogy, a hívás a normál havi keretre esik vissza — így a flag
+ * legfeljebb ennyi ingyenes hívást ér. Egy teljes onboarding ~6–12 hívás.
+ */
+export const ONBOARDING_ACTION = "onboarding";
+export const ONBOARDING_MONTHLY_ALLOWANCE = 20;
+
+/**
+ * Funkciók, amelyeknek a csomagonkénti darabszáma KÜLÖN is kemény korlát (a teljes
+ * havi kereten felül) — ezeket a csomagkártyák konkrétan ígérik (pl. „3 SEO audit/hó”),
+ * és drágák. A többi funkció a teljes havi keretből gazdálkodik.
+ */
+export const STRICT_FEATURES: readonly AiFeature[] = ["seo", "image"];
+
+/**
+ * Count AI usages for a user in the current month, optionally filtered by action.
+ * Action nélkül a teljes havi csomagkeret-fogyasztást adja (az onboarding-keret
+ * sorai nélkül).
+ */
 export async function getMonthlyAiUsageCount(
   appUserId: string,
   month?: string,
-  feature?: AiFeature
+  feature?: AiFeature | typeof ONBOARDING_ACTION
 ): Promise<number> {
   const db = await requireDb();
   const m = month ?? getCurrentMonth();
@@ -254,6 +279,8 @@ export async function getMonthlyAiUsageCount(
   ];
   if (feature) {
     conditions.push(eq(aiUsage.action, feature));
+  } else {
+    conditions.push(ne(aiUsage.action, ONBOARDING_ACTION));
   }
   const rows = await db
     .select({ count: count() })
@@ -287,42 +314,60 @@ export async function getMonthlyUsageBreakdown(
   return result;
 }
 
-/** Record an AI usage event (skipped for super_admin and onboarding flow) */
+/**
+ * Record an AI usage event (skipped for super_admin).
+ * `onboarding`: a `checkAiUsageLimit` által visszaadott `onboarding` flag — ha a hívás
+ * az onboarding-keretből ment, oda könyveljük (NEM a kliens kérését kell ide adni).
+ */
 export async function recordAiUsage(
   appUserId: string,
   action: string,
   role?: string,
-  isOnboarding?: boolean
+  onboarding?: boolean
 ): Promise<void> {
   if (role === "super_admin") return;
-  if (isOnboarding) return;
   const db = await requireDb();
   await db.insert(aiUsage).values({
     appUserId,
-    action,
+    action: onboarding ? ONBOARDING_ACTION : action,
     month: getCurrentMonth(),
   });
 }
 
-/** Check if a user can perform an AI action for a specific feature */
-export async function checkAiUsageLimit(
-  appUserId: string,
-  plan: string,
-  role?: string,
-  isOnboarding?: boolean,
-  feature?: AiFeature
-): Promise<{
+export type AiUsageCheck = {
   allowed: boolean;
   used: number;
   limit: number;
   plan: string;
   warning: boolean; // true when >= 80% of limit used
-}> {
+  /** true: a hívás az onboarding-keretből megy → a recordAiUsage-nek ezt kell átadni. */
+  onboarding: boolean;
+};
+
+/**
+ * Check if a user can perform an AI action.
+ * `wantsOnboarding`: a hívás onboarding-jellegű (kliens-flag vagy onboarding-végpont) —
+ * ez csak KÉRÉS: a szerver a havi onboarding-keretig engedi, utána a normál keret dönt.
+ */
+export async function checkAiUsageLimit(
+  appUserId: string,
+  plan: string,
+  role?: string,
+  wantsOnboarding?: boolean,
+  feature?: AiFeature
+): Promise<AiUsageCheck> {
   if (role === "super_admin") {
-    return { allowed: true, used: 0, limit: -1, plan: "super_admin", warning: false };
+    return { allowed: true, used: 0, limit: -1, plan: "super_admin", warning: false, onboarding: false };
   }
-  if (isOnboarding) {
-    return { allowed: true, used: 0, limit: -1, plan: `${plan}_onboarding`, warning: false };
+  if (wantsOnboarding) {
+    const usedOnboarding = await getMonthlyAiUsageCount(appUserId, undefined, ONBOARDING_ACTION);
+    if (usedOnboarding < ONBOARDING_MONTHLY_ALLOWANCE) {
+      return {
+        allowed: true, used: usedOnboarding, limit: ONBOARDING_MONTHLY_ALLOWANCE,
+        plan: `${plan}_onboarding`, warning: false, onboarding: true,
+      };
+    }
+    // Az onboarding-keret elfogyott → a normál havi keret dönt (lent).
   }
 
   // AUDIT #2 FIX: az enforcement eddig a per-`feature` bucketet nézte, de a hívók
@@ -336,7 +381,16 @@ export async function checkAiUsageLimit(
   // Hard-gate: ha a funkció ezen a csomagon KIFEJEZETTEN 0 (pl. free/starter
   // képgenerálás/videó), akkor teljesen tiltjuk, függetlenül a total kerettől.
   if (feature && (planLimits[feature] ?? 0) === 0) {
-    return { allowed: false, used: 0, limit: 0, plan, warning: false };
+    return { allowed: false, used: 0, limit: 0, plan, warning: false, onboarding: false };
+  }
+
+  // Külön darabkorlát a drága, a csomagkártyán konkrétan ígért funkciókra.
+  if (feature && STRICT_FEATURES.includes(feature)) {
+    const featureLimit = planLimits[feature];
+    const featureUsed = await getMonthlyAiUsageCount(appUserId, undefined, feature);
+    if (featureUsed >= featureLimit) {
+      return { allowed: false, used: featureUsed, limit: featureLimit, plan, warning: true, onboarding: false };
+    }
   }
 
   const totalLimit = AI_PLAN_TOTAL_LIMITS[plan] ?? AI_PLAN_TOTAL_LIMITS.free;
@@ -349,5 +403,15 @@ export async function checkAiUsageLimit(
     limit: totalLimit,
     plan,
     warning,
+    onboarding: false,
   };
+}
+
+/** Egységes FORBIDDEN hiba, ha a keret elfogyott (a kliens az AI_LIMIT_REACHED kódot figyeli). */
+export function aiLimitError(check: AiUsageCheck, what = "AI generálási") {
+  return new TRPCError({
+    code: "FORBIDDEN",
+    message: `${what} limit elérve (${check.used}/${check.limit} ebben a hónapban). Frissítsd az előfizetésed a folytatáshoz.`,
+    cause: { code: "AI_LIMIT_REACHED", used: check.used, limit: check.limit, plan: check.plan },
+  });
 }

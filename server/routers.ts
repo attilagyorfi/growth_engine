@@ -39,7 +39,8 @@ import {
 } from "./db";
 import { invokeLLM, parseLLMJson } from "./_core/llm";
 import { buildBusinessContext, ANTI_GENERIC_HU } from "./_core/businessContext";
-import { checkAiUsageLimit, recordAiUsage } from "./authDb";
+import { checkAiUsageLimit, recordAiUsage, aiLimitError } from "./authDb";
+import { createDailyCache } from "./_core/dailyCache";
 import Stripe from "stripe";
 // Profile ownership helper moved to ./_core/ownership for cross-router reuse
 import { assertProfileOwnership } from "./_core/ownership";
@@ -55,6 +56,87 @@ function getStripeClient(): Stripe | null {
   if (!process.env.STRIPE_SECRET_KEY) return null;
   _stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2026-04-22.dahlia" });
   return _stripeClient;
+}
+
+// ─── „Mi a dolgom ma?” — napi teendők (profilonként naponta egyszer, lásd dailyTasks.generate) ───
+type DailyTasksResult = {
+  tasks: { text: string; category: string; link: string; actionType: string }[];
+  motivationalMessage: string;
+};
+const dailyTasksCache = createDailyCache<DailyTasksResult>();
+
+async function generateDailyTasks(profileId: string): Promise<DailyTasksResult> {
+  const strategy = await getActiveStrategyVersion(profileId);
+  const { getDb } = await import("./db");
+  const { leads: leadsTable, contentPosts: postsTable } = await import("../drizzle/schema");
+  const { eq, and } = await import("drizzle-orm");
+  const rawDb = await getDb();
+  const newLeads = rawDb ? await rawDb.select().from(leadsTable)
+    .where(and(eq(leadsTable.profileId, profileId), eq(leadsTable.status, "new")))
+    .limit(5) : [];
+  const draftPosts = rawDb ? await rawDb.select().from(postsTable)
+    .where(and(eq(postsTable.profileId, profileId), eq(postsTable.status, "draft")))
+    .limit(5) : [];
+
+  const contextParts = [
+    strategy ? `Aktív stratégia: ${strategy.title}.` : "Nincs aktív stratégia.",
+    newLeads.length > 0 ? `${newLeads.length} új lead vár feldolgozásra.` : "Nincs új lead.",
+    draftPosts.length > 0 ? `${draftPosts.length} piszkozat tartalom vár jóváhagyásra.` : "Nincs piszkozat tartalom.",
+  ];
+
+  const response = await invokeLLM({
+    messages: [
+      {
+        role: "system",
+        content: `Te egy marketing asszisztens vagy. A vállalkozás kontextusa alapján adj 3-5 konkrét, rövid napi teendőt. Minden teendő legyen cselekvő igével kezdődő, max 10 szavas magyar mondat. Adj egy rövid motiváló üzenetet is.
+
+FONTOS: Minden feladathoz adj meg egy actionType-ot és egy link URL-t az alábbi szabályok szerint:
+- Ha a feladat stratégiával kapcsolatos: actionType="strategy", link="/strategia?autoGenerate=true"
+- Ha a feladat tartalommal kapcsolatos (poszt, cikk, social): actionType="content", link="/tartalom-studio"
+- Ha a feladat lead-del vagy értékesítéssel kapcsolatos: actionType="sales", link="/ertekesites"
+- Ha a feladat kampánnyal kapcsolatos: actionType="campaign", link="/kampanyok"
+- Ha a feladat intelligence/elemzéssel kapcsolatos: actionType="intelligence", link="/intelligencia"
+- Egyéb esetben: actionType="other", link="/iranyitopult"
+
+A link mező mindig ezek egyike legyen, ne találj ki más URL-t.`,
+      },
+      {
+        role: "user",
+        content: `Kontextus: ${contextParts.join(" ")}. Mai dátum: ${new Date().toLocaleDateString("hu-HU")}. Add meg a napi teendőket.`,
+      },
+    ],
+    response_format: {
+      type: "json_schema",
+      json_schema: {
+        name: "daily_tasks",
+        strict: true,
+        schema: {
+          type: "object",
+          properties: {
+            tasks: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  text: { type: "string" },
+                  category: { type: "string", enum: ["tartalom", "lead", "stratégia", "kampány", "egyéb"] },
+                  link: { type: "string" },
+                  actionType: { type: "string", enum: ["strategy", "content", "sales", "campaign", "intelligence", "other"] },
+                },
+                required: ["text", "category", "link", "actionType"],
+                additionalProperties: false,
+              },
+            },
+            motivationalMessage: { type: "string" },
+          },
+          required: ["tasks", "motivationalMessage"],
+          additionalProperties: false,
+        },
+      },
+    },
+  });
+  const raw = response.choices[0]?.message?.content ?? "{}";
+  return parseLLMJson(raw) as DailyTasksResult;
 }
 
 export const appRouter = router({
@@ -321,11 +403,11 @@ export const appRouter = router({
         }),
         websiteAnalysis: z.any().optional(),
         onboardingAnswers: z.array(z.object({ fieldKey: z.string(), fieldValue: z.string().nullable() })).optional(),
-        isOnboarding: z.boolean().optional(), // bypass AI usage quota during onboarding
+        isOnboarding: z.boolean().optional(), // onboarding-keretből kéri (a szerver korlátozza)
       }))
       .mutation(async ({ input, ctx }) => {
         await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
-        // Feature gating: check AI usage limit (bypass during onboarding)
+        // Feature gating: havi keret, onboarding alatt a (szerveroldalon számolt) onboarding-keret
         const usageCheck = await checkAiUsageLimit(ctx.appUser.id, ctx.appUser.subscriptionPlan ?? "free", ctx.appUser.role, input.isOnboarding);
         if (!usageCheck.allowed) {
           throw new TRPCError({ code: "FORBIDDEN", message: `AI generálási limit elérve (${usageCheck.used}/${usageCheck.limit} ebben a hónapban). Frísítsd az előfizetésed a folytatáshoz.`, cause: { code: "AI_LIMIT_REACHED", used: usageCheck.used, limit: usageCheck.limit, plan: usageCheck.plan } });
@@ -357,8 +439,7 @@ export const appRouter = router({
         });
         const content = response.choices[0]?.message?.content ?? "{}";
         const parsed = parseLLMJson(content);
-        // Record AI usage (skip during onboarding)
-        await recordAiUsage(ctx.appUser.id, "intelligence", ctx.appUser.role, input.isOnboarding);
+        await recordAiUsage(ctx.appUser.id, "intelligence", ctx.appUser.role, usageCheck.onboarding);
         return upsertCompanyIntelligence({
           id: nanoid(),
           profileId: input.profileId,
@@ -374,6 +455,9 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        // Csak az onboarding hívja → onboarding-keret, utána a havi keret (eddig nem számolt).
+        const usageCheck = await checkAiUsageLimit(ctx.appUser.id, ctx.appUser.subscriptionPlan ?? "free", ctx.appUser.role, true);
+        if (!usageCheck.allowed) throw aiLimitError(usageCheck);
         const response = await invokeLLM({
           messages: [
             { role: "system", content: "Te egy tapasztalt marketing stratéga vagy. Cselekvhető átlelátásokat és gyors győzelmeket generálsz vállalkozásoknak. Kizárólag érvényes JSON-t adj vissza. MINDEN szöveges értéket KIZÁRÓLAG MAGYARUL írj meg – ez kötelező." },
@@ -382,6 +466,7 @@ export const appRouter = router({
           response_format: { type: "json_schema", json_schema: { name: "wow_moment", strict: true, schema: { type: "object", properties: { companySummary: { type: "string" }, topStrengths: { type: "array", items: { type: "string" } }, topRisks: { type: "array", items: { type: "string" } }, ninetyDayStrategyOutline: { type: "string" }, contentPillars: { type: "array", items: { type: "object", properties: { name: { type: "string" }, description: { type: "string" }, percentage: { type: "number" } }, required: ["name", "description", "percentage"], additionalProperties: false } }, contentIdeas: { type: "array", items: { type: "object", properties: { title: { type: "string" }, platform: { type: "string" }, format: { type: "string" }, pillar: { type: "string" } }, required: ["title", "platform", "format", "pillar"], additionalProperties: false } }, quickWins: { type: "array", items: { type: "object", properties: { title: { type: "string" }, description: { type: "string" }, impact: { type: "string" }, effort: { type: "string" } }, required: ["title", "description", "impact", "effort"], additionalProperties: false } } }, required: ["companySummary", "topStrengths", "topRisks", "ninetyDayStrategyOutline", "contentPillars", "contentIdeas", "quickWins"], additionalProperties: false } } },
         });
         const content = response.choices[0]?.message?.content ?? "{}";
+        await recordAiUsage(ctx.appUser.id, "intelligence", ctx.appUser.role, usageCheck.onboarding);
         return parseLLMJson(content);
       }),
 
@@ -1019,90 +1104,28 @@ export const appRouter = router({
   // ─── Daily Tasks („Mi a dolgom ma?”) ──────────────────────────────────────────────
   dailyTasks: router({
     generate: appUserProcedure
-      .input(z.object({ profileId: z.string() }))
+      .input(z.object({
+        profileId: z.string(),
+        // true = kézi „Frissítés”: új generálás, a havi keretből. Alapból a napi
+        // (profilonkénti) eredmény jön, ami NEM fogyaszt keretet — eddig minden
+        // dashboard-betöltés/eszköz levont egyet, egy ingyenes fiók kerete így
+        // pusztán a napi belépésektől elfogyott.
+        force: z.boolean().optional(),
+      }))
       .mutation(async ({ ctx, input }) => {
         await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
-        const dailyTasksUsageCheck = await checkAiUsageLimit(ctx.appUser.id, ctx.appUser.subscriptionPlan ?? "free", ctx.appUser.role);
-        if (!dailyTasksUsageCheck.allowed) {
-          throw new TRPCError({ code: "FORBIDDEN", message: `AI generálási limit elérve (${dailyTasksUsageCheck.used}/${dailyTasksUsageCheck.limit} ebben a hónapban). Frissítsd az előfizetésed a folytatáshoz.`, cause: { code: "AI_LIMIT_REACHED", used: dailyTasksUsageCheck.used, limit: dailyTasksUsageCheck.limit, plan: dailyTasksUsageCheck.plan } });
+        if (!input.force) {
+          const cached = dailyTasksCache.peek(input.profileId);
+          if (cached) return cached;
         }
+        const usageCheck = input.force
+          ? await checkAiUsageLimit(ctx.appUser.id, ctx.appUser.subscriptionPlan ?? "free", ctx.appUser.role)
+          : null;
+        if (usageCheck && !usageCheck.allowed) throw aiLimitError(usageCheck);
 
-        // Gather context: strategy version, leads, drafts
-        const strategy = await getActiveStrategyVersion(input.profileId);
-        const { getDb } = await import("./db");
-        const { leads: leadsTable, contentPosts: postsTable } = await import("../drizzle/schema");
-        const { eq, and } = await import("drizzle-orm");
-        const rawDb = await getDb();
-        const newLeads = rawDb ? await rawDb.select().from(leadsTable)
-          .where(and(eq(leadsTable.profileId, input.profileId), eq(leadsTable.status, "new")))
-          .limit(5) : [];
-        const draftPosts = rawDb ? await rawDb.select().from(postsTable)
-          .where(and(eq(postsTable.profileId, input.profileId), eq(postsTable.status, "draft")))
-          .limit(5) : [];
-
-        const contextParts = [
-          strategy ? `Aktív stratégia: ${strategy.title}.` : "Nincs aktív stratégia.",
-          newLeads.length > 0 ? `${newLeads.length} új lead vár feldolgozásra.` : "Nincs új lead.",
-          draftPosts.length > 0 ? `${draftPosts.length} piszkozat tartalom vár jóváhagyásra.` : "Nincs piszkozat tartalom.",
-        ];
-
-        const response = await invokeLLM({
-          messages: [
-            {
-              role: "system",
-              content: `Te egy marketing asszisztens vagy. A vállalkozás kontextusa alapján adj 3-5 konkrét, rövid napi teendőt. Minden teendő legyen cselekvő igével kezdődő, max 10 szavas magyar mondat. Adj egy rövid motiváló üzenetet is.
-
-FONTOS: Minden feladathoz adj meg egy actionType-ot és egy link URL-t az alábbi szabályok szerint:
-- Ha a feladat stratégiával kapcsolatos: actionType="strategy", link="/strategia?autoGenerate=true"
-- Ha a feladat tartalommal kapcsolatos (poszt, cikk, social): actionType="content", link="/tartalom-studio"
-- Ha a feladat lead-del vagy értékesítéssel kapcsolatos: actionType="sales", link="/ertekesites"
-- Ha a feladat kampánnyal kapcsolatos: actionType="campaign", link="/kampanyok"
-- Ha a feladat intelligence/elemzéssel kapcsolatos: actionType="intelligence", link="/intelligencia"
-- Egyéb esetben: actionType="other", link="/iranyitopult"
-
-A link mező mindig ezek egyike legyen, ne találj ki más URL-t.`,
-            },
-            {
-              role: "user",
-              content: `Kontextus: ${contextParts.join(" ")}. Mai dátum: ${new Date().toLocaleDateString("hu-HU")}. Add meg a napi teendőket.`,
-            },
-          ],
-          response_format: {
-            type: "json_schema",
-            json_schema: {
-              name: "daily_tasks",
-              strict: true,
-              schema: {
-                type: "object",
-                properties: {
-                  tasks: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        text: { type: "string" },
-                        category: { type: "string", enum: ["tartalom", "lead", "stratégia", "kampány", "egyéb"] },
-                        link: { type: "string" },
-                        actionType: { type: "string", enum: ["strategy", "content", "sales", "campaign", "intelligence", "other"] },
-                      },
-                      required: ["text", "category", "link", "actionType"],
-                      additionalProperties: false,
-                    },
-                  },
-                  motivationalMessage: { type: "string" },
-                },
-                required: ["tasks", "motivationalMessage"],
-                additionalProperties: false,
-              },
-            },
-          },
-        });
-        const raw = response.choices[0]?.message?.content ?? "{}";
-        await recordAiUsage(ctx.appUser.id, "dailyTasks", ctx.appUser.role);
-        return parseLLMJson(raw) as {
-          tasks: { text: string; category: string; link: string; actionType: string }[];
-          motivationalMessage: string;
-        };
+        const { value, fresh } = await dailyTasksCache.getOrCreate(input.profileId, () => generateDailyTasks(input.profileId), { force: input.force });
+        if (usageCheck && fresh) await recordAiUsage(ctx.appUser.id, "dailyTasks", ctx.appUser.role);
+        return value;
       }),
   }),
 

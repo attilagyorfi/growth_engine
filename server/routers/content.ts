@@ -13,7 +13,7 @@ import { TRPCError } from "@trpc/server";
 import { appUserProcedure, router } from "../_core/trpc";
 import { invokeLLM, parseLLMJson } from "../_core/llm";
 import { assertProfileOwnership } from "../_core/ownership";
-import { checkAiUsageLimit, recordAiUsage } from "../authDb";
+import { checkAiUsageLimit, recordAiUsage, aiLimitError } from "../authDb";
 import {
   getContentByProfile, getContentById, createContent, updateContent, deleteContent, getProfileById,
   createNotification,
@@ -214,12 +214,12 @@ export const contentRouter = router({
       intelligenceData: z.any().optional(),
       contentPillars: z.array(z.string()).optional(),
       platforms: z.array(z.string()).optional(),
-      isOnboarding: z.boolean().optional(), // bypass AI usage quota during onboarding
+      isOnboarding: z.boolean().optional(), // onboarding-keretből kéri (a szerver korlátozza)
     }))
     .mutation(async ({ input, ctx }) => {
       await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
       const limitCheck = await checkAiUsageLimit(ctx.appUser.id, ctx.appUser.subscriptionPlan, ctx.appUser.role, input.isOnboarding);
-      if (!limitCheck.allowed) throw new TRPCError({ code: "FORBIDDEN", message: `AI használati limit elérve (${limitCheck.used}/${limitCheck.limit})` });
+      if (!limitCheck.allowed) throw aiLimitError(limitCheck);
 
       const monthName = new Date(input.year, input.month, 1).toLocaleString("hu-HU", { month: "long", year: "numeric" });
       const platforms = input.platforms ?? ["LinkedIn", "Facebook", "Instagram"];
@@ -286,7 +286,7 @@ export const contentRouter = router({
         created.push(result);
       }
 
-      await recordAiUsage(ctx.appUser.id, "contentPlan", ctx.appUser.role, input.isOnboarding);
+      await recordAiUsage(ctx.appUser.id, "contentPlan", ctx.appUser.role, limitCheck.onboarding);
       return { created: created.length, posts: created };
     }),
   // ─── Approval Workflow ──────────────────────────────────────────────────────
