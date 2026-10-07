@@ -2,13 +2,18 @@
  * G2A Growth Engine – Stripe Webhook Handler
  * Route: POST /api/stripe/webhook
  * Registered BEFORE express.json() with express.raw()
+ *
+ * Itt csak az aláírás-ellenőrzés és az adatbázis-kötés van; az események
+ * feldolgozása a `billing.ts` `applyStripeEvent` függvényében (tesztelt).
  */
 
 import type { Request, Response } from "express";
 import Stripe from "stripe";
+import { nanoid } from "nanoid";
 import { getDb } from "../db";
-import { appUsers } from "../../drizzle/schema";
+import { appUsers, appNotifications } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
+import { applyStripeEvent, type BillingStore, type BillingUser } from "./billing";
 
 // LAZY INIT: a Stripe kliens csak akkor példányosul, amikor a webhook
 // tényleg meghívódik — így a server elindul akkor is, ha a STRIPE_SECRET_KEY
@@ -19,6 +24,37 @@ function getStripe(): Stripe | null {
   if (!process.env.STRIPE_SECRET_KEY) return null;
   _stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2026-04-22.dahlia" });
   return _stripe;
+}
+
+type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
+
+function createBillingStore(database: Db): BillingStore {
+  const pick = (rows: Array<{ id: string; stripeCustomerId: string | null; stripeSubscriptionId: string | null }>): BillingUser | null =>
+    rows[0] ? { id: rows[0].id, stripeCustomerId: rows[0].stripeCustomerId, stripeSubscriptionId: rows[0].stripeSubscriptionId } : null;
+  const cols = { id: appUsers.id, stripeCustomerId: appUsers.stripeCustomerId, stripeSubscriptionId: appUsers.stripeSubscriptionId };
+
+  return {
+    async findUserById(id) {
+      return pick(await database.select(cols).from(appUsers).where(eq(appUsers.id, id)).limit(1));
+    },
+    async findUserByCustomerId(customerId) {
+      return pick(await database.select(cols).from(appUsers).where(eq(appUsers.stripeCustomerId, customerId)).limit(1));
+    },
+    async updateUser(id, patch) {
+      if (Object.keys(patch).length === 0) return;
+      await database.update(appUsers).set(patch).where(eq(appUsers.id, id));
+    },
+    async notifyUser(userId, title, body) {
+      await database.insert(appNotifications).values({
+        id: nanoid(),
+        appUserId: userId,
+        type: "system",
+        title,
+        body,
+        actionUrl: "/beallitasok?tab=billing",
+      });
+    },
+  };
 }
 
 export async function handleStripeWebhook(req: Request, res: Response) {
@@ -53,52 +89,7 @@ export async function handleStripeWebhook(req: Request, res: Response) {
   }
 
   try {
-    switch (event.type) {
-      case "checkout.session.completed": {
-        const session = event.data.object as Stripe.Checkout.Session;
-        const userId = session.metadata?.user_id;
-        const planId = session.metadata?.plan_id as "starter" | "pro" | "agency" | undefined;
-        const billing = session.metadata?.billing as "monthly" | "yearly" | undefined;
-        const customerId = typeof session.customer === "string" ? session.customer : (session.customer as Stripe.Customer)?.id;
-        const subscriptionId = typeof session.subscription === "string" ? session.subscription : (session.subscription as Stripe.Subscription)?.id;
-
-        if (userId && planId) {
-          await database.update(appUsers)
-            .set({
-              subscriptionPlan: planId,
-              subscriptionBilling: billing ?? "monthly",
-              stripeCustomerId: customerId ?? undefined,
-              stripeSubscriptionId: subscriptionId ?? undefined,
-            })
-            .where(eq(appUsers.id, userId));
-          console.log(`[Stripe Webhook] Updated user ${userId} → plan: ${planId} (${billing})`);
-        }
-        break;
-      }
-
-      case "customer.subscription.deleted": {
-        const subscription = event.data.object as Stripe.Subscription;
-        const customerId = typeof subscription.customer === "string" ? subscription.customer : (subscription.customer as Stripe.Customer).id;
-
-        await database.update(appUsers)
-          .set({ subscriptionPlan: "free", stripeSubscriptionId: null })
-          .where(eq(appUsers.stripeCustomerId, customerId));
-        console.log(`[Stripe Webhook] Subscription cancelled for customer ${customerId} → downgraded to free`);
-        break;
-      }
-
-      case "invoice.payment_failed": {
-        const invoice = event.data.object as Stripe.Invoice;
-        const customerId = typeof invoice.customer === "string" ? invoice.customer : (invoice.customer as Stripe.Customer)?.id;
-        if (customerId) {
-          console.warn(`[Stripe Webhook] Payment failed for customer ${customerId}`);
-        }
-        break;
-      }
-
-      default:
-        console.log(`[Stripe Webhook] Unhandled event type: ${event.type}`);
-    }
+    await applyStripeEvent(event, createBillingStore(database));
   } catch (err) {
     console.error("[Stripe Webhook] Handler error:", err);
     return res.status(500).json({ error: "Webhook handler failed" });
