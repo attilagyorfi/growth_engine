@@ -21,6 +21,15 @@ import {
   upsertStrategyTask, getStrategyTasks, getStrategyTaskById, updateStrategyTaskStatus,
 } from "../db";
 
+/** A verzió létezik ÉS a megadott profilé — különben NOT_FOUND (idegen verzió nem fedhető fel). */
+async function assertVersionInProfile(versionId: string, profileId: string, opts: { allowMissing?: boolean } = {}) {
+  const version = await getStrategyVersionById(versionId);
+  if (!version && opts.allowMissing) return;
+  if (!version || version.profileId !== profileId) {
+    throw new TRPCError({ code: "NOT_FOUND", message: "A stratégia verzió nem található" });
+  }
+}
+
 export const strategyVersionsRouter = router({
   list: appUserProcedure
     .input(z.object({ profileId: z.string() }))
@@ -54,6 +63,9 @@ export const strategyVersionsRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      // SECURITY (IDOR): eddig egy MÁSIK profil verziójának id-jával a saját profilId
+      // alatt felül lehetett írni (és át lehetett emelni) egy idegen stratégiát.
+      if (input.id) await assertVersionInProfile(input.id, input.profileId, { allowMissing: true });
       return upsertStrategyVersion({ ...input, id: input.id ?? nanoid() });
     }),
 
@@ -61,7 +73,10 @@ export const strategyVersionsRouter = router({
     .input(z.object({ profileId: z.string(), versionId: z.string() }))
     .mutation(async ({ input, ctx }) => {
       await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
-      return setActiveStrategyVersion(input.profileId, input.versionId);
+      // Csak a profil SAJÁT verziója aktiválható (eddig bármelyik id-t elfogadta).
+      const ok = await setActiveStrategyVersion(input.profileId, input.versionId);
+      if (!ok) throw new TRPCError({ code: "NOT_FOUND", message: "A stratégia verzió nem található" });
+      return { ok: true };
     }),
 
   archive: appUserProcedure
@@ -122,6 +137,7 @@ export const strategyVersionsRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      await assertVersionInProfile(input.strategyVersionId, input.profileId);
       const tasks: Array<{ id: string; profileId: string; strategyId: string; title: string; description?: string; funnelStage: "awareness" | "consideration" | "decision" | "retention"; status: "todo" | "in_progress" | "done" | "skipped" }> = [];
       // Convert quickWins to tasks
       for (const win of (input.quickWins ?? [])) {
