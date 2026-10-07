@@ -39,7 +39,8 @@ import {
 } from "./db";
 import { invokeLLM, parseLLMJson } from "./_core/llm";
 import { buildBusinessContext, ANTI_GENERIC_HU } from "./_core/businessContext";
-import { checkAiUsageLimit, recordAiUsage, aiLimitError } from "./authDb";
+import { checkAiUsageLimit, recordAiUsage, aiLimitError, updateAppUser } from "./authDb";
+import { ENV } from "./_core/env";
 import { createDailyCache } from "./_core/dailyCache";
 import Stripe from "stripe";
 // Profile ownership helper moved to ./_core/ownership for cross-router reuse
@@ -137,6 +138,12 @@ A link mező mindig ezek egyike legyen, ne találj ki más URL-t.`,
   });
   const raw = response.choices[0]?.message?.content ?? "{}";
   return parseLLMJson(raw) as DailyTasksResult;
+}
+
+/** A Stripe success/cancel/return URL-ek bázisa: APP_URL, ennek hiányában a kérés Origin-je. */
+function billingOrigin(req: { headers: Record<string, unknown> }): string {
+  const origin = typeof req.headers.origin === "string" ? req.headers.origin : "";
+  return ENV.appUrl || origin || "https://growthengine-production.up.railway.app";
 }
 
 export const appRouter = router({
@@ -1226,42 +1233,22 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         const stripeClient = getStripeClient(); if (!stripeClient) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Stripe nincs konfigurálva" });
-        const { PLAN_DETAILS } = await import("./stripe/products");
-        const plan = PLAN_DETAILS[input.planId];
-        const amount = input.billing === "yearly" ? plan.yearlyPriceHuf : plan.monthlyPriceHuf;
-        const origin = ctx.req.headers.origin as string || "https://g2a-growth-engine.manus.space";
-        const session = await stripeClient.checkout.sessions.create({
-          mode: input.billing === "yearly" ? "payment" : "subscription",
-          allow_promotion_codes: true,
-          customer_email: ctx.appUser.email,
-          client_reference_id: ctx.appUser.id,
-          metadata: {
-            user_id: ctx.appUser.id,
-            plan_id: input.planId,
-            billing: input.billing,
-            customer_email: ctx.appUser.email,
-            customer_name: ctx.appUser.name ?? "",
-          },
-          line_items: [{
-            price_data: {
-              currency: "huf",
-              unit_amount: amount,
-              product_data: { name: plan.name, description: plan.description },
-              ...(input.billing === "monthly" ? { recurring: { interval: "month" } } : {}),
-            },
-            quantity: 1,
-          }],
-          success_url: `${origin}/beallitasok?tab=billing&checkout=success`,
-          cancel_url: `${origin}/beallitasok?tab=billing&checkout=cancelled`,
-        });
-        return { url: session.url };
+        const { startPlanPurchase } = await import("./stripe/billing");
+        // Új előfizetés → Checkout URL; meglévő aktív előfizetés → csomagváltás arányos számlával
+        // (nem nyílik második, párhuzamos előfizetés).
+        const result = await startPlanPurchase(stripeClient, ctx.appUser, input, billingOrigin(ctx.req));
+        if (result.kind === "changed") {
+          // Azonnal látszódjon a felületen; a webhook ugyanezt állítja be (idempotens).
+          await updateAppUser(ctx.appUser.id, { subscriptionPlan: result.planId, subscriptionBilling: result.billing });
+        }
+        return { status: result.kind, url: result.kind === "checkout" ? result.url : null };
       }),
 
     getPortalUrl: appUserProcedure
       .mutation(async ({ ctx }) => {
         const stripeClient = getStripeClient(); if (!stripeClient) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Stripe nincs konfigurálva" });
         if (!ctx.appUser.stripeCustomerId) throw new TRPCError({ code: "NOT_FOUND", message: "Nincs Stripe előfizetés" });
-        const origin = ctx.req.headers.origin as string || "https://g2a-growth-engine.manus.space";
+        const origin = billingOrigin(ctx.req);
         const session = await stripeClient.billingPortal.sessions.create({
           customer: ctx.appUser.stripeCustomerId,
           return_url: `${origin}/beallitasok?tab=billing`,

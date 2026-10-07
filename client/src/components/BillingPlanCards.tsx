@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { Sparkles, Rocket, Building2, Crown, CheckCircle2, CreditCard, ExternalLink, Loader2, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import { useAppAuth } from "@/hooks/useAppAuth";
 import { PLAN_FEATURES, type SubscriptionPlan } from "@/hooks/useSubscription";
 
 const PLAN_ICONS: Record<SubscriptionPlan, React.ReactNode> = {
@@ -52,20 +53,37 @@ interface Props {
 export default function BillingPlanCards({ currentPlan }: Props) {
   const [isYearly, setIsYearly] = useState(false);
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const { user } = useAppAuth();
+  const currentBilling = (user as { subscriptionBilling?: string } | null)?.subscriptionBilling === "yearly" ? "yearly" : "monthly";
+  const selectedBilling = isYearly ? "yearly" : "monthly";
 
+  const utils = trpc.useUtils();
   const createCheckout = trpc.stripe.createCheckout.useMutation();
   const getPortalUrl = trpc.stripe.getPortalUrl.useMutation();
 
   const handleUpgrade = async (planId: "starter" | "pro" | "agency") => {
+    const label = `${PLAN_FEATURES[planId].planLabel} (${isYearly ? "éves" : "havi"})`;
+    // Fizetős csomagról váltáskor a meglévő előfizetés módosul, azonnali arányos számlával —
+    // ezt jóvá kell hagyni, mert nincs külön Stripe fizetési oldal.
+    if (currentPlan !== "free") {
+      const ok = window.confirm(
+        `Csomagváltás erre: ${label}.\n\n`
+        + "A meglévő előfizetésed módosul: a különbözetet a Stripe azonnal, arányosan terheli a mentett kártyádra "
+        + "(kisebb csomagra váltáskor a fennmaradó összeg jóváírásként a következő számlákból vonódik le).\n\nFolytatod?",
+      );
+      if (!ok) return;
+    }
     setLoadingPlan(planId);
     try {
-      const result = await createCheckout.mutateAsync({
-        planId,
-        billing: isYearly ? "yearly" : "monthly",
-      });
-      if (result.url) {
+      const result = await createCheckout.mutateAsync({ planId, billing: selectedBilling });
+      if (result.status === "checkout" && result.url) {
         toast.success("Átirányítás a fizetési oldalra...");
         window.open(result.url, "_blank");
+      } else if (result.status === "changed") {
+        toast.success(`Csomag módosítva: ${label}`);
+        await utils.appAuth.me.invalidate();
+      } else if (result.status === "payment_failed") {
+        toast.error("A különbözet terhelése nem sikerült, a csomagod nem változott. Frissítsd a fizetési módot az „Előfizetés kezelése” alatt.");
       }
     } catch (err: any) {
       toast.error(err?.message ?? "Hiba a fizetési oldal megnyitásakor");
@@ -133,6 +151,8 @@ export default function BillingPlanCards({ currentPlan }: Props) {
         {(["free", "starter", "pro", "agency"] as SubscriptionPlan[]).map(planId => {
           const plan = PLAN_FEATURES[planId];
           const isActive = currentPlan === planId;
+          // Ugyanazon csomagon belül havi ↔ éves váltás is lehetséges.
+          const canSwitchBilling = isActive && planId !== "free" && currentBilling !== selectedBilling;
           const color = PLAN_COLORS[planId];
           const isLoading = loadingPlan === planId;
 
@@ -182,7 +202,7 @@ export default function BillingPlanCards({ currentPlan }: Props) {
               </ul>
 
               {/* CTA */}
-              {!isActive && planId !== "free" && (
+              {(!isActive || canSwitchBilling) && planId !== "free" && (
                 <button
                   onClick={() => handleUpgrade(planId as "starter" | "pro" | "agency")}
                   disabled={isLoading}
@@ -194,8 +214,10 @@ export default function BillingPlanCards({ currentPlan }: Props) {
                   ) : (
                     <>
                       <CreditCard size={12} />
-                      {currentPlan === "free" ? "Választás" : "Frissítés"}
-                      <ExternalLink size={10} />
+                      {canSwitchBilling
+                        ? (isYearly ? "Váltás évesre" : "Váltás havira")
+                        : currentPlan === "free" ? "Választás" : "Váltás erre"}
+                      {currentPlan === "free" && <ExternalLink size={10} />}
                     </>
                   )}
                 </button>
