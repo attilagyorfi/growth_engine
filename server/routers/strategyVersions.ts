@@ -78,11 +78,11 @@ export const strategyVersionsRouter = router({
       profileId: z.string(),
       intelligenceData: z.any(),
       strategyContext: z.string().optional(),
-      isOnboarding: z.boolean().optional(), // bypass AI usage quota during onboarding
+      isOnboarding: z.boolean().optional(), // onboarding-keretből kéri (a szerver korlátozza)
     }))
     .mutation(async ({ input, ctx }) => {
       await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
-      // Feature gating: check AI usage limit (bypass during onboarding)
+      // Feature gating: havi keret, onboarding alatt a (szerveroldalon számolt) onboarding-keret
       const usageCheck = await checkAiUsageLimit(ctx.appUser.id, ctx.appUser.subscriptionPlan ?? "free", ctx.appUser.role, input.isOnboarding);
       if (!usageCheck.allowed) {
         throw new TRPCError({ code: "FORBIDDEN", message: `AI generálási limit elérve (${usageCheck.used}/${usageCheck.limit} ebben a hónapban). Frissítsd az előfizetésed a folytatáshoz.`, cause: { code: "AI_LIMIT_REACHED", used: usageCheck.used, limit: usageCheck.limit, plan: usageCheck.plan } });
@@ -99,8 +99,7 @@ export const strategyVersionsRouter = router({
       });
       const content = response.choices[0]?.message?.content ?? "{}";
       const parsed = parseLLMJson(content);
-      // Record AI usage (skip during onboarding)
-      await recordAiUsage(ctx.appUser.id, "strategy", ctx.appUser.role, input.isOnboarding);
+      await recordAiUsage(ctx.appUser.id, "strategy", ctx.appUser.role, usageCheck.onboarding);
       const existing = await getStrategyVersionsByProfile(input.profileId);
       const versionNumber = existing.length + 1;
       return upsertStrategyVersion({

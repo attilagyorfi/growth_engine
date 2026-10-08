@@ -21,6 +21,17 @@ import {
 import {
   getSocialProfileCache, upsertSocialProfileCache,
 } from "../projectsDb";
+import { checkAiUsageLimit, recordAiUsage, aiLimitError } from "../authDb";
+
+type OnboardingCtx = { appUser: { id: string; subscriptionPlan: string | null; role: string } };
+
+/**
+ * Az onboarding AI-hívásai (eddig keret nélkül futottak) az onboarding-keretből
+ * mennek; ha az elfogyott, a normál havi keretből.
+ */
+function checkOnboardingAi(ctx: OnboardingCtx) {
+  return checkAiUsageLimit(ctx.appUser.id, ctx.appUser.subscriptionPlan ?? "free", ctx.appUser.role, true);
+}
 
 export const onboardingRouter = router({
   getSession: appUserProcedure
@@ -85,7 +96,9 @@ export const onboardingRouter = router({
 
   scrapeWebsite: appUserProcedure
     .input(z.object({ url: z.string().url() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      const usage = await checkOnboardingAi(ctx);
+      if (!usage.allowed) throw aiLimitError(usage);
       // Step 1: Fetch the actual HTML content of the website
       let htmlContent = "";
       let fetchError = "";
@@ -156,6 +169,7 @@ export const onboardingRouter = router({
         response_format: { type: "json_schema", json_schema: { name: "website_analysis", strict: true, schema: { type: "object", properties: { companyName: { type: "string" }, industry: { type: "string" }, services: { type: "array", items: { type: "string" } }, keyMessages: { type: "array", items: { type: "string" } }, toneOfVoice: { type: "string" }, targetAudience: { type: "string" }, ctas: { type: "array", items: { type: "string" } }, competitorCandidates: { type: "array", items: { type: "string" } }, companySummary: { type: "string" } }, required: ["companyName", "industry", "services", "keyMessages", "toneOfVoice", "targetAudience", "ctas", "competitorCandidates", "companySummary"], additionalProperties: false } } },
       });
       const content = response.choices[0]?.message?.content ?? "{}";
+      await recordAiUsage(ctx.appUser.id, "intelligence", ctx.appUser.role, usage.onboarding);
       return JSON.parse(typeof content === "string" ? content : JSON.stringify(content));
     }),
 
@@ -199,17 +213,22 @@ export const onboardingRouter = router({
         fileKey,
         assetType: input.assetType,
       });
-      invokeLLM({
-        messages: [
-          { role: "system", content: "Te egy márkaelemző vagy. Kulcs márkainformációkat nyérsz ki feltöltött dokumentumokból. MINDEN szöveget KIZÁRÓLAG MAGYARUL adj meg." },
-          { role: "user", content: `Elemezd ezt a ${input.assetType} dokumentumot (${input.fileName}) és nyérd ki: márkaértékek, kommunikációs stílus, fő üzenetek, célcsoport, vizuális irányelvek és minden egyéb releváns marketing információ. Adj vissza strukturált szöveges összefoglalót MAGYARUL.` },
-        ],
-      }).then(async (res) => {
-        const parsed = res.choices[0]?.message?.content;
-        if (parsed && asset?.id) {
-          await updateBrandAssetParsed(asset.id, typeof parsed === "string" ? parsed : JSON.stringify(parsed));
-        }
-      }).catch(console.error);
+      // AI-feldolgozás csak kereten belül; a feltöltés a keret elfogyása után is megmarad.
+      const usage = await checkOnboardingAi(ctx);
+      if (usage.allowed) {
+        invokeLLM({
+          messages: [
+            { role: "system", content: "Te egy márkaelemző vagy. Kulcs márkainformációkat nyérsz ki feltöltött dokumentumokból. MINDEN szöveget KIZÁRÓLAG MAGYARUL adj meg." },
+            { role: "user", content: `Elemezd ezt a ${input.assetType} dokumentumot (${input.fileName}) és nyérd ki: márkaértékek, kommunikációs stílus, fő üzenetek, célcsoport, vizuális irányelvek és minden egyéb releváns marketing információ. Adj vissza strukturált szöveges összefoglalót MAGYARUL.` },
+          ],
+        }).then(async (res) => {
+          await recordAiUsage(ctx.appUser.id, "other", ctx.appUser.role, usage.onboarding);
+          const parsed = res.choices[0]?.message?.content;
+          if (parsed && asset?.id) {
+            await updateBrandAssetParsed(asset.id, typeof parsed === "string" ? parsed : JSON.stringify(parsed));
+          }
+        }).catch(console.error);
+      }
       return asset;
     }),
 
@@ -247,6 +266,8 @@ export const onboardingRouter = router({
         const ageMs = Date.now() - new Date(cached.scrapedAt).getTime();
         if (ageMs < 3600_000) return cached.analysis;
       }
+      const usage = await checkOnboardingAi(ctx);
+      if (!usage.allowed) throw aiLimitError(usage);
 
       // Step 1: Try to fetch publicly visible content from the social profile page
       let pageContent = "";
@@ -307,6 +328,7 @@ export const onboardingRouter = router({
       });
       const raw = response.choices[0]?.message?.content ?? "{}";
       const analysis = JSON.parse(typeof raw === "string" ? raw : JSON.stringify(raw));
+      await recordAiUsage(ctx.appUser.id, "intelligence", ctx.appUser.role, usage.onboarding);
       await upsertSocialProfileCache({
         id: nanoid(),
         profileId: input.profileId,

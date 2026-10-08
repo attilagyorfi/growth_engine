@@ -22,6 +22,7 @@ import { assertProfileOwnership } from "../_core/ownership";
 import { safeFetch } from "../_core/safeFetch";
 import { invokeLLM } from "../_core/llm";
 import { ENV } from "../_core/env";
+import { checkAiUsageLimit, recordAiUsage, aiLimitError } from "../authDb";
 import * as cheerio from "cheerio";
 
 // ─── PageSpeed Insights ───────────────────────────────────────────────────
@@ -113,6 +114,9 @@ export const seoRouter = router({
       // Security fix (audit IDOR): eddig nem volt ownership-check — bárki futtathatott
       // auditot más profil neve alatt (cross-tenant write + SSRF-driver). Most kötelező.
       await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      // SEO audit-keret (pl. Starter: 3/hó) — eddig korlátlan volt (crawl + PageSpeed + 2 AI-hívás).
+      const usage = await checkAiUsageLimit(ctx.appUser.id, ctx.appUser.subscriptionPlan ?? "free", ctx.appUser.role, false, "seo");
+      if (!usage.allowed) throw aiLimitError(usage, "SEO audit");
       const { nanoid } = await import("nanoid");
       const id = nanoid();
       const { getDb } = await import("../db");
@@ -295,6 +299,10 @@ export const seoRouter = router({
         const rawRec = aiRecResp.choices?.[0]?.message?.content;
         aiRecommendations = typeof rawRec === "string" ? rawRec : "";
       } catch { /* AI failure is non-fatal */ }
+      // Csak akkor fogy a keret, ha az AI-elemzés is elkészült.
+      if (aiInsights || aiRecommendations) {
+        await recordAiUsage(ctx.appUser.id, "seo", ctx.appUser.role);
+      }
 
       const report = {
         meta: { title, titleLength: title?.length ?? 0, description, descriptionLength: description?.length ?? 0, canonical, robots, ogTitle, ogDescription, ogImage },
