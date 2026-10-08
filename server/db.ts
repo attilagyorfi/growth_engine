@@ -1,4 +1,4 @@
-import { eq, desc, and, gte, lte } from "drizzle-orm";
+import { eq, ne, desc, and, gte, lte } from "drizzle-orm";
 import { drizzle, type MySql2Database } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
 import mysql from "mysql2/promise";
@@ -698,8 +698,11 @@ export async function getStrategyVersionsByProfile(profileId: string) {
 export async function getActiveStrategyVersion(profileId: string) {
   const db = await getDb();
   if (!db) return undefined;
+  // Determinisztikus: ha (régi adatban) több aktív verzió maradt, a legújabb nyer —
+  // eddig a sorrend nélküli LIMIT 1 hol az egyiket, hol a másikat adta vissza.
   const result = await db.select().from(strategyVersions)
     .where(and(eq(strategyVersions.profileId, profileId), eq(strategyVersions.isActive, true)))
+    .orderBy(desc(strategyVersions.versionNumber), desc(strategyVersions.createdAt))
     .limit(1);
   return result[0];
 }
@@ -707,18 +710,33 @@ export async function getActiveStrategyVersion(profileId: string) {
 export async function upsertStrategyVersion(data: InsertStrategyVersion) {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
-  await db.insert(strategyVersions).values(data).onDuplicateKeyUpdate({ set: data });
+  // Meglévő sornál az id és a tulajdonos profil (profileId) NEM írható felül.
+  const { id: _id, profileId: _owner, ...updatable } = data;
+  await db.transaction(async (tx) => {
+    await tx.insert(strategyVersions).values(data).onDuplicateKeyUpdate({ set: updatable });
+    // Profilonként egyetlen aktív verzió: az új aktív mellett a többi kikapcsol.
+    // Eddig minden generálás újabb aktív verziót hozott létre a régiek mellé.
+    if (data.isActive) {
+      await tx.update(strategyVersions).set({ isActive: false })
+        .where(and(eq(strategyVersions.profileId, data.profileId), ne(strategyVersions.id, data.id)));
+    }
+  });
   const result = await db.select().from(strategyVersions).where(eq(strategyVersions.id, data.id)).limit(1);
   return result[0];
 }
 
-export async function setActiveStrategyVersion(profileId: string, versionId: string) {
+/** Aktívvá teszi a verziót (a profil többi verzióját kikapcsolja). false, ha a verzió nem a profilé. */
+export async function setActiveStrategyVersion(profileId: string, versionId: string): Promise<boolean> {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
-  // Deactivate all versions for this profile
-  await db.update(strategyVersions).set({ isActive: false }).where(eq(strategyVersions.profileId, profileId));
-  // Activate the selected version
-  await db.update(strategyVersions).set({ isActive: true }).where(eq(strategyVersions.id, versionId));
+  const owned = and(eq(strategyVersions.id, versionId), eq(strategyVersions.profileId, profileId));
+  const [row] = await db.select({ id: strategyVersions.id }).from(strategyVersions).where(owned).limit(1);
+  if (!row) return false;
+  await db.transaction(async (tx) => {
+    await tx.update(strategyVersions).set({ isActive: false }).where(eq(strategyVersions.profileId, profileId));
+    await tx.update(strategyVersions).set({ isActive: true }).where(owned);
+  });
+  return true;
 }
 
 export async function getStrategyVersionById(id: string) {
