@@ -12,7 +12,8 @@ import { nanoid } from "nanoid";
 import { TRPCError } from "@trpc/server";
 import { publicProcedure, appUserProcedure, router } from "../_core/trpc";
 import { assertProfileOwnership } from "../_core/ownership";
-import { encryptToken, decryptToken } from "../_core/tokenCrypto";
+import { encryptToken } from "../_core/tokenCrypto";
+import { composePostText, publishWithConnection, classifyPublishError } from "../publishing";
 
 export const socialRouter = router({
   listConnections: appUserProcedure
@@ -97,7 +98,7 @@ export const socialRouter = router({
     .mutation(async ({ ctx, input }) => {
       await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
       const { getDb } = await import("../db");
-      const { socialConnections: scTable, scheduledPosts } = await import("../../drizzle/schema");
+      const { socialConnections: scTable, scheduledPosts, publishingLogs } = await import("../../drizzle/schema");
       const { eq } = await import("drizzle-orm");
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Adatbázis nem elérhető" });
@@ -111,40 +112,31 @@ export const socialRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "A social fiók nem ehhez a profilhoz tartozik" });
       }
 
-      // A tárolt token vissza van fejtve használat előtt (a régi plaintext
-      // tokeneket a decryptToken változatlanul visszaadja — backward-kompat).
-      const accessToken = decryptToken(conn.accessToken);
-      if (!accessToken) {
-        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "A hozzáférési token hiányzik vagy sérült — csatlakoztasd újra a fiókot" });
+      // Ha tartalomhoz tartozik: a tartalom a profilé-e, és a hashtagjei is menjenek ki.
+      const { getContentById, updateContent } = await import("../db");
+      const post = input.contentId ? await getContentById(input.contentId) : undefined;
+      if (input.contentId && (!post || post.profileId !== input.profileId)) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "A tartalom nem található" });
       }
+      const text = composePostText(input.text, post?.hashtags);
 
-      // Platform-alapú routolás. Mindegyik publisher a saját API-t hívja,
-      // egyseges { postId } shape-ben tér vissza.
-      const {
-        publishToLinkedIn, publishToFacebook, publishToInstagram,
-      } = await import("../socialPublisher");
-
+      // Közös út az időzítővel: token-visszafejtés, lejárat-ellenőrzés, platform-routolás.
       let postId: string;
       try {
-        if (conn.platform === "linkedin") {
-          ({ postId } = await publishToLinkedIn(accessToken, conn.platformUserId ?? "", input.text, input.imageUrl));
-        } else if (conn.platform === "facebook") {
-          if (!conn.platformUserId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "A Facebook Page ID hiányzik a csatlakozásból — csatlakoztasd újra a fiókot" });
-          ({ postId } = await publishToFacebook(accessToken, conn.platformUserId, input.text, input.imageUrl));
-        } else if (conn.platform === "instagram") {
-          if (!conn.platformUserId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Az Instagram Business Account ID hiányzik — csatlakoztasd újra a Facebook Page-en keresztül" });
-          if (!input.imageUrl) throw new TRPCError({ code: "BAD_REQUEST", message: "Instagram poszthoz kép szükséges (text-only nem megy)" });
-          ({ postId } = await publishToInstagram(accessToken, conn.platformUserId, input.text, input.imageUrl));
-        } else {
-          // tiktok: a #66 PR schema-bővítés után jön külön PR-ben (videó-input hiányzik)
-          // twitter: nincs implementálva, ha valaki mégis csatlakoztatná
-          throw new TRPCError({ code: "BAD_REQUEST", message: `A(z) '${conn.platform}' platformra jelenleg nem támogatott a publikálás` });
-        }
+        ({ postId } = await publishWithConnection(conn, text, input.imageUrl));
       } catch (err) {
-        // Meta / LinkedIn API rate-limit vagy expired token esetén readable hibaüzenet
-        const msg = err instanceof Error ? err.message : String(err);
-        if (err instanceof TRPCError) throw err;
-        throw new TRPCError({ code: "BAD_GATEWAY", message: `Publikálás sikertelen (${conn.platform}): ${msg}` });
+        const { message, permanent } = classifyPublishError(conn.platform, err);
+        throw new TRPCError({ code: permanent ? "PRECONDITION_FAILED" : "BAD_GATEWAY", message });
+      }
+
+      // Eddig a tartalom „Közzétesz most” után is piszkozat/jóváhagyott maradt.
+      if (post) {
+        const publishedAt = new Date();
+        await updateContent(post.id, { status: "published", publishedAt });
+        await db.insert(publishingLogs).values({
+          profileId: input.profileId, contentPostId: post.id, platform: conn.platform,
+          status: "success", platformPostId: postId || null, publishedAt,
+        });
       }
 
       await db.insert(scheduledPosts).values({
@@ -152,7 +144,7 @@ export const socialRouter = router({
         profileId: input.profileId,
         contentId: input.contentId ?? null,
         platform: conn.platform,
-        text: input.text,
+        text,
         imageUrl: input.imageUrl ?? null,
         scheduledAt: new Date(),
         status: "published",

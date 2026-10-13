@@ -17,28 +17,90 @@ const META_GRAPH_BASE = `https://graph.facebook.com/${META_GRAPH_VERSION}`;
 
 // ─── LinkedIn ─────────────────────────────────────────────────────────────
 
+const LINKEDIN_API = "https://api.linkedin.com/v2";
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+
+type FetchLike = (url: string, init?: RequestInit) => Promise<Response>;
+type ImageLoader = (url: string) => Promise<{ data: Uint8Array; contentType: string }>;
+
+/** Kép letöltése feltöltéshez — SSRF-védett (safeFetch), méret- és típusellenőrzéssel. */
+async function downloadImage(url: string): Promise<{ data: Uint8Array; contentType: string }> {
+  const { safeFetch } = await import("./_core/safeFetch");
+  const res = await safeFetch(url, { signal: AbortSignal.timeout(20_000) });
+  if (!res.ok) throw new Error(`A poszt képe nem tölthető le (HTTP ${res.status})`);
+  const contentType = (res.headers.get("content-type") ?? "").split(";")[0].trim();
+  if (!contentType.startsWith("image/")) throw new Error("A poszt képe nem kép formátumú");
+  const data = new Uint8Array(await res.arrayBuffer());
+  if (data.byteLength > MAX_IMAGE_BYTES) throw new Error("A poszt képe túl nagy (max. 10 MB)");
+  return { data, contentType };
+}
+
+/**
+ * Kép feltöltése a LinkedIn-re (dokumentált 3 lépés: registerUpload → bináris
+ * feltöltés → az `asset` URN a posztban). Az `originalUrl` CSAK link (ARTICLE)
+ * megosztásnál érvényes — képpel eddig a poszt hibára futott.
+ * https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/share-on-linkedin
+ */
+async function uploadLinkedInImage(f: FetchLike, accessToken: string, owner: string, imageUrl: string, loadImage: ImageLoader): Promise<string> {
+  const reg = await f(`${LINKEDIN_API}/assets?action=registerUpload`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+      "X-Restli-Protocol-Version": "2.0.0",
+    },
+    body: JSON.stringify({
+      registerUploadRequest: {
+        recipes: ["urn:li:digitalmediaRecipe:feedshare-image"],
+        owner,
+        serviceRelationships: [{ relationshipType: "OWNER", identifier: "urn:li:userGeneratedContent" }],
+      },
+    }),
+  });
+  if (!reg.ok) throw new Error(`LinkedIn API error: ${reg.status} – képfeltöltés regisztrálása: ${await reg.text()}`);
+  const regData = await reg.json() as any;
+  const uploadUrl: string | undefined = regData?.value?.uploadMechanism?.["com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"]?.uploadUrl;
+  const asset: string | undefined = regData?.value?.asset;
+  if (!uploadUrl || !asset) throw new Error("LinkedIn API error: a képfeltöltés regisztrációja nem adott feltöltési címet");
+
+  const image = await loadImage(imageUrl);
+  const send = (method: "PUT" | "POST") => f(uploadUrl, {
+    method,
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": image.contentType },
+    body: image.data as unknown as BodyInit,
+  });
+  // A dokumentáció szövege POST-ot ír, a példája (curl --upload-file) PUT-ot — mindkettőt elfogadjuk.
+  let up = await send("PUT");
+  if (up.status === 405) up = await send("POST");
+  if (!up.ok) throw new Error(`LinkedIn API error: ${up.status} – kép feltöltése: ${await up.text()}`);
+  return asset;
+}
+
 export async function publishToLinkedIn(
   accessToken: string,
   authorId: string,
   text: string,
-  imageUrl?: string
+  imageUrl?: string,
+  deps: { fetch?: FetchLike; loadImage?: ImageLoader } = {},
 ): Promise<{ postId: string }> {
+  const f: FetchLike = deps.fetch ?? fetch;
+  const author = `urn:li:person:${authorId}`;
+  const asset = imageUrl ? await uploadLinkedInImage(f, accessToken, author, imageUrl, deps.loadImage ?? downloadImage) : null;
+
   const body = {
-    author: `urn:li:person:${authorId}`,
+    author,
     lifecycleState: "PUBLISHED",
     specificContent: {
       "com.linkedin.ugc.ShareContent": {
         shareCommentary: { text },
-        shareMediaCategory: imageUrl ? "IMAGE" : "NONE",
-        ...(imageUrl && {
-          media: [{ status: "READY", originalUrl: imageUrl }],
-        }),
+        shareMediaCategory: asset ? "IMAGE" : "NONE",
+        ...(asset && { media: [{ status: "READY", media: asset }] }),
       },
     },
     visibility: { "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC" },
   };
 
-  const response = await fetch("https://api.linkedin.com/v2/ugcPosts", {
+  const response = await f(`${LINKEDIN_API}/ugcPosts`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -52,8 +114,18 @@ export async function publishToLinkedIn(
     const errText = await response.text();
     throw new Error(`LinkedIn API error: ${response.status} – ${errText}`);
   }
-  const data = await response.json() as { id: string };
-  return { postId: data.id };
+  // 201 Created: az azonosító az X-RestLi-Id fejlécben jön, a törzs üres is lehet.
+  // Eddig response.json() → üres törzsnél kivétel a SIKERES poszt után → a felület
+  // hibát mutatott, az újrapróbálás pedig duplán posztolt. Sikernél soha nem dobunk.
+  let postId = response.headers.get("x-restli-id") ?? "";
+  if (!postId) {
+    try {
+      const raw = await response.text();
+      postId = raw ? String(JSON.parse(raw)?.id ?? "") : "";
+    } catch { /* üres/nem-JSON törzs — a poszt ettől még létrejött */ }
+  }
+  if (!postId) console.warn("[LinkedIn] A poszt létrejött, de nem jött vissza azonosító.");
+  return { postId };
 }
 
 // ─── Facebook Page ────────────────────────────────────────────────────────
