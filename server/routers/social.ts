@@ -201,25 +201,9 @@ export const socialRouter = router({
         .orderBy(desc(scheduledPosts.scheduledAt))
         .limit(50);
     }),
-  getLinkedInOAuthUrl: appUserProcedure
-    .input(z.object({ profileId: z.string(), origin: z.string() }))
-    .query(async ({ ctx, input }) => {
-      await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
-      const clientId = process.env.LINKEDIN_CLIENT_ID ?? "";
-      if (!clientId) {
-        return { url: null, configured: false };
-      }
-      const state = Buffer.from(JSON.stringify({ profileId: input.profileId, origin: input.origin })).toString("base64url");
-      const redirectUri = `${input.origin}/api/oauth/linkedin/callback`;
-      const params = new URLSearchParams({
-        response_type: "code",
-        client_id: clientId,
-        redirect_uri: redirectUri,
-        state,
-        scope: "openid profile email w_member_social",
-      });
-      return { url: `https://www.linkedin.com/oauth/v2/authorization?${params.toString()}`, configured: true };
-    }),
+  // (A korábbi getLinkedInOAuthUrl aláíratlan base64 state-et adott, amit a
+  // /api/oauth/linkedin/callback HMAC-ellenőrzése mindig elutasított →
+  // „invalid_state”. A csatlakozás most a /api/oauth/linkedin/start útvonalon megy.)
   isLinkedInConfigured: publicProcedure
     .query(() => {
       return { configured: !!(process.env.LINKEDIN_CLIENT_ID && process.env.LINKEDIN_CLIENT_SECRET) };

@@ -26,7 +26,7 @@
 import type { Express, Request, Response } from "express";
 import crypto from "crypto";
 import { nanoid } from "nanoid";
-import { ENV } from "./_core/env";
+import { ENV, getPublicAppOrigin } from "./_core/env";
 import { verifyAppToken } from "./routers/appAuth";
 import { assertProfileOwnership } from "./_core/ownership";
 import { getAppUserById } from "./authDb";
@@ -44,7 +44,7 @@ const STATE_MAX_AGE_MS = 15 * 60 * 1000;
 const TIKTOK_SCOPES = "user.info.basic,video.publish,video.upload";
 
 function getAppOrigin(): string {
-  return ENV.appUrl || "http://localhost:5173";
+  return getPublicAppOrigin();
 }
 
 function signState(payload: { profileId: string; userId: string; csrf: string }): string {

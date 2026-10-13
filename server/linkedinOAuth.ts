@@ -28,7 +28,7 @@
 
 import type { Express, Request, Response } from "express";
 import crypto from "crypto";
-import { ENV } from "./_core/env";
+import { ENV, getPublicAppOrigin } from "./_core/env";
 import { verifyAppToken } from "./routers/appAuth";
 import { assertProfileOwnership } from "./_core/ownership";
 import { getAppUserById } from "./authDb";
@@ -49,8 +49,7 @@ function getLinkedInConfig() {
 // Az APP_URL alapján derivedet származtatunk a callback URL-hez. NEM
 // fogadunk el query-param `origin`-t mert az open-redirect vektor lenne.
 function getAppOrigin(): string {
-  const fromEnv = (process.env.APP_URL ?? "").trim().replace(/\/+$/, "");
-  return fromEnv || "http://localhost:5173";
+  return getPublicAppOrigin();
 }
 
 // HMAC-aláírt state. Formátum: `${payloadB64url}.${signatureB64url}`.

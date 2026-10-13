@@ -41,6 +41,21 @@ const ADMIN_TAB: { id: Tab; label: string; icon: React.ReactNode; badge?: string
 const cardBg = "var(--qa-surface)";
 const border = "var(--qa-border)";
 
+/** Az OAuth-visszatérés hibakódjai (…?linkedin=error&reason=…) érthető magyar szöveggel. */
+const OAUTH_ERROR_TEXT: Record<string, string> = {
+  invalid_state: "a csatlakozási kérés lejárt vagy érvénytelen. Próbáld újra.",
+  missing_params: "a platform nem küldött vissza engedélyt. Próbáld újra.",
+  token_exchange_failed: "a platform nem adott hozzáférést. Ellenőrizd az alkalmazás beállításait (átirányítási cím, jogosultságok).",
+  token_response_error: "a platform hibás választ adott. Próbáld újra később.",
+  not_configured: "a platform-integráció nincs beállítva a szerveren.",
+  forbidden: "ehhez az ügyfélhez nincs jogosultságod.",
+  user_gone: "a felhasználói fiók nem található. Jelentkezz be újra.",
+  db_unavailable: "az adatbázis most nem elérhető. Próbáld újra később.",
+  no_pages: "nem találtunk kezelhető Facebook-oldalt ehhez a fiókhoz.",
+  pages_fetch_failed: "nem sikerült lekérni a Facebook-oldalakat. Próbáld újra.",
+  unexpected: "váratlan hiba történt. Próbáld újra később.",
+};
+
 export default function Settings() {
   const { activeProfile } = useProfile();
   const { user: appUser, isSuperAdmin } = useAppAuth();
@@ -152,10 +167,10 @@ export default function Settings() {
   const [linkedInModal, setLinkedInModal] = useState(false);
   const [linkedInForm, setLinkedInForm] = useState({ accessToken: "", platformUserId: "", platformUsername: "" });
   const { data: linkedInConfig } = trpc.social.isLinkedInConfigured.useQuery();
-  const { data: linkedInOAuthData } = trpc.social.getLinkedInOAuthUrl.useQuery(
-    { profileId: activeProfile.id, origin: typeof window !== "undefined" ? window.location.origin : "" },
-    { enabled: !!activeProfile.id && !!linkedInConfig?.configured }
-  );
+  // Biztonságos (bejelentkezés + tulajdon-ellenőrzés + aláírt state) szerveroldali indítás.
+  const linkedInStartUrl = linkedInConfig?.configured && activeProfile.id
+    ? `/api/oauth/linkedin/start?profileId=${encodeURIComponent(activeProfile.id)}`
+    : null;
   // A 3 közösségi platform (FB/IG/TikTok) konfiguráltság-státusza egy
   // hívásban. A frontend ezzel dönti el, hogy a gomb klikkelhető (van
   // env Railway-en) vagy a "Még nincs konfigurálva" modal jelenjen meg.
@@ -178,7 +193,7 @@ export default function Settings() {
         cleaned = true;
       } else if (status === "error") {
         const reason = params.get("reason") ?? "unknown";
-        toast.error(`${label} csatlakoztatás sikertelen: ${reason}`);
+        toast.error(`${label} csatlakoztatás sikertelen: ${OAUTH_ERROR_TEXT[reason] ?? reason}`, { duration: 8000 });
         cleaned = true;
       }
     };
@@ -466,7 +481,7 @@ export default function Settings() {
                 return (
                   <div className="flex flex-col items-center gap-2 p-4 rounded-xl border cursor-pointer transition-all"
                     style={{ background: conn ? "var(--qa-accent-soft)" : "var(--qa-surface2)", borderColor: conn ? "var(--qa-accent-soft)" : "var(--qa-border)" }}
-                    onClick={() => { if (!conn) { linkedInOAuthData?.url ? window.location.href = linkedInOAuthData.url : setLinkedInModal(true); } }}>
+                    onClick={() => { if (!conn) { linkedInStartUrl ? window.location.href = linkedInStartUrl : setLinkedInModal(true); } }}>
                     <svg viewBox="0 0 24 24" className="w-8 h-8" fill="#0A66C2"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
                     <span className="text-xs font-semibold" style={{ color: conn ? "var(--qa-accent)" : "var(--qa-fg3)" }}>LinkedIn</span>
                     {conn ? <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "oklch(from var(--qa-success) l c h / 15%)", color: "var(--qa-success)" }}>✓ Csatlakozva</span>
@@ -589,12 +604,12 @@ export default function Settings() {
               <h3 className="text-base font-bold" style={{ fontFamily: "var(--font-heading)", color: "var(--qa-fg)" }}>LinkedIn fiók csatlakoztatása</h3>
               <button onClick={() => setLinkedInModal(false)} style={{ color: "var(--qa-fg4)" }}><X size={18} /></button>
             </div>
-            {linkedInOAuthData?.url ? (
+            {linkedInStartUrl ? (
               <div className="mb-4">
                 <p className="text-xs mb-3 p-3 rounded-lg" style={{ background: "oklch(from var(--qa-accent) l c h / 8%)", color: "var(--qa-accent)" }}>
                   Kattints az alábbi gombra a LinkedIn fiókod biztonságos csatlakoztatásához. Átirányítunk a LinkedIn bejelentkezési oldalára.
                 </p>
-                <a href={linkedInOAuthData.url}
+                <a href={linkedInStartUrl}
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-white text-sm"
                   style={{ background: "var(--qa-accent)" }}>
                   <Plug size={15} /> Csatlakozás LinkedIn-nel
