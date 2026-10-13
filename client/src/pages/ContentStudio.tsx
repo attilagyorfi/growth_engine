@@ -532,7 +532,7 @@ export default function ContentStudio() {
       {post.hashtags && post.hashtags.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-3">
           {post.hashtags.slice(0, 4).map(h => (
-            <span key={h} className="text-xs px-1.5 py-0.5 rounded" style={{ background: "oklch(from var(--qa-accent) l c h / 10%)", color: "var(--qa-accent)" }}>#{h}</span>
+            <span key={h} className="text-xs px-1.5 py-0.5 rounded" style={{ background: "oklch(from var(--qa-accent) l c h / 10%)", color: "var(--qa-accent)" }}>#{h.replace(/^#+/, "")}</span>
           ))}
         </div>
       )}

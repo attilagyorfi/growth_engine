@@ -42,6 +42,8 @@ import { buildBusinessContext, ANTI_GENERIC_HU } from "./_core/businessContext";
 import { checkAiUsageLimit, recordAiUsage, aiLimitError, updateAppUser } from "./authDb";
 import { ENV } from "./_core/env";
 import { createDailyCache } from "./_core/dailyCache";
+import { normalizeHashtags, withNormalizedHashtags } from "./_core/hashtags";
+import { formatStrategyForDailyTasks } from "./_core/strategyContext";
 import Stripe from "stripe";
 // Profile ownership helper moved to ./_core/ownership for cross-router reuse
 import { assertProfileOwnership } from "./_core/ownership";
@@ -80,7 +82,7 @@ async function generateDailyTasks(profileId: string): Promise<DailyTasksResult> 
     .limit(5) : [];
 
   const contextParts = [
-    strategy ? `Aktív stratégia: ${strategy.title}.` : "Nincs aktív stratégia.",
+    formatStrategyForDailyTasks(strategy),
     newLeads.length > 0 ? `${newLeads.length} új lead vár feldolgozásra.` : "Nincs új lead.",
     draftPosts.length > 0 ? `${draftPosts.length} piszkozat tartalom vár jóváhagyásra.` : "Nincs piszkozat tartalom.",
   ];
@@ -593,7 +595,7 @@ export const appRouter = router({
         });
         const content = response.choices[0]?.message?.content ?? "{}";
         await recordAiUsage(ctx.appUser.id, "post", ctx.appUser.role);
-        return parseLLMJson(content);
+        return withNormalizedHashtags(parseLLMJson(content));
       }),
   }),
 
@@ -819,7 +821,7 @@ export const appRouter = router({
             platform,
             title: parsed.title ?? idea.title,
             content: parsed.content ?? "",
-            hashtags: parsed.hashtags ?? [],
+            hashtags: normalizeHashtags(parsed.hashtags),
             status: "draft",
             pillar: input.campaignId,
           });
@@ -1115,7 +1117,7 @@ export const appRouter = router({
         const raw = response.choices[0]?.message?.content ?? "{}";
         // Record AI usage
         await recordAiUsage(ctx.appUser.id, "post", ctx.appUser.role);
-        return parseLLMJson(raw);
+        return withNormalizedHashtags(parseLLMJson(raw));
       }),
   }),
 

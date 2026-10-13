@@ -107,25 +107,68 @@ async function fetchAndParse(url: string): Promise<{ html: string; status: numbe
   }
 }
 
+/** Ha a fő oldal nem auditálható, a felhasználónak szóló ok; különben null. */
+export function mainPageProblem(status: number | null, html: string): string | null {
+  if (status === null) return "Az oldal nem érhető el (a cím nem létezik, vagy nem válaszolt időben).";
+  if (status >= 400) return `Az oldal hibát adott vissza (HTTP ${status}).`;
+  if (!html.trim()) return "Az oldal üres választ adott.";
+  return null;
+}
+
+/**
+ * Kliensoldalon renderelt (SPA) „üres váz”: app-gyökér elem, alig szöveg és link a
+ * nyers HTML-ben. Ilyenkor a szöveg-alapú ellenőrzések félrevezetően jók lennének.
+ */
+export function looksJsRendered(p: { hasAppRoot: boolean; wordCount: number; linkCount: number }): boolean {
+  return p.hasAppRoot && p.wordCount < 150 && p.linkCount < 3;
+}
+
+/**
+ * Csak http(s) cím, valódi (pontot tartalmazó) domainnel — kiszűri az elgépelt,
+ * összeolvadt címeket (élő teszt: „https://g2amhttps://g2amarketing.huarketing.hu”
+ * átment a z.url()-en). Felhasználónak szóló hibaüzenet, vagy null.
+ */
+export function auditUrlProblem(value: string): string | null {
+  const bad = "Érvénytelen weboldal-cím. Példa: https://cegnev.hu";
+  try {
+    const u = new URL(value);
+    if (u.protocol !== "https:" && u.protocol !== "http:") return bad;
+    if (!/\.[a-z]{2,}$/i.test(u.hostname)) return bad;
+    if (/https?:/i.test(u.pathname)) return bad;
+    return null;
+  } catch {
+    return bad;
+  }
+}
+
 export const seoRouter = router({
   runAudit: appUserProcedure
-    .input(z.object({ profileId: z.string(), url: z.string().url() }))
+    .input(z.object({ profileId: z.string(), url: z.string().trim().min(1).max(2048) }))
     .mutation(async ({ input, ctx }) => {
       // Security fix (audit IDOR): eddig nem volt ownership-check — bárki futtathatott
       // auditot más profil neve alatt (cross-tenant write + SSRF-driver). Most kötelező.
       await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      const urlProblem = auditUrlProblem(input.url);
+      if (urlProblem) throw new TRPCError({ code: "BAD_REQUEST", message: urlProblem });
       // SEO audit-keret (pl. Starter: 3/hó) — eddig korlátlan volt (crawl + PageSpeed + 2 AI-hívás).
       const usage = await checkAiUsageLimit(ctx.appUser.id, ctx.appUser.subscriptionPlan ?? "free", ctx.appUser.role, false, "seo");
       if (!usage.allowed) throw aiLimitError(usage, "SEO audit");
+      // ── 1. Fő oldal letöltése — ha nem érhető el, NEM pontozunk ──────────
+      // Eddig egy elérhetetlen/elgépelt címre is „lefutott” az audit: az üres oldal
+      // minden ellenőrzésen elbukott (pl. 25/100), ami félrevezető volt, és a
+      // keretet is fogyasztotta. Most érthető hiba jön, nincs mentett audit.
+      const main = await fetchAndParse(input.url);
+      const unreachable = mainPageProblem(main.status, main.html);
+      if (unreachable) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: `${unreachable} Ellenőrizd a címet (pl. https://cegnev.hu), és próbáld újra.` });
+      }
+
       const { nanoid } = await import("nanoid");
       const id = nanoid();
       const { getDb } = await import("../db");
       const { seoAudits } = await import("../../drizzle/schema");
       const db = await getDb();
       await db!.insert(seoAudits).values({ id, profileId: input.profileId, url: input.url, status: "running" });
-
-      // ── 1. Fő oldal letöltése + cheerio parsing ───────────────────────
-      const main = await fetchAndParse(input.url);
       const html = main.html;
       const hasHttps = input.url.startsWith("https://");
       const $ = html ? cheerio.load(html) : cheerio.load("");
@@ -233,7 +276,14 @@ export const seoRouter = router({
       if (imagesWithoutAlt > 0) issues.push({ severity: "warning", category: "Akadálymentesség", title: `${imagesWithoutAlt} kép alt szöveg nélkül`, description: `${totalImages} képből ${imagesWithoutAlt} nem tartalmaz alt attribútumot.`, recommendation: "Minden képhez adj leíró alt szöveget a keresőoptimalizálás és akadálymentesség érdekében." });
       if (!canonical) issues.push({ severity: "info", category: "Meta", title: "Hiányzó canonical URL", description: "Nincs canonical link tag.", recommendation: "Add hozzá a canonical URL-t a duplikált tartalom elkerülése érdekében." });
       if (!langAttr) issues.push({ severity: "info", category: "Technikai", title: "Hiányzó lang attribútum", description: "A HTML tag nem tartalmaz lang attribútumot.", recommendation: "Add hozzá a lang attribútumot, pl. lang='hu'." });
-      if (wordCount < 300) issues.push({ severity: "warning", category: "Tartalom", title: "Kevés szöveges tartalom", description: `Az oldal csak ~${wordCount} szót tartalmaz.`, recommendation: "Bővítsd a tartalmat legalább 500 szóra a jobb rangsorolás érdekében." });
+      const jsRendered = looksJsRendered({ hasAppRoot: $("#root, #app, #__next, #__nuxt, [data-reactroot]").length > 0, wordCount, linkCount: allLinks.length });
+      if (jsRendered) {
+        issues.push({ severity: "critical", category: "Indexelhetőség", title: "A tartalom csak JavaScripttel jelenik meg",
+          description: `A szerver szinte üres oldalt küld (~${wordCount} szó, ${allLinks.length} link); a szöveg és a menü csak a böngészőben, JavaScripttel töltődik be. A Google késleltetve indexeli, sok más robot (Bing, közösségi előnézetek, AI-keresők) egyáltalán nem látja.`,
+          recommendation: "Kérd a weboldal fejlesztőjét szerveroldali renderelésre (SSR) vagy előrenderelésre (pl. Next.js, Astro, prerender), hogy a HTML-ben benne legyen a tartalom." });
+      } else if (wordCount < 300) {
+        issues.push({ severity: "warning", category: "Tartalom", title: "Kevés szöveges tartalom", description: `Az oldal csak ~${wordCount} szót tartalmaz.`, recommendation: "Bővítsd a tartalmat legalább 500 szóra a jobb rangsorolás érdekében." });
+      }
 
       // PageSpeed-alapú issue-k
       if (pageSpeedMobile.performanceScore !== null && pageSpeedMobile.performanceScore < 50) {
@@ -247,6 +297,13 @@ export const seoRouter = router({
       if (pageSpeedMobile.cls !== null && pageSpeedMobile.cls > 0.25) {
         issues.push({ severity: "warning", category: "Sebesség (mobil)", title: `Magas Layout Shift (CLS: ${pageSpeedMobile.cls.toFixed(3)})`,
           description: "Az oldal sokat ugrál betöltéskor.", recommendation: "Adj méreteket a képeknek/iframe-eknek, fix helyet a reklámoknak. A CLS < 0.1 a cél." });
+      }
+      if (pageSpeedMobile.error && pageSpeedDesktop.error) {
+        // Pl. 429: kulcs nélkül a Google közös kerete szinte mindig elfogy (PAGESPEED_API_KEY).
+        console.warn(`[SEO] PageSpeed nem elérhető: ${pageSpeedMobile.error}`);
+        issues.push({ severity: "info", category: "Sebesség", title: "A sebességmérés most nem futott le",
+          description: "A Google PageSpeed szolgáltatása ebben a futásban nem adott eredményt, ezért a pontszám a sebességet nem tartalmazza.",
+          recommendation: "Futtasd újra később, vagy mérd meg közvetlenül: pagespeed.web.dev" });
       }
 
       // Broken links
@@ -275,8 +332,11 @@ export const seoRouter = router({
         `HTTPS: ${hasHttps}`,
         `Sitemap.xml: ${hasSitemap}, Robots.txt: ${hasRobotsTxt}`,
         `Strukturált adat: ${hasStructuredData}`,
-        `PageSpeed mobil: ${pageSpeedMobile.performanceScore ?? "N/A"}/100, LCP ${pageSpeedMobile.lcp ? Math.round(pageSpeedMobile.lcp) + "ms" : "N/A"}, CLS ${pageSpeedMobile.cls?.toFixed(3) ?? "N/A"}`,
-        `PageSpeed desktop: ${pageSpeedDesktop.performanceScore ?? "N/A"}/100, LCP ${pageSpeedDesktop.lcp ? Math.round(pageSpeedDesktop.lcp) + "ms" : "N/A"}`,
+        pageSpeedMobile.error && pageSpeedDesktop.error
+          ? "PageSpeed: a Google sebességmérése ebben a futásban NEM volt elérhető (nincs adat — ne következtess belőle az oldal sebességére)"
+          : `PageSpeed mobil: ${pageSpeedMobile.performanceScore ?? "N/A"}/100, LCP ${pageSpeedMobile.lcp ? Math.round(pageSpeedMobile.lcp) + "ms" : "N/A"}, CLS ${pageSpeedMobile.cls?.toFixed(3) ?? "N/A"}`,
+        ...(pageSpeedMobile.error && pageSpeedDesktop.error ? [] : [`PageSpeed desktop: ${pageSpeedDesktop.performanceScore ?? "N/A"}/100, LCP ${pageSpeedDesktop.lcp ? Math.round(pageSpeedDesktop.lcp) + "ms" : "N/A"}`]),
+        ...(jsRendered ? ["FONTOS: a nyers HTML szinte üres, a tartalom JavaScripttel (kliensoldalon) töltődik be — a szöveg-alapú mérések ezért nem a valós tartalmat tükrözik."] : []),
         `Belső linkek: ${internalLinks}, külső: ${externalLinks}, hibás linkek: ${brokenLinks.length}`,
         `Lekért aloldalak: ${crawlResults.length} (átlag szószám: ${crawlResults.length ? Math.round(crawlResults.reduce((s, p) => s + p.wordCount, 0) / crawlResults.length) : 0})`,
         `Problémák: ${issues.map(i => `[${i.severity}] ${i.title}`).join("; ")}`,

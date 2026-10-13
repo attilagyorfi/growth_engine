@@ -347,7 +347,7 @@ export default function AIWriter() {
                     <div className="flex flex-wrap gap-1.5">
                       {generated.hashtags.map((tag, i) => (
                         <span key={i} className="text-xs px-2 py-1 rounded-full" style={{ background: "oklch(0.22 0.05 255)", color: "var(--qa-accent)" }}>
-                          #{tag}
+                          #{tag.replace(/^#+/, "")}
                         </span>
                       ))}
                     </div>
