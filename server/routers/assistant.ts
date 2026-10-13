@@ -18,6 +18,8 @@ import { invokeLLM, type Tool } from "../_core/llm";
 import { buildBusinessContext, ANTI_GENERIC_HU } from "../_core/businessContext";
 import { checkAiUsageLimit, recordAiUsage } from "../authDb";
 import { assistantThreads, assistantMessages } from "../../drizzle/schema";
+import { normalizeHashtags } from "../_core/hashtags";
+import { formatStrategyForAssistant } from "../_core/strategyContext";
 
 const HISTORY_LIMIT = 12;        // hány korábbi üzenet megy kontextusnak
 const MAX_MESSAGE_LEN = 4000;
@@ -134,6 +136,10 @@ async function buildSystemPrompt(profileId: string | null, page: string | null):
       // konkrétak legyenek, ne általánosak.
       const business = await buildBusinessContext(profileId);
       if (business) ctx = `\n\n${business}`;
+      // Aktív stratégia (csatornák, e havi prioritások, következő lépések).
+      const { getActiveStrategyVersion } = await import("../db");
+      const strategy = formatStrategyForAssistant(await getActiveStrategyVersion(profileId));
+      if (strategy) ctx += `\n\n${strategy}`;
       // Művelethető posztok — az approve_post/schedule_post CSAK ezekre hívható.
       const posts: any[] = await getContentByProfile(profileId);
       const lines: string[] = [];
@@ -302,7 +308,7 @@ export const assistantRouter = router({
         const content = String(params.content ?? "").trim();
         if (!content) throw new TRPCError({ code: "BAD_REQUEST", message: "A poszt szövege üres." });
         const title = String(params.title || "Új poszt").slice(0, 200);
-        const hashtags = Array.isArray(params.hashtags) ? params.hashtags.map((h: any) => String(h)).slice(0, 30) : undefined;
+        const hashtags = Array.isArray(params.hashtags) ? normalizeHashtags(params.hashtags).slice(0, 30) : undefined;
         await createContent({
           id: nanoid(),
           profileId: input.profileId,

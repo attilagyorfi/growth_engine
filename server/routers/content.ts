@@ -14,6 +14,7 @@ import { appUserProcedure, router } from "../_core/trpc";
 import { invokeLLM, parseLLMJson } from "../_core/llm";
 import { assertProfileOwnership } from "../_core/ownership";
 import { checkAiUsageLimit, recordAiUsage, aiLimitError } from "../authDb";
+import { normalizeHashtags } from "../_core/hashtags";
 import {
   getContentByProfile, getContentById, createContent, updateContent, deleteContent, getProfileById,
   createNotification,
@@ -278,7 +279,7 @@ export const contentRouter = router({
           platform: platform as any,
           title: p.title,
           content: p.caption,
-          hashtags: p.hashtags,
+          hashtags: normalizeHashtags(p.hashtags),
           status: "draft",
           scheduledAt: new Date(input.year, input.month, day),
           pillar: p.pillar,
