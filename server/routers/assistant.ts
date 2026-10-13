@@ -125,6 +125,24 @@ async function findThread(db: any, appUserId: string, profileId: string | null) 
   return row ?? null;
 }
 
+/**
+ * Egy javaslat kimenetelét (megerősítve / elvetve) a beszélgetésbe írja. Enélkül a
+ * modell csak a „Készítettem egy javaslatot” üzenetet látta, és a következő kérdésnél
+ * a már elmentett vázlatot is „megerősítésre várónak” mondta (élő teszt, 2026-10-13).
+ */
+async function noteActionOutcome(appUserId: string, profileId: string | null, content: string) {
+  try {
+    const db = await requireDb();
+    const thread = await findThread(db, appUserId, profileId);
+    if (!thread) return;
+    await db.insert(assistantMessages).values({ id: nanoid(), threadId: thread.id, role: "assistant", content });
+    await db.update(assistantThreads).set({ updatedAt: new Date() }).where(eq(assistantThreads.id, thread.id));
+  } catch (err) {
+    // A művelet már lefutott — a napló hiánya nem ok a hibára.
+    console.warn("[Copilot] A javaslat kimenetele nem került a beszélgetésbe:", err);
+  }
+}
+
 async function buildSystemPrompt(profileId: string | null, page: string | null): Promise<string> {
   let ctx = "";
   let actionsCtx = "";
@@ -298,51 +316,20 @@ export const assistantRouter = router({
       if (input.profileId) {
         await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
       }
-      const { type, params } = input.action;
-      const { createContent, getContentById, updateContent } = await import("../db");
+      const result = await performAction(input, ctx.appUser);
+      await noteActionOutcome(ctx.appUser.id, input.profileId ?? null, `✓ ${result.message}`);
+      return result;
+    }),
 
-      if (type === "draft_post") {
-        if (!input.profileId) throw new TRPCError({ code: "BAD_REQUEST", message: "Nincs kiválasztott ügyfél a mentéshez." });
-        const platform = String(params.platform);
-        if (!PLATFORMS.includes(platform as any)) throw new TRPCError({ code: "BAD_REQUEST", message: "Ismeretlen platform." });
-        const content = String(params.content ?? "").trim();
-        if (!content) throw new TRPCError({ code: "BAD_REQUEST", message: "A poszt szövege üres." });
-        const title = String(params.title || "Új poszt").slice(0, 200);
-        const hashtags = Array.isArray(params.hashtags) ? normalizeHashtags(params.hashtags).slice(0, 30) : undefined;
-        await createContent({
-          id: nanoid(),
-          profileId: input.profileId,
-          title,
-          platform: platform as any,
-          content,
-          hashtags,
-          pillar: params.pillar ? String(params.pillar) : undefined,
-          status: "draft",
-        } as any);
-        return { ok: true, message: `Elmentettem vázlatként: „${title}" (${PLATFORM_LABEL[platform] ?? platform}). A Tartalom oldalon átnézheted és ütemezheted.` };
+  /** A felhasználó elvetette a javaslatot — a beszélgetésbe kerül, hogy a modell is tudja. */
+  dismissAction: appUserProcedure
+    .input(z.object({ profileId: z.string().optional(), summary: z.string().max(500) }))
+    .mutation(async ({ input, ctx }) => {
+      if (input.profileId) {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
       }
-
-      if (type === "approve_post") {
-        const post: any = await getContentById(String(params.postId));
-        if (!post) throw new TRPCError({ code: "NOT_FOUND", message: "A poszt nem található." });
-        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, post.profileId, ctx.appUser.profileId);
-        if (post.status !== "review") throw new TRPCError({ code: "BAD_REQUEST", message: "Csak jóváhagyásra váró poszt hagyható jóvá." });
-        await updateContent(post.id, { status: "approved", reviewedBy: ctx.appUser.id, reviewedAt: new Date() } as any);
-        return { ok: true, message: `Jóváhagytam: „${post.title}". Most már ütemezhető.` };
-      }
-
-      if (type === "schedule_post") {
-        const post: any = await getContentById(String(params.postId));
-        if (!post) throw new TRPCError({ code: "NOT_FOUND", message: "A poszt nem található." });
-        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, post.profileId, ctx.appUser.profileId);
-        if (post.status !== "approved") throw new TRPCError({ code: "BAD_REQUEST", message: "Csak jóváhagyott poszt ütemezhető." });
-        const when = new Date(String(params.scheduledAt));
-        if (Number.isNaN(when.getTime())) throw new TRPCError({ code: "BAD_REQUEST", message: "Érvénytelen időpont." });
-        await updateContent(post.id, { status: "scheduled", scheduledAt: when } as any);
-        return { ok: true, message: `Beütemeztem: „${post.title}" — ${when.toLocaleString("hu-HU", { month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}.` };
-      }
-
-      throw new TRPCError({ code: "BAD_REQUEST", message: "Ismeretlen művelet." });
+      await noteActionOutcome(ctx.appUser.id, input.profileId ?? null, `✗ Elvetetted a javaslatot (${input.summary}) — nem történt módosítás.`);
+      return { ok: true };
     }),
 
   /** A beszélgetés törlése (új lappal indul). */
@@ -360,3 +347,57 @@ export const assistantRouter = router({
       return { ok: true };
     }),
 });
+
+type ActionInput = {
+  profileId?: string;
+  action: { type: "draft_post" | "approve_post" | "schedule_post"; params: Record<string, any> };
+};
+
+/** Egy megerősített javaslat tényleges végrehajtása (ownership + státusz-őrök). */
+async function performAction(input: ActionInput, appUser: { id: string; role: string; profileId: string | null }): Promise<{ ok: true; message: string }> {
+  const { type, params } = input.action;
+  const { createContent, getContentById, updateContent } = await import("../db");
+
+  if (type === "draft_post") {
+    if (!input.profileId) throw new TRPCError({ code: "BAD_REQUEST", message: "Nincs kiválasztott ügyfél a mentéshez." });
+    const platform = String(params.platform);
+    if (!PLATFORMS.includes(platform as any)) throw new TRPCError({ code: "BAD_REQUEST", message: "Ismeretlen platform." });
+    const content = String(params.content ?? "").trim();
+    if (!content) throw new TRPCError({ code: "BAD_REQUEST", message: "A poszt szövege üres." });
+    const title = String(params.title || "Új poszt").slice(0, 200);
+    const hashtags = Array.isArray(params.hashtags) ? normalizeHashtags(params.hashtags).slice(0, 30) : undefined;
+    await createContent({
+      id: nanoid(),
+      profileId: input.profileId,
+      title,
+      platform: platform as any,
+      content,
+      hashtags,
+      pillar: params.pillar ? String(params.pillar) : undefined,
+      status: "draft",
+    } as any);
+    return { ok: true, message: `Elmentettem vázlatként: „${title}" (${PLATFORM_LABEL[platform] ?? platform}). A Tartalom oldalon átnézheted és ütemezheted.` };
+  }
+
+  if (type === "approve_post") {
+    const post: any = await getContentById(String(params.postId));
+    if (!post) throw new TRPCError({ code: "NOT_FOUND", message: "A poszt nem található." });
+    await assertProfileOwnership(appUser.id, appUser.role, post.profileId, appUser.profileId);
+    if (post.status !== "review") throw new TRPCError({ code: "BAD_REQUEST", message: "Csak jóváhagyásra váró poszt hagyható jóvá." });
+    await updateContent(post.id, { status: "approved", reviewedBy: appUser.id, reviewedAt: new Date() } as any);
+    return { ok: true, message: `Jóváhagytam: „${post.title}". Most már ütemezhető.` };
+  }
+
+  if (type === "schedule_post") {
+    const post: any = await getContentById(String(params.postId));
+    if (!post) throw new TRPCError({ code: "NOT_FOUND", message: "A poszt nem található." });
+    await assertProfileOwnership(appUser.id, appUser.role, post.profileId, appUser.profileId);
+    if (post.status !== "approved") throw new TRPCError({ code: "BAD_REQUEST", message: "Csak jóváhagyott poszt ütemezhető." });
+    const when = new Date(String(params.scheduledAt));
+    if (Number.isNaN(when.getTime())) throw new TRPCError({ code: "BAD_REQUEST", message: "Érvénytelen időpont." });
+    await updateContent(post.id, { status: "scheduled", scheduledAt: when } as any);
+    return { ok: true, message: `Beütemeztem: „${post.title}" — ${when.toLocaleString("hu-HU", { month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}.` };
+  }
+
+  throw new TRPCError({ code: "BAD_REQUEST", message: "Ismeretlen művelet." });
+}

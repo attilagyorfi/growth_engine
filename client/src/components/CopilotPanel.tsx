@@ -104,8 +104,12 @@ export default function CopilotPanel({ open, onClose, page, profileId }: Copilot
       }
     );
   };
+  const dismissMutation = trpc.assistant.dismissAction.useMutation();
   const cancelAction = (idx: number) => {
+    const summary = messages[idx]?.action?.summary ?? "javaslat";
     setMessages((prev) => prev.map((m, i) => (i === idx ? { ...m, actionState: "cancelled" as const } : m)));
+    // A szerveren is rögzítjük, hogy a Copilot a következő kérdésnél ne higgye függőben lévőnek.
+    dismissMutation.mutate({ profileId, summary: summary.slice(0, 500) });
   };
 
   const isPending = sendMutation.isPending;
