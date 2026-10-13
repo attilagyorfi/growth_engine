@@ -47,6 +47,14 @@ const PLATFORM_ICONS: Record<Platform, React.ReactNode> = {
   tiktok: <span style={{ fontSize: 12, fontWeight: 700 }}>TT</span>,
 };
 
+const PLATFORM_LABELS: Record<Platform, string> = {
+  linkedin: "LinkedIn",
+  facebook: "Facebook",
+  instagram: "Instagram",
+  twitter: "X (Twitter)",
+  tiktok: "TikTok",
+};
+
 const PLATFORM_COLORS: Record<Platform, string> = {
   linkedin: "var(--qa-accent)",
   facebook: "oklch(0.55 0.2 250)",
@@ -1101,29 +1109,22 @@ export default function ContentStudio() {
                 <input type="time" value={scheduleTime} onChange={e => setScheduleTime(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg text-sm border" style={{ background: "var(--qa-surface2)", borderColor: "var(--qa-border)", color: "var(--qa-fg2)" }} />
               </div>
-              {/* Social account selection for connected accounts */}
-              {socialConnections.filter(c => c.isActive).length > 0 && (
-                <div>
-                  <label className="text-xs font-semibold mb-1 block" style={{ color: "var(--qa-fg3)" }}>Közzétevő fiók (opcionális)</label>
-                  <div className="space-y-1.5">
-                    <button
-                      onClick={() => setSelectedConnectionId("")}
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm border transition-all"
-                      style={{ background: !selectedConnectionId ? "oklch(from var(--qa-accent) l c h / 10%)" : "var(--qa-surface2)", borderColor: !selectedConnectionId ? "oklch(from var(--qa-accent) l c h / 40%)" : "var(--qa-border)", color: "var(--qa-fg2)" }}>
-                      <span className="text-xs">Csak ütemezés (nem publikál automatikusan)</span>
-                    </button>
-                    {socialConnections.filter(c => c.isActive).map(conn => (
-                      <button key={conn.id} onClick={() => setSelectedConnectionId(conn.id)}
-                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm border transition-all"
-                        style={{ background: selectedConnectionId === conn.id ? "oklch(from var(--qa-accent) l c h / 10%)" : "var(--qa-surface2)", borderColor: selectedConnectionId === conn.id ? "oklch(from var(--qa-accent) l c h / 40%)" : "var(--qa-border)", color: "var(--qa-fg2)" }}>
-                        <Linkedin size={14} style={{ color: "var(--qa-accent)" }} />
-                        <span className="font-medium">{conn.platformUsername ?? conn.platform}</span>
-                        <span className="ml-auto text-xs" style={{ color: "var(--qa-fg4)" }}>automatikus publikálás</span>
-                      </button>
-                    ))}
+              {/* Automatikus közzététel: az időzítő a profil aktív, a poszt platformjához tartozó fiókján teszi közzé. */}
+              {(() => {
+                const conn = socialConnections.find(c => c.isActive && c.platform === scheduleModal.platform);
+                const label = PLATFORM_LABELS[scheduleModal.platform] ?? scheduleModal.platform;
+                const needsImage = scheduleModal.platform === "instagram" && !scheduleModal.imageUrl;
+                const ok = !!conn && !needsImage;
+                return (
+                  <div className="rounded-lg border px-3 py-2.5 text-xs leading-relaxed" style={{ background: ok ? "oklch(from var(--qa-success) l c h / 8%)" : "oklch(from var(--qa-warning) l c h / 8%)", borderColor: ok ? "oklch(from var(--qa-success) l c h / 30%)" : "oklch(from var(--qa-warning) l c h / 30%)", color: ok ? "var(--qa-success)" : "var(--qa-warning)" }}>
+                    {ok
+                      ? <>Az időpontban automatikusan kimegy ide: <strong>{conn!.platformUsername ?? label}</strong> ({label}).</>
+                      : needsImage
+                        ? <>Instagram-poszthoz kép kell — kép nélkül az időpontban nem tudjuk közzétenni.</>
+                        : <>Nincs csatlakoztatott {label}-fiók, ezért az időpontban <strong>nem tudjuk közzétenni</strong>. Csatlakoztasd a Beállítások → Integrációk alatt.</>}
                   </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
             <div className="flex gap-3 mt-5">
               <button onClick={() => setScheduleModal(null)} className="flex-1 py-2.5 rounded-lg text-sm font-semibold" style={{ background: "var(--qa-surface2)", color: "var(--qa-fg3)" }}>Mégse</button>

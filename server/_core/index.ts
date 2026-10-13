@@ -16,6 +16,7 @@ import { handleStripeWebhook } from "../stripe/webhook";
 import { logLlmStartup } from "./llm";
 import { ENV } from "./env";
 import { seedDemoAccount } from "./demoAccount";
+import { startScheduler } from "../scheduler";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -137,6 +138,9 @@ async function startServer() {
     // Demo/teszt fiók seed — csak ha ENABLE_DEMO_ACCOUNT=true. Non-blocking,
     // non-fatal: a szerver akkor is fut, ha a seed elhasal (pl. nincs DB).
     seedDemoAccount().catch(err => console.error("[demo] seed failed:", err));
+    // Ütemezett posztok közzététele — production-ben alapból be, SCHEDULER_ENABLED=false kikapcsolja.
+    const schedulerEnv = process.env.SCHEDULER_ENABLED?.trim().toLowerCase();
+    startScheduler({ enabled: schedulerEnv ? schedulerEnv === "true" : ENV.isProduction });
   });
 }
 
