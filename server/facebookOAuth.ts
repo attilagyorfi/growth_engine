@@ -38,7 +38,7 @@
 import type { Express, Request, Response } from "express";
 import crypto from "crypto";
 import { nanoid } from "nanoid";
-import { ENV } from "./_core/env";
+import { ENV, getPublicAppOrigin } from "./_core/env";
 import { verifyAppToken } from "./routers/appAuth";
 import { assertProfileOwnership } from "./_core/ownership";
 import { getAppUserById } from "./authDb";
@@ -59,7 +59,7 @@ const FB_SCOPES = [
 ].join(",");
 
 function getAppOrigin(): string {
-  return ENV.appUrl || "http://localhost:5173";
+  return getPublicAppOrigin();
 }
 
 function signState(payload: { profileId: string; userId: string }): string {

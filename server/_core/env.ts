@@ -69,3 +69,16 @@ export const ENV = {
   // jogkörű és reset-on-login, ezért a blast radius egy homokozó.
   enableDemoAccount: process.env.ENABLE_DEMO_ACCOUNT === "true",
 };
+
+/** A production Railway-domain — ha az APP_URL nincs beállítva, ez a biztonságos alapérték. */
+export const DEFAULT_PRODUCTION_ORIGIN = "https://growthengine-production.up.railway.app";
+
+/**
+ * Az app nyilvános címe az OAuth callback- és visszairányító URL-ekhez.
+ * Eddig APP_URL nélkül production-ben is `http://localhost:5173`-ra irányított
+ * (LinkedIn/Facebook/TikTok redirect_uri) → a csatlakozás csendben elhasalt.
+ * Kérésből (Origin/Host) SOHA nem vesszük — az open-redirect vektor lenne.
+ */
+export function getPublicAppOrigin(): string {
+  return ENV.appUrl || (ENV.isProduction ? DEFAULT_PRODUCTION_ORIGIN : "http://localhost:5173");
+}
