@@ -1,9 +1,11 @@
 # Railway / Nixpacks build config
-# Force Node 20 — a project import.meta.dirname-et használ ami Node 20.11+ feature.
+# Node 24 (LTS, 2028-ig támogatott) — a package.json#engines "24.x"-szel EGYÜTT kell változtatni:
+# a Nixpacks az engines alapján választja a nixpkgs-archívumot, amiből ez a csomag jön.
+# (Korábban Node 20 — 2026 áprilisától nem kap biztonsági frissítést.)
 # A package.json#engines">=20.11" range-et a Nixpacks regex parser nem érti,
 # ezért explicit nixPkgs override kell.
 
 providers = ["node"]
 
 [phases.setup]
-nixPkgs = ["nodejs_20", "pnpm-10_x", "openssl"]
+nixPkgs = ["nodejs_24", "pnpm-10_x", "openssl"]
