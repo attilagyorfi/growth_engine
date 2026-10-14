@@ -68,6 +68,9 @@ export default function Settings() {
       const tab = params.get("tab") as Tab | null;
       const validTabs: Tab[] = ["fiok", "billing", "brand", "integrations", "ai-memory", "team", "audit", "admin"];
       if (tab && validTabs.includes(tab)) return tab;
+      // Social OAuth-visszatérés (?linkedin=connected / ?facebook=error …) → az Integrációk fül,
+      // hogy a felhasználó lássa a csatlakozás eredményét (eddig a Brand Centerre érkezett).
+      if (["linkedin", "facebook", "tiktok"].some((p) => params.has(p))) return "integrations";
     }
     return "brand";
   });
