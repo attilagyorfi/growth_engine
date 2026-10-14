@@ -22,9 +22,11 @@ export const socialRouter = router({
       await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
       const { getDb } = await import("../db");
       const { socialConnections } = await import("../../drizzle/schema");
-      const { eq } = await import("drizzle-orm");
+      const { eq, desc } = await import("drizzle-orm");
       const db = await getDb();
       if (!db) return [];
+      // Sorrend = az időzítő választása (server/scheduler.ts findConnection): a legújabb
+      // aktív kapcsolat platformonként → a felület ugyanazt mutatja célként.
       // Security fix (audit H1): SOHA ne adjuk vissza a tokeneket a kliensnek.
       // Eddig a select().from() minden oszlopot visszaadott (accessToken +
       // refreshToken is) → a böngésző / XSS kilophatta és a fiók nevében posztolhatott.
@@ -38,7 +40,8 @@ export const socialRouter = router({
         tokenExpiresAt: socialConnections.tokenExpiresAt,
         isActive: socialConnections.isActive,
       }).from(socialConnections)
-        .where(eq(socialConnections.profileId, input.profileId));
+        .where(eq(socialConnections.profileId, input.profileId))
+        .orderBy(desc(socialConnections.createdAt), desc(socialConnections.id));
     }),
   saveConnection: appUserProcedure
     .input(z.object({
