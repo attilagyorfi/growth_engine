@@ -1114,13 +1114,19 @@ export default function ContentStudio() {
                 const conn = socialConnections.find(c => c.isActive && c.platform === scheduleModal.platform);
                 const label = PLATFORM_LABELS[scheduleModal.platform] ?? scheduleModal.platform;
                 const needsImage = scheduleModal.platform === "instagram" && !scheduleModal.imageUrl;
-                const ok = !!conn && !needsImage;
+                // A kapcsolat az ütemezett időpontig lejár? (LinkedIn: 60 nap, frissítés nélkül)
+                const when = scheduleDate ? new Date(`${scheduleDate}T${scheduleTime}`) : null;
+                const expiresAt = conn?.tokenExpiresAt ? new Date(conn.tokenExpiresAt) : null;
+                const expiredByThen = !!(conn && expiresAt && when && !Number.isNaN(expiresAt.getTime()) && expiresAt.getTime() <= when.getTime());
+                const ok = !!conn && !needsImage && !expiredByThen;
                 return (
                   <div className="rounded-lg border px-3 py-2.5 text-xs leading-relaxed" style={{ background: ok ? "oklch(from var(--qa-success) l c h / 8%)" : "oklch(from var(--qa-warning) l c h / 8%)", borderColor: ok ? "oklch(from var(--qa-success) l c h / 30%)" : "oklch(from var(--qa-warning) l c h / 30%)", color: ok ? "var(--qa-success)" : "var(--qa-warning)" }}>
                     {ok
                       ? <>Az időpontban automatikusan kimegy ide: <strong>{conn!.platformUsername ?? label}</strong> ({label}).</>
                       : needsImage
                         ? <>Instagram-poszthoz kép kell — kép nélkül az időpontban nem tudjuk közzétenni.</>
+                      : expiredByThen
+                        ? <>A(z) {label}-kapcsolat az ütemezett időpont előtt lejár (lejárat: <strong>{expiresAt!.toLocaleDateString("hu-HU")}</strong>). Csatlakoztasd újra a Beállítások → Integrációk alatt, különben a poszt nem megy ki.</>
                         : <>Nincs csatlakoztatott {label}-fiók, ezért az időpontban <strong>nem tudjuk közzétenni</strong>. Csatlakoztasd a Beállítások → Integrációk alatt.</>}
                   </div>
                 );
