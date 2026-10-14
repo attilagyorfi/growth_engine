@@ -14,8 +14,11 @@
  */
 import type { ContentPost, SocialConnection } from "../drizzle/schema";
 import { PLATFORM_LABEL, classifyPublishError, composePostText, publishWithConnection } from "./publishing";
+import { runExpiryCheck, type ExpiryDeps } from "./connectionExpiry";
 
 export const SCHEDULER_INTERVAL_MS = 60_000;
+/** A social kapcsolatok lejárati ellenőrzése óránként (az első rögtön az induló futásnál). */
+export const EXPIRY_CHECK_INTERVAL_MS = 60 * 60 * 1000;
 export const STALE_AFTER_MS = 24 * 60 * 60 * 1000;
 export const MAX_ATTEMPTS = 3;
 const BATCH_SIZE = 20;
@@ -164,10 +167,40 @@ async function createDbDeps(): Promise<SchedulerDeps | null> {
   };
 }
 
+async function createExpiryDeps(): Promise<ExpiryDeps | null> {
+  const { getDb, getProfileById } = await import("./db");
+  const db = await getDb();
+  if (!db) return null;
+  const { socialConnections, appNotifications } = await import("../drizzle/schema");
+  const { and, eq } = await import("drizzle-orm");
+  const { nanoid } = await import("nanoid");
+  return {
+    now: () => new Date(),
+    listActiveConnections: () => db.select({
+      id: socialConnections.id, profileId: socialConnections.profileId, platform: socialConnections.platform,
+      platformUsername: socialConnections.platformUsername, tokenExpiresAt: socialConnections.tokenExpiresAt,
+    }).from(socialConnections).where(eq(socialConnections.isActive, true)),
+    async hasNotification(profileId, title) {
+      const rows = await db.select({ id: appNotifications.id }).from(appNotifications)
+        .where(and(eq(appNotifications.profileId, profileId), eq(appNotifications.title, title.slice(0, 255))))
+        .limit(1);
+      return rows.length > 0;
+    },
+    async notify(profileId, title, body) {
+      const profile = await getProfileById(profileId);
+      if (!profile?.appUserId) return;
+      await db.insert(appNotifications).values({
+        id: nanoid(), appUserId: profile.appUserId, profileId, type: "system", title: title.slice(0, 255), body, actionUrl: "/beallitasok?tab=integrations",
+      });
+    },
+  };
+}
+
 let timer: ReturnType<typeof setInterval> | null = null;
 let running = false;
+let lastExpiryCheck = 0;
 
-/** Egy futás az élő adatbázison (átfedés-védelemmel). */
+/** Egy futás az élő adatbázison (átfedés-védelemmel); óránként a kapcsolatok lejáratát is nézi. */
 export async function runSchedulerOnce(): Promise<TickResult | null> {
   if (running) return null;
   running = true;
@@ -177,6 +210,16 @@ export async function runSchedulerOnce(): Promise<TickResult | null> {
     const result = await runSchedulerTick(deps);
     if (result.published || result.failed || result.retried || result.stale) {
       console.log(`[Scheduler] közzétéve: ${result.published}, sikertelen: ${result.failed}, újrapróbál: ${result.retried}, lejárt: ${result.stale}`);
+    }
+    if (Date.now() - lastExpiryCheck >= EXPIRY_CHECK_INTERVAL_MS) {
+      lastExpiryCheck = Date.now();
+      try {
+        const expiryDeps = await createExpiryDeps();
+        const expiry = expiryDeps ? await runExpiryCheck(expiryDeps) : null;
+        if (expiry?.notified) console.log(`[Scheduler] lejárati figyelmeztetés: ${expiry.notified}`);
+      } catch (err) {
+        console.error("[Scheduler] A lejárat-ellenőrzés hibára futott:", err);
+      }
     }
     return result;
   } catch (err) {
