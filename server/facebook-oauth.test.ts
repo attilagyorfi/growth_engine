@@ -16,6 +16,10 @@ vi.mock("./db", async (importOriginal) => {
   };
   return { ...actual, getDb: vi.fn(async () => db) };
 });
+vi.mock("./routers/appAuth", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./routers/appAuth")>();
+  return { ...actual, verifyAppToken: vi.fn(async () => ({ userId: "user-a" })) };
+});
 vi.mock("./authDb", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./authDb")>();
   return { ...actual, getAppUserById: vi.fn(async () => ({ id: "user-a", role: "user", profileId: "profile-a" })) };
@@ -36,7 +40,7 @@ async function callback(query: Record<string, string>) {
   return res.redirectedTo as string;
 }
 
-const original = { id: ENV.facebookAppId, secret: ENV.facebookAppSecret };
+const original = { id: ENV.facebookAppId, secret: ENV.facebookAppSecret, config: ENV.facebookLoginConfigId };
 let fetchMock: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
@@ -48,7 +52,32 @@ beforeEach(() => {
 afterEach(() => {
   ENV.facebookAppId = original.id;
   ENV.facebookAppSecret = original.secret;
+  ENV.facebookLoginConfigId = original.config;
   vi.unstubAllGlobals();
+});
+
+describe("Facebook OAuth start", () => {
+  async function start() {
+    const res: any = { redirectedTo: "", redirect(url: string) { this.redirectedTo = url; }, status() { return this; }, json() { return this; } };
+    await routes().get("/api/oauth/facebook/start")!({ query: { profileId: "profile-a" }, headers: { cookie: "app_token=t" } }, res);
+    return new URL(res.redirectedTo);
+  }
+
+  it("v26.0 dialógus, a scope-ban a business_management is benne van", async () => {
+    ENV.facebookLoginConfigId = "";
+    const url = await start();
+    expect(url.origin + url.pathname).toBe("https://www.facebook.com/v26.0/dialog/oauth");
+    expect(url.searchParams.get("scope")?.split(",")).toEqual(expect.arrayContaining(["pages_manage_posts", "business_management", "instagram_content_publish"]));
+    expect(url.searchParams.get("redirect_uri")).toMatch(/\/api\/oauth\/facebook\/callback$/);
+    expect(url.searchParams.get("config_id")).toBeNull();
+  });
+
+  it("ha van Login for Business konfiguráció, config_id megy a scope helyett", async () => {
+    ENV.facebookLoginConfigId = "cfg-123";
+    const url = await start();
+    expect(url.searchParams.get("config_id")).toBe("cfg-123");
+    expect(url.searchParams.get("scope")).toBeNull();
+  });
 });
 
 function stubFetch(handlers: Array<[RegExp, () => Response]>) {

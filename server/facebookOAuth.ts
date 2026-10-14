@@ -25,7 +25,7 @@
  *   - pages_manage_posts (poszt publikálás)
  *   - instagram_basic (IG account összerendelés)
  *   - instagram_content_publish (IG poszt publikálás)
- *   - business_management (Business Manager hozzáférés — opcionális)
+ *   - business_management (üzleti portfólióban lévő oldalak/IG — a Meta kötelezőnek jelöli)
  *
  * Development mode-ban (review előtt) csak a developer + manuálisan
  * hozzáadott tester accountok tudnak bejelentkezni. Lásd:
@@ -50,10 +50,14 @@ const FB_TOKEN_URL = `${META_GRAPH_BASE}/oauth/access_token`;
 const FB_GRAPH_BASE = META_GRAPH_BASE;
 const STATE_MAX_AGE_MS = 15 * 60 * 1000;
 
-const FB_SCOPES = [
+// A Meta „Instagram API with Facebook login” beállítása a business_management-et is
+// KÖTELEZŐNEK jelöli: nélküle az üzleti portfólióban lévő oldalak/IG-fiókok nem
+// jelennek meg a /me/accounts-ban.
+export const FB_SCOPES = [
   "pages_show_list",
   "pages_read_engagement",
   "pages_manage_posts",
+  "business_management",
   "instagram_basic",
   "instagram_content_publish",
 ].join(",");
@@ -130,7 +134,9 @@ export function registerFacebookOAuthRoutes(app: Express) {
       client_id: ENV.facebookAppId,
       redirect_uri: redirectUri,
       state,
-      scope: FB_SCOPES,
+      // Facebook Login for Business: ha van konfiguráció (Dashboard → Configurations),
+      // a Meta a config_id-t ajánlja a scope helyett; nélküle a scope is működik.
+      ...(ENV.facebookLoginConfigId ? { config_id: ENV.facebookLoginConfigId } : { scope: FB_SCOPES }),
       // auth_type=rerequest — ha a user korábban elutasított pár scope-ot,
       // most újra megkérdezi (különben csendben kihagyja és kódunk
       // azt hiszi minden OK).

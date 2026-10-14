@@ -54,6 +54,8 @@ export const ENV = {
   // tudja csatlakoztatni a sajat fiókját. Lásd: docs/social-oauth-setup.md
   facebookAppId: (process.env.FACEBOOK_APP_ID ?? "").trim(),
   facebookAppSecret: (process.env.FACEBOOK_APP_SECRET ?? "").trim(),
+  // Opcionális: Facebook Login for Business konfiguráció azonosítója (config_id).
+  facebookLoginConfigId: (process.env.FACEBOOK_LOGIN_CONFIG_ID ?? "").trim(),
   tiktokClientKey: (process.env.TIKTOK_CLIENT_KEY ?? "").trim(),
   tiktokClientSecret: (process.env.TIKTOK_CLIENT_SECRET ?? "").trim(),
   // APP_URL — production base URL minden OAuth callback redirectjéhez.
