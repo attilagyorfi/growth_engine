@@ -8,7 +8,7 @@
  *
  * Flow:
  *   1. /api/oauth/facebook/start?profileId=xxx  (bejelentkezett user only)
- *   2. Redirect → https://www.facebook.com/v18.0/dialog/oauth?...
+ *   2. Redirect → https://www.facebook.com/{META_GRAPH_VERSION}/dialog/oauth?... (lásd _core/meta.ts)
  *   3. User Facebook-on engedélyez → callback ?code&state
  *   4. /api/oauth/facebook/callback:
  *      a) code → user access token (short-lived)
@@ -43,11 +43,11 @@ import { verifyAppToken } from "./routers/appAuth";
 import { assertProfileOwnership } from "./_core/ownership";
 import { getAppUserById } from "./authDb";
 import { encryptToken } from "./_core/tokenCrypto";
+import { META_GRAPH_BASE, META_OAUTH_DIALOG_URL } from "./_core/meta";
 
-const META_GRAPH_VERSION = "v18.0";
-const FB_AUTH_URL = `https://www.facebook.com/${META_GRAPH_VERSION}/dialog/oauth`;
-const FB_TOKEN_URL = `https://graph.facebook.com/${META_GRAPH_VERSION}/oauth/access_token`;
-const FB_GRAPH_BASE = `https://graph.facebook.com/${META_GRAPH_VERSION}`;
+const FB_AUTH_URL = META_OAUTH_DIALOG_URL;
+const FB_TOKEN_URL = `${META_GRAPH_BASE}/oauth/access_token`;
+const FB_GRAPH_BASE = META_GRAPH_BASE;
 const STATE_MAX_AGE_MS = 15 * 60 * 1000;
 
 const FB_SCOPES = [
@@ -62,7 +62,7 @@ function getAppOrigin(): string {
   return getPublicAppOrigin();
 }
 
-function signState(payload: { profileId: string; userId: string }): string {
+export function signState(payload: { profileId: string; userId: string }): string {
   const stateObj = { ...payload, ts: Date.now(), nonce: crypto.randomBytes(8).toString("base64url") };
   const payloadB64 = Buffer.from(JSON.stringify(stateObj)).toString("base64url");
   const sig = crypto.createHmac("sha256", ENV.cookieSecret).update(payloadB64).digest("base64url");
@@ -201,16 +201,21 @@ export function registerFacebookOAuthRoutes(app: Express) {
       }
       const shortToken = (await shortTokenRes.json() as { access_token: string }).access_token;
 
-      // b) short → long-lived (60 nap) — javasolt minden Meta integrációhoz
+      // b) short → long-lived user token. KÖTELEZŐ: csak a long-lived user tokenből
+      // kapott Page-token nem jár le. Eddig hiba esetén csendben a rövid (≈1 órás)
+      // tokennel ment tovább → a Page-tokenek 1 óra múlva használhatatlanok lettek.
       const longTokenRes = await fetch(`${FB_TOKEN_URL}?` + new URLSearchParams({
         grant_type: "fb_exchange_token",
         client_id: ENV.facebookAppId,
         client_secret: ENV.facebookAppSecret,
         fb_exchange_token: shortToken,
       }));
-      const longToken = longTokenRes.ok
-        ? (await longTokenRes.json() as { access_token: string; expires_in?: number }).access_token
-        : shortToken; // fallback: short-lived (1 ora)
+      if (!longTokenRes.ok) {
+        console.error("[Facebook OAuth] Long-lived token exchange failed:", await longTokenRes.text());
+        res.redirect(`${appOrigin}/beallitasok?facebook=error&reason=token_exchange_failed`);
+        return;
+      }
+      const longToken = (await longTokenRes.json() as { access_token: string; expires_in?: number }).access_token;
 
       // c) GET /me/accounts → Pages lista + per-page access tokenek
       const pagesRes = await fetch(`${FB_GRAPH_BASE}/me/accounts?` + new URLSearchParams({
@@ -256,9 +261,10 @@ export function registerFacebookOAuthRoutes(app: Express) {
           eq(socialConnections.platform, "instagram"),
         ));
 
-      // A Page tokenek "long-lived" jellegűek (nincs explicit expires_in,
-      // a Meta dokumentum szerint kb. 60 nap a user-token után + auto-refresh).
-      const tokenExpiresAt = new Date(Date.now() + 60 * 24 * 3600 * 1000);
+      // A long-lived user tokenből kért Page-token NEM jár le (Meta: „no expiration
+      // date”) — csak jelszócsere / jogosultság-visszavonás teszi érvénytelenné, azt a
+      // publikáló 401/190 hibaként felismeri. Eddig fix +60 napot írtunk be → a
+      // lejárati figyelmeztetés tévesen riasztott, és 60 nap után a publikálás leállt.
 
       let fbConnected = 0;
       let igConnected = 0;
@@ -271,7 +277,7 @@ export function registerFacebookOAuthRoutes(app: Express) {
           platform: "facebook",
           accessToken: encryptToken(page.access_token),
           refreshToken: null,
-          tokenExpiresAt: tokenExpiresAt.toISOString(),
+          tokenExpiresAt: null, // Page-token: nem jár le
           platformUserId: page.id,
           platformUsername: page.name,
           isActive: true,
@@ -299,7 +305,7 @@ export function registerFacebookOAuthRoutes(app: Express) {
             platform: "instagram",
             accessToken: encryptToken(page.access_token),                  // Page-token IG-hoz is
             refreshToken: null,
-            tokenExpiresAt: tokenExpiresAt.toISOString(),
+            tokenExpiresAt: null, // Page-token: nem jár le
             platformUserId: page.instagram_business_account.id,
             platformUsername: igUsername || `@${page.name}`,
             isActive: true,

@@ -596,6 +596,21 @@ export default function Settings() {
               })()}
             </div>
 
+            {/* Több aktív fiók ugyanazon a platformon (pl. több Facebook-oldal) — az automatikus
+                közzététel csak az elsőt (legutóbb csatlakoztatottat) használja. */}
+            {(["facebook", "instagram", "linkedin", "tiktok"] as const).map(platform => {
+              const list = socialConnections.filter(c => c.isActive && c.platform === platform);
+              if (list.length < 2) return null;
+              const label = { facebook: "Facebook-oldal", instagram: "Instagram-fiók", linkedin: "LinkedIn-fiók", tiktok: "TikTok-fiók" }[platform];
+              return (
+                <div key={platform} className="mt-4 rounded-lg border px-3 py-2.5 text-xs leading-relaxed"
+                  style={{ background: "oklch(from var(--qa-warning) l c h / 8%)", borderColor: "oklch(from var(--qa-warning) l c h / 30%)", color: "var(--qa-warning)" }}>
+                  {list.length} {label} van csatlakoztatva ehhez az ügyfélhez ({list.map(c => c.platformUsername ?? c.platform).join(", ")}).
+                  Az ütemezett posztok ide mennek: <strong>{list[0].platformUsername ?? platform}</strong>. Amelyik ennél az ügyfélnél nem kell, azt csatlakoztasd le lent.
+                </div>
+              );
+            })}
+
             {/* Connected accounts list */}
             {socialConnections.filter(c => c.isActive).length > 0 && (
               <div className="space-y-2 mt-4">

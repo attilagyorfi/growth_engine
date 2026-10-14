@@ -134,7 +134,7 @@ async function createDbDeps(): Promise<SchedulerDeps | null> {
     async findConnection(profileId, platform) {
       const [conn] = await db.select().from(socialConnections)
         .where(and(eq(socialConnections.profileId, profileId), eq(socialConnections.platform, platform as SocialConnection["platform"]), eq(socialConnections.isActive, true)))
-        .orderBy(desc(socialConnections.createdAt))
+        .orderBy(desc(socialConnections.createdAt), desc(socialConnections.id)) // = social.listConnections sorrendje
         .limit(1);
       return conn ?? null;
     },

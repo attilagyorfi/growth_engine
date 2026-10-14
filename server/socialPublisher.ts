@@ -12,8 +12,7 @@
  * ugyanaz a Page-token megy (Meta dokumentum).
  */
 
-const META_GRAPH_VERSION = "v18.0";
-const META_GRAPH_BASE = `https://graph.facebook.com/${META_GRAPH_VERSION}`;
+import { META_GRAPH_BASE } from "./_core/meta";
 
 // ─── LinkedIn ─────────────────────────────────────────────────────────────
 
