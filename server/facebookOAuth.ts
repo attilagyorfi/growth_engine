@@ -37,13 +37,12 @@
 
 import type { Express, Request, Response } from "express";
 import crypto from "crypto";
-import { nanoid } from "nanoid";
 import { ENV, getPublicAppOrigin } from "./_core/env";
 import { verifyAppToken } from "./routers/appAuth";
 import { assertProfileOwnership } from "./_core/ownership";
 import { getAppUserById } from "./authDb";
-import { encryptToken } from "./_core/tokenCrypto";
 import { META_GRAPH_BASE, META_OAUTH_DIALOG_URL } from "./_core/meta";
+import { savePendingPages, saveMetaPageConnection, type MetaPage } from "./metaPages";
 
 const FB_AUTH_URL = META_OAUTH_DIALOG_URL;
 const FB_TOKEN_URL = `${META_GRAPH_BASE}/oauth/access_token`;
@@ -244,84 +243,29 @@ export function registerFacebookOAuthRoutes(app: Express) {
         return;
       }
 
+      const metaPages: MetaPage[] = pages.map((p) => ({
+        id: p.id, name: p.name, accessToken: p.access_token, instagramId: p.instagram_business_account?.id,
+      }));
+
+      // Több oldal (pl. ügynökség): NEM mentünk mindent — a felhasználó kiválasztja,
+      // melyik tartozik ehhez az ügyfélhez. A kulcsok addig csak memóriában várnak.
+      if (metaPages.length > 1) {
+        const sel = savePendingPages({ profileId, userId, pages: metaPages });
+        console.log(`[Facebook OAuth] Profile ${profileId}: ${metaPages.length} oldal — választásra vár`);
+        res.redirect(`${appOrigin}/beallitasok?tab=integrations&facebook=select&sel=${encodeURIComponent(sel)}`);
+        return;
+      }
+
       const { getDb } = await import("./db");
-      const { socialConnections } = await import("../drizzle/schema");
-      const { eq, and } = await import("drizzle-orm");
       const db = await getDb();
       if (!db) {
         res.redirect(`${appOrigin}/beallitasok?facebook=error&reason=db_unavailable`);
         return;
       }
-
-      // Deaktiváljuk a profile minden korábbi FB + IG kapcsolatát (új csatlakozás felülírja)
-      await db.update(socialConnections)
-        .set({ isActive: false })
-        .where(and(
-          eq(socialConnections.profileId, profileId),
-          eq(socialConnections.platform, "facebook"),
-        ));
-      await db.update(socialConnections)
-        .set({ isActive: false })
-        .where(and(
-          eq(socialConnections.profileId, profileId),
-          eq(socialConnections.platform, "instagram"),
-        ));
-
-      // A long-lived user tokenből kért Page-token NEM jár le (Meta: „no expiration
-      // date”) — csak jelszócsere / jogosultság-visszavonás teszi érvénytelenné, azt a
-      // publikáló 401/190 hibaként felismeri. Eddig fix +60 napot írtunk be → a
-      // lejárati figyelmeztetés tévesen riasztott, és 60 nap után a publikálás leállt.
-
-      let fbConnected = 0;
-      let igConnected = 0;
-
-      for (const page of pages) {
-        // FB Page rekord
-        await db.insert(socialConnections).values({
-          id: nanoid(),
-          profileId,
-          platform: "facebook",
-          accessToken: encryptToken(page.access_token),
-          refreshToken: null,
-          tokenExpiresAt: null, // Page-token: nem jár le
-          platformUserId: page.id,
-          platformUsername: page.name,
-          isActive: true,
-        });
-        fbConnected++;
-
-        // IG Business account (ha van) — a Page hozzá van rendelve
-        if (page.instagram_business_account?.id) {
-          // IG-hez használt token a Page-token (a Meta dokumentum szerint)
-          // Lekérjük az IG username-t a Graph API-ból
-          let igUsername = "";
-          try {
-            const igRes = await fetch(`${FB_GRAPH_BASE}/${page.instagram_business_account.id}?` + new URLSearchParams({
-              access_token: page.access_token,
-              fields: "username",
-            }));
-            if (igRes.ok) {
-              igUsername = (await igRes.json() as { username?: string }).username ?? "";
-            }
-          } catch { /* non-fatal */ }
-
-          await db.insert(socialConnections).values({
-            id: nanoid(),
-            profileId,
-            platform: "instagram",
-            accessToken: encryptToken(page.access_token),                  // Page-token IG-hoz is
-            refreshToken: null,
-            tokenExpiresAt: null, // Page-token: nem jár le
-            platformUserId: page.instagram_business_account.id,
-            platformUsername: igUsername || `@${page.name}`,
-            isActive: true,
-          });
-          igConnected++;
-        }
-      }
-
-      console.log(`[Facebook OAuth] Profile ${profileId}: ${fbConnected} Page(s), ${igConnected} IG account(s)`);
-      res.redirect(`${appOrigin}/beallitasok?facebook=connected&pages=${fbConnected}&instagram=${igConnected}`);
+      await saveMetaPageConnection(db, profileId, metaPages[0]);
+      const igConnected = metaPages[0].instagramId ? 1 : 0;
+      console.log(`[Facebook OAuth] Profile ${profileId}: 1 Page, ${igConnected} IG account`);
+      res.redirect(`${appOrigin}/beallitasok?facebook=connected&pages=1&instagram=${igConnected}`);
     } catch (err) {
       console.error("[Facebook OAuth] Unexpected error:", err);
       res.redirect(`${appOrigin}/beallitasok?facebook=error&reason=unexpected`);

@@ -6,13 +6,13 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-const fake = vi.hoisted(() => ({ inserted: [] as any[], updated: 0 }));
+const fake = vi.hoisted(() => ({ inserted: [] as any[], updated: 0, updateValues: [] as any[] }));
 
 vi.mock("./db", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./db")>();
   const db = {
     insert: () => ({ values: async (v: any) => { fake.inserted.push(v); } }),
-    update: () => ({ set: () => ({ where: async () => { fake.updated++; } }) }),
+    update: () => ({ set: (v: any) => ({ where: async () => { fake.updated++; fake.updateValues.push(v); } }) }),
   };
   return { ...actual, getDb: vi.fn(async () => db) };
 });
@@ -46,6 +46,7 @@ let fetchMock: ReturnType<typeof vi.fn>;
 beforeEach(() => {
   fake.inserted = [];
   fake.updated = 0;
+  fake.updateValues = [];
   ENV.facebookAppId = "app-id";
   ENV.facebookAppSecret = "app-secret";
 });
@@ -106,6 +107,31 @@ describe("Facebook OAuth callback", () => {
       expect.objectContaining({ platform: "facebook", platformUserId: "page1", platformUsername: "G2A Marketing", tokenExpiresAt: null, isActive: true }),
       expect.objectContaining({ platform: "instagram", platformUserId: "ig1", platformUsername: "g2amarketing", tokenExpiresAt: null, isActive: true }),
     ]);
+  });
+
+  it("a régi FB/IG kapcsolat kikapcsolásakor a kulcs is törlődik", async () => {
+    stubFetch([
+      [/oauth\/access_token\?.*code=/, () => json({ access_token: "short" })],
+      [/oauth\/access_token\?.*fb_exchange_token=/, () => json({ access_token: "long" })],
+      [/\/me\/accounts/, () => json({ data: [{ id: "page1", name: "G2A Marketing", access_token: "page-token" }] })],
+    ]);
+    await callback({ code: "c", state: state() });
+    expect(fake.updateValues).toEqual([{ isActive: false, accessToken: "", refreshToken: null }]);
+  });
+
+  it("több oldal (ügynökség): SEMMIT nem ment, oldalválasztásra küld", async () => {
+    stubFetch([
+      [/oauth\/access_token\?.*code=/, () => json({ access_token: "short" })],
+      [/oauth\/access_token\?.*fb_exchange_token=/, () => json({ access_token: "long" })],
+      [/\/me\/accounts/, () => json({ data: [
+        { id: "p1", name: "G2A Marketing", access_token: "t1", instagram_business_account: { id: "ig1" } },
+        { id: "p2", name: "Ügyfél Kft.", access_token: "t2" },
+      ] })],
+    ]);
+    const to = await callback({ code: "c", state: state() });
+    expect(to).toMatch(/\/beallitasok\?tab=integrations&facebook=select&sel=[A-Za-z0-9_-]{20,}$/);
+    expect(fake.inserted).toEqual([]);
+    expect(fake.updated).toBe(0);
   });
 
   it("ha a long-lived csere elbukik, hibát ad és SEMMIT nem ment (nincs 1 órás token)", async () => {

@@ -13,6 +13,7 @@ import { TRPCError } from "@trpc/server";
 import { publicProcedure, appUserProcedure, router } from "../_core/trpc";
 import { assertProfileOwnership } from "../_core/ownership";
 import { encryptToken } from "../_core/tokenCrypto";
+import { DEACTIVATED_CONNECTION } from "../_core/socialConnectionState";
 import { composePostText, publishWithConnection, classifyPublishError } from "../publishing";
 
 export const socialRouter = router({
@@ -87,7 +88,8 @@ export const socialRouter = router({
       const [conn] = await db.select().from(socialConnections).where(eq(socialConnections.id, input.connectionId)).limit(1);
       if (!conn) throw new TRPCError({ code: "NOT_FOUND", message: "Social fiók nem található" });
       await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, conn.profileId, ctx.appUser.profileId);
-      await db.update(socialConnections).set({ isActive: false }).where(eq(socialConnections.id, input.connectionId));
+      // Lecsatlakoztatáskor a kulcs is törlődik (nem csak inaktív lesz).
+      await db.update(socialConnections).set({ ...DEACTIVATED_CONNECTION }).where(eq(socialConnections.id, input.connectionId));
       return { success: true };
     }),
   publishNow: appUserProcedure
@@ -199,6 +201,43 @@ export const socialRouter = router({
   // (A korábbi getLinkedInOAuthUrl aláíratlan base64 state-et adott, amit a
   // /api/oauth/linkedin/callback HMAC-ellenőrzése mindig elutasított →
   // „invalid_state”. A csatlakozás most a /api/oauth/linkedin/start útvonalon megy.)
+  // ─── Meta oldalválasztás (több Facebook-oldal esetén) ─────────────────────
+  // A Facebook-visszatérés több oldalnál ide küld (?facebook=select&sel=…): a felhasználó
+  // kiválasztja, melyik oldal tartozik az ügyfélhez — csak az mentődik (lásd server/metaPages.ts).
+  facebookPendingPages: appUserProcedure
+    .input(z.object({ selectionId: z.string().min(10).max(64) }))
+    .query(async ({ ctx, input }) => {
+      const { peekPendingPages } = await import("../metaPages");
+      const p = peekPendingPages(input.selectionId, ctx.appUser.id);
+      if (!p) throw new TRPCError({ code: "NOT_FOUND", message: "Az oldalválasztás lejárt. Indítsd újra a Facebook-csatlakozást." });
+      await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, p.profileId, ctx.appUser.profileId);
+      return {
+        profileId: p.profileId,
+        pages: p.pages.map((pg) => ({ id: pg.id, name: pg.name, hasInstagram: !!pg.instagramId })),
+      };
+    }),
+  chooseFacebookPage: appUserProcedure
+    .input(z.object({ selectionId: z.string().min(10).max(64), pageId: z.string().min(1).max(64) }))
+    .mutation(async ({ ctx, input }) => {
+      const { peekPendingPages, takePendingPages, saveMetaPageConnection } = await import("../metaPages");
+      const p = peekPendingPages(input.selectionId, ctx.appUser.id);
+      if (!p) throw new TRPCError({ code: "NOT_FOUND", message: "Az oldalválasztás lejárt. Indítsd újra a Facebook-csatlakozást." });
+      await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, p.profileId, ctx.appUser.profileId);
+      const page = p.pages.find((pg) => pg.id === input.pageId);
+      if (!page) throw new TRPCError({ code: "BAD_REQUEST", message: "Ez az oldal nem szerepel a választhatók között." });
+      const { getDb } = await import("../db");
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Adatbázis nem elérhető" });
+      takePendingPages(input.selectionId, ctx.appUser.id); // egyszer használható; a többi oldal kulcsa eldobódik
+      return saveMetaPageConnection(db, p.profileId, page);
+    }),
+  cancelFacebookSelection: appUserProcedure
+    .input(z.object({ selectionId: z.string().min(10).max(64) }))
+    .mutation(async ({ ctx, input }) => {
+      const { takePendingPages } = await import("../metaPages");
+      takePendingPages(input.selectionId, ctx.appUser.id);
+      return { ok: true };
+    }),
   isLinkedInConfigured: publicProcedure
     .query(() => {
       return { configured: !!(process.env.LINKEDIN_CLIENT_ID && process.env.LINKEDIN_CLIENT_SECRET) };

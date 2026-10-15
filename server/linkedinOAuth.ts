@@ -33,6 +33,7 @@ import { verifyAppToken } from "./routers/appAuth";
 import { assertProfileOwnership } from "./_core/ownership";
 import { getAppUserById } from "./authDb";
 import { encryptToken } from "./_core/tokenCrypto";
+import { DEACTIVATED_CONNECTION } from "./_core/socialConnectionState";
 
 const LINKEDIN_AUTH_URL = "https://www.linkedin.com/oauth/v2/authorization";
 const LINKEDIN_TOKEN_URL = "https://www.linkedin.com/oauth/v2/accessToken";
@@ -249,7 +250,7 @@ export function registerLinkedInOAuthRoutes(app: Express) {
 
       // Upsert: deactivate existing LinkedIn connections for this profile, then insert new
       await db.update(socialConnections)
-        .set({ isActive: false })
+        .set({ ...DEACTIVATED_CONNECTION }) // a régi kapcsolat kulcsa törlődik
         .where(and(
           eq(socialConnections.profileId, profileId),
           eq(socialConnections.platform, "linkedin"),
