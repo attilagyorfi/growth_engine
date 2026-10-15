@@ -1,6 +1,4 @@
 import { z } from "zod";
-import { COOKIE_NAME } from "../shared/const.js";
-import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, appUserProcedure, superAdminProcedure, router } from "./_core/trpc";
 import { appAuthRouter } from "./routers/appAuth";
@@ -151,15 +149,6 @@ function billingOrigin(req: { headers: Record<string, unknown> }): string {
 export const appRouter = router({
   system: systemRouter,
   appAuth: appAuthRouter,
-
-  auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user),
-    logout: publicProcedure.mutation(({ ctx }) => {
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      return { success: true } as const;
-    }),
-  }),
 
   // ─── Profiles ───────────────────────────────────────────────────────────────
   profiles: router({

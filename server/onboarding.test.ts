@@ -14,22 +14,6 @@ import { AI_PLAN_LIMITS, checkAiUsageLimit } from "./authDb";
 // ─── Test helpers ─────────────────────────────────────────────────────────────
 
 type AppUser = NonNullable<TrpcContext["appUser"]>;
-type AuthUser = NonNullable<TrpcContext["user"]>;
-
-function createAuthUser(overrides: Partial<AuthUser> = {}): AuthUser {
-  return {
-    id: 1,
-    openId: "test-open-id",
-    email: "test@example.com",
-    name: "Test User",
-    loginMethod: "manus",
-    role: "user",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    lastSignedIn: new Date(),
-    ...overrides,
-  };
-}
 
 function createAppUser(overrides: Partial<AppUser> = {}): AppUser {
   return {
@@ -48,9 +32,8 @@ function createAppUser(overrides: Partial<AppUser> = {}): AppUser {
   };
 }
 
-function createContext(appUserOverrides: Partial<AppUser> = {}, userOverrides: Partial<AuthUser> = {}): TrpcContext {
+function createContext(appUserOverrides: Partial<AppUser> = {}): TrpcContext {
   return {
-    user: createAuthUser(userOverrides),
     appUser: createAppUser(appUserOverrides),
     req: {
       protocol: "https",
@@ -224,13 +207,6 @@ describe("Subscription Plans – Feature Matrix", () => {
 // ─── Auth Context Tests ───────────────────────────────────────────────────────
 
 describe("Auth – Context Shape", () => {
-  it("auth.logout procedure requires authenticated user", async () => {
-    const ctx = createContext();
-    const caller = appRouter.createCaller(ctx);
-    const result = await caller.auth.logout();
-    expect(result).toEqual({ success: true });
-  });
-
   it("appUser role defaults to user for new registrations", () => {
     const appUser = createAppUser({ role: "user" });
     expect(appUser.role).toBe("user");

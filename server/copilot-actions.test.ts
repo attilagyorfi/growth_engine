@@ -21,7 +21,6 @@ import type { TrpcContext } from "./_core/context";
 
 function caller() {
   return appRouter.createCaller({
-    user: null,
     appUser: {
       id: "user-a", email: "a@example.hu", name: "A", role: "user", subscriptionPlan: "pro",
       onboardingCompleted: true, profileId: "profile-a", active: true,

@@ -1010,8 +1010,8 @@ export default function Settings() {
                 "Hozz létre új alkalmazást (Create App)",
                 "Products fülön add hozzá: \"Share on LinkedIn\" és \"Sign In with LinkedIn\"",
                 "Auth fülön másold ki a Client ID és Client Secret értékeket",
-                `Authorized redirect URL: ${typeof window !== "undefined" ? window.location.origin : "https://your-domain.manus.space"}/api/oauth/linkedin/callback`,
-                "Illeszd be a credentials-eket a fenti mezőkbe, vagy add hozzá a Secrets panelhez (LINKEDIN_CLIENT_ID, LINKEDIN_CLIENT_SECRET)",
+                `Authorized redirect URL: ${window.location.origin}/api/oauth/linkedin/callback`,
+                "Add hozzá a Railway Variables-höz: LINKEDIN_CLIENT_ID, LINKEDIN_CLIENT_SECRET",
               ].map((step, i) => (
                 <li key={i} className="flex gap-2">
                   <span className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold" style={{ background: "oklch(from var(--qa-accent) l c h / 15%)", color: "var(--qa-accent)" }}>{i + 1}</span>

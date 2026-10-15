@@ -56,7 +56,7 @@ A Growth Engine a Social Hub `/api/v1` API-jának kliense. A végpontok pontos l
 ### G0 – Takarítás és határ (2026. október 15. – november 15.)
 
 - [ ] A Growth Engine Meta-appja nem megy App Review-ra; FB/IG/TikTok csatlakozás kikapcsolva kapcsolóval (a kód a G2 végéig marad)
-- [ ] Manus-maradványok törlése: `manus` LLM-ág, OAuth-bridge `users` tábla, `.manus` mappák, `__manus__` asset
+- [x] Manus-maradványok törlése: `manus` LLM-ág, OAuth-bridge `users` tábla, `.manus` mappák, `__manus__` asset
 - [ ] Leads/outbound táblák és halott útvonalak törlése migrációval
 - [ ] Landing: a „Sales” modul és az alá nem támasztott „10x” állítás levétele; árazási blokk elrejtése a pilotig
 - [ ] README és fejlesztői dokumentáció frissítése a valós állapotra (Railway, Anthropic/OpenAI, Stripe kész)

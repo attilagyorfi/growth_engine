@@ -17,7 +17,7 @@ import {
 import { getProfilesByAppUser } from "../db";
 import { assertProfileOwnership } from "../_core/ownership";
 import { SignJWT, jwtVerify } from "jose";
-import { ENV } from "../_core/env";
+import { ENV, getPublicAppOrigin } from "../_core/env";
 import { isDemoEmail, resetDemoAccountData } from "../_core/demoAccount";
 import {
   loginIpLimiter, loginEmailLimiter,
@@ -338,8 +338,8 @@ export const appAuthRouter = router({
       const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
       await createPasswordResetToken({ id: nanoid(), userId: user.id, token, expiresAt });
       // Send password reset email via Resend
-      // Use APP_URL env if set, otherwise derive from request Origin header (works in all environments)
-      const appUrl = process.env.APP_URL || "https://g2a-growth-engine.manus.space";
+      // APP_URL, ennek hiányában a production Railway-domain (a régi manus.space cím megszűnt).
+      const appUrl = getPublicAppOrigin();
       const resetUrl = `${appUrl}/reset-password?token=${token}`;
       const emailSent = await sendPasswordResetEmail({
         to: user.email,

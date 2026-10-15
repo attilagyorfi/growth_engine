@@ -313,7 +313,8 @@ export const contentRouter = router({
           const [owner] = await db.select().from(appUsers).where(eq(appUsers.id, profile.appUserId)).limit(1);
           if (owner?.email) {
             const { sendPostReviewNotificationEmail } = await import("../email");
-            const appUrl = process.env.APP_URL || "https://g2a-growth-engine.manus.space";
+            const { getPublicAppOrigin } = await import("../_core/env");
+            const appUrl = getPublicAppOrigin();
             const reviewUrl = `${appUrl}/content-studio?postId=${post.id}`;
             const sent = await sendPostReviewNotificationEmail({
               to: owner.email,

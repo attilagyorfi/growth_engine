@@ -11,22 +11,6 @@ import type { TrpcContext } from "./_core/context";
 // ─── Test helpers ─────────────────────────────────────────────────────────────
 
 type AppUser = NonNullable<TrpcContext["appUser"]>;
-type AuthUser = NonNullable<TrpcContext["user"]>;
-
-function createAuthUser(overrides: Partial<AuthUser> = {}): AuthUser {
-  return {
-    id: 1,
-    openId: "super-admin-open-id",
-    email: "info@g2amarketing.hu",
-    name: "Super Admin",
-    loginMethod: "manus",
-    role: "super_admin",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    lastSignedIn: new Date(),
-    ...overrides,
-  };
-}
 
 function createAppUser(overrides: Partial<AppUser> = {}): AppUser {
   return {

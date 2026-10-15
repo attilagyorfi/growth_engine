@@ -18,7 +18,6 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 // NOTE: a Vercel Node.js ESM runtime strict directory-import védelmet alkalmaz.
 // Explicit .js extension az imports-ban → egyértelmű fájl-resolution
 // (no ERR_UNSUPPORTED_DIR_IMPORT). TS bundler mode compile-time .ts-re mappeli.
-import { registerOAuthRoutes } from "../server/_core/oauth.js";
 import { registerLinkedInOAuthRoutes } from "../server/linkedinOAuth.js";
 import { appRouter } from "../server/routers.js";
 import { createContext } from "../server/_core/context.js";
@@ -37,10 +36,6 @@ function getApp(): express.Express {
   // Standard body parsers with generous limits for file uploads.
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
-
-  // Manus OAuth callback (under /api/oauth/callback) — graceful skip ha
-  // OAUTH_SERVER_URL nincs beállítva (Manus-leválasztás után).
-  registerOAuthRoutes(app);
 
   // LinkedIn OAuth callback (under /api/oauth/linkedin/callback).
   registerLinkedInOAuthRoutes(app);

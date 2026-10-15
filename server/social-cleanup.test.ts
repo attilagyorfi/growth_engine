@@ -31,7 +31,6 @@ const pages = [
 ];
 
 const caller = (userId = "user-a") => appRouter.createCaller({
-  user: null,
   appUser: { id: userId, email: "a@example.hu", name: "A", role: "user", subscriptionPlan: "pro", onboardingCompleted: true, profileId: "profile-a", active: true, createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() },
   req: { protocol: "https", headers: {} },
   res: { clearCookie: () => {}, cookie: () => {} },

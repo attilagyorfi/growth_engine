@@ -2,44 +2,47 @@
  * G2A Growth Engine – LLM provider router tests
  *
  * Tests for the resolveProvider behavior — env-driven provider választás
- * a Manus Forge / OpenAI / Anthropic között. A tényleges HTTP hívást
- * nem mockoljuk; ezek a tesztek csak a provider routing logikát fedik le.
+ * az OpenAI és az Anthropic között (a régi Manus Forge proxy megszűnt). A
+ * tényleges HTTP hívást nem mockoljuk; ezek a tesztek csak a provider
+ * routing logikát fedik le.
  *
  * Mivel a provider az ENV objektumból olvas (ami modul-szinten init-elődik),
- * minden teszt előtt töröljük a require cache-t és újraimportáljuk a modulokat
- * az aktuális process.env értékekkel.
+ * minden teszt előtt töröljük a modul-cache-t (vi.resetModules), így az import
+ * az aktuális process.env értékekkel fut.
  */
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 const ORIGINAL_ENV = { ...process.env };
 
 beforeEach(() => {
-  // Töröljük a friss import cache-t hogy minden teszt friss ENV-vel induljon
-  // (az env.ts modul-szinten kapja az értékeket)
   process.env = { ...ORIGINAL_ENV };
+  vi.resetModules();
 });
 
 afterEach(() => {
   process.env = { ...ORIGINAL_ENV };
 });
 
-describe("LLM provider routing – Manus (default)", () => {
-  it("uses Manus when LLM_PROVIDER is unset (default)", async () => {
+describe("LLM provider routing – alapértelmezés", () => {
+  it("LLM_PROVIDER nélkül OPENAI_API_KEY-vel openai", async () => {
     delete process.env.LLM_PROVIDER;
-    process.env.BUILT_IN_FORGE_API_KEY = "test-manus-key";
+    process.env.OPENAI_API_KEY = "test-openai-key";
     const { ENV } = await import("./_core/env");
-    // Az ENV modul cache-elt — ha a első import LLM_PROVIDER nélkül történt,
-    // akkor "manus" a default. Ha másképp lett init-elve, akkor csak azt
-    // ellenőrizzük hogy az llmProvider egy érvényes string.
-    expect(["manus", "openai", "anthropic"]).toContain(ENV.llmProvider);
+    expect(ENV.llmProvider).toBe("openai");
+  });
+
+  it("LLM_PROVIDER nélkül, csak ANTHROPIC_API_KEY-vel anthropic", async () => {
+    delete process.env.LLM_PROVIDER;
+    delete process.env.OPENAI_API_KEY;
+    process.env.ANTHROPIC_API_KEY = "test-anthropic-key";
+    const { ENV } = await import("./_core/env");
+    expect(ENV.llmProvider).toBe("anthropic");
   });
 });
 
 describe("LLM provider type definitions", () => {
-  it("exports LlmProvider type union with three valid values", async () => {
+  it("exports invokeLLM", async () => {
     const llm = await import("./_core/llm");
-    // A type csak compile-time, de runtime-on a default model alapján
-    // tudjuk ellenőrizni hogy az OpenAI / Manus modellek külön vannak kezelve
     expect(typeof llm.invokeLLM).toBe("function");
   });
 });
@@ -49,20 +52,22 @@ describe("LLM provider error messages", () => {
     process.env.LLM_PROVIDER = "openai";
     delete process.env.OPENAI_API_KEY;
 
-    // Az invokeLLM-et nem hívjuk valódi messages-szel; az env hibát hamarabb dobja
-    // mint a fetch hívást. Egy mock üres requesttel teszteljük.
-    // FIGYELEM: a env.ts modul cache miatt a futás eredménye attól függ,
-    // hogy a teszt-runner cache-eli-e. Ha a teszt nem olvassa be a friss env-et,
-    // akkor a default Manus path-on mehet végig — ez OK egy lokális dev környezetben.
-    // A primary assertion a default path: mindig dob valamilyen hibát.
-
+    // Az env-hiba hamarabb dob, mint a fetch hívás.
     const { invokeLLM } = await import("./_core/llm");
     await expect(
       invokeLLM({ messages: [{ role: "user", content: "test" }] })
-    ).rejects.toThrow();
+    ).rejects.toThrow(/OPENAI_API_KEY/);
   });
 
-  it("throws not-implemented error for Anthropic provider", async () => {
+  it("a megszűnt manus (vagy bármi ismeretlen) provider érthető hibát ad", async () => {
+    process.env.LLM_PROVIDER = "manus";
+    const { invokeLLM } = await import("./_core/llm");
+    await expect(
+      invokeLLM({ messages: [{ role: "user", content: "test" }] })
+    ).rejects.toThrow(/Ismeretlen LLM_PROVIDER/);
+  });
+
+  it("throws for Anthropic provider with an invalid key", async () => {
     process.env.LLM_PROVIDER = "anthropic";
     process.env.ANTHROPIC_API_KEY = "fake-key";
 
@@ -85,8 +90,8 @@ describe("LLM ENV defaults", () => {
     expect(ENV.openaiApiUrl).toMatch(/^https?:\/\//);
   });
 
-  it("ENV.llmProvider is one of the three known values", async () => {
+  it("ENV.llmProvider is one of the two known values", async () => {
     const { ENV } = await import("./_core/env");
-    expect(["manus", "openai", "anthropic"]).toContain(ENV.llmProvider);
+    expect(["openai", "anthropic"]).toContain(ENV.llmProvider);
   });
 });
