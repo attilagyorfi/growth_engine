@@ -31,6 +31,7 @@ import { verifyAppToken } from "./routers/appAuth";
 import { assertProfileOwnership } from "./_core/ownership";
 import { getAppUserById } from "./authDb";
 import { encryptToken } from "./_core/tokenCrypto";
+import { DEACTIVATED_CONNECTION } from "./_core/socialConnectionState";
 
 const TIKTOK_AUTH_URL = "https://www.tiktok.com/v2/auth/authorize/";
 const TIKTOK_TOKEN_URL = "https://open.tiktokapis.com/v2/oauth/token/";
@@ -231,7 +232,7 @@ export function registerTikTokOAuthRoutes(app: Express) {
       }
 
       await db.update(socialConnections)
-        .set({ isActive: false })
+        .set({ ...DEACTIVATED_CONNECTION }) // a régi kapcsolat kulcsa törlődik
         .where(and(
           eq(socialConnections.profileId, profileId),
           eq(socialConnections.platform, "tiktok"),

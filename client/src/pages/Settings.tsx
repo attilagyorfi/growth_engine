@@ -205,6 +205,25 @@ export default function Settings() {
   const { data: platformConfig } = trpc.social.isPlatformConfigured.useQuery();
   const [oauthErrorModal, setOauthErrorModal] = useState<{ platform: string; reason: string } | null>(null);
 
+  // Facebook-oldalválasztás (ha a Meta több oldalt adott vissza)
+  const [fbSelectionId, setFbSelectionId] = useState<string | null>(null);
+  const [fbPageSearch, setFbPageSearch] = useState("");
+  const [fbChosenPageId, setFbChosenPageId] = useState<string | null>(null);
+  const fbPending = trpc.social.facebookPendingPages.useQuery(
+    { selectionId: fbSelectionId ?? "" },
+    { enabled: !!fbSelectionId, retry: false },
+  );
+  const closeFbSelection = () => { setFbSelectionId(null); setFbChosenPageId(null); setFbPageSearch(""); };
+  const chooseFbPage = trpc.social.chooseFacebookPage.useMutation({
+    onSuccess: (r) => {
+      toast.success(`Facebook csatlakoztatva: ${r.pageName}${r.instagramUsername ? ` + Instagram: @${r.instagramUsername}` : ""}`);
+      closeFbSelection();
+      refetchSocial();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const cancelFbSelection = trpc.social.cancelFacebookSelection.useMutation({ onSettled: closeFbSelection });
+
   // Handle OAuth callback eredmény a URL paraméterekből (mind a 4 platform):
   // ?linkedin=connected / ?facebook=connected&pages=N&instagram=M / ?tiktok=connected
   useEffect(() => {
@@ -221,7 +240,12 @@ export default function Settings() {
         cleaned = true;
       } else if (status === "error") {
         const reason = params.get("reason") ?? "unknown";
-        toast.error(`${label} csatlakoztatás sikertelen: ${OAUTH_ERROR_TEXT[reason] ?? reason}`, { duration: 8000 });
+        // Bezárásig látszik: eddig 8 mp után eltűnt, és a hiba oka utólag nem volt kideríthető.
+        toast.error(`${label} csatlakoztatás sikertelen: ${OAUTH_ERROR_TEXT[reason] ?? reason}`, { duration: Infinity, closeButton: true });
+        cleaned = true;
+      } else if (status === "select" && params.get("sel")) {
+        // Több Facebook-oldal: a felhasználó választja ki, melyik tartozik ehhez az ügyfélhez.
+        setFbSelectionId(params.get("sel"));
         cleaned = true;
       }
     };
@@ -635,6 +659,59 @@ export default function Settings() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Facebook-oldalválasztó — több oldalnál csak a kiválasztott mentődik ehhez az ügyfélhez */}
+      {fbSelectionId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.6)" }}>
+          <div className="w-full max-w-md rounded-2xl border p-6 flex flex-col max-h-[85vh]" style={{ background: "oklch(0.15 0.022 255)", borderColor: "var(--qa-border-hi)" }}>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-base font-bold" style={{ fontFamily: "var(--font-heading)", color: "var(--qa-fg)" }}>Melyik Facebook-oldal tartozik ehhez az ügyfélhez?</h3>
+              <button aria-label="Bezárás" onClick={() => cancelFbSelection.mutate({ selectionId: fbSelectionId })} style={{ color: "var(--qa-fg4)" }}><X size={18} /></button>
+            </div>
+            {fbPending.error ? (
+              <p className="text-sm my-4" style={{ color: "var(--qa-warning)" }}>{fbPending.error.message}</p>
+            ) : !fbPending.data ? (
+              <p className="text-sm my-4" style={{ color: "var(--qa-fg3)" }}>Oldalak betöltése…</p>
+            ) : (
+              <>
+                <p className="text-xs mb-3" style={{ color: "var(--qa-fg3)" }}>
+                  A Facebook {fbPending.data.pages.length} oldalt adott vissza. Csak a kiválasztott oldal (és a hozzá kötött Instagram) kapcsolódik ehhez az ügyfélhez — a többi oldal adatait nem tároljuk.
+                </p>
+                {fbPending.data.pages.length > 6 && (
+                  <input value={fbPageSearch} onChange={e => setFbPageSearch(e.target.value)} placeholder="Keresés oldalnév szerint…"
+                    className="w-full px-3 py-2 rounded-lg text-sm border mb-3" style={{ background: "var(--qa-surface2)", borderColor: "var(--qa-border)", color: "var(--qa-fg2)" }} />
+                )}
+                <div className="space-y-1.5 overflow-y-auto pr-1" style={{ maxHeight: "45vh" }}>
+                  {fbPending.data.pages
+                    .filter(p => p.name.toLocaleLowerCase("hu-HU").includes(fbPageSearch.trim().toLocaleLowerCase("hu-HU")))
+                    .map(p => (
+                      <button key={p.id} onClick={() => setFbChosenPageId(p.id)}
+                        className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border text-left text-sm transition-all"
+                        style={{
+                          background: fbChosenPageId === p.id ? "oklch(from var(--qa-accent) l c h / 12%)" : "var(--qa-surface2)",
+                          borderColor: fbChosenPageId === p.id ? "oklch(from var(--qa-accent) l c h / 45%)" : "var(--qa-border)",
+                          color: "var(--qa-fg2)",
+                        }}>
+                        <span className="font-medium truncate">{p.name}</span>
+                        {p.hasInstagram && <span className="ml-auto text-[11px] px-1.5 py-0.5 rounded-full shrink-0" style={{ background: "oklch(0.55 0.2 330 / 15%)", color: "#e6683c" }}>+ Instagram</span>}
+                      </button>
+                    ))}
+                </div>
+              </>
+            )}
+            <div className="flex gap-3 mt-5">
+              <button onClick={() => cancelFbSelection.mutate({ selectionId: fbSelectionId })} className="flex-1 py-2.5 rounded-lg text-sm font-semibold" style={{ background: "var(--qa-surface2)", color: "var(--qa-fg3)" }}>Mégse</button>
+              <button
+                disabled={!fbChosenPageId || chooseFbPage.isPending || !!fbPending.error}
+                onClick={() => fbChosenPageId && chooseFbPage.mutate({ selectionId: fbSelectionId, pageId: fbChosenPageId })}
+                className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
+                style={{ background: "var(--qa-accent)" }}>
+                {chooseFbPage.isPending ? "Csatlakoztatás…" : "Csatlakoztatás"}
+              </button>
+            </div>
           </div>
         </div>
       )}
