@@ -1,0 +1,43 @@
+# CI: típusellenőrzés, a teljes tesztcsomag és a production build minden PR-on
+# és a main-re érkező minden commiton. Ez a „zöld CI” kapu
+# (docs/termekcsalad/GROWTH_ENGINE_TERV.md) — a Vercel/Railway csak buildel.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: tsc + tesztek + build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      # A pnpm verzióját a package.json "packageManager" mezője adja.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Típusellenőrzés
+        run: pnpm check
+
+      - name: Tesztek
+        run: pnpm test
+
+      - name: Production build
+        run: pnpm build
