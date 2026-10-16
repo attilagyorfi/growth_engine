@@ -39,7 +39,6 @@ function ctxFor(overrides: Partial<AppUser>): TrpcContext {
     ...overrides,
   } as AppUser;
   return {
-    user: null as any,
     appUser,
     req: { protocol: "https", headers: {} } as TrpcContext["req"],
     res: { clearCookie: () => {}, cookie: () => {} } as unknown as TrpcContext["res"],

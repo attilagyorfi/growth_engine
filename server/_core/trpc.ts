@@ -1,4 +1,3 @@
-import { NOT_ADMIN_ERR_MSG, UNAUTHED_ERR_MSG } from '../../shared/const.js';
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import type { TrpcContext } from "./context";
@@ -36,27 +35,6 @@ const sanitizeErrors = t.middleware(async ({ next, path }) => {
 // Minden procedure ebből származik → mindenhol érvényes a hibatisztítás.
 const baseProcedure = t.procedure.use(sanitizeErrors);
 export const publicProcedure = baseProcedure;
-
-// ─── Manus OAuth protected procedure ─────────────────────────────────────────
-const requireUser = t.middleware(async opts => {
-  const { ctx, next } = opts;
-  if (!ctx.user) {
-    throw new TRPCError({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
-  }
-  return next({ ctx: { ...ctx, user: ctx.user } });
-});
-
-export const protectedProcedure = baseProcedure.use(requireUser);
-
-export const adminProcedure = baseProcedure.use(
-  t.middleware(async opts => {
-    const { ctx, next } = opts;
-    if (!ctx.user || ctx.user.role !== 'admin') {
-      throw new TRPCError({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
-    }
-    return next({ ctx: { ...ctx, user: ctx.user } });
-  }),
-);
 
 // ─── App Auth (email+password) protected procedure ────────────────────────────
 const requireAppUser = t.middleware(async opts => {

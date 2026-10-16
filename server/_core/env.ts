@@ -13,24 +13,19 @@ if (process.env.NODE_ENV === "production" && _jwtSecret.length < 32) {
 }
 
 export const ENV = {
-  appId: process.env.VITE_APP_ID ?? "",
   cookieSecret: _jwtSecret,
   databaseUrl: process.env.DATABASE_URL ?? "",
-  oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
-  ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
   isProduction: process.env.NODE_ENV === "production",
   // ─── LLM providers ─────────────────────────────────────────────────────
-  // LLM_PROVIDER lehet: "openai", "manus" (régi Forge proxy), "anthropic" (Claude).
-  // Alapértelmezés: ha LLM_PROVIDER nincs megadva, de van OPENAI_API_KEY, akkor
-  // automatikusan "openai" (a Manusról lemigráltunk). Csak ha OPENAI_API_KEY sincs,
-  // akkor esik vissza a régi "manus" (Forge) providerre — visszafelé kompatibilitásból.
+  // LLM_PROVIDER lehet: "anthropic" (Claude) vagy "openai".
+  // Ha nincs megadva: OPENAI_API_KEY-vel "openai", csak ANTHROPIC_API_KEY-vel
+  // "anthropic". Ismeretlen értékre (pl. a megszűnt "manus") az első AI-hívás
+  // érthető hibát ad, és az induló log is jelzi.
   llmProvider: (
-    process.env.LLM_PROVIDER ?? (process.env.OPENAI_API_KEY ? "openai" : "manus")
-  ).toLowerCase() as "manus" | "openai" | "anthropic",
+    process.env.LLM_PROVIDER ??
+    (process.env.OPENAI_API_KEY ? "openai" : process.env.ANTHROPIC_API_KEY ? "anthropic" : "openai")
+  ).toLowerCase() as "openai" | "anthropic",
   llmModel: process.env.LLM_MODEL ?? "",
-  // Manus Forge (default) — auto-injected env-ek
-  forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
-  forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
   // OpenAI (vagy bármilyen OpenAI-kompatibilis endpoint, pl. Together / Groq / Anyscale)
   openaiApiUrl: process.env.OPENAI_API_URL ?? "https://api.openai.com",
   openaiApiKey: process.env.OPENAI_API_KEY ?? "",

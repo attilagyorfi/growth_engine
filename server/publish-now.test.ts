@@ -35,7 +35,6 @@ import * as db from "./db";
 import * as publishing from "./publishing";
 
 const caller = () => appRouter.createCaller({
-  user: null,
   appUser: {
     id: "user-a", email: "a@example.hu", name: "A", role: "user", subscriptionPlan: "pro",
     onboardingCompleted: true, profileId: "profile-a", active: true,

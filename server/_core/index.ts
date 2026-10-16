@@ -5,7 +5,6 @@ import express from "express";
 import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { registerOAuthRoutes } from "./oauth";
 import { registerLinkedInOAuthRoutes } from "../linkedinOAuth";
 import { registerFacebookOAuthRoutes } from "../facebookOAuth";
 import { registerTikTokOAuthRoutes } from "../tiktokOAuth";
@@ -84,15 +83,9 @@ async function startServer() {
       // (Csak boolean + provider név — kulcs vagy más titok SOHA nem kerülhet ide.)
       llmProvider: ENV.llmProvider,
       llmKeyConfigured:
-        ENV.llmProvider === "openai"
-          ? !!ENV.openaiApiKey
-          : ENV.llmProvider === "anthropic"
-            ? !!ENV.anthropicApiKey
-            : !!ENV.forgeApiKey,
+        ENV.llmProvider === "anthropic" ? !!ENV.anthropicApiKey : !!ENV.openaiApiKey,
     });
   });
-  // OAuth callback under /api/oauth/callback
-  registerOAuthRoutes(app);
   // Social OAuth routes — minden hardened auth-gate + HMAC state +
   // ownership check + APP_URL-derived redirect-tel (lásd a security audit
   // #2 fix-et). Mind a 3 modul defensive: env nélkül 500-at ad, NEM crash.
@@ -133,7 +126,7 @@ async function startServer() {
   // tudja a containert routolni (a default `localhost`-only bind nem elég).
   server.listen(port, "0.0.0.0", () => {
     console.log(`Server running on port ${port} (${process.env.NODE_ENV || "development"})`);
-    // Diagnosztika: melyik LLM provider aktív (openai vs. a halott manus proxy)?
+    // Diagnosztika: melyik LLM provider aktív, és van-e hozzá kulcs?
     logLlmStartup();
     // Demo/teszt fiók seed — csak ha ENABLE_DEMO_ACCOUNT=true. Non-blocking,
     // non-fatal: a szerver akkor is fut, ha a seed elhasal (pl. nincs DB).

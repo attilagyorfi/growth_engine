@@ -211,12 +211,11 @@ const normalizeToolChoice = (
 };
 
 // ─── Provider routing ────────────────────────────────────────────────────────
-// A Manus Forge `/v1/chat/completions` séma OpenAI-kompatibilis, ezért
-// lényegében csak a base URL + Bearer token + default model változik a két
-// provider között. Az Anthropic más API formátumot (/v1/messages) használ,
-// ezért azt a dedikált anthropicAdapter.ts kezeli (az invokeLLM átirányít oda).
+// Az OpenAI a `/v1/chat/completions`-t hívja (base URL + Bearer token + default
+// model). Az Anthropic más API formátumot (/v1/messages) használ, ezért azt a
+// dedikált anthropicAdapter.ts kezeli (az invokeLLM átirányít oda).
 
-export type LlmProvider = "manus" | "openai" | "anthropic";
+export type LlmProvider = "openai" | "anthropic";
 
 type ResolvedProvider = {
   provider: LlmProvider;
@@ -242,17 +241,14 @@ export function logLlmStartup(): void {
   } else if (provider === "anthropic") {
     keyPresent = !!ENV.anthropicApiKey;
   } else {
-    keyPresent = !!ENV.forgeApiKey;
-    model = model || "gemini-2.5-flash";
+    console.warn(
+      `[LLM] FIGYELEM: ismeretlen LLM_PROVIDER="${provider}" — a szöveges AI NEM fog működni. Állítsd "anthropic"-ra vagy "openai"-ra a Railway Variables-ben.`,
+    );
+    return;
   }
   console.log(
     `[LLM] Aktív provider: ${provider} | model: ${model} | API kulcs: ${keyPresent ? "✓ beállítva" : "✗ HIÁNYZIK"}`,
   );
-  if (provider === "manus") {
-    console.warn(
-      "[LLM] FIGYELEM: a 'manus' provider a Manus Forge proxyt használja, ami már nem elérhető — a szöveges AI NEM fog működni. Állíts be OPENAI_API_KEY-t (és NE legyen LLM_PROVIDER=manus) a Railway Variables-ben.",
-    );
-  }
 }
 
 const resolveProvider = (): ResolvedProvider => {
@@ -282,19 +278,7 @@ const resolveProvider = (): ResolvedProvider => {
       defaultModel: ENV.llmModel || "claude-opus-5-5",
     };
   }
-  // Default: Manus Forge (OpenAI-kompatibilis proxy)
-  if (!ENV.forgeApiKey) {
-    throw new Error("LLM_PROVIDER=manus (default) but BUILT_IN_FORGE_API_KEY is not configured");
-  }
-  const base = ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
-    ? ENV.forgeApiUrl.replace(/\/$/, "")
-    : "https://forge.manus.im";
-  return {
-    provider: "manus",
-    url: `${base}/v1/chat/completions`,
-    authHeader: `Bearer ${ENV.forgeApiKey}`,
-    defaultModel: ENV.llmModel || "gemini-2.5-flash",
-  };
+  throw new Error(`Ismeretlen LLM_PROVIDER="${provider}" — használj "anthropic"-ot vagy "openai"-t`);
 };
 
 const normalizeResponseFormat = ({
@@ -416,14 +400,6 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
       // változatlan; a bőven kérő hívók (default 32768→16384) sem módosulnak.
       payload.max_completion_tokens = Math.min(Math.max(capped, 8192), 16384);
     }
-  } else {
-    // Manus Forge (OpenAI-kompatibilis proxy) — a régi max_tokens-t várja.
-    payload.max_tokens = requestedMaxTokens;
-  }
-  // A Manus Forge proxy specifikus thinking budget paraméter — más providereknél
-  // ignorált vagy hibát adhat, ezért csak Manus esetén küldjük
-  if (target.provider === "manus") {
-    payload.thinking = { budget_tokens: 128 };
   }
 
   const normalizedResponseFormat = normalizeResponseFormat({

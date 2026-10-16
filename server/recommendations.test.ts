@@ -8,7 +8,7 @@
  *    guards in case future code changes break the mapping)
  *
  * Az LLM hívást nem mockoljuk; az integráció valódi környezetben fut le
- * (DB + Manus/OpenAI API). Itt csak a Zod / ownership / mapping
+ * (DB + LLM API). Itt csak a Zod / ownership / mapping
  * szabályokat fixáljuk.
  */
 import { describe, it, expect } from "vitest";
@@ -16,21 +16,6 @@ import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
 
 type AppUser = NonNullable<TrpcContext["appUser"]>;
-type AuthUser = NonNullable<TrpcContext["user"]>;
-
-function createAuthUser(): AuthUser {
-  return {
-    id: 1,
-    openId: "test-open-id",
-    email: "test@example.com",
-    name: "Test User",
-    loginMethod: "manus",
-    role: "user",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    lastSignedIn: new Date(),
-  };
-}
 
 function createAppUser(overrides: Partial<AppUser> = {}): AppUser {
   return {
@@ -51,7 +36,6 @@ function createAppUser(overrides: Partial<AppUser> = {}): AppUser {
 
 function createContext(appUserOverrides: Partial<AppUser> = {}): TrpcContext {
   return {
-    user: createAuthUser(),
     appUser: createAppUser(appUserOverrides),
     req: { protocol: "https", headers: {} } as TrpcContext["req"],
     res: { clearCookie: () => {}, cookie: () => {} } as unknown as TrpcContext["res"],
@@ -92,7 +76,7 @@ describe("Recommendations – generate input validation", () => {
 
   it("accepts optional recentContent and recentLeads arrays", async () => {
     // Saját profil + DB nélkül a usage check átmegy, az invokeLLM viszont
-    // hibázik (nincs BUILT_IN_FORGE_API_KEY). Csak Zod réteget teszteljük.
+    // hibázik (nincs LLM API-kulcs). Csak Zod réteget teszteljük.
     const caller = appRouter.createCaller(createContext({ profileId: "profile-1" }));
     await expect(
       caller.recommendations.generate({

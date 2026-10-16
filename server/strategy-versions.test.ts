@@ -28,7 +28,6 @@ const mocked = db as unknown as {
 
 function caller() {
   const ctx = {
-    user: null,
     appUser: {
       id: "user-a", email: "a@example.hu", name: "A", role: "user", subscriptionPlan: "free",
       onboardingCompleted: true, profileId: "profile-a", active: true,

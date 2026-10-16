@@ -7,7 +7,7 @@
  *    "következő 3 hónap YYYY-MM" képlet a vártnak megfelelően alakul.
  *
  * Az LLM hívást nem mockoljuk; az AI-függő integráció csak valódi
- * BUILT_IN_FORGE_API_KEY-vel fut le. Itt a Zod réteget és a date
+ * LLM API-kulccsal fut le. Itt a Zod réteget és a date
  * matekot fixáljuk.
  */
 import { describe, it, expect } from "vitest";
@@ -15,22 +15,6 @@ import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
 
 type AppUser = NonNullable<TrpcContext["appUser"]>;
-type AuthUser = NonNullable<TrpcContext["user"]>;
-
-function createAuthUser(overrides: Partial<AuthUser> = {}): AuthUser {
-  return {
-    id: 1,
-    openId: "test-open-id",
-    email: "test@example.com",
-    name: "Test User",
-    loginMethod: "manus",
-    role: "user",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    lastSignedIn: new Date(),
-    ...overrides,
-  };
-}
 
 function createAppUser(overrides: Partial<AppUser> = {}): AppUser {
   return {
@@ -51,7 +35,6 @@ function createAppUser(overrides: Partial<AppUser> = {}): AppUser {
 
 function createContext(appUserOverrides: Partial<AppUser> = {}): TrpcContext {
   return {
-    user: createAuthUser(),
     appUser: createAppUser(appUserOverrides),
     req: { protocol: "https", headers: {} } as TrpcContext["req"],
     res: { clearCookie: () => {}, cookie: () => {} } as unknown as TrpcContext["res"],
