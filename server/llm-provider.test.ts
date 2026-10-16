@@ -21,6 +21,7 @@ beforeEach(() => {
 
 afterEach(() => {
   process.env = { ...ORIGINAL_ENV };
+  vi.unstubAllGlobals();
 });
 
 describe("LLM provider routing – alapértelmezés", () => {
@@ -70,6 +71,12 @@ describe("LLM provider error messages", () => {
   it("throws for Anthropic provider with an invalid key", async () => {
     process.env.LLM_PROVIDER = "anthropic";
     process.env.ANTHROPIC_API_KEY = "fake-key";
+    // Hálózat nélkül: az API 401-es válaszát helyben adjuk vissza (a 401-et az
+    // SDK nem próbálja újra, így a teszt gyors és nem függ a hálózattól).
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(
+      JSON.stringify({ type: "error", error: { type: "authentication_error", message: "invalid x-api-key" } }),
+      { status: 401, headers: { "content-type": "application/json" } },
+    )));
 
     const { invokeLLM } = await import("./_core/llm");
     // A primary assertion: hibát dob
