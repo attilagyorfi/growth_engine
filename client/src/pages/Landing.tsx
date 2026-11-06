@@ -1,6 +1,7 @@
 /**
- * G2A Growth Engine – Landing Page v4.0
- * Animated, bilingual, with synced pricing and real content
+ * G2A Growth Engine – Landing oldal
+ * Csak létező funkciót ígér: stratégia, tartalomtervezés, SEO-audit, AI Copilot.
+ * Az árazás a pilotig rejtve (SHOW_PRICING), a tartalma a LandingPricing komponensben van.
  */
 
 import { Link } from "wouter";
@@ -8,91 +9,19 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { motion, useInView } from "framer-motion";
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import {
-  BarChart3, Brain, Mail, Megaphone, Target, Users,
+  Bot, Brain, Megaphone, Search, Target, Users,
   CheckCircle2, ArrowRight, Shield, TrendingUp,
-  Sparkles, Rocket, Building2, Crown,
 } from "lucide-react";
 import { G2ALogoOnDark } from "@/components/G2ALogo";
-import PricingMatrix from "@/components/PricingMatrix";
+import FadeIn from "@/components/landing/FadeIn";
+import LandingPricing from "@/components/landing/LandingPricing";
 
-// ─── Shared Plans (synced with Register.tsx) ──────────────────────────────────
-// Színkódok minden csomaghoz — vizuális különbségtétel a választás megkönnyítésére.
-// A Tailwind classes string-ek a tartós (build-time) stílusokhoz, az accent
-// objektum CSS color literal-ekkel a finomabb alkalmazáshoz (badge, border, glow).
-const PLANS = [
-  {
-    id: "free",
-    name: "Ingyenes",
-    price: "0 Ft",
-    period: "/hó",
-    icon: Sparkles,
-    description: "Ismerkedj meg a platformmal — bankkártya nélkül",
-    features: ["1 vállalkozás profil", "1 stratégia generálása / hó", "5 poszt generálása / hó", "1 SEO audit / hó", "Alapanalitika (export nélkül)"],
-    cta: "Kezdd el ingyen",
-    popular: false,
-    disabled: false,
-    accent: { color: "#60a5fa", glow: "rgba(96,165,250,0.12)" }, // blue-400
-  },
-  {
-    id: "starter",
-    name: "Starter",
-    price: "9 900 Ft",
-    period: "/hó",
-    icon: Rocket,
-    description: "Kis vállalkozásoknak",
-    features: ["1 vállalkozás profil", "5 stratégia generálása / hó", "50 poszt generálása / hó", "3 SEO audit / hó", "Lead & kampány kezelés", "Analitika export"],
-    cta: "Starter indítása",
-    popular: true,
-    disabled: false,
-    accent: { color: "#a78bfa", glow: "rgba(167,139,250,0.18)" }, // violet-400
-  },
-  {
-    id: "pro",
-    name: "Pro",
-    price: "24 900 Ft",
-    period: "/hó",
-    icon: Building2,
-    description: "Növekvő vállalkozásoknak",
-    features: ["3 vállalkozás profil", "300 szöveg generálása / hó", "30 kép generálása / hó", "5 HeyGen videó / hó", "10 SEO audit / hó", "Prioritásos támogatás"],
-    cta: "Pro indítása",
-    popular: false,
-    disabled: false,
-    accent: { color: "#34d399", glow: "rgba(52,211,153,0.15)" }, // emerald-400
-  },
-  {
-    id: "agency",
-    name: "Agency",
-    price: "49 900 Ft",
-    period: "/hó",
-    icon: Crown,
-    description: "Marketing ügynökségeknek — egyedi elbírálással",
-    features: ["Korlátlan projekt", "1 000 szöveg generálása / hó", "100 kép generálása / hó", "15 HeyGen videó / hó", "30 SEO audit / hó", "White-label lehetőség", "Dedikált támogatás"],
-    cta: "Vedd fel a kapcsolatot",
-    popular: false,
-    disabled: true,
-    accent: { color: "#fbbf24", glow: "rgba(251,191,36,0.15)" }, // amber-400
-  },
-] as const;
+// Az árazás a pilotig rejtve: true-ra állítva a szekció és a nav link is visszajön.
+const SHOW_PRICING = false;
 
 // ─── Animation helpers ────────────────────────────────────────────────────────
-function FadeIn({ children, delay = 0, className = "" }: { children: React.ReactNode; delay?: number; className?: string }) {
-  const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: "-80px" });
-  return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: 24 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.55, delay, ease: [0.22, 1, 0.36, 1] }}
-      className={className}
-    >
-      {children}
-    </motion.div>
-  );
-}
-
 function SlideIn({ children, delay = 0, direction = "left", className = "" }: { children: React.ReactNode; delay?: number; direction?: "left" | "right"; className?: string }) {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: "-60px" });
@@ -110,17 +39,7 @@ function SlideIn({ children, delay = 0, direction = "left", className = "" }: { 
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-// ─── Annual prices (10 months = 2 months free) ───────────────────────────────
-const ANNUAL_PRICES: Record<string, string> = {
-  free: "0 Ft", starter: "99 000 Ft", pro: "249 000 Ft", agency: "499 000 Ft",
-};
-const ANNUAL_MONTHLY_EQUIV: Record<string, string> = {
-  free: "0 Ft/hó", starter: "8 250 Ft/hó", pro: "20 750 Ft/hó", agency: "41 583 Ft/hó",
-};
-
 export default function Landing() {
-  const [isYearly, setIsYearly] = useState(false);
-
   const bg = "#0A0A0F";
   const subtext = "text-white/50";
   const cardBg = "bg-white/[0.03] border-white/[0.06]";
@@ -128,10 +47,10 @@ export default function Landing() {
 
   const features = [
     { icon: Brain, title: "AI-alapú Stratégia", desc: "Az AI elemzi a vállalkozásodat és teljes marketing stratégiát generál: célközönség, tartalom pillérek, havi prioritások." },
-    { icon: Megaphone, title: "Tartalom Stúdió", desc: "LinkedIn, Facebook, Instagram, TikTok – ütemezd, szerkeszd és hagyd jóvá a posztjaidat egy helyen." },
-    { icon: Mail, title: "Hírlevél", desc: "Gyűjtsd a feliratkozókat a regisztrációs űrlapról, és küldj nekik brand-arculatú hírleveleket egyetlen felületről." },
+    { icon: Megaphone, title: "Tartalom Stúdió", desc: "LinkedIn, Facebook, Instagram – tervezd, szerkeszd és hagyd jóvá a posztjaidat egy helyen." },
+    { icon: Search, title: "SEO-audit", desc: "Add meg a weboldalad címét, és kapj részletes keresőoptimalizálási elemzést, konkrét javaslatokkal." },
     { icon: Target, title: "Vevői Intelligencia", desc: "Automatikus versenytárs elemzés, buyer persona generálás és márka DNA feltérképezés." },
-    { icon: BarChart3, title: "Analitika & KPI", desc: "Valós idejű teljesítmény mutatók, tartalom hatékonyság és lead konverzió nyomon követése." },
+    { icon: Bot, title: "AI Copilot", desc: "Kérdezz bátran a munka közben: az asszisztens ismeri a vállalkozásod adatait, válaszol, magyaráz és javasol." },
     { icon: Users, title: "Ügyfél Workspace", desc: "Minden ügyfélnek saját, izolált munkaterülete van – az adataik biztonságban maradnak." },
   ];
 
@@ -159,9 +78,11 @@ export default function Landing() {
             <a href="#how" className="hover:text-white transition-colors">
               Hogyan működik
             </a>
-            <a href="#pricing" className="hover:text-white transition-colors">
-              Árazás
-            </a>
+            {SHOW_PRICING && (
+              <a href="#pricing" className="hover:text-white transition-colors">
+                Árazás
+              </a>
+            )}
           </div>
 
           {/* Right actions */}
@@ -210,8 +131,7 @@ export default function Landing() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className={`text-xl mb-10 max-w-2xl mx-auto leading-relaxed ${subtext}`}
           >
-            A G2A Growth Engine AI-alapú marketing operációs rendszer, amely segít a vállalkozásodnak stratégiát alkotni, tartalmat gyártani és leadeket generálni – mindezt egyetlen platformon."
-             
+            A G2A Growth Engine AI-alapú marketing operációs rendszer, amely segít a vállalkozásodnak stratégiát alkotni, tartalmat tervezni és a SEO-t rendbe tenni – mindezt egyetlen platformon.
           </motion.p>
 
           <motion.div
@@ -261,11 +181,10 @@ export default function Landing() {
 
       {/* ─── Stats ───────────────────────────────────────────────────────────── */}
       <section className="py-12 px-6 border-y border-white/5">
-        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
           {[
-            { val: "10x", label: "Gyorsabb stratégia alkotás" },
             { val: "5 perc", label: "Onboarding idő" },
-            { val: "3 modul", label: "Stratégia, Tartalom, Sales" },
+            { val: "3 modul", label: "Stratégia, Tartalom, SEO" },
             { val: "100%", label: "Magyar nyelvű" },
           ].map((stat, i) => (
             <FadeIn key={stat.val} delay={i * 0.08}>
@@ -284,7 +203,7 @@ export default function Landing() {
               Minden, amire szükséged van
             </h2>
             <p className={`text-lg max-w-2xl mx-auto ${subtext}`}>
-              Egy platform, amely lefedi a teljes marketing és értékesítési folyamatot – az ötlettől az eredményig.
+              Egy platform a marketinged tervezéséhez – a stratégiától a jóváhagyott tartalomig.
             </p>
           </FadeIn>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -305,23 +224,22 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ─── Screenshot section: Tartalom naptár + Videókészítő ──────────────────────── */}
+      {/* ─── Screenshot section: Tartalom naptár ─────────────────────────────── */}
       <section className="py-24 px-6 bg-white/[0.02]">
         <div className="max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <SlideIn direction="left">
               <Badge className="mb-4 bg-violet-500/10 text-violet-400 border-violet-500/20">
-                Tartalom + Videó egy helyen
+                Tartalom egy helyen
               </Badge>
               <h2 className="text-3xl md:text-4xl font-bold mb-6">
-                Tartalom naptár és AI videókészítő
+                Tartalom naptár
               </h2>
               <p className={`text-lg mb-8 leading-relaxed ${subtext}`}>
-                Tervezd meg a hónapos tartalomnaptárat, majd Pro csomaggal alakítsd át a legjobb posztjaidat HeyGen AI avatár videókká – kamera és stúdió nélkül."
-                 
+                Tervezd meg a havi tartalomnaptárat, és lásd egy helyen, melyik poszt hol tart.
               </p>
               <div className="space-y-3">
-                {["Havi tartalom naptár LinkedIn, Facebook, Instagram platformokra", "Vázlat, ütemezett és közzétett posztok színkódolással", "AI avatár videók szkriptből – 2-5 perc alatt (Pro)", "5 videó per hónap a Pro csomagban"].map((item) => (
+                {["Havi tartalom naptár LinkedIn, Facebook, Instagram platformokra", "A posztok állapota egy pillantással látszik, színkódolással"].map((item) => (
                   <div key={item} className="flex items-center gap-3">
                     <CheckCircle2 className="w-5 h-5 text-violet-400 shrink-0" />
                     <span className={`text-sm ${subtext}`}>{item}</span>
@@ -333,54 +251,11 @@ export default function Landing() {
               <div className="rounded-2xl overflow-hidden border shadow-xl border-white/10">
                 <img
                   src="https://d2xsxph8kpxj0f.cloudfront.net/109169450/WzYbMH2rdiW2pftdUmZaz8/screenshot-content-minta-QFnVmj9cHdhsCZ6tLWtfDx.webp"
-                  alt="Tartalom Naptár és Videókészítő – Minta Cég Kft. Pro"
+                  alt="Tartalom Naptár – Minta Cég Kft. Pro"
                   className="w-full object-cover"
                 />
               </div>
             </SlideIn>
-          </div>
-        </div>
-      </section>
-
-      {/* ─── Jövőbeli funkciók (Roadmap) ────────────────────────────────────────────── */}
-      <section className="py-24 px-6">
-        <div className="max-w-6xl mx-auto">
-          <FadeIn className="text-center mb-16">
-            <Badge className="mb-4 bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
-              🚧 Hamarosan
-            </Badge>
-            <h2 className="text-4xl font-bold mb-4">
-              A platform folyamatosan bővül
-            </h2>
-            <p className={`text-lg max-w-2xl mx-auto ${subtext}`}>
-              A G2A Growth Engine egy élő termék – folyamatosan új funkciókkal bővítjük az ügyfelek visszajelzései alapján.
-            </p>
-          </FadeIn>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              { icon: "🎙️", phase: "Q3 2026", title: "Podcast & Hang Stúdió", desc: "AI-alapú podcast szkript generálás, hangfelvétel és automatikus átirat egy helyen." },
-              { icon: "📊", phase: "Q3 2026", title: "Fejlett Riportálás", desc: "Automatikus heti és havi marketing riportok PDF-ben – küldhető az ügyfeleknek." },
-              { icon: "🤝", phase: "Q4 2026", title: "Csapat Együttműködés", desc: "Több felhasználó egy munkaterületen, szerepkörökkel és jóváhagyási folyamatokkal." },
-              { icon: "🔗", phase: "Q4 2026", title: "Direkt Social Közzététel", desc: "Valódi OAuth integráció LinkedIn, Facebook és Instagram API-val – automatikus közzététel az ütemezés alapján." },
-              { icon: "🌐", phase: "2027 Q1", title: "Többnyelvű Tartalom", desc: "Tartalmak automatikus fordítása és lokalizációja 10+ nyelvre AI segítségével." },
-              { icon: "🛒", phase: "2027 Q1", title: "E-commerce Integráció", desc: "Shopify, WooCommerce és Unas összekötés – termék adatok automatikus betöltése a tartalom generáláshoz." },
-            ].map((item, i) => (
-              <FadeIn key={item.title} delay={i * 0.07}>
-                <Card className={`h-full relative overflow-hidden ${cardBg} hover:scale-[1.02] transition-transform duration-300`}>
-                  <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald-500/40 via-violet-500/40 to-transparent" />
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <span className="text-2xl">{item.icon}</span>
-                      <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-xs">
-                        {item.phase}
-                      </Badge>
-                    </div>
-                    <h3 className="font-semibold text-lg mb-2">{item.title}</h3>
-                    <p className={`text-sm leading-relaxed ${subtext}`}>{item.desc}</p>
-                  </CardContent>
-                </Card>
-              </FadeIn>
-            ))}
           </div>
         </div>
       </section>
@@ -415,198 +290,10 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ─── Pricing ─────────────────────────────────────────────────────────── */}
-      <section id="pricing" className="py-24 px-6 bg-white/[0.02]">
-        <div className="max-w-5xl mx-auto">
-          <FadeIn className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">
-              Egyszerű árazás
-            </h2>
-            <p className={`text-lg mb-8 ${subtext}`}>
-              Kezdd el ingyen, fejlődj velünk!
-            </p>
-            {/* Éves/havi kapcsoló */}
-            <div className="inline-flex items-center gap-1 p-1 rounded-xl" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
-              <button
-                onClick={() => setIsYearly(false)}
-                className="px-5 py-2 rounded-lg text-sm font-semibold transition-all"
-                style={!isYearly ? { background: "var(--qa-accent)", color: "white" } : { color: "rgba(255,255,255,0.45)" }}
-              >
-                Havi
-              </button>
-              <button
-                onClick={() => setIsYearly(true)}
-                className="px-5 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2"
-                style={isYearly ? { background: "var(--qa-accent)", color: "white" } : { color: "rgba(255,255,255,0.45)" }}
-              >
-                Éves
-                <span className="text-xs px-1.5 py-0.5 rounded-full font-bold" style={{ background: "oklch(0.65 0.18 165 / 30%)", color: "oklch(0.65 0.18 165)" }}>
-                  -17%
-                </span>
-              </button>
-            </div>
-          </FadeIn>
-          {/* Ingyenes csomag — vertikális kártya, max-width center-elve, accent színnel */}
-          {(() => {
-            const freePlan = PLANS.find(p => p.id === "free")!;
-            return (
-              <FadeIn>
-                <div className="max-w-md mx-auto mb-2">
-                  <Card
-                    className="h-full relative overflow-hidden transition-transform duration-300 hover:scale-[1.03]"
-                    style={{
-                      background: `${freePlan.accent.glow}`,
-                      borderColor: `${freePlan.accent.color}50`,
-                    }}
-                  >
-                    <div className="absolute top-4 right-4">
-                      <Badge className="border-0 text-xs" style={{ background: freePlan.accent.color, color: "#0A0A0F" }}>
-                        Bankkártya nélkül
-                      </Badge>
-                    </div>
-                    <CardContent className="p-8">
-                      <div className="mb-6">
-                        <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3" style={{ background: `${freePlan.accent.color}1f` }}>
-                          <freePlan.icon className="w-5 h-5" style={{ color: freePlan.accent.color }} />
-                        </div>
-                        <h3 className="text-xl font-bold mb-1">{freePlan.name}</h3>
-                        <div className="mb-1">
-                          <div className="text-3xl font-bold">
-                            {freePlan.price}
-                            <span className={`text-base font-normal ml-1 ${subtext}`}>{freePlan.period}</span>
-                          </div>
-                        </div>
-                        <p className={`text-sm ${subtext}`}>{freePlan.description}</p>
-                      </div>
-                      <ul className="space-y-2.5 mb-8">
-                        {freePlan.features.map((item) => (
-                          <li key={item} className="flex items-center gap-2 text-sm">
-                            <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: freePlan.accent.color }} />
-                            <span className={subtext}>{item}</span>
-                          </li>
-                        ))}
-                      </ul>
-                      <Link href="/regisztracio">
-                        <Button
-                          className="w-full border-0 text-white"
-                          style={{ background: freePlan.accent.color, color: "#0A0A0F" }}
-                        >
-                          {freePlan.cta}
-                        </Button>
-                      </Link>
-                    </CardContent>
-                  </Card>
-                </div>
-              </FadeIn>
-            );
-          })()}
+      {/* ─── Pricing (a pilotig rejtve) ──────────────────────────────────────── */}
+      {SHOW_PRICING && <LandingPricing />}
 
-          {/* "VAGY VÁLASSZ FIZETŐS CSOMAGOT" elválasztó */}
-          <div className="flex items-center gap-3 my-8">
-            <div className="flex-1 h-px bg-white/10" />
-            <span className="text-xs uppercase tracking-wider text-white/40">vagy válassz fizetős csomagot</span>
-            <div className="flex-1 h-px bg-white/10" />
-          </div>
-
-          {/* 3 fizetős csomag — egyedi színkóddal mindegyik */}
-          <div className="grid md:grid-cols-3 gap-6">
-            {PLANS.filter(p => p.id !== "free").map((plan, i) => (
-              <FadeIn key={plan.id} delay={i * 0.1}>
-                <Card
-                  className={`h-full relative overflow-hidden transition-transform duration-300 ${
-                    plan.disabled ? "opacity-60" : "hover:scale-[1.03]"
-                  }`}
-                  style={{
-                    background: plan.accent.glow,
-                    borderColor: `${plan.accent.color}50`,
-                  }}
-                >
-                  {plan.popular && !plan.disabled && (
-                    <div className="absolute top-4 right-4">
-                      <Badge className="border-0 text-xs" style={{ background: plan.accent.color, color: "#0A0A0F" }}>
-                        Legnépszerűbb
-                      </Badge>
-                    </div>
-                  )}
-                  {plan.disabled && (
-                    <div className="absolute top-4 right-4">
-                      <Badge className="border-0 text-xs" style={{ background: `${plan.accent.color}40`, color: plan.accent.color }}>
-                        Hamarosan
-                      </Badge>
-                    </div>
-                  )}
-                  <CardContent className="p-8">
-                    <div className="mb-6">
-                      <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-3" style={{ background: `${plan.accent.color}1f` }}>
-                        <plan.icon className="w-5 h-5" style={{ color: plan.accent.color }} />
-                      </div>
-                      <h3 className="text-xl font-bold mb-1">{plan.name}</h3>
-                      <motion.div
-                        key={isYearly ? "yearly" : "monthly"}
-                        initial={{ opacity: 0, y: -6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.25 }}
-                        className="mb-1"
-                      >
-                        <div className="text-3xl font-bold">
-                          {isYearly ? ANNUAL_PRICES[plan.id] ?? plan.price : plan.price}
-                          {isYearly ? (
-                            <span className={`text-base font-normal ml-1 ${subtext}`}>/év</span>
-                          ) : (
-                            <span className={`text-base font-normal ml-1 ${subtext}`}>{plan.period}</span>
-                          )}
-                        </div>
-                        {isYearly && (
-                          <p className="text-xs mt-0.5" style={{ color: "oklch(0.65 0.18 165)" }}>
-                            {ANNUAL_MONTHLY_EQUIV[plan.id]} – 2 hónap ingyen
-                          </p>
-                        )}
-                      </motion.div>
-                      <p className={`text-sm ${subtext}`}>{plan.description}</p>
-                    </div>
-                    <ul className="space-y-2.5 mb-8">
-                      {plan.features.map((item) => (
-                        <li key={item} className="flex items-center gap-2 text-sm">
-                          <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: plan.accent.color }} />
-                          <span className={subtext}>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    {plan.disabled ? (
-                      <Button disabled className="w-full bg-white/5 text-white/40 border-0 cursor-not-allowed">
-                        {plan.cta}
-                      </Button>
-                    ) : (
-                      <Link href="/regisztracio">
-                        <Button
-                          className="w-full border-0 text-white"
-                          style={{ background: plan.accent.color, color: "#0A0A0F" }}
-                        >
-                          {plan.cta}
-                        </Button>
-                      </Link>
-                    )}
-                  </CardContent>
-                </Card>
-              </FadeIn>
-            ))}
-          </div>
-
-          {/* Feature-mátrix — részletes összehasonlítás a kártyák alatt */}
-          <FadeIn delay={0.1} className="mt-16">
-            <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold mb-2">Csomag-összehasonlítás</h3>
-              <p className={`text-sm ${subtext}`}>
-                Minden funkció és korlát egy táblázatban — hogy pontosan lásd, melyik csomag felel meg a legjobban.
-              </p>
-            </div>
-            <PricingMatrix />
-          </FadeIn>
-        </div>
-      </section>
-
-
-            {/* ─── CTA ─────────────────────────────────────────────────────────────── */}
+      {/* ─── CTA ─────────────────────────────────────────────────────────────── */}
       <section className="py-24 px-6">
         <FadeIn>
           <div className="max-w-3xl mx-auto text-center">
@@ -620,8 +307,7 @@ export default function Landing() {
               Készen állsz a növekedésre?
             </h2>
             <p className={`text-lg mb-10 ${subtext}`}>
-              Regisztrálj ingyen és 5 perc alatt készen áll a marketing stratégiád."
-               
+              Regisztrálj ingyen és 5 perc alatt készen áll a marketing stratégiád.
             </p>
             <Link href="/regisztracio">
               <Button size="lg" className="bg-violet-600 hover:bg-violet-500 text-white border-0 px-10 h-14 text-lg">
