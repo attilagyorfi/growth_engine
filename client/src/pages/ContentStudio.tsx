@@ -700,9 +700,11 @@ export default function ContentStudio() {
           {!activeStrategy && suggestedTemplates.length === 0 && (
             <div className="rounded-xl overflow-hidden border" style={{ borderColor: border }}>
               <img
-                src="https://d2xsxph8kpxj0f.cloudfront.net/109169450/WzYbMH2rdiW2pftdUmZaz8/content-studio-hero_cdb2a587.png"
-                alt="Content Studio preview"
-                className="w-full object-cover opacity-70"
+                src="/brand/illustrations/content-studio-preview.svg"
+                alt="Tartalomstúdió minta nézete"
+                width={1200}
+                height={400}
+                className="w-full h-auto object-cover opacity-70"
               />
             </div>
           )}
