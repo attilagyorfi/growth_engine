@@ -5,7 +5,7 @@
  *   a függő választás a felhasználóhoz kötött, lejár és egyszer használható.
  * - Az egyszeri SQL-takarítás egyetlen, idempotens UPDATE.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { readFileSync } from "node:fs";
 
 const fake = vi.hoisted(() => ({ inserted: [] as any[], updateValues: [] as any[], conn: null as any }));
@@ -23,6 +23,7 @@ import { savePendingPages, peekPendingPages, takePendingPages, resetPendingPages
 import { DEACTIVATED_CONNECTION } from "./_core/socialConnectionState";
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
+import { FEATURE_FLAGS } from "./featureFlags";
 import { parseStatements } from "../scripts/migrate-db.mjs";
 
 const pages = [
@@ -36,7 +37,12 @@ const caller = (userId = "user-a") => appRouter.createCaller({
   res: { clearCookie: () => {}, cookie: () => {} },
 } as unknown as TrpcContext);
 
+// Az oldalválasztást a bekapcsolt FB/IG csatlakozással teszteljük (a kikapcsolt ág: social-meta-tiktok-flag.test.ts).
+const originalFlag = FEATURE_FLAGS.metaTiktokConnect;
+afterEach(() => { FEATURE_FLAGS.metaTiktokConnect = originalFlag; });
+
 beforeEach(() => {
+  FEATURE_FLAGS.metaTiktokConnect = true;
   resetPendingPages();
   fake.inserted = [];
   fake.updateValues = [];

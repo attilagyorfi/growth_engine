@@ -41,6 +41,7 @@ import { ENV, getPublicAppOrigin } from "./_core/env";
 import { verifyAppToken } from "./routers/appAuth";
 import { assertProfileOwnership } from "./_core/ownership";
 import { getAppUserById } from "./authDb";
+import { isMetaTiktokConnectEnabled } from "./featureFlags";
 import { META_GRAPH_BASE, META_OAUTH_DIALOG_URL } from "./_core/meta";
 import { savePendingPages, saveMetaPageConnection, type MetaPage } from "./metaPages";
 
@@ -102,6 +103,11 @@ export function registerFacebookOAuthRoutes(app: Express) {
    * Step 1: Initiate Facebook OAuth
    */
   app.get("/api/oauth/facebook/start", async (req: Request, res: Response) => {
+    // G0: a csatlakozás kapcsolóval ki van kapcsolva (server/featureFlags.ts) → nincs OAuth.
+    if (!isMetaTiktokConnectEnabled()) {
+      res.redirect(`${getAppOrigin()}/beallitasok?tab=integrations&facebook=unavailable`);
+      return;
+    }
     const { profileId } = req.query as { profileId?: string };
     if (!profileId) { res.status(400).json({ error: "Missing profileId" }); return; }
 
@@ -150,6 +156,11 @@ export function registerFacebookOAuthRoutes(app: Express) {
    */
   app.get("/api/oauth/facebook/callback", async (req: Request, res: Response) => {
     const appOrigin = getAppOrigin();
+    // Kikapcsolt állapotban egy régi/kézzel hívott visszatérés se hozzon létre kapcsolatot.
+    if (!isMetaTiktokConnectEnabled()) {
+      res.redirect(`${appOrigin}/beallitasok?tab=integrations&facebook=unavailable`);
+      return;
+    }
     const { code, state, error, error_description } = req.query as {
       code?: string; state?: string; error?: string; error_description?: string;
     };

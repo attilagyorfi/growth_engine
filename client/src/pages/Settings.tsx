@@ -81,6 +81,9 @@ const OAUTH_ERROR_TEXT: Record<string, string> = {
   unexpected: "váratlan hiba történt. Próbáld újra később.",
 };
 
+/** A kikapcsolt FB/IG/TikTok csatlakozás magyarázata (Integrációk fül + visszairányítás). */
+const META_TIKTOK_UNAVAILABLE_TEXT = "A Facebook-, Instagram- és TikTok-csatlakozás egyelőre nem elérhető. A posztokat a Social Hubból teheted közzé.";
+
 export default function Settings() {
   const { activeProfile } = useProfile();
   const { user: appUser, isSuperAdmin } = useAppAuth();
@@ -203,6 +206,9 @@ export default function Settings() {
   // hívásban. A frontend ezzel dönti el, hogy a gomb klikkelhető (van
   // env Railway-en) vagy a "Még nincs konfigurálva" modal jelenjen meg.
   const { data: platformConfig } = trpc.social.isPlatformConfigured.useQuery();
+  // G0: a FB/IG/TikTok csatlakozás szerveroldali kapcsolóval ki van kapcsolva (server/featureFlags.ts).
+  // Betöltés közben is rejtve marad, hogy ne villanjon fel a gomb.
+  const metaTiktokEnabled = !!platformConfig?.metaTiktokEnabled;
   const [oauthErrorModal, setOauthErrorModal] = useState<{ platform: string; reason: string } | null>(null);
 
   // Facebook-oldalválasztás (ha a Meta több oldalt adott vissza)
@@ -242,6 +248,9 @@ export default function Settings() {
         const reason = params.get("reason") ?? "unknown";
         // Bezárásig látszik: eddig 8 mp után eltűnt, és a hiba oka utólag nem volt kideríthető.
         toast.error(`${label} csatlakoztatás sikertelen: ${OAUTH_ERROR_TEXT[reason] ?? reason}`, { duration: Infinity, closeButton: true });
+        cleaned = true;
+      } else if (status === "unavailable") {
+        toast.info(META_TIKTOK_UNAVAILABLE_TEXT);
         cleaned = true;
       } else if (status === "select" && params.get("sel")) {
         // Több Facebook-oldal: a felhasználó választja ki, melyik tartozik ehhez az ügyfélhez.
@@ -542,6 +551,7 @@ export default function Settings() {
                 );
               })()}
 
+              {metaTiktokEnabled ? (<>
               {/* Facebook + Instagram — egyetlen OAuth flow a Meta-n keresztül.
                   Ha sikeresen csatlakozik, az IG Business accountokat is
                   feltölti a connection-be (lásd server/facebookOAuth.ts). */}
@@ -618,6 +628,12 @@ export default function Settings() {
                   </div>
                 );
               })()}
+              </>) : (
+                <div className="col-span-1 sm:col-span-3 flex items-center p-4 rounded-xl border text-xs leading-relaxed"
+                  style={{ background: "var(--qa-surface2)", borderColor: "var(--qa-border)", color: "var(--qa-fg3)" }}>
+                  {META_TIKTOK_UNAVAILABLE_TEXT}
+                </div>
+              )}
             </div>
 
             {/* Több aktív fiók ugyanazon a platformon (pl. több Facebook-oldal) — az automatikus

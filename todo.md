@@ -1155,6 +1155,6 @@
 ## G0 – Lezárás (2026. november)
 
 - [x] Landing és app hero képek: a törött Manus CDN helyett saját SVG-makettek a `client/public/landing/` és `client/public/brand/illustrations/` alatt (őrteszt: `server/static-assets.test.ts`)
-- [ ] FB/IG/TikTok csatlakozás kikapcsolása kapcsolóval
+- [x] FB/IG/TikTok csatlakozás kikapcsolása kapcsolóval: `server/featureFlags.ts` (alapból ki, `SOCIAL_META_TIKTOK_ENABLED=true`-val visszakapcsolható); az OAuth start/callback, a kézi token és az oldalválasztás nem hoz létre új kapcsolatot, a Beállítások helyette magyarázatot mutat; a meglévő kapcsolatok, a lecsatlakoztatás és a publikálás érintetlen (őrteszt: `server/social-meta-tiktok-flag.test.ts`)
 - [ ] HeyGen és hírlevél befagyasztása kapcsolóval
 - [ ] README frissítése

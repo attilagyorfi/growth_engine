@@ -27,6 +27,7 @@ vi.mock("./authDb", async (importOriginal) => {
 
 import { registerFacebookOAuthRoutes, signState } from "./facebookOAuth";
 import { ENV } from "./_core/env";
+import { FEATURE_FLAGS } from "./featureFlags";
 
 type Handler = (req: any, res: any) => Promise<void>;
 function routes() {
@@ -40,13 +41,15 @@ async function callback(query: Record<string, string>) {
   return res.redirectedTo as string;
 }
 
-const original = { id: ENV.facebookAppId, secret: ENV.facebookAppSecret, config: ENV.facebookLoginConfigId };
+// A régi (bekapcsolt) viselkedést teszteli; a kikapcsolt ág: social-meta-tiktok-flag.test.ts
+const original = { id: ENV.facebookAppId, secret: ENV.facebookAppSecret, config: ENV.facebookLoginConfigId, flag: FEATURE_FLAGS.metaTiktokConnect };
 let fetchMock: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   fake.inserted = [];
   fake.updated = 0;
   fake.updateValues = [];
+  FEATURE_FLAGS.metaTiktokConnect = true;
   ENV.facebookAppId = "app-id";
   ENV.facebookAppSecret = "app-secret";
 });
@@ -54,6 +57,7 @@ afterEach(() => {
   ENV.facebookAppId = original.id;
   ENV.facebookAppSecret = original.secret;
   ENV.facebookLoginConfigId = original.config;
+  FEATURE_FLAGS.metaTiktokConnect = original.flag;
   vi.unstubAllGlobals();
 });
 
