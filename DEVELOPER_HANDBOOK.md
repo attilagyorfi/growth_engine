@@ -349,7 +349,7 @@ Minden felhasználóhoz tartozik egy `clientProfile` (az `app_users.profileId` m
 
 ### Képek és médiatartalmak
 
-**SOHA** ne tárold képeket a `client/public/` mappában. Minden statikus asset az S3-on van (`manus-upload-file --webdev` paranccsal feltöltve). A CDN URL-eket közvetlenül a kódban kell használni.
+A felület statikus képei a repóban, a `client/public/` alatt vannak (pl. `client/public/landing/`, `client/public/brand/illustrations/`), és gyökérrelatív útvonallal hivatkozunk rájuk (`src="/landing/dashboard.svg"`). A build a `dist/public/` alá másolja őket. Külső képtárhelyet (a régi Manus CDN-t sem, mert 403-at ad) nem használunk; ezt a `server/static-assets.test.ts` ellenőrzi. A makettek kézzel kódolt SVG-k, csak kitalált „Minta Cég Kft.” adattal, külső font- és képhivatkozás nélkül.
 
 ### Tesztek
 

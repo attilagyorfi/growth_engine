@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="400" viewBox="0 0 1200 400" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" role="img" aria-label="Elemzési nézet mintaadatokkal">
+  <defs>
+    <linearGradient id="area" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8B5CF6" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#8B5CF6" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="400" fill="#0E0E16"/>
+
+  <!-- KPI csempék -->
+  <g font-size="13">
+    <rect x="32" y="32" width="264" height="104" rx="14" fill="#15151D" stroke="#FFFFFF" stroke-opacity="0.07"/>
+    <text x="54" y="64" fill="#A1A1AA">Elkészült tartalmak</text>
+    <text x="54" y="108" fill="#F4F4F5" font-size="32" font-weight="700">18</text>
+    <rect x="320" y="32" width="264" height="104" rx="14" fill="#15151D" stroke="#FFFFFF" stroke-opacity="0.07"/>
+    <text x="342" y="64" fill="#A1A1AA">Jóváhagyási arány</text>
+    <text x="342" y="108" fill="#F4F4F5" font-size="32" font-weight="700">86%</text>
+    <rect x="32" y="160" width="264" height="104" rx="14" fill="#15151D" stroke="#FFFFFF" stroke-opacity="0.07"/>
+    <text x="54" y="192" fill="#A1A1AA">Aktív kampányok</text>
+    <text x="54" y="236" fill="#F4F4F5" font-size="32" font-weight="700">3</text>
+    <rect x="320" y="160" width="264" height="104" rx="14" fill="#15151D" stroke="#FFFFFF" stroke-opacity="0.07"/>
+    <text x="342" y="192" fill="#A1A1AA">Weboldal pontszám</text>
+    <text x="342" y="236" fill="#F4F4F5" font-size="32" font-weight="700">82</text>
+    <rect x="32" y="288" width="552" height="80" rx="14" fill="#15151D" stroke="#FFFFFF" stroke-opacity="0.07"/>
+    <text x="54" y="320" fill="#A1A1AA">Csatornák megoszlása</text>
+    <rect x="54" y="336" width="508" height="12" rx="6" fill="#27272A"/>
+    <rect x="54" y="336" width="320" height="12" rx="6" fill="#A78BFA"/>
+    <rect x="374" y="336" width="120" height="12" fill="#38BDF8"/>
+  </g>
+
+  <!-- Oszlopdiagram -->
+  <rect x="608" y="32" width="560" height="336" rx="14" fill="#15151D" stroke="#FFFFFF" stroke-opacity="0.07"/>
+  <text x="632" y="66" fill="#F4F4F5" font-size="16" font-weight="600">Tartalmak havonta</text>
+  <g stroke="#FFFFFF" stroke-opacity="0.06">
+    <line x1="640" y1="120" x2="1140" y2="120"/>
+    <line x1="640" y1="190" x2="1140" y2="190"/>
+    <line x1="640" y1="260" x2="1140" y2="260"/>
+    <line x1="640" y1="330" x2="1140" y2="330"/>
+  </g>
+  <path d="M660 300 L742 280 L824 260 L906 225 L988 200 L1070 165 L1130 150 L1130 330 L660 330 Z" fill="url(#area)"/>
+  <g fill="#8B5CF6" fill-opacity="0.85">
+    <rect x="644" y="290" width="32" height="40" rx="6"/>
+    <rect x="726" y="270" width="32" height="60" rx="6"/>
+    <rect x="808" y="250" width="32" height="80" rx="6"/>
+    <rect x="890" y="215" width="32" height="115" rx="6"/>
+    <rect x="972" y="190" width="32" height="140" rx="6"/>
+    <rect x="1054" y="155" width="32" height="175" rx="6" fill="#A78BFA" fill-opacity="1"/>
+  </g>
+  <g fill="#71717A" font-size="12" text-anchor="middle">
+    <text x="660" y="352">jún.</text>
+    <text x="742" y="352">júl.</text>
+    <text x="824" y="352">aug.</text>
+    <text x="906" y="352">szept.</text>
+    <text x="988" y="352">okt.</text>
+    <text x="1070" y="352">nov.</text>
+  </g>
+</svg>

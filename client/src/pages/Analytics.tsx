@@ -516,9 +516,11 @@ export default function Analytics() {
         {!isLoading && !hasAnyData && (
           <div className="rounded-2xl overflow-hidden border" style={{ border }}>
             <img
-              src="https://d2xsxph8kpxj0f.cloudfront.net/109169450/WzYbMH2rdiW2pftdUmZaz8/analytics-hero_b702831f.png"
-              alt="Analytics preview"
-              className="w-full object-cover opacity-60"
+              src="/brand/illustrations/analytics-preview.svg"
+              alt="Elemzési nézet mintaadatokkal"
+              width={1200}
+              height={400}
+              className="w-full h-auto object-cover opacity-60"
             />
           </div>
         )}

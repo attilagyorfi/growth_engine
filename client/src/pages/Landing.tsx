@@ -170,9 +170,11 @@ export default function Landing() {
         >
           <div className="rounded-2xl overflow-hidden border shadow-2xl border-white/10 shadow-violet-900/20">
             <img
-              src="https://d2xsxph8kpxj0f.cloudfront.net/109169450/WzYbMH2rdiW2pftdUmZaz8/screenshot-dashboard-minta-Hy6fyXi499rgi2TiWUxnqb.webp"
-              alt="G2A Growth Engine Dashboard – Minta Cég Kft. Pro"
-              className="w-full object-cover"
+              src="/landing/dashboard.svg"
+              alt="Az irányítópult minta nézete a Minta Cég Kft. adataival"
+              width={1600}
+              height={1000}
+              className="w-full h-auto object-cover"
             />
           </div>
           <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0F] via-transparent to-transparent pointer-events-none rounded-2xl" />
@@ -250,9 +252,12 @@ export default function Landing() {
             <SlideIn direction="right" delay={0.15}>
               <div className="rounded-2xl overflow-hidden border shadow-xl border-white/10">
                 <img
-                  src="https://d2xsxph8kpxj0f.cloudfront.net/109169450/WzYbMH2rdiW2pftdUmZaz8/screenshot-content-minta-QFnVmj9cHdhsCZ6tLWtfDx.webp"
-                  alt="Tartalom Naptár – Minta Cég Kft. Pro"
-                  className="w-full object-cover"
+                  src="/landing/content-calendar.svg"
+                  alt="Heti tartalomnaptár a Minta Cég Kft. posztjaival"
+                  width={1200}
+                  height={800}
+                  loading="lazy"
+                  className="w-full h-auto object-cover"
                 />
               </div>
             </SlideIn>

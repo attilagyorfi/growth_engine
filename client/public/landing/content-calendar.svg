@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" role="img" aria-label="Heti tartalomnaptár minta nézet – Minta Cég Kft.">
+  <defs>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#8B5CF6"/>
+      <stop offset="1" stop-color="#6366F1"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="800" fill="#0E0E16"/>
+
+  <!-- Fejléc -->
+  <text x="40" y="62" fill="#F4F4F5" font-size="26" font-weight="700">Tartalomnaptár</text>
+  <text x="40" y="90" fill="#A1A1AA" font-size="14">Minta Cég Kft. · 2026. november, 2. hét</text>
+  <rect x="860" y="40" width="40" height="40" rx="10" fill="#18181F" stroke="#FFFFFF" stroke-opacity="0.08"/>
+  <path d="M884 50 L874 60 L884 70" fill="none" stroke="#A1A1AA" stroke-width="2"/>
+  <rect x="910" y="40" width="40" height="40" rx="10" fill="#18181F" stroke="#FFFFFF" stroke-opacity="0.08"/>
+  <path d="M926 50 L936 60 L926 70" fill="none" stroke="#A1A1AA" stroke-width="2"/>
+  <rect x="964" y="40" width="196" height="40" rx="10" fill="url(#accent)"/>
+  <text x="1062" y="66" fill="#FFFFFF" font-size="14" font-weight="600" text-anchor="middle">Havi terv generálása</text>
+
+  <!-- Jelmagyarázat -->
+  <g font-size="13" fill="#A1A1AA">
+    <circle cx="46" cy="128" r="5" fill="#A78BFA"/><text x="58" y="133">Vázlat</text>
+    <circle cx="130" cy="128" r="5" fill="#FBBF24"/><text x="142" y="133">Jóváhagyásra vár</text>
+    <circle cx="274" cy="128" r="5" fill="#34D399"/><text x="286" y="133">Jóváhagyva</text>
+  </g>
+
+  <!-- Rács -->
+  <rect x="40" y="156" width="1120" height="604" rx="16" fill="#13131B" stroke="#FFFFFF" stroke-opacity="0.07"/>
+  <g stroke="#FFFFFF" stroke-opacity="0.06">
+    <line x1="200" y1="156" x2="200" y2="760"/>
+    <line x1="360" y1="156" x2="360" y2="760"/>
+    <line x1="520" y1="156" x2="520" y2="760"/>
+    <line x1="680" y1="156" x2="680" y2="760"/>
+    <line x1="840" y1="156" x2="840" y2="760"/>
+    <line x1="1000" y1="156" x2="1000" y2="760"/>
+    <line x1="40" y1="212" x2="1160" y2="212"/>
+  </g>
+  <g font-size="13" fill="#A1A1AA" font-weight="600">
+    <text x="60" y="190">H <tspan fill="#71717A" font-weight="400">nov. 9.</tspan></text>
+    <text x="220" y="190">K <tspan fill="#71717A" font-weight="400">nov. 10.</tspan></text>
+    <text x="380" y="190">Sze <tspan fill="#71717A" font-weight="400">nov. 11.</tspan></text>
+    <text x="540" y="190" fill="#C4B5FD">Cs <tspan font-weight="400">nov. 12.</tspan></text>
+    <text x="700" y="190">P <tspan fill="#71717A" font-weight="400">nov. 13.</tspan></text>
+    <text x="860" y="190">Szo <tspan fill="#71717A" font-weight="400">nov. 14.</tspan></text>
+    <text x="1020" y="190">V <tspan fill="#71717A" font-weight="400">nov. 15.</tspan></text>
+  </g>
+  <rect x="521" y="213" width="158" height="546" fill="#8B5CF6" fill-opacity="0.05"/>
+
+  <!-- Posztkártyák -->
+  <g font-size="13">
+    <!-- Hétfő -->
+    <rect x="52" y="228" width="136" height="104" rx="10" fill="#1C1C26" stroke="#34D399" stroke-opacity="0.35"/>
+    <rect x="52" y="228" width="4" height="104" rx="2" fill="#34D399"/>
+    <text x="66" y="252" fill="#71717A" font-size="11" font-weight="600">LINKEDIN · 9:00</text>
+    <text x="66" y="276" fill="#E4E4E7" font-weight="600">Heti szakmai</text>
+    <text x="66" y="294" fill="#E4E4E7" font-weight="600">tipp</text>
+    <text x="66" y="318" fill="#34D399" font-size="11">Jóváhagyva</text>
+
+    <!-- Kedd -->
+    <rect x="212" y="228" width="136" height="104" rx="10" fill="#1C1C26" stroke="#34D399" stroke-opacity="0.35"/>
+    <rect x="212" y="228" width="4" height="104" rx="2" fill="#34D399"/>
+    <text x="226" y="252" fill="#71717A" font-size="11" font-weight="600">BLOG · 10:00</text>
+    <text x="226" y="276" fill="#E4E4E7" font-weight="600">Így válassz</text>
+    <text x="226" y="294" fill="#E4E4E7" font-weight="600">partnert</text>
+    <text x="226" y="318" fill="#34D399" font-size="11">Jóváhagyva</text>
+
+    <!-- Szerda -->
+    <rect x="372" y="228" width="136" height="104" rx="10" fill="#1C1C26" stroke="#FBBF24" stroke-opacity="0.35"/>
+    <rect x="372" y="228" width="4" height="104" rx="2" fill="#FBBF24"/>
+    <text x="386" y="252" fill="#71717A" font-size="11" font-weight="600">LINKEDIN · 12:00</text>
+    <text x="386" y="276" fill="#E4E4E7" font-weight="600">Csapatunk</text>
+    <text x="386" y="294" fill="#E4E4E7" font-weight="600">bemutatása</text>
+    <text x="386" y="318" fill="#FBBF24" font-size="11">Jóváhagyásra vár</text>
+
+    <!-- Csütörtök -->
+    <rect x="532" y="228" width="136" height="104" rx="10" fill="#1C1C26" stroke="#FBBF24" stroke-opacity="0.35"/>
+    <rect x="532" y="228" width="4" height="104" rx="2" fill="#FBBF24"/>
+    <text x="546" y="252" fill="#71717A" font-size="11" font-weight="600">LINKEDIN · 9:00</text>
+    <text x="546" y="276" fill="#E4E4E7" font-weight="600">Őszi akció</text>
+    <text x="546" y="294" fill="#E4E4E7" font-weight="600">bejelentése</text>
+    <text x="546" y="318" fill="#FBBF24" font-size="11">Jóváhagyásra vár</text>
+
+    <rect x="532" y="344" width="136" height="104" rx="10" fill="#1C1C26" stroke="#A78BFA" stroke-opacity="0.35"/>
+    <rect x="532" y="344" width="4" height="104" rx="2" fill="#A78BFA"/>
+    <text x="546" y="368" fill="#71717A" font-size="11" font-weight="600">BLOG · 14:00</text>
+    <text x="546" y="392" fill="#E4E4E7" font-weight="600">Gyakori</text>
+    <text x="546" y="410" fill="#E4E4E7" font-weight="600">kérdések</text>
+    <text x="546" y="434" fill="#C4B5FD" font-size="11">Vázlat</text>
+
+    <!-- Péntek -->
+    <rect x="692" y="228" width="136" height="104" rx="10" fill="#1C1C26" stroke="#A78BFA" stroke-opacity="0.35"/>
+    <rect x="692" y="228" width="4" height="104" rx="2" fill="#A78BFA"/>
+    <text x="706" y="252" fill="#71717A" font-size="11" font-weight="600">BLOG · 10:00</text>
+    <text x="706" y="276" fill="#E4E4E7" font-weight="600">5 tipp a téli</text>
+    <text x="706" y="294" fill="#E4E4E7" font-weight="600">szezonra</text>
+    <text x="706" y="318" fill="#C4B5FD" font-size="11">Vázlat</text>
+
+    <!-- Szombat: üres -->
+    <rect x="852" y="228" width="136" height="104" rx="10" fill="none" stroke="#FFFFFF" stroke-opacity="0.1" stroke-dasharray="5 5"/>
+    <text x="920" y="285" fill="#52525B" font-size="13" text-anchor="middle">+ Új tartalom</text>
+
+    <!-- Vasárnap -->
+    <rect x="1012" y="228" width="136" height="104" rx="10" fill="#1C1C26" stroke="#A78BFA" stroke-opacity="0.35"/>
+    <rect x="1012" y="228" width="4" height="104" rx="2" fill="#A78BFA"/>
+    <text x="1026" y="252" fill="#71717A" font-size="11" font-weight="600">LINKEDIN · 18:00</text>
+    <text x="1026" y="276" fill="#E4E4E7" font-weight="600">Heti</text>
+    <text x="1026" y="294" fill="#E4E4E7" font-weight="600">összefoglaló</text>
+    <text x="1026" y="318" fill="#C4B5FD" font-size="11">Vázlat</text>
+  </g>
+
+  <!-- Pillérek összesítő -->
+  <rect x="60" y="600" width="1080" height="140" rx="12" fill="#18181F"/>
+  <text x="84" y="636" fill="#F4F4F5" font-size="16" font-weight="600">A hét tartalmi pillérei</text>
+  <g font-size="13" fill="#A1A1AA">
+    <text x="84" y="672">Szakértelem</text>
+    <rect x="220" y="662" width="400" height="12" rx="6" fill="#27272A"/>
+    <rect x="220" y="662" width="240" height="12" rx="6" fill="#A78BFA"/>
+    <text x="636" y="672">3 tartalom</text>
+
+    <text x="84" y="704">Ügyfélközelség</text>
+    <rect x="220" y="694" width="400" height="12" rx="6" fill="#27272A"/>
+    <rect x="220" y="694" width="160" height="12" rx="6" fill="#38BDF8"/>
+    <text x="636" y="704">2 tartalom</text>
+
+    <text x="760" y="672">Kész ezen a héten</text>
+    <text x="760" y="712" fill="#F4F4F5" font-size="32" font-weight="700">2<tspan fill="#71717A" font-size="18"> / 7</tspan></text>
+    <text x="940" y="672">Jóváhagyásra vár</text>
+    <text x="940" y="712" fill="#FBBF24" font-size="32" font-weight="700">2</text>
+  </g>
+</svg>

@@ -1151,3 +1151,10 @@
 - [x] Visual brief + CTA javaslat: ai.generatePostContent backend + ContentStudio UI (kék kártya AI javaslatok szekció)
 - [x] Strategy → task breakdown: generateTasks procedure (quickWins + nextActions → strategyTasks DB), "Feladatokká alakítás" gomb
 - [x] Content calendar feltöltése stratégiából: "Tartalomnaptár feltöltése stratégiából" gomb a havi tervnél → /content-studio
+
+## G0 – Lezárás (2026. november)
+
+- [x] Landing és app hero képek: a törött Manus CDN helyett saját SVG-makettek a `client/public/landing/` és `client/public/brand/illustrations/` alatt (őrteszt: `server/static-assets.test.ts`)
+- [ ] FB/IG/TikTok csatlakozás kikapcsolása kapcsolóval
+- [ ] HeyGen és hírlevél befagyasztása kapcsolóval
+- [ ] README frissítése
