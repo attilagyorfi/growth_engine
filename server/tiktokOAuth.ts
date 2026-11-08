@@ -30,6 +30,7 @@ import { ENV, getPublicAppOrigin } from "./_core/env";
 import { verifyAppToken } from "./routers/appAuth";
 import { assertProfileOwnership } from "./_core/ownership";
 import { getAppUserById } from "./authDb";
+import { isMetaTiktokConnectEnabled } from "./featureFlags";
 import { encryptToken } from "./_core/tokenCrypto";
 import { DEACTIVATED_CONNECTION } from "./_core/socialConnectionState";
 
@@ -85,6 +86,11 @@ export function registerTikTokOAuthRoutes(app: Express) {
    * Step 1: Initiate TikTok OAuth
    */
   app.get("/api/oauth/tiktok/start", async (req: Request, res: Response) => {
+    // G0: a csatlakozás kapcsolóval ki van kapcsolva (server/featureFlags.ts) → nincs OAuth.
+    if (!isMetaTiktokConnectEnabled()) {
+      res.redirect(`${getAppOrigin()}/beallitasok?tab=integrations&tiktok=unavailable`);
+      return;
+    }
     const { profileId } = req.query as { profileId?: string };
     if (!profileId) { res.status(400).json({ error: "Missing profileId" }); return; }
 
@@ -129,6 +135,11 @@ export function registerTikTokOAuthRoutes(app: Express) {
    */
   app.get("/api/oauth/tiktok/callback", async (req: Request, res: Response) => {
     const appOrigin = getAppOrigin();
+    // Kikapcsolt állapotban egy régi/kézzel hívott visszatérés se hozzon létre kapcsolatot.
+    if (!isMetaTiktokConnectEnabled()) {
+      res.redirect(`${appOrigin}/beallitasok?tab=integrations&tiktok=unavailable`);
+      return;
+    }
     const { code, state, error, error_description } = req.query as {
       code?: string; state?: string; error?: string; error_description?: string;
     };

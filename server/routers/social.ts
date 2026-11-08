@@ -15,6 +15,7 @@ import { assertProfileOwnership } from "../_core/ownership";
 import { encryptToken } from "../_core/tokenCrypto";
 import { DEACTIVATED_CONNECTION } from "../_core/socialConnectionState";
 import { composePostText, publishWithConnection, classifyPublishError } from "../publishing";
+import { isConnectBlocked, isMetaTiktokConnectEnabled, META_TIKTOK_DISABLED_MESSAGE } from "../featureFlags";
 
 export const socialRouter = router({
   listConnections: appUserProcedure
@@ -56,6 +57,8 @@ export const socialRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      // G0: FB/IG/TikTok csatlakozás kikapcsolva (server/featureFlags.ts) — kézi tokennel sem.
+      if (isConnectBlocked(input.platform)) throw new TRPCError({ code: "BAD_REQUEST", message: META_TIKTOK_DISABLED_MESSAGE });
       const { getDb } = await import("../db");
       const { socialConnections } = await import("../../drizzle/schema");
       const db = await getDb();
@@ -219,6 +222,7 @@ export const socialRouter = router({
   chooseFacebookPage: appUserProcedure
     .input(z.object({ selectionId: z.string().min(10).max(64), pageId: z.string().min(1).max(64) }))
     .mutation(async ({ ctx, input }) => {
+      if (!isMetaTiktokConnectEnabled()) throw new TRPCError({ code: "BAD_REQUEST", message: META_TIKTOK_DISABLED_MESSAGE });
       const { peekPendingPages, takePendingPages, saveMetaPageConnection } = await import("../metaPages");
       const p = peekPendingPages(input.selectionId, ctx.appUser.id);
       if (!p) throw new TRPCError({ code: "NOT_FOUND", message: "Az oldalválasztás lejárt. Indítsd újra a Facebook-csatlakozást." });
@@ -245,12 +249,18 @@ export const socialRouter = router({
   // Új: a 3 platform konfiguráltság-státusza egy hívásban. A frontend
   // ezzel dönti el, hogy a gomb klikkelhető (van env) vagy "Konfiguráció
   // szükséges" modal-t mutat.
+  // metaTiktokEnabled=false: a FB/IG/TikTok csatlakozást kapcsolóval kikapcsoltuk
+  // (server/featureFlags.ts) — a kliens ebből tudja, hogy nem „nincs konfigurálva”.
   isPlatformConfigured: publicProcedure
-    .query(() => ({
-      linkedin: !!(process.env.LINKEDIN_CLIENT_ID && process.env.LINKEDIN_CLIENT_SECRET),
-      facebook: !!(process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET),
-      // Instagram a Facebook OAuth-on keresztül megy, ugyanaz az env-kombináció
-      instagram: !!(process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET),
-      tiktok: !!(process.env.TIKTOK_CLIENT_KEY && process.env.TIKTOK_CLIENT_SECRET),
-    })),
+    .query(() => {
+      const metaTiktokEnabled = isMetaTiktokConnectEnabled();
+      return {
+        linkedin: !!(process.env.LINKEDIN_CLIENT_ID && process.env.LINKEDIN_CLIENT_SECRET),
+        facebook: metaTiktokEnabled && !!(process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET),
+        // Instagram a Facebook OAuth-on keresztül megy, ugyanaz az env-kombináció
+        instagram: metaTiktokEnabled && !!(process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET),
+        tiktok: metaTiktokEnabled && !!(process.env.TIKTOK_CLIENT_KEY && process.env.TIKTOK_CLIENT_SECRET),
+        metaTiktokEnabled,
+      };
+    }),
 });

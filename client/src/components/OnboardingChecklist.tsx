@@ -84,7 +84,7 @@ export default function OnboardingChecklist({ profileId }: OnboardingChecklistPr
       id: "social",
       icon: <Link2 size={14} />,
       label: "Közösségi média csatlakoztatva",
-      description: "LinkedIn, Facebook, Instagram vagy TikTok fiók",
+      description: "LinkedIn-fiók a Beállítások → Integrációk alatt",
       href: "/beallitasok?tab=integrations",
       done: (socialConns.data ?? []).some((c: any) => c.isActive),
     },
