@@ -17,6 +17,7 @@ import { AiLimitBanner } from "@/components/AiLimitBanner";
 import UpgradePrompt from "@/components/UpgradePrompt";
 import { useSubscription } from "@/hooks/useSubscription";
 import { trpc } from "@/lib/trpc";
+import { getScheduleWarning } from "@/lib/scheduleWarning";
 import { useProfile } from "@/contexts/ProfileContext";
 import { toast } from "sonner";
 
@@ -198,6 +199,10 @@ export default function ContentStudio() {
     { profileId: activeProfile.id },
     { enabled: !!activeProfile.id }
   );
+  // G0: a FB/IG/TikTok csatlakozás szerveroldali kapcsolóval ki van kapcsolva (server/featureFlags.ts).
+  // Betöltés közben kikapcsoltnak számít, hogy ne villanjon fel a régi üzenet.
+  const { data: platformConfig } = trpc.social.isPlatformConfigured.useQuery();
+  const metaTiktokEnabled = !!platformConfig?.metaTiktokEnabled;
   const publishNowMutation = trpc.social.publishNow.useMutation({
     onSuccess: () => {
       toast.success("Tartalom sikeresen publikálva!");
@@ -1115,20 +1120,24 @@ export default function ContentStudio() {
               {(() => {
                 const conn = socialConnections.find(c => c.isActive && c.platform === scheduleModal.platform);
                 const label = PLATFORM_LABELS[scheduleModal.platform] ?? scheduleModal.platform;
-                const needsImage = scheduleModal.platform === "instagram" && !scheduleModal.imageUrl;
-                // A kapcsolat az ütemezett időpontig lejár? (LinkedIn: 60 nap, frissítés nélkül)
-                const when = scheduleDate ? new Date(`${scheduleDate}T${scheduleTime}`) : null;
-                const expiresAt = conn?.tokenExpiresAt ? new Date(conn.tokenExpiresAt) : null;
-                const expiredByThen = !!(conn && expiresAt && when && !Number.isNaN(expiresAt.getTime()) && expiresAt.getTime() <= when.getTime());
-                const ok = !!conn && !needsImage && !expiredByThen;
+                const warning = getScheduleWarning({
+                  platform: scheduleModal.platform,
+                  connection: conn,
+                  hasImage: !!scheduleModal.imageUrl,
+                  scheduledAt: scheduleDate ? new Date(`${scheduleDate}T${scheduleTime}`) : null,
+                  metaTiktokEnabled,
+                });
+                const ok = warning.kind === "ok";
                 return (
                   <div className="rounded-lg border px-3 py-2.5 text-xs leading-relaxed" style={{ background: ok ? "oklch(from var(--qa-success) l c h / 8%)" : "oklch(from var(--qa-warning) l c h / 8%)", borderColor: ok ? "oklch(from var(--qa-success) l c h / 30%)" : "oklch(from var(--qa-warning) l c h / 30%)", color: ok ? "var(--qa-success)" : "var(--qa-warning)" }}>
-                    {ok
+                    {warning.kind === "ok"
                       ? <>Az időpontban automatikusan kimegy ide: <strong>{conn!.platformUsername ?? label}</strong> ({label}).</>
-                      : needsImage
+                      : warning.kind === "needsImage"
                         ? <>Instagram-poszthoz kép kell — kép nélkül az időpontban nem tudjuk közzétenni.</>
-                      : expiredByThen
-                        ? <>A(z) {label}-kapcsolat az ütemezett időpont előtt lejár (lejárat: <strong>{expiresAt!.toLocaleDateString("hu-HU")}</strong>). Csatlakoztasd újra a Beállítások → Integrációk alatt, különben a poszt nem megy ki.</>
+                      : warning.kind === "socialHub"
+                        ? <>Ide a Social Hubból tudod közzétenni a posztot.</>
+                      : warning.kind === "expired"
+                        ? <>A(z) {label}-kapcsolat az ütemezett időpont előtt lejár (lejárat: <strong>{warning.expiresAt.toLocaleDateString("hu-HU")}</strong>). Csatlakoztasd újra a Beállítások → Integrációk alatt, különben a poszt nem megy ki.</>
                         : <>Nincs csatlakoztatott {label}-fiók, ezért az időpontban <strong>nem tudjuk közzétenni</strong>. Csatlakoztasd a Beállítások → Integrációk alatt.</>}
                   </div>
                 );

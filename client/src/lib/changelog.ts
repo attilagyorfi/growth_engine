@@ -32,6 +32,13 @@ export interface ChangelogEntry {
 // Legfrissebb elöl. A user "Újdonságok" drawer-je ebben a sorrendben mutatja.
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: "2026-11-g0-social-hub",
+    date: "2026-11-09",
+    category: "improvement",
+    title: "A közösségi publikálás a Social Hubba költözik",
+    description: "Új Facebook-, Instagram- és TikTok-fiókot már nem tudsz itt csatlakoztatni: ezekre a csatornákra a Social Hubból teheted közzé a posztokat. A meglévő kapcsolataid és a LinkedIn változatlanul működnek. A videókészítés egyelőre szünetel, a kész videóidat továbbra is látod.",
+  },
+  {
     id: "2026-08-notification-center",
     date: "2026-08-13",
     category: "feature",
@@ -101,7 +108,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-06-24",
     category: "feature",
     title: "Facebook + Instagram + TikTok csatlakoztatás",
-    description: "A Beállítások → Integrációk oldalon most csatlakoztathatod a Facebook Page-eidet, Instagram Business fiókodat és TikTok-odat. A Content Studio-ból közvetlenül publikálhatsz Facebook + Instagram-ra (TikTok videó-publikálás hamarosan).",
+    description: "A Beállítások → Integrációk oldalon most csatlakoztathatod a Facebook Page-eidet, Instagram Business fiókodat és TikTok-odat. A Content Studio-ból közvetlenül publikálhatsz Facebook + Instagram-ra (TikTok videó-publikálás hamarosan). Frissítés (2026. november): ez a csatlakozás azóta ki van kapcsolva, a közösségi publikálás a Social Hubba költözik.",
     href: "/beallitasok?tab=integrations",
   },
   {
