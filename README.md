@@ -8,21 +8,60 @@ A G2A Growth Engine egy teljes körű SaaS platform, amely mesterséges intellig
 
 ## Tartalomjegyzék
 
-1. [Projekt célja](#projekt-célja)
-2. [Végső rendeltetés és üzleti modell](#végső-rendeltetés-és-üzleti-modell)
-3. [Technológiai stack](#technológiai-stack)
-4. [Architektúra áttekintés](#architektúra-áttekintés)
-5. [Adatbázis séma](#adatbázis-séma)
-6. [Modulok és funkciók](#modulok-és-funkciók)
-7. [Autentikáció és jogosultságkezelés](#autentikáció-és-jogosultságkezelés)
-8. [Feature gating és előfizetési csomagok](#feature-gating-és-előfizetési-csomagok)
-9. [API és tRPC routerek](#api-és-trpc-routerek)
-10. [Fejlesztői útmutató](#fejlesztői-útmutató)
-11. [Környezeti változók](#környezeti-változók)
-12. [Tesztelés](#tesztelés)
-13. [Deployment](#deployment)
-14. [Roadmap](#roadmap)
-15. [Közreműködők és szerepkörök](#közreműködők-és-szerepkörök)
+1. [Állapot a G0 után](#állapot-a-g0-után)
+2. [Projekt célja](#projekt-célja)
+3. [Végső rendeltetés és üzleti modell](#végső-rendeltetés-és-üzleti-modell)
+4. [Technológiai stack](#technológiai-stack)
+5. [Architektúra áttekintés](#architektúra-áttekintés)
+6. [Adatbázis séma](#adatbázis-séma)
+7. [Modulok és funkciók](#modulok-és-funkciók)
+8. [Autentikáció és jogosultságkezelés](#autentikáció-és-jogosultságkezelés)
+9. [Feature gating és előfizetési csomagok](#feature-gating-és-előfizetési-csomagok)
+10. [API és tRPC routerek](#api-és-trpc-routerek)
+11. [Fejlesztői útmutató](#fejlesztői-útmutató)
+12. [Környezeti változók](#környezeti-változók)
+13. [Tesztelés](#tesztelés)
+14. [Deployment](#deployment)
+15. [Roadmap](#roadmap)
+16. [Közreműködők és szerepkörök](#közreműködők-és-szerepkörök)
+
+---
+
+## Állapot a G0 után
+
+> 2026. novemberi állapot, a kódból ellenőrizve. Az alábbi régebbi fejezetek egy része a Manus-korszakot (Sprint 11) írja le; ahol ellentmondanak, **ez a szakasz a mérvadó**. A fázisterv: [`docs/termekcsalad/GROWTH_ENGINE_TERV.md`](docs/termekcsalad/GROWTH_ENGINE_TERV.md).
+
+### Mi él
+
+| Terület | Állapot | Hol a kódban |
+|---|---|---|
+| Hosting | **Railway** (Nixpacks, Node 24), indításkor (`prestart`) lefut az adatbázis-migráció, healthcheck: `/api/health` | `railway.json`, `nixpacks.toml`, `scripts/migrate-db.mjs` |
+| Adatbázis | **TiDB Cloud** (MySQL-kompatibilis), Drizzle ORM | `drizzle/schema.ts`, `server/db.ts` |
+| LLM | **Anthropic Claude** az élő szolgáltató; **OpenAI** tartalékként env-ből visszaállítható. Minden AI-hívás egyetlen ponton, az `invokeLLM`-en megy át | `server/_core/llm.ts`, `server/_core/anthropicAdapter.ts`, `server/_core/env.ts` |
+| Fizetés | **Stripe** Checkout + webhook (`/api/stripe/webhook`), HUF-árak, csomagok: Starter / Pro / Agency | `server/stripe/` |
+| Tartalomstúdió | AI-tartalomgyártás, naptár, jóváhagyás, időzítés (`/tartalom-studio`) | `client/src/pages/ContentStudio.tsx`, `server/routers/content.ts` |
+| Riportok | Havi riport AI-összefoglalóval (`/riportok`) — **egyelőre mintaadattal**, a valós Google-/Meta-adapterek a G1-ben jönnek (`LIVE_METRIC_PLATFORMS` jelenleg üres) | `server/routers/reports.ts`, `server/reports/` |
+| Egyéb | Onboarding, Cégintelligencia, Stratégia, Kampányok, Analitika, AI-író, SEO-audit, Copilot-asszisztens, értesítések, projektek (admin) | `client/src/App.tsx` útvonalai |
+| Közösségi kapcsolatok | **LinkedIn** csatlakoztatás és közzététel működik; a meglévő FB/IG-kapcsolatok is működnek (lásd lent) | `server/routers/social.ts`, `server/scheduler.ts` |
+| Fájltárolás | Vercel Blob | `server/storage.ts` |
+
+Az LLM-szolgáltatót a Railway env-ben lehet váltani: `LLM_PROVIDER=anthropic` vagy `LLM_PROVIDER=openai`, a modellt a `LLM_MODEL` adja, a kulcs az `ANTHROPIC_API_KEY`, illetve az `OPENAI_API_KEY`. A Manus LLM-ág megszűnt.
+
+A Sales/Leads modul (`/ertekesites`) nem érhető el, az útvonal az irányítópultra irányít át. A régi leads/outbound táblák törlése külön, jóváhagyott migrációval történik majd.
+
+### Mi van kapcsoló mögött
+
+A kapcsolók egy helyen vannak: [`server/featureFlags.ts`](server/featureFlags.ts). **Mindhárom alapból ki van kapcsolva** (nem kell hozzá env). Visszakapcsolás: a Railway Variables alatt állítsd az env-et `=true` értékre, majd indítsd újra (redeployold) a szolgáltatást. Bármilyen más érték, vagy ha nincs beállítva, kikapcsolt állapotot jelent.
+
+| Env-változó | Mit kapcsol ki | Mi működik tovább kikapcsolva | PR |
+|---|---|---|---|
+| `SOCIAL_META_TIKTOK_ENABLED` | Új Facebook-, Instagram- és TikTok-kapcsolat létrehozása (OAuth és kézi token). A Beállítások → Integrációk alatt nincs csatlakozás gomb, a Tartalomstúdió ezekre a csatornákra a Social Hubra irányít | A meglévő kapcsolatok, a lecsatlakoztatás, a közzététel és az időzítő | #150 |
+| `HEYGEN_VIDEO_ENABLED` | HeyGen AI-videógyártás (avatar- és hanglista, új videó indítása) | A kész videók listája, az állapotlekérdezés (csak adatbázisból) és a kvótakijelzés; adat nem törlődik | #151 |
+| `NEWSLETTER_ENABLED` | Hírlevélküldés (super_admin kampányküldő, Resend) | A regisztrációs hírlevél-hozzájárulás gyűjtése és a feliratkozók listája | #151 |
+
+### Publikálás: a Social Hub dolga
+
+A **Growth Engine nem publikál**: tartalmat tervez, gyárt és riportol. A közösségi közzététel a **Social Hub** feladata (lásd `docs/termekcsalad/`). A Growth Engine Meta- és TikTok-appja nem megy App Review-ra. Átmenetileg, a Social Hub-integrációig (G2) a meglévő LinkedIn- és FB/IG-kapcsolatokon a közvetlen közzététel és az időzítő még fut, de új FB/IG/TikTok-csatornát a Growth Engine-be már nem lehet bekötni.
 
 ---
 
@@ -32,7 +71,7 @@ A G2A Growth Engine célja, hogy a marketing ügynökségek és vállalkozások 
 
 - **Automatizálja a stratégiaalkotást** – az ügyfél weboldala és iparági adatai alapján AI generál teljes marketing stratégiát, brand DNA-t, célcsoport térképet és versenytárs elemzést.
 - **Gyorsítja a tartalomgyártást** – AI-alapú szövegírás (social poszt, email, blog, hirdetés) a brand hangja és a tartalmi pillérek alapján.
-- **Kezeli az értékesítési folyamatot** – lead nyilvántartás, kimenő email kampányok, bejövő válaszok kezelése egy helyen.
+- ~~**Kezeli az értékesítési folyamatot**~~ – *a Sales/Leads modul a G0-ban kikerült, lásd [Állapot a G0 után](#állapot-a-g0-után).*
 - **Kampányokat tervez és követ** – kampányok brief-től a publikálásig, jóváhagyási munkafolyamattal.
 - **Tanul és fejlődik** – AI memória rögzíti a jóváhagyott és elutasított tartalmakat, hogy a következő generálás pontosabb legyen.
 
@@ -99,8 +138,10 @@ A platform SaaS előfizetéses modellben működik. A jövőbeni fejlesztési ir
 
 | Szolgáltatás | Szerepe |
 |---|---|
-| Manus Platform | Hosting, OAuth, S3 storage, LLM proxy |
-| AWS S3 (Manus proxy) | Fájl tárolás (brand assets, dokumentumok) |
+| Railway | Hosting (Nixpacks build, `prestart` migráció) |
+| Anthropic Claude / OpenAI | LLM az `invokeLLM`-en át (`LLM_PROVIDER`) |
+| Stripe | Előfizetés, Checkout, webhook |
+| Vercel Blob | Fájl tárolás (brand assets, generált képek) |
 | TiDB Cloud | Felhő alapú MySQL kompatibilis adatbázis |
 | Vite | Frontend build eszköz |
 
@@ -131,8 +172,8 @@ A platform SaaS előfizetéses modellben működik. A jövőbeni fejlesztési ir
 └─────────┼─────────────────┼─────────────────┼─────────────┘
           │                 │                 │
     ┌─────▼──────┐   ┌──────▼──────┐   ┌─────▼──────┐
-    │  TiDB/MySQL│   │ Manus LLM   │   │  AWS S3    │
-    │  Database  │   │   Proxy     │   │  (Manus)   │
+    │  TiDB/MySQL│   │ Claude /    │   │ Vercel Blob│
+    │  Database  │   │ OpenAI      │   │            │
     └────────────┘   └─────────────┘   └────────────┘
 ```
 
@@ -156,7 +197,6 @@ A projekt **30 adatbázis táblát** tartalmaz, amelyek az alábbi logikai csopo
 |---|---|
 | `app_users` | Saját email+jelszó alapú felhasználók (email, passwordHash, role, subscriptionPlan) |
 | `password_reset_tokens` | Jelszó-visszaállítási tokenek (1 órás lejárat) |
-| `users` | Manus OAuth felhasználók (OAuth bridge) |
 | `app_notifications` | In-app értesítések |
 
 ### Ügyfelek és profilok
@@ -190,6 +230,8 @@ A projekt **30 adatbázis táblát** tartalmaz, amelyek az alábbi logikai csopo
 | `campaign_assets` | Kampányhoz tartozó tartalom elemek |
 
 ### Értékesítés
+
+> A Sales/Leads modul a felületről kikerült; ezek a táblák egy későbbi, jóváhagyott migrációval törlődnek.
 
 | Tábla | Leírás |
 |---|---|
@@ -281,7 +323,9 @@ Tartalom gyártás és kezelés öt tabban:
 
 AI quick generate drawer: stratégia-alapú tartalomjavaslatok, tartalomtípus ajánlók (poszt, email, blog, hirdetés), brand hangra hangolt generálás.
 
-### 8. Sales Ops (`/ertekesites`)
+### 8. Sales Ops (`/ertekesites`) – kivezetve
+
+> Nem érhető el: az útvonal az irányítópultra irányít át. Az alábbi leírás a régi állapotot rögzíti.
 
 Értékesítési folyamat kezelése három tabban:
 
@@ -314,7 +358,7 @@ Négy tabos beállítási oldal:
 | Tab | Tartalom |
 |---|---|
 | **Brand Center** | Logó, színek, betűtípusok, brand guideline |
-| **Integrations** | Email, social media integrációk |
+| **Integrations** | LinkedIn csatlakoztatás; FB/IG/TikTok-csatlakozás csak `SOCIAL_META_TIKTOK_ENABLED=true` mellett (alapból ki) |
 | **Team** | Csapattagok és jogosultságok |
 | **Audit Log** | Rendszer audit napló |
 
@@ -340,9 +384,7 @@ A platform két párhuzamos autentikációs rendszert támogat:
 - Bejelentkezés: JWT token, `app_token` HttpOnly cookie, 30 napos lejárat
 - Session: `appUserProcedure` middleware ellenőrzi minden védett route-on
 
-**2. Manus OAuth** (másodlagos, fejlesztői hozzáférés)
-- OAuth bridge: ha `app_token` nincs, de Manus OAuth session van, automatikusan létrehozza/megtalálja az appUser-t email alapján
-- Super admin (g2amarketing) automatikusan `super_admin` role-t kap
+**2. Manus OAuth** – *megszűnt (G0: a Manus-maradványok, köztük az OAuth-bridge törölve). Csak az email+jelszó auth él.*
 
 ### Role-based access control
 
@@ -403,7 +445,6 @@ export const AI_PLAN_LIMITS: Record<string, number> = {
 server/routers.ts (fő router)
 ├── system          – Owner értesítések
 ├── appAuth         – Regisztráció, login, logout, me, jelszó reset
-├── auth            – Manus OAuth (me, logout)
 ├── profiles        – Ügyfél workspace CRUD
 ├── leads           – Lead kezelés
 ├── outbound        – Kimenő emailek
@@ -527,25 +568,23 @@ growth_engine/
 
 ## Környezeti változók
 
-A projekt a Manus platform által automatikusan injektált változókat használja. Lokális fejlesztéshez `.env` fájlban kell megadni:
+Élesben a Railway Variables alatt vannak beállítva, lokális fejlesztéshez `.env` fájlban kell megadni. A teljes, kommentezett lista: `server/_core/env.ts` és `server/featureFlags.ts`. A fontosabbak (értéket ide soha ne írj):
 
 | Változó | Leírás | Kötelező |
 |---|---|---|
 | `DATABASE_URL` | MySQL/TiDB connection string | ✅ |
-| `JWT_SECRET` | Session cookie aláíró kulcs | ✅ |
-| `RESEND_API_KEY` | Resend API kulcs (email küldés) | ✅ |
-| `EMAIL_FROM` | Feladó email cím (pl. `noreply@g2amarketing.hu`) | ✅ |
-| `VITE_APP_ID` | Manus OAuth alkalmazás ID | ✅ |
-| `OAUTH_SERVER_URL` | Manus OAuth backend URL | ✅ |
-| `VITE_OAUTH_PORTAL_URL` | Manus login portal URL | ✅ |
-| `OWNER_OPEN_ID` | Tulajdonos Manus ID | ✅ |
-| `OWNER_NAME` | Tulajdonos neve | ✅ |
-| `BUILT_IN_FORGE_API_URL` | Manus beépített API URL (LLM, S3) | ✅ |
-| `BUILT_IN_FORGE_API_KEY` | Manus beépített API kulcs (szerver) | ✅ |
-| `VITE_FRONTEND_FORGE_API_KEY` | Manus API kulcs (frontend) | ✅ |
-| `VITE_FRONTEND_FORGE_API_URL` | Manus API URL (frontend) | ✅ |
-| `VITE_ANALYTICS_ENDPOINT` | Analytics endpoint | ⬜ |
-| `VITE_ANALYTICS_WEBSITE_ID` | Analytics website ID | ⬜ |
+| `JWT_SECRET` | Session cookie aláíró kulcs (productionben min. 32 karakter) | ✅ |
+| `LLM_PROVIDER` | `anthropic` vagy `openai` | ✅ |
+| `LLM_MODEL` | A használt modell neve | ⬜ |
+| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | A kiválasztott LLM-szolgáltató kulcsa | ✅ |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Stripe előfizetés és webhook | ✅ |
+| `RESEND_API_KEY`, `EMAIL_FROM` | Tranzakcionális email (Resend) | ✅ |
+| `BLOB_READ_WRITE_TOKEN` | Vercel Blob fájltárolás | ✅ |
+| `APP_URL` | Production base URL az OAuth callbackekhez | ✅ |
+| `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET` | LinkedIn csatlakozás | ⬜ |
+| `SCHEDULER_ENABLED` | Időzítő; productionben alapból be, `false` kikapcsolja | ⬜ |
+| `SOCIAL_META_TIKTOK_ENABLED`, `HEYGEN_VIDEO_ENABLED`, `NEWSLETTER_ENABLED` | Funkciókapcsolók, alapból ki (lásd [Állapot a G0 után](#állapot-a-g0-után)) | ⬜ |
+| `PAGESPEED_API_KEY`, `SENTRY_DSN`, `HEYGEN_API_KEY` | Opcionális szolgáltatások | ⬜ |
 
 > **Fontos:** Soha ne commitolj `.env` fájlt a repóba. A `.gitignore` már tartalmazza.
 
@@ -578,14 +617,9 @@ A tesztek Vitest-tel futnak, TypeScript natív támogatással. Új feature-höz 
 
 ## Deployment
 
-### Manus Platform (ajánlott)
+### Railway (éles)
 
-A projekt a Manus platformon fut, ahol a deployment a Management UI-ból indítható:
-
-1. Checkpoint mentése: `webdev_save_checkpoint`
-2. Publish gomb a Management UI fejlécében
-
-**Éles URL:** `https://g2a-growth-engine.manus.space`
+A projekt a Railway-en fut (`railway.json`, `nixpacks.toml`). A `main` ágra került változás automatikusan buildelődik és élesedik: `pnpm build`, majd `pnpm start`, előtte a `prestart` lefuttatja az adatbázis-migrációt. Healthcheck: `/api/health`. Az env-változókat a Railway Variables alatt kell kezelni; változtatás után a szolgáltatás újraindul.
 
 ### Manuális deployment
 
@@ -606,6 +640,8 @@ A build kimenet a `dist/` mappában:
 ---
 
 ## Roadmap
+
+> **Régi, Sprint 11-es roadmap, csak történeti célból.** Azóta elkészült többek között a Stripe-előfizetés, az auth rate limiting és a LinkedIn-közzététel. Az aktuális fázisterv (G0–G3): [`docs/termekcsalad/GROWTH_ENGINE_TERV.md`](docs/termekcsalad/GROWTH_ENGINE_TERV.md).
 
 ### Sprint 12 – Stripe integráció (következő)
 - [ ] Stripe Checkout önkiszolgáló előfizetés-kezelés
@@ -644,9 +680,9 @@ A build kimenet a `dist/` mappában:
 | Szerepkör | Feladatkör |
 |---|---|
 | **Product Owner** | Attila Györfi – üzleti követelmények, prioritizálás, sprint tervezés |
-| **AI Development** | Manus AI – teljes szoftver fejlesztés (frontend, backend, DB, tesztek) |
-| **Design** | Manus AI – UI/UX tervezés, komponens könyvtár, animációk |
-| **DevOps** | Manus Platform – hosting, CI/CD, adatbázis, S3 |
+| **AI Development** | Korábban Manus AI, ma Claude Code – szoftverfejlesztés (frontend, backend, DB, tesztek) |
+| **Design** | Korábban Manus AI – UI/UX tervezés, komponens könyvtár, animációk |
+| **DevOps** | Railway (hosting, deploy) + TiDB Cloud (adatbázis); korábban Manus Platform |
 
 ### Fejlesztési napló
 
@@ -660,4 +696,4 @@ MIT License – részletekért lásd a `LICENSE` fájlt.
 
 ---
 
-*Utoljára frissítve: 2026. április 22. | Verzió: Sprint 11 (047fb088)*
+*Utoljára frissítve: 2026. november 9. (G0 lezárása; az „Állapot a G0 után” szakasz friss, a többi fejezet részben a Sprint 11-es állapotot írja le)*
