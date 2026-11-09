@@ -8,6 +8,9 @@
  * MVP-szintű kampány: subject + HTML body + opcionális plain text. Egyetlen
  * azonnali küldés (nincs ütemezés). Email-szinten dedup, hogy ugyanaz a cím
  * ne kapja kétszer.
+ *
+ * G0: a küldés kapcsolóval befagyasztva (server/featureFlags.ts → newsletter);
+ * a feliratkozók listája olvasható, a regisztrációs hozzájárulás gyűjtése változatlan.
  */
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
@@ -16,6 +19,7 @@ import { getDb } from "../db";
 import { leads } from "../../drizzle/schema";
 import { or, eq } from "drizzle-orm";
 import { sendNewsletterEmail } from "../email";
+import { NEWSLETTER_DISABLED_MESSAGE, isNewsletterEnabled } from "../featureFlags";
 
 // Egyszerű késleltetés, hogy ne fussunk bele a Resend rate-limitbe (~10 req/s).
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -46,6 +50,9 @@ async function getNewsletterSubscribers() {
 }
 
 export const newsletterRouter = router({
+  // A G0 kapcsoló állása — a kliens ebből tudja, hogy a küldés gomb aktív lehet-e.
+  isEnabled: superAdminProcedure.query(() => ({ enabled: isNewsletterEnabled() })),
+
   // Feliratkozók listája — frontend ezt használja a recipient-count chip-hez és listához.
   listSubscribers: superAdminProcedure.query(async () => {
     const subs = await getNewsletterSubscribers();
@@ -65,6 +72,10 @@ export const newsletterRouter = router({
       textBody: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
+      // A kapcsoló minden más (feliratkozók lekérdezése, küldés) előtt.
+      if (!isNewsletterEnabled()) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: NEWSLETTER_DISABLED_MESSAGE });
+      }
       const subs = await getNewsletterSubscribers();
       if (subs.length === 0) {
         throw new TRPCError({
