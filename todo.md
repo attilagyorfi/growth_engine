@@ -1156,5 +1156,5 @@
 
 - [x] Landing és app hero képek: a törött Manus CDN helyett saját SVG-makettek a `client/public/landing/` és `client/public/brand/illustrations/` alatt (őrteszt: `server/static-assets.test.ts`)
 - [x] FB/IG/TikTok csatlakozás kikapcsolása kapcsolóval: `server/featureFlags.ts` (alapból ki, `SOCIAL_META_TIKTOK_ENABLED=true`-val visszakapcsolható); az OAuth start/callback, a kézi token és az oldalválasztás nem hoz létre új kapcsolatot, a Beállítások helyette magyarázatot mutat; a meglévő kapcsolatok, a lecsatlakoztatás és a publikálás érintetlen (őrteszt: `server/social-meta-tiktok-flag.test.ts`)
-- [ ] HeyGen és hírlevél befagyasztása kapcsolóval
+- [x] HeyGen és hírlevél befagyasztása kapcsolóval: `server/featureFlags.ts` (`heygenVideo`, `newsletter`; alapból ki, `HEYGEN_VIDEO_ENABLED=true` / `NEWSLETTER_ENABLED=true`-val visszakapcsolható); kikapcsolva nincs HeyGen-hívás, új videó és hírlevélküldés, a Videó stúdió és a Hírlevél oldal helyette rövid magyarázatot mutat; a meglévő videók listája/állapota, a feliratkozók listája és a regisztrációs hírlevél-hozzájárulás érintetlen (őrteszt: `server/heygen-newsletter-flags.test.ts`)
 - [ ] README frissítése

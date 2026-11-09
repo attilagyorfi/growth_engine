@@ -23,6 +23,34 @@ export const FEATURE_FLAGS = {
    * (publishNow / schedulePost / időzítő) érintetlen.
    */
   metaTiktokConnect: process.env.SOCIAL_META_TIKTOK_ENABLED === "true",
+
+  /**
+   * HeyGen AI-videógyártás (avatar/hang lista + új videó indítása).
+   *
+   * MIÉRT KI: a G0 terv szerint (docs/termekcsalad/GROWTH_ENGINE_TERV.md) a videógyártás
+   * befagyasztva: nem a fő érték, karbantartást visz, és minden videó fizetős HeyGen-hívás.
+   *
+   * MEDDIG: ha egy fizető ügyfél kéri, a G3 után; addig a kód marad, csak nem érhető el.
+   * Visszakapcsolás: HEYGEN_VIDEO_ENABLED=true env (alapból nincs beállítva → kikapcsolt).
+   *
+   * Ami NEM változik: a már elkészült videók listája, az állapotlekérdezés (csak a DB-ből,
+   * HeyGen-hívás nélkül) és a kvótakijelzés működik; adat nem törlődik.
+   */
+  heygenVideo: process.env.HEYGEN_VIDEO_ENABLED === "true",
+
+  /**
+   * Hírlevélküldés (super_admin kampányküldő, Resend).
+   *
+   * MIÉRT KI: a G0 terv szerint (docs/termekcsalad/GROWTH_ENGINE_TERV.md) a hírlevél
+   * befagyasztva: nem a fő érték, karbantartást visz.
+   *
+   * MEDDIG: amíg a saját G2A-hírlevél el nem indul; addig a kód marad, csak nem érhető el.
+   * Visszakapcsolás: NEWSLETTER_ENABLED=true env (alapból nincs beállítva → kikapcsolt).
+   *
+   * Ami NEM változik: a regisztrációs hírlevél-hozzájárulás gyűjtése és a feliratkozók
+   * listája működik; feliratkozási adat nem törlődik.
+   */
+  newsletter: process.env.NEWSLETTER_ENABLED === "true",
 };
 
 export function isMetaTiktokConnectEnabled(): boolean {
@@ -37,3 +65,17 @@ export function isConnectBlocked(platform: string): boolean {
 /** Rövid, tegező hibaüzenet a kikapcsolt csatlakozáshoz (tRPC-hibákban). */
 export const META_TIKTOK_DISABLED_MESSAGE =
   "A Facebook-, Instagram- és TikTok-csatlakozás egyelőre nem elérhető. A posztokat a Social Hubból teheted közzé.";
+
+export function isHeygenVideoEnabled(): boolean {
+  return FEATURE_FLAGS.heygenVideo;
+}
+
+export function isNewsletterEnabled(): boolean {
+  return FEATURE_FLAGS.newsletter;
+}
+
+/** Rövid, tegező hibaüzenet a kikapcsolt videókészítéshez (tRPC-hibákban). */
+export const HEYGEN_VIDEO_DISABLED_MESSAGE = "A videókészítés egyelőre nem elérhető.";
+
+/** Rövid, tegező hibaüzenet a kikapcsolt hírlevélküldéshez (tRPC-hibákban). */
+export const NEWSLETTER_DISABLED_MESSAGE = "A hírlevélküldés egyelőre szünetel.";

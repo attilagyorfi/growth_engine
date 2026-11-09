@@ -6,6 +6,9 @@
  *      mentett címek). Stats + táblázat.
  *   2) Új kampány szerkesztő: tárgy + HTML body + Küldés gomb confirm modallal.
  *      A küldés a server/routers/newsletter.ts:sendCampaign endpoint-on át megy.
+ *
+ * G0: a küldés kapcsolóval befagyasztva (newsletter.isEnabled); kikapcsolva a gomb
+ * le van tiltva, és rövid magyarázat látszik. A feliratkozók listája változatlan.
  */
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
@@ -21,6 +24,10 @@ export default function NewsletterSection() {
   const { data: subs, isLoading } = trpc.newsletter.listSubscribers.useQuery(undefined, {
     refetchOnWindowFocus: false,
   });
+  const { data: flag } = trpc.newsletter.isEnabled.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+  });
+  const sendingEnabled = flag?.enabled === true;
   const [subject, setSubject] = useState("");
   const [htmlBody, setHtmlBody] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -39,7 +46,7 @@ export default function NewsletterSection() {
   });
 
   const subscriberCount = subs?.length ?? 0;
-  const canSend = subject.trim().length > 0 && htmlBody.trim().length >= 10 && subscriberCount > 0;
+  const canSend = sendingEnabled && subject.trim().length > 0 && htmlBody.trim().length >= 10 && subscriberCount > 0;
 
   return (
     <div className="space-y-4">
@@ -143,7 +150,11 @@ export default function NewsletterSection() {
             <Send size={14} />
             Küldés most ({subscriberCount} címzett)
           </button>
-          {!canSend && subscriberCount > 0 && (
+          {!sendingEnabled ? (
+            <span className="text-xs" style={{ color: "var(--qa-fg4)" }}>
+              A hírlevélküldés egyelőre szünetel.
+            </span>
+          ) : !canSend && subscriberCount > 0 && (
             <span className="text-xs" style={{ color: "var(--qa-fg4)" }}>
               Tölts ki tárgyat és legalább 10 karakter tartalmat.
             </span>
@@ -152,7 +163,7 @@ export default function NewsletterSection() {
       </div>
 
       {/* Confirm modal */}
-      {confirmOpen && (
+      {confirmOpen && sendingEnabled && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: "rgba(0, 0, 0, 0.7)" }}

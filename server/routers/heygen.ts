@@ -3,6 +3,8 @@
  *
  * Avatar/voice listák, videó létrehozás, polling, lista, kvóta státusz.
  * Plan gate: Pro és Agency csomag (plus super_admin).
+ * G0: a videógyártás kapcsolóval befagyasztva (server/featureFlags.ts → heygenVideo);
+ * kikapcsolva nincs HeyGen-hívás és új videó, a meglévők listája/állapota olvasható.
  *
  * Kivéve a `routers.ts`-ből a router-split refaktor során.
  */
@@ -10,20 +12,25 @@ import { z } from "zod";
 import { nanoid } from "nanoid";
 import { TRPCError } from "@trpc/server";
 import { appUserProcedure, router } from "../_core/trpc";
+import { HEYGEN_VIDEO_DISABLED_MESSAGE, isHeygenVideoEnabled } from "../featureFlags";
 
 export const heygenRouter = router({
-  // Check if HeyGen is enabled (API key configured)
+  // Check if HeyGen is enabled (feature flag on AND API key configured).
+  // featureEnabled: a G0 kapcsoló állása — a kliens ebből tudja, hogy a videókészítés be van-e fagyasztva.
   isEnabled: appUserProcedure
     .query(async ({ ctx }) => {
       const { isHeygenEnabled } = await import("../_core/heygen");
       const plan = ctx.appUser.subscriptionPlan ?? "free";
       const hasAccess = ["pro", "agency"].includes(plan) || ctx.appUser.role === "super_admin";
-      return { enabled: isHeygenEnabled(), hasAccess };
+      const featureEnabled = isHeygenVideoEnabled();
+      return { enabled: featureEnabled && isHeygenEnabled(), featureEnabled, hasAccess };
     }),
 
   // List available avatars
   listAvatars: appUserProcedure
     .query(async ({ ctx }) => {
+      // Kikapcsolva üres lista (nem hiba), hogy a dialógus ne dobjon fölösleges hibaüzenetet.
+      if (!isHeygenVideoEnabled()) return { avatars: [] };
       const plan = ctx.appUser.subscriptionPlan ?? "free";
       const hasAccess = ["pro", "agency"].includes(plan) || ctx.appUser.role === "super_admin";
       if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "A videókészítő csak Pro és Agency csomagban elérhető" });
@@ -37,6 +44,7 @@ export const heygenRouter = router({
   listVoices: appUserProcedure
     .input(z.object({ language: z.string().optional().default("hu") }))
     .query(async ({ ctx, input }) => {
+      if (!isHeygenVideoEnabled()) return { voices: [] };
       const plan = ctx.appUser.subscriptionPlan ?? "free";
       const hasAccess = ["pro", "agency"].includes(plan) || ctx.appUser.role === "super_admin";
       if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "A videókészítő csak Pro és Agency csomagban elérhető" });
@@ -56,6 +64,10 @@ export const heygenRouter = router({
       profileId: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      // A kapcsoló minden más (plan, kvóta, DB) előtt: kikapcsolva se HeyGen-hívás, se DB-sor.
+      if (!isHeygenVideoEnabled()) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: HEYGEN_VIDEO_DISABLED_MESSAGE });
+      }
       const plan = ctx.appUser.subscriptionPlan ?? "free";
       const hasAccess = ["pro", "agency"].includes(plan) || ctx.appUser.role === "super_admin";
       if (!hasAccess) throw new TRPCError({ code: "FORBIDDEN", message: "A videókészítő csak Pro és Agency csomagban elérhető" });
@@ -135,7 +147,8 @@ export const heygenRouter = router({
       const video = rows[0];
 
       // If still processing and we have a heygenVideoId, poll the API
-      if (video.status === "processing" && video.heygenVideoId) {
+      // (kikapcsolt videós kapcsolónál nem: ilyenkor a DB-ben tárolt állapot megy vissza).
+      if (isHeygenVideoEnabled() && video.status === "processing" && video.heygenVideoId) {
         const { isHeygenEnabled, getVideoStatus } = await import("../_core/heygen");
         if (isHeygenEnabled()) {
           try {

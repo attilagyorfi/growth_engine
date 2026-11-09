@@ -215,10 +215,21 @@ export default function VideoStudio() {
   }
 
   if (!enabledData?.hasAccess) {
+    // Befagyasztott funkcióra nem kínálunk csomagváltást.
+    if (!enabledData?.featureEnabled) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 text-center px-4">
+          <Lock className="w-10 h-10 text-slate-500" />
+          <p className="text-slate-300">A videókészítés egyelőre nem elérhető.</p>
+        </div>
+      );
+    }
     return <ProGateBanner />;
   }
 
-  const isDemoMode = !enabledData?.enabled;
+  // G0: a videókészítés kapcsolóval befagyasztva → nincs indító gomb, csak a meglévő videók.
+  const isFrozen = !enabledData?.featureEnabled;
+  const isDemoMode = !isFrozen && !enabledData?.enabled;
   const videos = videosData?.videos ?? [];
 
   return (
@@ -243,16 +254,29 @@ export default function VideoStudio() {
           {quotaData?.unlimited && (
             <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30">Korlátlan</Badge>
           )}
-          <Button
-            onClick={() => setCreateOpen(true)}
-            disabled={quotaData?.noAccess || (quotaData?.remaining === 0)}
-            className="bg-purple-600 hover:bg-purple-700 text-white gap-2"
-          >
-            <Sparkles className="w-4 h-4" />
-            Új videó
-          </Button>
+          {!isFrozen && (
+            <Button
+              onClick={() => setCreateOpen(true)}
+              disabled={quotaData?.noAccess || (quotaData?.remaining === 0)}
+              className="bg-purple-600 hover:bg-purple-700 text-white gap-2"
+            >
+              <Sparkles className="w-4 h-4" />
+              Új videó
+            </Button>
+          )}
         </div>
       </div>
+
+      {/* Befagyasztva (G0) */}
+      {isFrozen && (
+        <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 flex items-start gap-3">
+          <Lock className="w-5 h-5 text-slate-400 mt-0.5 flex-shrink-0" />
+          <div>
+            <div className="text-slate-200 font-medium text-sm">A videókészítés egyelőre nem elérhető.</div>
+            <div className="text-slate-400 text-xs mt-1">A korábban elkészült videóidat itt továbbra is megnézheted.</div>
+          </div>
+        </div>
+      )}
 
       {/* Demo mode banner */}
       {isDemoMode && (
@@ -282,12 +306,16 @@ export default function VideoStudio() {
           </div>
           <div>
             <div className="text-white font-medium">Még nincs videód</div>
-            <div className="text-slate-400 text-sm mt-1">Kattints az „Új videó" gombra az első AI videó elkészítéséhez</div>
+            {!isFrozen && (
+              <div className="text-slate-400 text-sm mt-1">Kattints az „Új videó" gombra az első AI videó elkészítéséhez</div>
+            )}
           </div>
-          <Button onClick={() => setCreateOpen(true)} className="bg-purple-600 hover:bg-purple-700 text-white gap-2 mt-2">
-            <Sparkles className="w-4 h-4" />
-            Első videó elkészítése
-          </Button>
+          {!isFrozen && (
+            <Button onClick={() => setCreateOpen(true)} className="bg-purple-600 hover:bg-purple-700 text-white gap-2 mt-2">
+              <Sparkles className="w-4 h-4" />
+              Első videó elkészítése
+            </Button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -364,11 +392,13 @@ export default function VideoStudio() {
         </div>
       )}
 
-      <CreateVideoModal
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        onCreated={() => refetch()}
-      />
+      {!isFrozen && (
+        <CreateVideoModal
+          open={createOpen}
+          onClose={() => setCreateOpen(false)}
+          onCreated={() => refetch()}
+        />
+      )}
     </div>
   );
 }

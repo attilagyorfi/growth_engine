@@ -60,7 +60,7 @@ A Growth Engine a Social Hub `/api/v1` API-jának kliense. A végpontok pontos l
 - [ ] Leads/outbound táblák és halott útvonalak törlése migrációval
 - [x] Landing: a „Sales” modul és az alá nem támasztott „10x” állítás levétele; árazási blokk elrejtése a pilotig
 - [ ] README és fejlesztői dokumentáció frissítése a valós állapotra (Railway, Anthropic/OpenAI, Stripe kész)
-- [ ] HeyGen-videó és hírlevél befagyasztása kapcsolóval
+- [x] HeyGen-videó és hírlevél befagyasztása kapcsolóval
 - [ ] Háttérben indul: Google OAuth-app ellenőrzése (`analytics.readonly`, `webmasters.readonly`) és Google Ads developer token igénylése – ezek hetekig tartanak (a felhasználó adja be, a kód készítse elő)
 
 **Kapu:** zöld CI, a landing csak létező funkciót ígér, a Google-ellenőrzés és a developer token beadva.
