@@ -9,6 +9,7 @@
  *     OAuth verification + Meta Ads Insights review a kritikus úton).
  *   - Mock adatot generálunk minden platformra a `sync` mutation-ben.
  *   - A PDF gomb `window.print()`-et hív (a Playwright renderer külön PR).
+ *   - A Word gomb a szerveren készült .docx-et tölti le (reports.exportDocx).
  */
 import { useState, useMemo } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -95,6 +96,22 @@ export default function Reports() {
       if (report?.id) setSelectedReportId(report.id);
     },
     onError: (err) => toast.error(err.message),
+  });
+
+  // Word-export: a szerver base64-ben adja a .docx-et, itt Blob-bá alakítjuk és letöltjük.
+  const exportDocxMutation = trpc.reports.exportDocx.useMutation({
+    onSuccess: ({ fileName, mimeType, base64 }) => {
+      const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+      const url = URL.createObjectURL(new Blob([bytes], { type: mimeType }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    },
+    onError: () => toast.error("Nem sikerült letölteni a Word-fájlt, próbáld újra."),
   });
 
   const disconnectMutation = trpc.reports.connections.disconnect.useMutation({
@@ -239,11 +256,23 @@ export default function Reports() {
                         </span>
                       )}
                     </div>
-                    <button onClick={() => window.print()} className="no-print flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold flex-shrink-0"
-                      style={{ background: "var(--qa-accent)", color: "var(--qa-accent-on)" }}
-                      title="A megnyíló ablakban válaszd a „Mentés PDF-ként” opciót">
-                      <Printer size={13} /> PDF letöltése
-                    </button>
+                    <div className="no-print flex items-center gap-2 flex-shrink-0">
+                      <button onClick={() => window.print()} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
+                        style={{ background: "var(--qa-accent)", color: "var(--qa-accent-on)" }}
+                        title="A megnyíló ablakban válaszd a „Mentés PDF-ként” opciót">
+                        <Printer size={13} /> PDF letöltése
+                      </button>
+                      <button
+                        onClick={() => exportDocxMutation.mutate({ profileId, reportId: activeReport.id })}
+                        disabled={!profileId || exportDocxMutation.isPending}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-40"
+                        style={{ background: "var(--qa-surface2)", color: textPrimary }}
+                        title="Word-fájlként töltöd le, így tovább tudod szerkeszteni">
+                        {exportDocxMutation.isPending
+                          ? <><Loader2 size={13} className="animate-spin" /> Készül…</>
+                          : <><FileText size={13} /> Word letöltése</>}
+                      </button>
+                    </div>
                   </div>
                   <p className="text-xs" style={{ color: textMuted }}>
                     <Calendar size={12} className="inline mr-1" />
