@@ -40,7 +40,7 @@ A G2A Growth Engine egy teljes körű SaaS platform, amely mesterséges intellig
 | LLM | **Anthropic Claude** az élő szolgáltató; **OpenAI** tartalékként env-ből visszaállítható. Minden AI-hívás egyetlen ponton, az `invokeLLM`-en megy át | `server/_core/llm.ts`, `server/_core/anthropicAdapter.ts`, `server/_core/env.ts` |
 | Fizetés | **Stripe** Checkout + webhook (`/api/stripe/webhook`), HUF-árak, csomagok: Starter / Pro / Agency | `server/stripe/` |
 | Tartalomstúdió | AI-tartalomgyártás, naptár, jóváhagyás, időzítés (`/tartalom-studio`) | `client/src/pages/ContentStudio.tsx`, `server/routers/content.ts` |
-| Riportok | Havi riport AI-összefoglalóval (`/riportok`) — **egyelőre mintaadattal**, a valós Google-/Meta-adapterek a G1-ben jönnek (`LIVE_METRIC_PLATFORMS` jelenleg üres) | `server/routers/reports.ts`, `server/reports/` |
+| Riportok | Havi riport AI-összefoglalóval (`/riportok`), letölthető PDF-ként és Word-fájlként (szerveroldali export, `reports.exportPdf` / `exportDocx`) — **egyelőre mintaadattal**, a valós Google-/Meta-adapterek a G1-ben jönnek (`LIVE_METRIC_PLATFORMS` jelenleg üres) | `server/routers/reports.ts`, `server/reports/` |
 | Egyéb | Onboarding, Cégintelligencia, Stratégia, Kampányok, Analitika, AI-író, SEO-audit, Copilot-asszisztens, értesítések, projektek (admin) | `client/src/App.tsx` útvonalai |
 | Közösségi kapcsolatok | **LinkedIn** csatlakoztatás és közzététel működik; a meglévő FB/IG-kapcsolatok is működnek (lásd lent) | `server/routers/social.ts`, `server/scheduler.ts` |
 | Fájltárolás | Vercel Blob | `server/storage.ts` |

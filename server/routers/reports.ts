@@ -6,10 +6,10 @@
  *   - db-helperek a server/db.ts-ből
  *   - mock connector a server/reports/connectors-ból
  *   - AI narratíva a server/ai/reportSummary.ts-ből
- *   - PDF stub a server/reports/pdf.ts-ből (Playwright TODO)
+ *   - Word- és PDF-export a server/reports/docx.ts / pdf.ts-ből (közös tartalom: content.ts)
  *
  * Az eljárások: connections.list/upsert/disconnect, sync, generate, list,
- * get, schedule. A `buildSummary` tiszta függvény — unit-tesztelhető.
+ * get, exportDocx, exportPdf, schedule. A `buildSummary` tiszta függvény — unit-tesztelhető.
  */
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
@@ -29,9 +29,10 @@ import {
   upsertReportSchedule,
 } from "../db";
 import { generateReportSummary } from "../ai/reportSummary";
-import { renderReportPdf } from "../reports/pdf";
+import { buildReportPdf, reportPdfFileName, PDF_MIME_TYPE } from "../reports/pdf";
 import { fetchMetrics, getMetricsSource, isDemoData } from "../reports/connectors";
-import { buildReportDocx, reportDocxFileName, DOCX_MIME_TYPE, type ReportDocxInput } from "../reports/docx";
+import { buildReportDocx, reportDocxFileName, DOCX_MIME_TYPE } from "../reports/docx";
+import type { ReportContentInput } from "../reports/content";
 
 const platformEnum = z.enum(["google_ads", "ga4", "search_console", "meta_ads"]);
 
@@ -101,7 +102,9 @@ export const reportsRouter = router({
       return { platforms: targets.map((t) => t.platform), inserted };
     }),
 
-  // ─── Riport legenerálása (összesítés → AI-narratíva → PDF) ────────────────
+  // ─── Riport legenerálása (összesítés → AI-narratíva) ─────────────────────
+  // A letölthető fájl (Word/PDF) igény szerint, az exportDocx/exportPdf-fel készül
+  // a tárolt pillanatképből; a pdfUrl ezért null marad (nincs hamis URL).
   generate: appUserProcedure
     .input(z.object({
       profileId: z.string(),
@@ -140,14 +143,10 @@ export const reportsRouter = router({
           appUserId: ctx.appUser.id,
         });
 
-        // 3) PDF renderelés (jelenleg stub — placeholder URL)
-        const pdfUrl = await renderReportPdf({ reportId: report.id });
-
         return updateReport(report.id, {
           status: "rendered",
           summaryData,
           aiSummary,
-          pdfUrl,
         });
       } catch (err) {
         await updateReport(report.id, { status: "failed" });
@@ -170,40 +169,38 @@ export const reportsRouter = router({
       return getReportById(input.profileId, input.reportId);
     }),
 
-  // ─── Word-export (G1, TELJESÍTMÉNY MINTA szerkezet) ──────────────────────
-  // A tárolt riport-pillanatképből (summaryData + aiSummary) készül, nincs
-  // LLM-hívás és új számítás. A mintaadat-jelölést az isDemoData() dönti el
-  // (a riportsor nem tárolja), ugyanúgy, mint a dataSource-nál.
+  // ─── Word- és PDF-export (G1, TELJESÍTMÉNY MINTA szerkezet) ─────────────
+  // A tárolt riport-pillanatképből (summaryData + aiSummary) készülnek, nincs
+  // LLM-hívás és új számítás. A jogosultságot, a hibautakat és a bemenetet a
+  // közös loadExportableReport() adja, így a két formátum nem térhet el.
   exportDocx: appUserProcedure
     .input(z.object({ profileId: z.string(), reportId: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
-      const report = await getReportById(input.profileId, input.reportId);
-      if (!report) throw new TRPCError({ code: "NOT_FOUND", message: "A riport nem található" });
-
-      const summaryData = report.summaryData as ReportDocxInput["summaryData"] | null;
-      if ((report.status !== "rendered" && report.status !== "delivered") || !summaryData) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Ez a riport még nem készült el, ezért nem tölthető le. Várd meg, amíg elkészül, vagy generáld újra.",
-        });
-      }
-
-      const profile = await getProfileById(input.profileId);
-      const clientName = profile?.name || report.title;
-      const periodFrom = toIsoDate(report.periodFrom);
-      const periodTo = toIsoDate(report.periodTo);
-      const buffer = await buildReportDocx({
-        clientName,
-        periodFrom,
-        periodTo,
-        summaryData: { kpis: summaryData.kpis ?? [], byPlatform: summaryData.byPlatform ?? [] },
-        aiSummary: report.aiSummary ?? null,
-        demo: isDemoData(),
-      });
+      const content = await loadExportableReport(ctx.appUser, input);
+      const buffer = await buildReportDocx(content);
       return {
-        fileName: reportDocxFileName(clientName, periodFrom, periodTo),
+        fileName: reportDocxFileName(content.clientName, content.periodFrom, content.periodTo),
         mimeType: DOCX_MIME_TYPE,
+        base64: buffer.toString("base64"),
+      };
+    }),
+
+  // Szerveroldali .pdf (pdf-lib, beágyazott DejaVu Sans) — a böngészős nyomtatás
+  // mellett ez a letölthető, később e-mailben is küldhető fájl.
+  exportPdf: appUserProcedure
+    .input(z.object({ profileId: z.string(), reportId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const content = await loadExportableReport(ctx.appUser, input);
+      let buffer: Buffer;
+      try {
+        buffer = await buildReportPdf(content);
+      } catch (err) {
+        console.error(`[reports.exportPdf] PDF-készítés sikertelen (riport: ${input.reportId}):`, err);
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Most nem sikerült elkészíteni a PDF-et. Próbáld újra később." });
+      }
+      return {
+        fileName: reportPdfFileName(content.clientName, content.periodFrom, content.periodTo),
+        mimeType: PDF_MIME_TYPE,
         base64: buffer.toString("base64"),
       };
     }),
@@ -324,6 +321,40 @@ const VIEW_CHANNELS: { platform: string; label: string; paid: boolean }[] = [
 function toIsoDate(d: Date | string | null | undefined): string {
   if (!d) return "";
   return d instanceof Date ? d.toISOString().slice(0, 10) : String(d).slice(0, 10);
+}
+
+export const REPORT_NOT_READY_MESSAGE =
+  "Ez a riport még nem készült el, ezért nem tölthető le. Várd meg, amíg elkészül, vagy generáld újra.";
+
+/**
+ * Közös előkészítés a Word- és PDF-exporthoz: jogosultság (assertProfileOwnership),
+ * a riport betöltése a profil alatt (NOT_FOUND), csak elkészült riport
+ * (rendered/delivered + summaryData, egyébként BAD_REQUEST), ügyfélnév, dátumok és
+ * a mintaadat-jelölés (az isDemoData() dönti el — a riportsor nem tárolja, ugyanúgy,
+ * mint a dataSource-nál).
+ */
+export async function loadExportableReport(
+  appUser: { id: string; role: string; profileId: string | null },
+  input: { profileId: string; reportId: string },
+): Promise<ReportContentInput> {
+  await assertProfileOwnership(appUser.id, appUser.role, input.profileId, appUser.profileId);
+  const report = await getReportById(input.profileId, input.reportId);
+  if (!report) throw new TRPCError({ code: "NOT_FOUND", message: "A riport nem található" });
+
+  const summaryData = report.summaryData as ReportContentInput["summaryData"] | null;
+  if ((report.status !== "rendered" && report.status !== "delivered") || !summaryData) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: REPORT_NOT_READY_MESSAGE });
+  }
+
+  const profile = await getProfileById(input.profileId);
+  return {
+    clientName: profile?.name || report.title,
+    periodFrom: toIsoDate(report.periodFrom),
+    periodTo: toIsoDate(report.periodTo),
+    summaryData: { kpis: summaryData.kpis ?? [], byPlatform: summaryData.byPlatform ?? [] },
+    aiSummary: report.aiSummary ?? null,
+    demo: isDemoData(),
+  };
 }
 
 /** Alapértelmezett időszak: utolsó 30 nap (YYYY-MM-DD). */

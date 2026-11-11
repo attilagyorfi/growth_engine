@@ -73,7 +73,7 @@ Függés: a Social Hub F1 (`GET /metrics`) kész.
 - [ ] Közösségi metrikák a Social Hubból (`GET /metrics`), ugyanabba a `report_metrics` táblába
 - [ ] Napi szinkron háttérfeladatként, hibánál újrapróbálással és értesítéssel
 - [x] .docx export a „TELJESÍTMÉNY MINTA” szerkezetében: csatornánkénti számozott szakaszok, számok + értelmezés, záró „Vezetői értékelés” (2026-11-11: Riportok → „Word letöltése”, `reports.exportDocx`, `server/reports/docx.ts`; a tárolt riport-pillanatképből, LLM nélkül, mintaadatnál jelölve)
-- [ ] Szerveroldali PDF (a `renderReportPdf` stub kiváltása)
+- [x] Szerveroldali PDF (a `renderReportPdf` stub kiváltása) (2026-11-11: Riportok → „PDF letöltése”, `reports.exportPdf`, `server/reports/pdf.ts`; pdf-lib + beágyazott DejaVu Sans, a docx-szel közös tartalmi modellből (`server/reports/content.ts`), mintaadatnál jelölve; a böngészős nyomtatás „Nyomtatás” gombon megmaradt, a `generate` már nem ír hamis `pdfUrl`-t. Blob-feltöltés és e-mailes kiküldés: külön tétel)
 - [ ] AI-narratíva valós adatból; a nagy visszaeséseket magyarázattal írja (pl. kampány nélküli hónap)
 - [ ] Alárkák külön riportban (pl. Dr K Phillips klinika + termék, Ste-Ba Nissan + Chery)
 

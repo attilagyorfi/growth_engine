@@ -8,18 +8,20 @@
  *   - A kapcsolatok gomb egyelőre a "Coming soon" modal-t nyitja (a Google
  *     OAuth verification + Meta Ads Insights review a kritikus úton).
  *   - Mock adatot generálunk minden platformra a `sync` mutation-ben.
- *   - A PDF gomb `window.print()`-et hív (a Playwright renderer külön PR).
- *   - A Word gomb a szerveren készült .docx-et tölti le (reports.exportDocx).
+ *   - A „PDF letöltése” a szerveren készült .pdf-et (reports.exportPdf), a
+ *     „Word letöltése” a .docx-et (reports.exportDocx) tölti le, közös segéddel.
+ *   - A „Nyomtatás” gomb `window.print()`-et hív (print CSS: index.css).
  */
 import { useState, useMemo } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useProfile } from "@/contexts/ProfileContext";
 import { trpc } from "@/lib/trpc";
+import { downloadBase64File } from "@/lib/downloadFile";
 import { toast } from "sonner";
 import { Streamdown } from "streamdown";
 import {
   BarChart3, Plus, Loader2, FileText, Zap, Calendar,
-  Facebook, Search, TrendingUp, X, Printer, Trash2,
+  Facebook, Search, TrendingUp, X, Printer, Trash2, Download,
 } from "lucide-react";
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -98,20 +100,14 @@ export default function Reports() {
     onError: (err) => toast.error(err.message),
   });
 
-  // Word-export: a szerver base64-ben adja a .docx-et, itt Blob-bá alakítjuk és letöltjük.
+  // Word- és PDF-export: a szerver base64-ben adja a fájlt, a közös segéd tölti le.
   const exportDocxMutation = trpc.reports.exportDocx.useMutation({
-    onSuccess: ({ fileName, mimeType, base64 }) => {
-      const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
-      const url = URL.createObjectURL(new Blob([bytes], { type: mimeType }));
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    },
+    onSuccess: downloadBase64File,
     onError: () => toast.error("Nem sikerült letölteni a Word-fájlt, próbáld újra."),
+  });
+  const exportPdfMutation = trpc.reports.exportPdf.useMutation({
+    onSuccess: downloadBase64File,
+    onError: () => toast.error("Nem sikerült letölteni a PDF-et, próbáld újra."),
   });
 
   const disconnectMutation = trpc.reports.connections.disconnect.useMutation({
@@ -257,10 +253,15 @@ export default function Reports() {
                       )}
                     </div>
                     <div className="no-print flex items-center gap-2 flex-shrink-0">
-                      <button onClick={() => window.print()} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
+                      <button
+                        onClick={() => exportPdfMutation.mutate({ profileId, reportId: activeReport.id })}
+                        disabled={!profileId || exportPdfMutation.isPending}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-40"
                         style={{ background: "var(--qa-accent)", color: "var(--qa-accent-on)" }}
-                        title="A megnyíló ablakban válaszd a „Mentés PDF-ként” opciót">
-                        <Printer size={13} /> PDF letöltése
+                        title="PDF-fájlként töltöd le, így egyből továbbküldheted">
+                        {exportPdfMutation.isPending
+                          ? <><Loader2 size={13} className="animate-spin" /> Készül…</>
+                          : <><Download size={13} /> PDF letöltése</>}
                       </button>
                       <button
                         onClick={() => exportDocxMutation.mutate({ profileId, reportId: activeReport.id })}
@@ -271,6 +272,11 @@ export default function Reports() {
                         {exportDocxMutation.isPending
                           ? <><Loader2 size={13} className="animate-spin" /> Készül…</>
                           : <><FileText size={13} /> Word letöltése</>}
+                      </button>
+                      <button onClick={() => window.print()} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
+                        style={{ background: "var(--qa-surface2)", color: textPrimary }}
+                        title="Kinyomtathatod, vagy a megnyíló ablakban „Mentés PDF-ként” is elmentheted">
+                        <Printer size={13} /> Nyomtatás
                       </button>
                     </div>
                   </div>
