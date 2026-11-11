@@ -72,7 +72,7 @@ Függés: a Social Hub F1 (`GET /metrics`) kész.
 - [ ] GA4 Data API, Search Console Search Analytics, Google Ads API-adapter a `fetchMetrics` mockágának helyére; `LIVE_METRIC_PLATFORMS` platformonként bekapcsolva
 - [ ] Közösségi metrikák a Social Hubból (`GET /metrics`), ugyanabba a `report_metrics` táblába
 - [ ] Napi szinkron háttérfeladatként, hibánál újrapróbálással és értesítéssel
-- [ ] .docx export a „TELJESÍTMÉNY MINTA” szerkezetében: csatornánkénti számozott szakaszok, számok + értelmezés, záró „Vezetői értékelés”
+- [x] .docx export a „TELJESÍTMÉNY MINTA” szerkezetében: csatornánkénti számozott szakaszok, számok + értelmezés, záró „Vezetői értékelés” (2026-11-11: Riportok → „Word letöltése”, `reports.exportDocx`, `server/reports/docx.ts`; a tárolt riport-pillanatképből, LLM nélkül, mintaadatnál jelölve)
 - [ ] Szerveroldali PDF (a `renderReportPdf` stub kiváltása)
 - [ ] AI-narratíva valós adatból; a nagy visszaeséseket magyarázattal írja (pl. kampány nélküli hónap)
 - [ ] Alárkák külön riportban (pl. Dr K Phillips klinika + termék, Ste-Ba Nissan + Chery)

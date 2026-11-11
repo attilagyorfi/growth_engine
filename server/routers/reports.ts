@@ -31,6 +31,7 @@ import {
 import { generateReportSummary } from "../ai/reportSummary";
 import { renderReportPdf } from "../reports/pdf";
 import { fetchMetrics, getMetricsSource, isDemoData } from "../reports/connectors";
+import { buildReportDocx, reportDocxFileName, DOCX_MIME_TYPE, type ReportDocxInput } from "../reports/docx";
 
 const platformEnum = z.enum(["google_ads", "ga4", "search_console", "meta_ads"]);
 
@@ -169,6 +170,44 @@ export const reportsRouter = router({
       return getReportById(input.profileId, input.reportId);
     }),
 
+  // ─── Word-export (G1, TELJESÍTMÉNY MINTA szerkezet) ──────────────────────
+  // A tárolt riport-pillanatképből (summaryData + aiSummary) készül, nincs
+  // LLM-hívás és új számítás. A mintaadat-jelölést az isDemoData() dönti el
+  // (a riportsor nem tárolja), ugyanúgy, mint a dataSource-nál.
+  exportDocx: appUserProcedure
+    .input(z.object({ profileId: z.string(), reportId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      const report = await getReportById(input.profileId, input.reportId);
+      if (!report) throw new TRPCError({ code: "NOT_FOUND", message: "A riport nem található" });
+
+      const summaryData = report.summaryData as ReportDocxInput["summaryData"] | null;
+      if ((report.status !== "rendered" && report.status !== "delivered") || !summaryData) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Ez a riport még nem készült el, ezért nem tölthető le. Várd meg, amíg elkészül, vagy generáld újra.",
+        });
+      }
+
+      const profile = await getProfileById(input.profileId);
+      const clientName = profile?.name || report.title;
+      const periodFrom = toIsoDate(report.periodFrom);
+      const periodTo = toIsoDate(report.periodTo);
+      const buffer = await buildReportDocx({
+        clientName,
+        periodFrom,
+        periodTo,
+        summaryData: { kpis: summaryData.kpis ?? [], byPlatform: summaryData.byPlatform ?? [] },
+        aiSummary: report.aiSummary ?? null,
+        demo: isDemoData(),
+      });
+      return {
+        fileName: reportDocxFileName(clientName, periodFrom, periodTo),
+        mimeType: DOCX_MIME_TYPE,
+        base64: buffer.toString("base64"),
+      };
+    }),
+
   /**
    * A mérési adat forrása (mock/live) — a UI EZ ALAPJÁN jelöl DEMO-t, nem
    * beégetett szöveggel. Amíg a valós adapterek (Google/Meta OAuth) nem élnek,
@@ -280,6 +319,12 @@ const VIEW_CHANNELS: { platform: string; label: string; paid: boolean }[] = [
   { platform: "ga4", label: "GA4 (analitika)", paid: false },
   { platform: "search_console", label: "Search Console", paid: false },
 ];
+
+/** A tárolt időszakhatár (Date vagy string) → YYYY-MM-DD. */
+function toIsoDate(d: Date | string | null | undefined): string {
+  if (!d) return "";
+  return d instanceof Date ? d.toISOString().slice(0, 10) : String(d).slice(0, 10);
+}
 
 /** Alapértelmezett időszak: utolsó 30 nap (YYYY-MM-DD). */
 function resolveRange(from?: string, to?: string): { from: string; to: string } {
