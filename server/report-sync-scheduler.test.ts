@@ -12,6 +12,7 @@ import {
   collectSyncFailures,
   createDailyTicker,
   isReportSyncEnabled,
+  nightlySyncPlatforms,
   rollingWindow,
   runDailyReportSync,
   shouldRunDailySync,
@@ -115,6 +116,30 @@ describe("syncProfileMetrics – közös mag", () => {
     const res = await syncProfileMetrics("p-1", "2026-11-10", "2026-11-11", ["ga4"], deps);
     expect(res.platforms).toEqual(["ga4"]);
     expect(vi.mocked(deps.syncSocial).mock.calls[0][0]).toMatchObject({ requested: false });
+  });
+});
+
+describe("nightlySyncPlatforms – éjjel csak élő forrás", () => {
+  it("amíg nincs élő kapcsolat-platform, csak a közösségi platformokat kéri", () => {
+    expect(nightlySyncPlatforms(new Set())).toEqual(["facebook", "instagram", "linkedin"]);
+  });
+
+  it("az élő kapcsolat-platform bekerül, a mock-ágú kimarad", () => {
+    expect(nightlySyncPlatforms(new Set(["ga4"]))).toEqual(["ga4", "facebook", "instagram", "linkedin"]);
+  });
+
+  it("a mai beállítással (üres LIVE_METRIC_PLATFORMS) nincs kapcsolat-platform a listában", () => {
+    expect(nightlySyncPlatforms().filter((p) => !["facebook", "instagram", "linkedin"].includes(p))).toEqual([]);
+  });
+
+  it("mock-ágú kapcsolatoknál nem ír a táblába, de a Social Hub-ágat kéri", async () => {
+    const { store, deps } = memoryDeps([conn("c-1", "google_ads"), conn("c-2", "meta_ads")]);
+    const res = await syncProfileMetrics("p-1", "2026-11-10", "2026-11-11", nightlySyncPlatforms(new Set()), deps);
+    expect(deps.fetchMetrics).not.toHaveBeenCalled();
+    expect(deps.replaceRows).not.toHaveBeenCalled();
+    expect(store).toHaveLength(0);
+    expect(res.platforms).toEqual([]);
+    expect(vi.mocked(deps.syncSocial).mock.calls[0][0]).toMatchObject({ requested: true });
   });
 });
 
