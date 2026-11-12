@@ -1,4 +1,4 @@
-import { eq, ne, desc, and, gte, lte } from "drizzle-orm";
+import { eq, ne, desc, and, gte, lte, inArray } from "drizzle-orm";
 import { drizzle, type MySql2Database } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
 import mysql from "mysql2/promise";
@@ -14,6 +14,7 @@ import {
 } from "../drizzle/schema";
 import type { InboundEmail } from "../drizzle/schema";
 import { encryptToken } from './_core/tokenCrypto';
+import { SOCIAL_METRIC_PLATFORMS } from "./reports/connectors";
 
 let _db: MySql2Database | null = null;
 let _dbPromise: Promise<MySql2Database | null> | null = null;
@@ -91,6 +92,33 @@ export async function upsertProfile(profile: InsertClientProfile) {
   const { id: _id, appUserId: _owner, ...updatable } = profile;
   await db.insert(clientProfiles).values(profile).onDuplicateKeyUpdate({ set: updatable });
   return getProfileById(profile.id);
+}
+
+/** MySQL „Duplicate entry” (ER_DUP_ENTRY, 1062) — a drizzle a mysql2-hibát `cause`-ba is csomagolhatja. */
+export function isDuplicateEntryError(err: unknown): boolean {
+  for (let e: any = err, depth = 0; e && depth < 5; e = e.cause, depth++) {
+    if (e.code === "ER_DUP_ENTRY" || e.errno === 1062) return true;
+  }
+  return false;
+}
+
+/**
+ * A Social Hub-párosítókulcs (external_ref) beállítása vagy törlése (null).
+ * Ütközésnél (egyedi index) `{ ok: false, reason: "taken" }` — a másik profilt nem adjuk vissza.
+ */
+export async function setProfileExternalRef(
+  profileId: string,
+  externalRef: string | null,
+): Promise<{ ok: true } | { ok: false; reason: "taken" }> {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  try {
+    await db.update(clientProfiles).set({ externalRef }).where(eq(clientProfiles.id, profileId));
+  } catch (err) {
+    if (isDuplicateEntryError(err)) return { ok: false, reason: "taken" };
+    throw err;
+  }
+  return { ok: true };
 }
 
 /**
@@ -876,6 +904,39 @@ export async function insertReportMetrics(
  * végezzük (YYYY-MM-DD), mert a MySQL a `date` oszlopot lexikografikusan
  * hasonlítja össze.
  */
+/**
+ * A Social Hubból jött közösségi sorok cseréje egy időszakra, tranzakcióban:
+ * előbb törli a profil facebook/instagram/linkedin sorait [from, to]-ban
+ * (inkluzív), utána beszúrja az újakat. Így az ismételt szinkron ugyanarra az
+ * időszakra nem duplikál. A mock-platformok sorait nem érinti.
+ */
+export async function replaceSocialReportMetrics(
+  profileId: string,
+  from: string,
+  to: string,
+  rows: Array<Omit<InsertReportMetric, "id" | "profileId" | "createdAt">>,
+  dbOverride?: Pick<MySql2Database, "transaction">,
+) {
+  const db = dbOverride ?? (await getDb());
+  if (!db) throw new Error("Adatbázis nem elérhető");
+  const values = rows.map((r) => ({ ...r, id: nanoid(), profileId }));
+  await db.transaction(async (tx) => {
+    await tx.delete(reportMetrics).where(
+      and(
+        eq(reportMetrics.profileId, profileId),
+        inArray(reportMetrics.platform, [...SOCIAL_METRIC_PLATFORMS]),
+        gte(reportMetrics.date, new Date(from)),
+        lte(reportMetrics.date, new Date(to)),
+      ),
+    );
+    // ~500 sor / batch a TiDB packet-limit alatt.
+    for (let i = 0; i < values.length; i += 500) {
+      await tx.insert(reportMetrics).values(values.slice(i, i + 500));
+    }
+  });
+  return { inserted: values.length };
+}
+
 export async function getMetricsByProfile(profileId: string, from: string, to: string) {
   const db = await getDb();
   if (!db) return [];

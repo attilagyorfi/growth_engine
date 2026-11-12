@@ -29,6 +29,9 @@ export const clientProfiles = mysqlTable("client_profiles", {
     platform: string; handle: string; connected: boolean; followers?: number; lastSync?: string;
   }>>(),
   appUserId: varchar("appUserId", { length: 64 }),
+  // Párosítókulcs a Social Hub `client` rekordjához (integrációs szerződés v1,
+  // pl. "viba-team"). Egyedi; üresen NULL, így több párosítatlan profil is lehet.
+  externalRef: varchar("external_ref", { length: 64 }).unique(),
   active: boolean("active").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -852,7 +855,8 @@ export type InsertDataConnection = typeof dataConnections.$inferInsert;
 export const reportMetrics = mysqlTable("report_metrics", {
   id: varchar("id", { length: 64 }).primaryKey(),
   profileId: varchar("profileId", { length: 64 }).notNull(),
-  platform: mysqlEnum("platform", ["google_ads", "ga4", "search_console", "meta_ads"]).notNull(),
+  // facebook/instagram/linkedin: a Social Hubból (GET /metrics) jövő közösségi sorok (0024).
+  platform: mysqlEnum("platform", ["google_ads", "ga4", "search_console", "meta_ads", "facebook", "instagram", "linkedin"]).notNull(),
   date: date("date").notNull(),
   metricKey: varchar("metricKey", { length: 64 }).notNull(), // spend, impressions, clicks, conversions, sessions, ctr, cpa
   value: double("value").notNull(),
