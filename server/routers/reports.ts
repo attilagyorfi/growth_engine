@@ -27,7 +27,9 @@ import {
   listReports,
   getReportById,
   upsertReportSchedule,
+  setDataConnectionBrand,
 } from "../db";
+import { assertBrandInProfile } from "./brands";
 import { generateReportSummary } from "../ai/reportSummary";
 import { analyzeReportPeriod, previousPeriod } from "../ai/reportSignals";
 import { buildReportPdf, reportPdfFileName, PDF_MIME_TYPE } from "../reports/pdf";
@@ -77,6 +79,18 @@ export const reportsRouter = router({
         await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
         return deleteDataConnection(input.profileId, input.connectionId);
       }),
+
+    // Márka hozzárendelése (null = nincs márka). A kapcsolat eddigi metrikasorai
+    // ugyanabban a tranzakcióban átcímkéződnek vagy törlődnek (nincs dupla számolás).
+    setBrand: appUserProcedure
+      .input(z.object({ profileId: z.string(), connectionId: z.string(), brandId: z.string().nullable() }))
+      .mutation(async ({ input, ctx }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        if (input.brandId) await assertBrandInProfile(input.profileId, input.brandId);
+        const result = await setDataConnectionBrand(input.profileId, input.connectionId, input.brandId);
+        if (!result.ok) throw new TRPCError({ code: "NOT_FOUND", message: "A kapcsolat nem található." });
+        return { ok: true as const, brandId: input.brandId };
+      }),
   }),
 
   // ─── Adat-szinkron: metrikák behúzása és normalizált tárolása ─────────────
@@ -105,16 +119,20 @@ export const reportsRouter = router({
       to: z.string(),
       templateKey: z.enum(["default", "paid", "seo"]).default("default"),
       compareToPrevious: z.boolean().default(true),
+      // Márkára szűkített riport; hiányában / null-nál összesített (a márkák előtti viselkedés).
+      brandId: z.string().nullable().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      const brand = input.brandId ? await assertBrandInProfile(input.profileId, input.brandId) : null;
 
       const profile = await getProfileById(input.profileId);
       if (!profile) throw new TRPCError({ code: "NOT_FOUND", message: "A profil nem található" });
 
       const report = await createReport({
         profileId: input.profileId,
-        title: `${profile.name} – riport ${input.from} → ${input.to}`,
+        title: reportTitle(profile.name, brand?.name ?? null, input.from, input.to),
+        ...(brand ? { brandId: brand.id } : {}),
         periodFrom: new Date(input.from),
         periodTo: new Date(input.to),
         templateKey: input.templateKey,
@@ -126,13 +144,17 @@ export const reportsRouter = router({
         // 1) Aktuális és (compareToPrevious esetén) az előző, azonos napszámú
         //    időszak metrikái + a kontextus-jelek forrásai (posztszám, szinkronhiba).
         const prev = input.compareToPrevious ? previousPeriod(input.from, input.to) : null;
-        const [current, previous, postsCurrent, postsPrevious, connections] = await Promise.all([
-          getMetricsByProfile(input.profileId, input.from, input.to),
-          prev ? getMetricsByProfile(input.profileId, prev.from, prev.to) : Promise.resolve(null),
+        // Márkánál csak a márka sorai és kapcsolatai; összesítettnél minden (változatlan hívás).
+        const metrics = (from: string, to: string) =>
+          brand ? getMetricsByProfile(input.profileId, from, to, brand.id) : getMetricsByProfile(input.profileId, from, to);
+        const [current, previous, postsCurrent, postsPrevious, allConnections] = await Promise.all([
+          metrics(input.from, input.to),
+          prev ? metrics(prev.from, prev.to) : Promise.resolve(null),
           countProfilePostsInPeriod(input.profileId, input.from, input.to),
           prev ? countProfilePostsInPeriod(input.profileId, prev.from, prev.to) : Promise.resolve(null),
           listDataConnections(input.profileId),
         ]);
+        const connections = brand ? allConnections.filter((c) => c.brandId === brand.id) : allConnections;
         const signals = analyzeReportPeriod({
           from: input.from,
           to: input.to,
@@ -141,7 +163,12 @@ export const reportsRouter = router({
           posts: { current: postsCurrent, previous: postsPrevious },
           syncErrorPlatforms: connections.filter((c) => c.connected && c.lastSyncError).map((c) => c.platform),
         });
-        const summaryData = { ...buildSummary(current, previous), signals };
+        const summaryData = {
+          ...buildSummary(current, previous),
+          signals,
+          // A márka neve a pillanatképben is megmarad (export, narratíva), akkor is, ha a márkát később törlik.
+          ...(brand ? { brand: { id: brand.id, name: brand.name } } : {}),
+        };
 
         // 2) AI vezetői összefoglaló magyar G2A brand-voice-ban (előfeldolgozott jelekkel, számellenőrzéssel)
         const aiSummary = await generateReportSummary({
@@ -162,11 +189,14 @@ export const reportsRouter = router({
       }
     }),
 
+  // brandId: hiányzik = minden riport; null = csak az összesítettek; string = az adott márkáé.
   list: appUserProcedure
-    .input(z.object({ profileId: z.string() }))
+    .input(z.object({ profileId: z.string(), brandId: z.string().nullable().optional() }))
     .query(async ({ input, ctx }) => {
       await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
-      return listReports(input.profileId);
+      if (input.brandId === undefined) return listReports(input.profileId);
+      if (input.brandId) await assertBrandInProfile(input.profileId, input.brandId);
+      return listReports(input.profileId, input.brandId);
     }),
 
   get: appUserProcedure
@@ -351,6 +381,18 @@ const VIEW_CHANNELS: { platform: string; label: string; paid: boolean }[] = [
   { platform: "search_console", label: "Search Console", paid: false },
 ];
 
+/** A riport címe; márkánál a márka neve is benne van, összesítettnél a márkák előtti cím. */
+export function reportTitle(profileName: string, brandName: string | null, from: string, to: string): string {
+  return brandName
+    ? `${profileName} – ${brandName} – riport ${from} → ${to}`
+    : `${profileName} – riport ${from} → ${to}`;
+}
+
+/** Az exportok ügyfélneve: márkás riportnál „Ügyfél – Márka”, egyébként a profil neve. */
+export function reportClientName(profileName: string, brandName: string | null | undefined): string {
+  return brandName ? `${profileName} – ${brandName}` : profileName;
+}
+
 /** A tárolt időszakhatár (Date vagy string) → YYYY-MM-DD. */
 function toIsoDate(d: Date | string | null | undefined): string {
   if (!d) return "";
@@ -381,8 +423,9 @@ export async function loadExportableReport(
   }
 
   const profile = await getProfileById(input.profileId);
+  const brandName = (summaryData as { brand?: { name?: string } | null }).brand?.name ?? null;
   return {
-    clientName: profile?.name || report.title,
+    clientName: profile?.name ? reportClientName(profile.name, brandName) : report.title,
     periodFrom: toIsoDate(report.periodFrom),
     periodTo: toIsoDate(report.periodTo),
     summaryData: { kpis: summaryData.kpis ?? [], byPlatform: summaryData.byPlatform ?? [], social: summaryData.social ?? [] },

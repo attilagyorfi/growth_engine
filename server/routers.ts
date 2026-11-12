@@ -11,6 +11,7 @@ import { projectsRouter } from "./routers/projects";
 import { seoRouter } from "./routers/seo";
 import { newsletterRouter } from "./routers/newsletter";
 import { reportsRouter } from "./routers/reports";
+import { brandsRouter } from "./routers/brands";
 import { teamRouter } from "./routers/team";
 import { assistantRouter } from "./routers/assistant";
 import { ideasRouter } from "./routers/ideas";
@@ -1187,6 +1188,7 @@ export const appRouter = router({
 
   // ─── Riportgenerátor (Google Ads / GA4 / Search Console / Meta Ads) ─────
   reports: reportsRouter,
+  brands: brandsRouter,
 
   // ─── HeyGen Videókészítő ──────────────────────────────────────────────────────────────────────
   heygen: heygenRouter,

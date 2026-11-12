@@ -9,7 +9,7 @@ export const EXTERNAL_REF_MAX_LENGTH = 64;
 export const EXTERNAL_REF_FORMAT_MESSAGE =
   "A Social Hub-azonosítóban csak kisbetű, szám és kötőjel lehet, legfeljebb 64 karakter.";
 export const EXTERNAL_REF_TAKEN_MESSAGE =
-  "Ezt a Social Hub-azonosítót már egy másik profil használja. Adj meg másikat.";
+  "Ezt a Social Hub-azonosítót már egy másik profil vagy márka használja. Adj meg másikat.";
 
 export const externalRefInput = z
   .string()

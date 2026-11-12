@@ -77,12 +77,15 @@ export type SocialSyncResult =
 export type SocialSyncDeps = {
   config?: SocialHubConfig | null;
   createClient?: (config: SocialHubConfig) => Pick<SocialHubApi, "listClients" | "getClientMetricsRange">;
-  /** Tranzakcióban: a profil közösségi sorainak törlése [from, to]-ban, majd beszúrás. */
-  replaceRows: (profileId: string, from: string, to: string, rows: SocialMetricRow[]) => Promise<{ inserted: number }>;
+  /**
+   * Tranzakcióban: a profil (márkás szinkronnál: a márka) közösségi sorainak törlése
+   * [from, to]-ban, majd beszúrás. A brandId csak márkás szinkronnál kerül átadásra.
+   */
+  replaceRows: (profileId: string, from: string, to: string, rows: SocialMetricRow[], brandId?: string | null) => Promise<{ inserted: number }>;
 };
 
 export async function syncSocialMetrics(
-  input: { profileId: string; externalRef: string | null | undefined; from: string; to: string; requested?: boolean },
+  input: { profileId: string; externalRef: string | null | undefined; from: string; to: string; requested?: boolean; brandId?: string | null },
   deps: SocialSyncDeps,
 ): Promise<SocialSyncResult> {
   if (input.requested === false) return { status: "skipped", reason: "not_requested" };
@@ -101,7 +104,9 @@ export async function syncSocialMetrics(
       const day = r.date.toISOString().slice(0, 10);
       return day >= input.from && day <= input.to;
     });
-    const { inserted } = await deps.replaceRows(input.profileId, input.from, input.to, inRange);
+    const { inserted } = input.brandId
+      ? await deps.replaceRows(input.profileId, input.from, input.to, inRange, input.brandId)
+      : await deps.replaceRows(input.profileId, input.from, input.to, inRange);
     return { status: "synced", inserted, skippedAccounts };
   } catch (err) {
     // Csak a saját, kulcsmentes hibaszöveg kerül naplóba és a válaszba.

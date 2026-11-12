@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, json, double, date } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, json, double, date, index, unique } from "drizzle-orm/mysql-core";
 
 // ─── Client Profiles ─────────────────────────────────────────────────────────
 
@@ -825,6 +825,24 @@ export type InsertHeygenVideo = typeof heygenVideos.$inferInsert;
 // mert az ads_read scope külön OAuth review-t igényel.
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// Profile Brands — alárkák (márkák) a profilon belül (0025). Az ügyfél EGY profil
+// marad; a márka címke a kapcsolatokon, a metrikákon és a riportokon (brandId).
+// A socialHubExternalRef opcionális: ha a márka a Social Hubban külön ügyfél,
+// a szinkron ezzel párosít (globálisan egyedi, és nem egyezhet profil external_ref-fel).
+export const profileBrands = mysqlTable("profile_brands", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  profileId: varchar("profileId", { length: 64 }).notNull(),
+  name: varchar("name", { length: 120 }).notNull(),
+  socialHubExternalRef: varchar("social_hub_external_ref", { length: 64 }).unique(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (t) => [
+  index("profile_brands_profileId_idx").on(t.profileId),
+  unique("profile_brands_profile_name_unique").on(t.profileId, t.name),
+]);
+export type ProfileBrand = typeof profileBrands.$inferSelect;
+export type InsertProfileBrand = typeof profileBrands.$inferInsert;
+
 // Data Connections — Ads/Analytics OAuth (a social publikálás tokenjétől
 // külön, mert az ads_read külön scope-ot igényel).
 export const dataConnections = mysqlTable("data_connections", {
@@ -834,6 +852,8 @@ export const dataConnections = mysqlTable("data_connections", {
   // Platform-specifikus fiók/property azonosító (ad account id, GA4 property id, GSC site url)
   externalAccountId: varchar("externalAccountId", { length: 255 }).notNull(),
   externalAccountName: varchar("externalAccountName", { length: 255 }),
+  // A kapcsolat márkája (profile_brands.id); NULL = márka nélküli (0025).
+  brandId: varchar("brandId", { length: 64 }),
   // ⚠️ Ezek plaintext oszlopok. Éles bevezetés előtt a token-titkosítást
   // (AES-GCM a JWT_SECRET-tel derivált kulcson) be kell építeni. Egyelőre
   // fejlesztési adatot tárol.
@@ -863,8 +883,12 @@ export const reportMetrics = mysqlTable("report_metrics", {
   currency: varchar("currency", { length: 3 }),
   // Opcionális bontás: { campaign, adset, channel, device, query, landingPage }
   dimension: json("dimension").$type<Record<string, string>>(),
+  // A sor márkája (a kapcsolatból ill. a Social Hub-párosításból); NULL = márka nélküli (0025).
+  brandId: varchar("brandId", { length: 64 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}, (t) => [
+  index("report_metrics_profileId_brandId_idx").on(t.profileId, t.brandId),
+]);
 export type ReportMetric = typeof reportMetrics.$inferSelect;
 export type InsertReportMetric = typeof reportMetrics.$inferInsert;
 
@@ -874,6 +898,8 @@ export const reports = mysqlTable("reports", {
   id: varchar("id", { length: 64 }).primaryKey(),
   profileId: varchar("profileId", { length: 64 }).notNull(),
   title: varchar("title", { length: 255 }).notNull(),
+  // Melyik márkára készült (profile_brands.id); NULL = összesített (0025).
+  brandId: varchar("brandId", { length: 64 }),
   periodFrom: date("periodFrom").notNull(),
   periodTo: date("periodTo").notNull(),
   templateKey: varchar("templateKey", { length: 64 }).default("default").notNull(), // default | paid | seo

@@ -143,6 +143,9 @@ export async function setProfileExternalRef(
 ): Promise<{ ok: true } | { ok: false; reason: "taken" }> {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
+  // Egy márka (profile_brands.social_hub_external_ref) sem használhatja ugyanezt,
+  // különben ugyanaz a Social Hub-ügyfél két helyre szinkronizálna.
+  if (externalRef && (await isSocialHubRefUsedByBrand(externalRef))) return { ok: false, reason: "taken" };
   try {
     await db.update(clientProfiles).set({ externalRef }).where(eq(clientProfiles.id, profileId));
   } catch (err) {
@@ -176,7 +179,7 @@ export const PROFILE_OWNED_TABLES = [
   "campaignAssets", "recommendations", "appNotifications", "socialConnections",
   "scheduledPosts", "socialProfileCache", "seoAudits", "heygenVideos", "dataConnections",
   "reportMetrics", "reports", "reportSchedules", "teamInvites", "assistantThreads",
-  "contentIdeas",
+  "contentIdeas", "profileBrands",
 ] as const;
 
 export async function deleteProfile(id: string) {
@@ -886,9 +889,223 @@ export async function markAllNotificationsRead(appUserId: string) {
 import {
   dataConnections, type InsertDataConnection, type DataConnection,
   reportMetrics, type InsertReportMetric,
+  profileBrands, type ProfileBrand,
   reports as reportsTable, type InsertReport,
   reportSchedules, type InsertReportSchedule,
 } from "../drizzle/schema";
+
+// ─── Profile Brands (alárkák) ───────────────────────────────────────────
+// Az ügyfél EGY profil; a márka a profilon belüli címke. Minden helper a
+// profileId-vel is szűr, így más profil márkájára nem lehet hivatkozni.
+
+/** brandId → márka-szűrő; null = a márka nélküli (ill. összesített) sorok. */
+function brandScope(
+  column: typeof reportMetrics.brandId | typeof dataConnections.brandId | typeof reportsTable.brandId,
+  brandId: string | null,
+) {
+  return brandId ? eq(column, brandId) : isNull(column);
+}
+
+export async function listProfileBrands(profileId: string): Promise<ProfileBrand[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(profileBrands).where(eq(profileBrands.profileId, profileId)).orderBy(profileBrands.name);
+}
+
+/** A márka, ha az adott profilé; más profil márkájánál null. */
+export async function getProfileBrand(profileId: string, brandId: string): Promise<ProfileBrand | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(profileBrands).where(
+    and(eq(profileBrands.id, brandId), eq(profileBrands.profileId, profileId)),
+  ).limit(1);
+  return rows[0] ?? null;
+}
+
+async function isSocialHubRefUsedByBrand(ref: string, exceptBrandId?: string): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  const rows = await db.select({ id: profileBrands.id }).from(profileBrands).where(
+    exceptBrandId
+      ? and(eq(profileBrands.socialHubExternalRef, ref), ne(profileBrands.id, exceptBrandId))
+      : eq(profileBrands.socialHubExternalRef, ref),
+  ).limit(1);
+  return rows.length > 0;
+}
+
+async function isSocialHubRefUsedByProfile(ref: string): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  const rows = await db.select({ id: clientProfiles.id }).from(clientProfiles)
+    .where(eq(clientProfiles.externalRef, ref)).limit(1);
+  return rows.length > 0;
+}
+
+export type BrandWriteResult =
+  | { ok: true; brand: ProfileBrand }
+  | { ok: false; reason: "name_taken" | "ref_taken" | "not_found" };
+
+/** Név (profilon belül) és Social Hub-azonosító (márkák + profilok között) ütközése. */
+export async function checkBrandConflicts(
+  profileId: string,
+  input: { name?: string; socialHubExternalRef?: string | null },
+  exceptBrandId?: string,
+): Promise<"name_taken" | "ref_taken" | null> {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  if (input.name !== undefined) {
+    const same = await db.select({ id: profileBrands.id }).from(profileBrands).where(
+      and(eq(profileBrands.profileId, profileId), eq(profileBrands.name, input.name)),
+    );
+    if (same.some((b) => b.id !== exceptBrandId)) return "name_taken";
+  }
+  const ref = input.socialHubExternalRef;
+  if (ref && ((await isSocialHubRefUsedByBrand(ref, exceptBrandId)) || (await isSocialHubRefUsedByProfile(ref)))) {
+    return "ref_taken";
+  }
+  return null;
+}
+
+/** Az egyedi indexek versenyhelyzeti ütközése → melyik kulcs ütközött. */
+function brandDuplicateReason(err: unknown): "name_taken" | "ref_taken" | null {
+  if (!isDuplicateEntryError(err)) return null;
+  const text = String((err as any)?.message ?? "") + String((err as any)?.cause?.message ?? "");
+  return text.includes("external_ref") ? "ref_taken" : "name_taken";
+}
+
+export async function createProfileBrand(
+  profileId: string,
+  input: { name: string; socialHubExternalRef: string | null },
+): Promise<BrandWriteResult> {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const conflict = await checkBrandConflicts(profileId, input);
+  if (conflict) return { ok: false, reason: conflict };
+  const id = nanoid();
+  try {
+    await db.insert(profileBrands).values({ id, profileId, name: input.name, socialHubExternalRef: input.socialHubExternalRef });
+  } catch (err) {
+    const reason = brandDuplicateReason(err);
+    if (reason) return { ok: false, reason };
+    throw err;
+  }
+  const brand = await getProfileBrand(profileId, id);
+  return brand ? { ok: true, brand } : { ok: false, reason: "not_found" };
+}
+
+export async function updateProfileBrand(
+  profileId: string,
+  brandId: string,
+  patch: { name?: string; socialHubExternalRef?: string | null },
+): Promise<BrandWriteResult> {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  if (!(await getProfileBrand(profileId, brandId))) return { ok: false, reason: "not_found" };
+  const conflict = await checkBrandConflicts(profileId, patch, brandId);
+  if (conflict) return { ok: false, reason: conflict };
+  try {
+    await db.update(profileBrands).set(patch).where(
+      and(eq(profileBrands.id, brandId), eq(profileBrands.profileId, profileId)),
+    );
+  } catch (err) {
+    const reason = brandDuplicateReason(err);
+    if (reason) return { ok: false, reason };
+    throw err;
+  }
+  const brand = await getProfileBrand(profileId, brandId);
+  return brand ? { ok: true, brand } : { ok: false, reason: "not_found" };
+}
+
+/**
+ * Márka törlése. Ha kapcsolat van hozzárendelve: `has_connections` (előbb le kell
+ * venni róla). Különben egy tranzakcióban törlődnek a márka report_metrics sorai
+ * és maga a márka — a már elkészült riportok megmaradnak (a címükben a márka neve).
+ */
+export async function deleteProfileBrand(
+  profileId: string,
+  brandId: string,
+  dbOverride?: Pick<MySql2Database, "transaction">,
+): Promise<{ ok: true } | { ok: false; reason: "not_found" | "has_connections" }> {
+  const db = dbOverride ?? (await getDb());
+  if (!db) throw new Error("DB not available");
+  return db.transaction(async (tx) => {
+    const brand = await tx.select({ id: profileBrands.id }).from(profileBrands).where(
+      and(eq(profileBrands.id, brandId), eq(profileBrands.profileId, profileId)),
+    ).limit(1);
+    if (!brand[0]) return { ok: false as const, reason: "not_found" as const };
+    const conns = await tx.select({ id: dataConnections.id }).from(dataConnections).where(
+      and(eq(dataConnections.profileId, profileId), eq(dataConnections.brandId, brandId)),
+    ).limit(1);
+    if (conns.length) return { ok: false as const, reason: "has_connections" as const };
+    await tx.delete(reportMetrics).where(and(eq(reportMetrics.profileId, profileId), eq(reportMetrics.brandId, brandId)));
+    await tx.delete(profileBrands).where(and(eq(profileBrands.id, brandId), eq(profileBrands.profileId, profileId)));
+    return { ok: true as const };
+  });
+}
+
+export type ConnectionBrandPlan =
+  | { action: "none" }
+  | { action: "relabel" | "delete"; platform: DataConnection["platform"]; fromBrandId: string | null; toBrandId: string | null };
+
+/**
+ * Mi legyen a kapcsolat eddigi (profil + platform + régi márka) metrikasoraival,
+ * ha a kapcsolat márkát vált? A report_metrics-ben nincs kapcsolat-oszlop, ezért:
+ *  - ha a régi címkén nincs másik ugyanilyen platformú kapcsolat → a sorok
+ *    átcímkéződnek az új márkára (az előzmény megmarad);
+ *  - ha van → nem választhatók szét, ezért törlődnek (a következő szinkron
+ *    mindkét csoportot újraírja).
+ * Így régi címkével semmi nem marad bent, az összesítés nem számol kétszer.
+ */
+export function planConnectionBrandChange(
+  connections: Pick<DataConnection, "id" | "platform" | "brandId">[],
+  connectionId: string,
+  newBrandId: string | null,
+): ConnectionBrandPlan {
+  const conn = connections.find((c) => c.id === connectionId);
+  if (!conn) return { action: "none" };
+  const fromBrandId = conn.brandId ?? null;
+  if (fromBrandId === newBrandId) return { action: "none" };
+  const sharesOldLabel = connections.some(
+    (c) => c.id !== conn.id && c.platform === conn.platform && (c.brandId ?? null) === fromBrandId,
+  );
+  return { action: sharesOldLabel ? "delete" : "relabel", platform: conn.platform, fromBrandId, toBrandId: newBrandId };
+}
+
+/**
+ * A kapcsolat márkájának beállítása (null = nincs márka). A meglévő metrikasorok
+ * ugyanabban a tranzakcióban átcímkéződnek vagy törlődnek (planConnectionBrandChange).
+ * A brandId profilhoz tartozását a hívó (router) ellenőrzi.
+ */
+export async function setDataConnectionBrand(
+  profileId: string,
+  connectionId: string,
+  brandId: string | null,
+  dbOverride?: Pick<MySql2Database, "transaction">,
+): Promise<{ ok: true; plan: ConnectionBrandPlan } | { ok: false; reason: "not_found" }> {
+  const db = dbOverride ?? (await getDb());
+  if (!db) throw new Error("DB not available");
+  return db.transaction(async (tx) => {
+    const conns = await tx.select({ id: dataConnections.id, platform: dataConnections.platform, brandId: dataConnections.brandId })
+      .from(dataConnections).where(eq(dataConnections.profileId, profileId));
+    if (!conns.some((c) => c.id === connectionId)) return { ok: false as const, reason: "not_found" as const };
+    const plan = planConnectionBrandChange(conns, connectionId, brandId);
+    if (plan.action === "none") return { ok: true as const, plan };
+    await tx.update(dataConnections).set({ brandId }).where(
+      and(eq(dataConnections.id, connectionId), eq(dataConnections.profileId, profileId)),
+    );
+    const scope = and(
+      eq(reportMetrics.profileId, profileId),
+      eq(reportMetrics.platform, plan.platform),
+      brandScope(reportMetrics.brandId, plan.fromBrandId),
+    );
+    if (plan.action === "relabel") {
+      await tx.update(reportMetrics).set({ brandId: plan.toBrandId }).where(scope);
+    } else {
+      await tx.delete(reportMetrics).where(scope);
+    }
+    return { ok: true as const, plan };
+  });
+}
 
 // ─── Data Connections ───────────────────────────────────────────────────
 
@@ -948,14 +1165,19 @@ export async function deleteDataConnection(profileId: string, connectionId: stri
  * ÖSSZES kapcsolatának sorait egyben adja át (lásd server/reports/syncProfile.ts),
  * különben a második kapcsolat cseréje törölné az első sorait. A közösségi
  * platformok sorait nem érinti (azokat a replaceSocialReportMetrics cseréli).
+ *
+ * Márkák (0025): a csere profil + platform + brandId + időszak hatókörű, a sorok
+ * a `brandId`-t kapják (null = márka nélküli). Más márka és a márka nélküli sorok
+ * érintetlenek, ezért a hívó márkánként is csoportosít.
  */
 export async function replaceReportMetrics(
   profileId: string,
   platform: DataConnection["platform"],
   from: string,
   to: string,
-  rows: Array<Omit<InsertReportMetric, "id" | "profileId" | "createdAt">>,
+  rows: Array<Omit<InsertReportMetric, "id" | "profileId" | "createdAt" | "brandId">>,
   dbOverride?: Pick<MySql2Database, "transaction">,
+  brandId: string | null = null,
 ) {
   if ((SOCIAL_METRIC_PLATFORMS as readonly string[]).includes(platform)) {
     throw new Error(`replaceReportMetrics: közösségi platform (${platform}) nem cserélhető itt`);
@@ -965,12 +1187,13 @@ export async function replaceReportMetrics(
   }
   const db = dbOverride ?? (await getDb());
   if (!db) throw new Error("Adatbázis nem elérhető");
-  const values = rows.map((r) => ({ ...r, id: nanoid(), profileId }));
+  const values = rows.map((r) => ({ ...r, id: nanoid(), profileId, brandId }));
   await db.transaction(async (tx) => {
     await tx.delete(reportMetrics).where(
       and(
         eq(reportMetrics.profileId, profileId),
         eq(reportMetrics.platform, platform),
+        brandScope(reportMetrics.brandId, brandId),
         gte(reportMetrics.date, new Date(from)),
         lte(reportMetrics.date, new Date(to)),
       ),
@@ -994,22 +1217,25 @@ export async function replaceReportMetrics(
  * előbb törli a profil facebook/instagram/linkedin sorait [from, to]-ban
  * (inkluzív), utána beszúrja az újakat. Így az ismételt szinkron ugyanarra az
  * időszakra nem duplikál. A mock-platformok sorait nem érinti.
+ * Márkák (0025): csak az adott brandId (null = márka nélküli) sorait cseréli.
  */
 export async function replaceSocialReportMetrics(
   profileId: string,
   from: string,
   to: string,
-  rows: Array<Omit<InsertReportMetric, "id" | "profileId" | "createdAt">>,
+  rows: Array<Omit<InsertReportMetric, "id" | "profileId" | "createdAt" | "brandId">>,
   dbOverride?: Pick<MySql2Database, "transaction">,
+  brandId: string | null = null,
 ) {
   const db = dbOverride ?? (await getDb());
   if (!db) throw new Error("Adatbázis nem elérhető");
-  const values = rows.map((r) => ({ ...r, id: nanoid(), profileId }));
+  const values = rows.map((r) => ({ ...r, id: nanoid(), profileId, brandId }));
   await db.transaction(async (tx) => {
     await tx.delete(reportMetrics).where(
       and(
         eq(reportMetrics.profileId, profileId),
         inArray(reportMetrics.platform, [...SOCIAL_METRIC_PLATFORMS]),
+        brandScope(reportMetrics.brandId, brandId),
         gte(reportMetrics.date, new Date(from)),
         lte(reportMetrics.date, new Date(to)),
       ),
@@ -1022,7 +1248,11 @@ export async function replaceSocialReportMetrics(
   return { inserted: values.length };
 }
 
-export async function getMetricsByProfile(profileId: string, from: string, to: string) {
+/**
+ * `brandId` megadásakor csak az adott márka sorai; nélküle (összesítve) a profil
+ * összes sora, márkától függetlenül — a márkák előtti viselkedés.
+ */
+export async function getMetricsByProfile(profileId: string, from: string, to: string, brandId?: string | null) {
   const db = await getDb();
   if (!db) return [];
   // A drizzle `date` oszlopa Date objektumot vár a where clause-ban.
@@ -1034,6 +1264,7 @@ export async function getMetricsByProfile(profileId: string, from: string, to: s
       eq(reportMetrics.profileId, profileId),
       gte(reportMetrics.date, fromDate),
       lte(reportMetrics.date, toDate),
+      ...(brandId ? [eq(reportMetrics.brandId, brandId)] : []),
     ),
   );
 }
@@ -1083,11 +1314,16 @@ export async function updateReport(
   return rows[0] ?? null;
 }
 
-export async function listReports(profileId: string) {
+/**
+ * `brandId`: undefined = minden riport; null = csak az összesítettek;
+ * string = csak az adott márkára készültek.
+ */
+export async function listReports(profileId: string, brandId?: string | null) {
   const db = await getDb();
   if (!db) return [];
+  const brandFilter = brandId === undefined ? [] : [brandScope(reportsTable.brandId, brandId)];
   return db.select().from(reportsTable)
-    .where(eq(reportsTable.profileId, profileId))
+    .where(and(eq(reportsTable.profileId, profileId), ...brandFilter))
     .orderBy(desc(reportsTable.createdAt))
     .limit(50);
 }

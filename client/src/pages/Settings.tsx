@@ -23,6 +23,7 @@ import { useAppAuth } from "@/hooks/useAppAuth";
 import { useTour } from "@/hooks/useTour";
 import { connectionHealth, formatHuDate, needsReconnect } from "@/lib/connectionHealth";
 import { toast } from "sonner";
+import BrandManager from "@/components/BrandManager";
 
 type Tab = "brand" | "integrations" | "team" | "audit" | "admin" | "fiok" | "billing" | "ai-memory";
 
@@ -556,6 +557,9 @@ export default function Settings() {
               </button>
             </form>
           </div>
+
+          {/* Márkák (alárkák): a profilon belüli márkacímkék, márkánkénti riporthoz. */}
+          <BrandManager profileId={activeProfile.id} cardBg={cardBg} border={border} />
 
           {/* Social Media Integrations */}
           <div className="rounded-xl border p-5" style={{ background: cardBg, borderColor: border }}>
