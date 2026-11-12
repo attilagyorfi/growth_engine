@@ -584,6 +584,7 @@ growth_engine/
 | `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET` | LinkedIn csatlakozás | ⬜ |
 | `SOCIAL_HUB_API_URL`, `SOCIAL_HUB_API_KEY` | Social Hub `/api/v1` alap-URL-je (pl. `https://…/api/v1`) és szervezeti API-kulcsa (Bearer). A riport-szinkron közösségi (FB/IG/LinkedIn) metrikái ezzel jönnek; bármelyik hiányában a közösségi csatorna kimarad, és a Riportok oldal ezt jelzi | ⬜ |
 | `SCHEDULER_ENABLED` | Időzítő; productionben alapból be, `false` kikapcsolja | ⬜ |
+| `REPORT_SYNC_SCHEDULER_ENABLED` | Napi riport-adatszinkron (hajnalban, Europe/Budapest, az előző 3 napra); productionben alapból be, `false` kikapcsolja | ⬜ |
 | `SOCIAL_META_TIKTOK_ENABLED`, `HEYGEN_VIDEO_ENABLED`, `NEWSLETTER_ENABLED` | Funkciókapcsolók, alapból ki (lásd [Állapot a G0 után](#állapot-a-g0-után)) | ⬜ |
 | `PAGESPEED_API_KEY`, `SENTRY_DSN`, `HEYGEN_API_KEY` | Opcionális szolgáltatások | ⬜ |
 

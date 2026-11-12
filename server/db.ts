@@ -11,12 +11,14 @@ import {
   strategies, InsertStrategy,
   emailIntegrations, InsertEmailIntegration,
   contentIdeas, InsertContentIdea,
+  appUsers,
 } from "../drizzle/schema";
 import type { InboundEmail } from "../drizzle/schema";
 import { encryptToken } from './_core/tokenCrypto';
 import { SOCIAL_METRIC_PLATFORMS } from "./reports/connectors";
 
 let _db: MySql2Database | null = null;
+let _pool: mysql.Pool | null = null;
 let _dbPromise: Promise<MySql2Database | null> | null = null;
 
 /**
@@ -48,6 +50,7 @@ export async function getDb() {
         console.log(
           `[Database] ✓ Connected to ${isTiDB ? "TiDB Cloud (SSL enabled)" : "MySQL"}`,
         );
+        _pool = pool;
         _db = drizzle(pool);
         return _db;
       } catch (error) {
@@ -63,6 +66,15 @@ export async function getDb() {
   return _dbPromise;
 }
 
+/**
+ * A drizzle alatti mysql2 pool — ott kell, ahol egy dedikált kapcsolat számít
+ * (pl. GET_LOCK / RELEASE_LOCK ugyanazon a kapcsolaton, lásd reportSyncScheduler).
+ */
+export async function getDbPool(): Promise<mysql.Pool | null> {
+  const db = await getDb();
+  return db ? _pool : null;
+}
+
 // ─── Client Profiles ─────────────────────────────────────────────────────────
 
 export async function getAllProfiles() {
@@ -75,6 +87,25 @@ export async function getProfilesByAppUser(appUserId: string) {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(clientProfiles).where(eq(clientProfiles.appUserId, appUserId)).orderBy(clientProfiles.createdAt);
+}
+
+/** Az aktív (client_profiles.active = true) profilok azonosítói — a napi riport-szinkronhoz. */
+export async function listActiveProfileIds(): Promise<string[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db.select({ id: clientProfiles.id }).from(clientProfiles)
+    .where(eq(clientProfiles.active, true))
+    .orderBy(clientProfiles.createdAt);
+  return rows.map((r) => r.id);
+}
+
+/** A profilhoz kötött aktív felhasználók (app_users.profileId = profil, active = true) azonosítói. */
+export async function listActiveProfileUserIds(profileId: string): Promise<string[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db.select({ id: appUsers.id }).from(appUsers)
+    .where(and(eq(appUsers.profileId, profileId), eq(appUsers.active, true)));
+  return rows.map((r) => r.id);
 }
 
 export async function getProfileById(id: string) {
@@ -800,6 +831,31 @@ export async function createNotification(data: InsertAppNotification) {
   await db.insert(appNotifications).values(data);
 }
 
+/**
+ * Van-e már OLVASATLAN, azonos profilú, típusú és című értesítése a felhasználónak?
+ * A napi riport-szinkron ezzel kerüli el, hogy ugyanarról a hibáról újra és újra
+ * (pl. újraindulás után is) értesítsen. Csak olvas, séma nem kell hozzá.
+ */
+export async function hasUnreadNotification(
+  appUserId: string,
+  profileId: string,
+  type: InsertAppNotification["type"],
+  title: string,
+) {
+  const db = await getDb();
+  if (!db) return false;
+  const rows = await db.select({ id: appNotifications.id }).from(appNotifications)
+    .where(and(
+      eq(appNotifications.appUserId, appUserId),
+      eq(appNotifications.profileId, profileId),
+      eq(appNotifications.type, type),
+      eq(appNotifications.title, title.slice(0, 255)),
+      eq(appNotifications.isRead, false),
+    ))
+    .limit(1);
+  return rows.length > 0;
+}
+
 export async function getNotificationById(id: string) {
   const db = await getDb();
   if (!db) return undefined;
@@ -828,7 +884,7 @@ export async function markAllNotificationsRead(appUserId: string) {
 // oszlopaira és típusaira a schema.ts-ben deklarált export-okat használjuk.
 // Egyetlen import-blokk a modul aljához (elkerüli a felül lévő importok bővítését).
 import {
-  dataConnections, type InsertDataConnection,
+  dataConnections, type InsertDataConnection, type DataConnection,
   reportMetrics, type InsertReportMetric,
   reports as reportsTable, type InsertReport,
   reportSchedules, type InsertReportSchedule,
@@ -883,18 +939,47 @@ export async function deleteDataConnection(profileId: string, connectionId: stri
 // ─── Report Metrics ─────────────────────────────────────────────────────
 
 /**
- * Bulk insert normalizált metrikák. A hívó (sync mutation) egy időszakhoz
- * több platform sorát adja át; a helpert a legkönnyebb kis batch-ekben
- * hívni (~500 sor / batch a TiDB packet-limit alatt).
+ * Egy kapcsolat-platform (google_ads, ga4, search_console, meta_ads) sorainak
+ * cseréje egy időszakra, tranzakcióban: előbb törli a profil adott platformjának
+ * sorait [from, to]-ban (inkluzív), utána ~500-as batch-ekben beszúrja az újakat.
+ * Így az ismételt (kézi vagy napi) szinkron ugyanarra az időszakra nem duplikál.
+ *
+ * FONTOS: a report_metrics-ben nincs kapcsolat-oszlop, ezért a hívó a platform
+ * ÖSSZES kapcsolatának sorait egyben adja át (lásd server/reports/syncProfile.ts),
+ * különben a második kapcsolat cseréje törölné az első sorait. A közösségi
+ * platformok sorait nem érinti (azokat a replaceSocialReportMetrics cseréli).
  */
-export async function insertReportMetrics(
+export async function replaceReportMetrics(
   profileId: string,
+  platform: DataConnection["platform"],
+  from: string,
+  to: string,
   rows: Array<Omit<InsertReportMetric, "id" | "profileId" | "createdAt">>,
+  dbOverride?: Pick<MySql2Database, "transaction">,
 ) {
-  const db = await getDb();
-  if (!db || rows.length === 0) return { inserted: 0 };
+  if ((SOCIAL_METRIC_PLATFORMS as readonly string[]).includes(platform)) {
+    throw new Error(`replaceReportMetrics: közösségi platform (${platform}) nem cserélhető itt`);
+  }
+  if (rows.some((r) => r.platform !== platform)) {
+    throw new Error(`replaceReportMetrics: minden sornak ${platform} platformúnak kell lennie`);
+  }
+  const db = dbOverride ?? (await getDb());
+  if (!db) throw new Error("Adatbázis nem elérhető");
   const values = rows.map((r) => ({ ...r, id: nanoid(), profileId }));
-  await db.insert(reportMetrics).values(values);
+  await db.transaction(async (tx) => {
+    await tx.delete(reportMetrics).where(
+      and(
+        eq(reportMetrics.profileId, profileId),
+        eq(reportMetrics.platform, platform),
+        gte(reportMetrics.date, new Date(from)),
+        lte(reportMetrics.date, new Date(to)),
+      ),
+    );
+    // ~500 sor / batch a TiDB packet-limit alatt.
+    for (let i = 0; i < values.length; i += 500) {
+      await tx.insert(reportMetrics).values(values.slice(i, i + 500));
+    }
+  });
   return { inserted: values.length };
 }
 

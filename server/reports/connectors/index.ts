@@ -99,8 +99,9 @@ const METRIC_CONFIG: Record<string, Array<{ key: string; base: number; variance:
  * listáját. MOCK — determinisztikus (a connectionId + date + metricKey
  * hash-e adja a seed-et).
  *
- * A hívó `insertReportMetrics(profileId, rows)`-szal írja be — a
- * `profileId`-t az `id, profileId, createdAt` mezőket a helper egészíti ki.
+ * A hívó (server/reports/syncProfile.ts) platformonként a `replaceReportMetrics`-szel
+ * írja be (törlés [from,to]-ban, majd beszúrás) — az `id, profileId, createdAt`
+ * mezőket a helper egészíti ki.
  */
 // ─── Adapter-forrás: éles-ready kapcsoló ─────────────────────────────────────
 // A valós adapterek (GA4, Google Ads, Search Console, Meta Ads) ide kerülnek be,

@@ -1159,3 +1159,7 @@
 - [x] HeyGen és hírlevél befagyasztása kapcsolóval: `server/featureFlags.ts` (`heygenVideo`, `newsletter`; alapból ki, `HEYGEN_VIDEO_ENABLED=true` / `NEWSLETTER_ENABLED=true`-val visszakapcsolható); kikapcsolva nincs HeyGen-hívás, új videó és hírlevélküldés, a Videó stúdió és a Hírlevél oldal helyette rövid magyarázatot mutat; a meglévő videók listája/állapota, a feliratkozók listája és a regisztrációs hírlevél-hozzájárulás érintetlen (őrteszt: `server/heygen-newsletter-flags.test.ts`)
 - [x] README frissítése: új „Állapot a G0 után” szakasz (mi él, a három kapcsoló env-névvel és visszakapcsolással, a publikálás a Social Hub dolga); az elavult Manus-, Sales- és env-részek javítva
 - [x] Tartalomstúdió időzítő-figyelmeztetése: FB/IG/TikTok-nál, kikapcsolt kapcsolóval, kapcsolat nélkül vagy lejáró kapcsolatnál a Social Hubra utal (`client/src/lib/scheduleWarning.ts`, teszt: `client/src/lib/scheduleWarning.test.ts`); a changelog régi FB/IG/TikTok-bejegyzése megjegyzést kapott, új G0-bejegyzés
+
+## G1 – Valós adat és havi riport
+
+- [x] Napi riport-adatszinkron háttérfeladatként: `server/reportSyncScheduler.ts` (hajnalban, Europe/Budapest, aktív profilok, tegnap−2 … tegnap); közös mag a kézi szinkronnal: `server/reports/syncProfile.ts`; idempotens csere `replaceReportMetrics` (az `insertReportMetrics` kivezetve); MySQL `GET_LOCK` zár; 3 próbálkozás visszalépéssel; tartós hibánál egy olvasatlan `system` értesítés (DB-dedup); `REPORT_SYNC_SCHEDULER_ENABLED` kapcsoló (teszt: `server/report-sync-scheduler.test.ts`)
