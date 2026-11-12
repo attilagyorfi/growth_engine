@@ -113,6 +113,13 @@
       "when": 1794441600000,
       "tag": "0024_social_hub_external_ref",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "5",
+      "when": 1794700800000,
+      "tag": "0025_profile_brands",
+      "breakpoints": true
     }
   ]
 }

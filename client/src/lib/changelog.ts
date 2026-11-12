@@ -32,6 +32,14 @@ export interface ChangelogEntry {
 // Legfrissebb elöl. A user "Újdonságok" drawer-je ebben a sorrendben mutatja.
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: "2026-11-markankenti-riport",
+    date: "2026-11-12",
+    category: "feature",
+    title: "Márkánkénti riport egy ügyfélen belül",
+    description: "Ha az ügyfélnek több márkája van, a Beállításokban felveheted őket, és az adatforrásokat márkához rendelheted. A Riportoknál márkánként vagy összesítve is készíthetsz riportot.",
+    href: "/riportok",
+  },
+  {
     id: "2026-11-riport-napi-szinkron",
     date: "2026-11-12",
     category: "feature",

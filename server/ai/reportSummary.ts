@@ -28,6 +28,8 @@ export type ReportSummaryData = {
   social?: SocialPlatformSummary[] | null;
   /** Előfeldolgozott jelek (időszakok, csatorna-összevetés, kontextus, megjelölt változások). */
   signals?: ReportSignals | null;
+  /** Márkás riportnál a márka (G1 alárkák); összesítettnél hiányzik. */
+  brand?: { id: string; name: string } | null;
 };
 
 export const SUMMARY_UNAVAILABLE_TEXT =
@@ -62,6 +64,10 @@ export function buildReportSummaryPrompt(profile: ClientProfile, summaryData: Re
   const lines: string[] = [];
   lines.push(`Ügyfél: ${profile.name}${profile.industry ? ` (${profile.industry})` : ""}`);
   for (const n of extractNumbers(`${profile.name} ${profile.industry ?? ""}`)) allowed.add(n.value);
+  if (summaryData.brand?.name) {
+    lines.push(`Márka: ${summaryData.brand.name} (a riport csak erre a márkára vonatkozik, ezt nevezd meg az összefoglalóban)`);
+    for (const n of extractNumbers(summaryData.brand.name)) allowed.add(n.value);
+  }
 
   if (signals) {
     const dateParts = (iso: string) => iso.split("-").map(Number).forEach((p) => allowed.add(p));

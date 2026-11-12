@@ -68,12 +68,20 @@ export default function Reports() {
   const [to, setTo] = useState(initialRange.to);
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const [showConnectionsModal, setShowConnectionsModal] = useState(false);
+  // Márkák (alárkák): generáláskor "" = összesítve; a listában "all" | "aggregate" | brandId.
+  const [generateBrandId, setGenerateBrandId] = useState("");
+  const [listBrandFilter, setListBrandFilter] = useState("all");
 
   const { data: connections = [], refetch: refetchConns } = trpc.reports.connections.list.useQuery(
     { profileId }, { enabled: !!profileId }
   );
+  const { data: brands = [] } = trpc.brands.list.useQuery({ profileId }, { enabled: !!profileId });
+  const hasBrands = brands.length > 0;
+  const listBrandInput = !hasBrands || listBrandFilter === "all"
+    ? {}
+    : { brandId: listBrandFilter === "aggregate" ? null : listBrandFilter };
   const { data: reports = [], refetch: refetchReports } = trpc.reports.list.useQuery(
-    { profileId }, { enabled: !!profileId }
+    { profileId, ...listBrandInput }, { enabled: !!profileId }
   );
   // A mérési adat forrása a szerverből — a DEMO-jelölést EZ vezérli (nem beégetett
   // szöveg). Ismeretlen/betöltés alatt → DEMO (biztonságos default). Amikor a valós
@@ -119,13 +127,20 @@ export default function Reports() {
   const disconnectMutation = trpc.reports.connections.disconnect.useMutation({
     onSuccess: () => { refetchConns(); toast.success("Kapcsolat törölve"); },
   });
+  const setConnectionBrandMutation = trpc.reports.connections.setBrand.useMutation({
+    onSuccess: () => { refetchConns(); toast.success("Márka mentve"); },
+    onError: (err) => toast.error(err.message),
+  });
 
   const handleGenerate = async () => {
     if (!profileId) return;
     // Előbb szinkronizálunk (mock adatot ír a DB-be), aztán generálunk.
     await syncMutation.mutateAsync({ profileId, from, to });
     utils.reports.list.invalidate({ profileId });
-    generateMutation.mutate({ profileId, from, to, templateKey: "default", compareToPrevious: true });
+    generateMutation.mutate({
+      profileId, from, to, templateKey: "default", compareToPrevious: true,
+      ...(generateBrandId ? { brandId: generateBrandId } : {}),
+    });
   };
 
   const activeReport = selectedReport ?? (reports.length > 0 ? reports[0] : null);
@@ -173,6 +188,17 @@ export default function Reports() {
               className="px-3 py-2 rounded-lg text-sm border"
               style={{ background: "var(--qa-surface2)", borderColor: border, color: textPrimary }} />
           </div>
+          {hasBrands && (
+            <div>
+              <label className="text-xs font-semibold mb-1 block" style={{ color: textMuted }}>Márka</label>
+              <select value={generateBrandId} onChange={e => setGenerateBrandId(e.target.value)}
+                className="px-3 py-2 rounded-lg text-sm border"
+                style={{ background: "var(--qa-surface2)", borderColor: border, color: textPrimary }}>
+                <option value="">Összesítve</option>
+                {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+            </div>
+          )}
           <button
             onClick={handleGenerate}
             disabled={!profileId || syncMutation.isPending || generateMutation.isPending}
@@ -204,6 +230,16 @@ export default function Reports() {
             <p className="text-xs font-semibold uppercase tracking-wider mb-2 px-2" style={{ color: textMuted }}>
               Korábbi riportok ({reports.length})
             </p>
+            {hasBrands && (
+              <select value={listBrandFilter} onChange={e => { setListBrandFilter(e.target.value); setSelectedReportId(null); }}
+                aria-label="Márkaszűrő"
+                className="w-full mb-2 px-2 py-1.5 rounded-lg text-xs border"
+                style={{ background: "var(--qa-surface2)", borderColor: border, color: textPrimary }}>
+                <option value="all">Minden riport</option>
+                <option value="aggregate">Csak összesített</option>
+                {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+            )}
             {reports.length === 0 ? (
               <div className="text-center py-8">
                 <FileText size={24} className="mx-auto mb-2 opacity-40" style={{ color: textMuted }} />
@@ -447,6 +483,16 @@ export default function Reports() {
                         <p className="text-xs" style={{ color: textMuted }}>{c.externalAccountName ?? c.externalAccountId}</p>
                       </div>
                     </div>
+                    {hasBrands && (
+                      <select value={c.brandId ?? ""} aria-label="Márka"
+                        disabled={setConnectionBrandMutation.isPending}
+                        onChange={e => setConnectionBrandMutation.mutate({ profileId, connectionId: c.id, brandId: e.target.value || null })}
+                        className="ml-auto mr-2 px-2 py-1 rounded-lg text-xs border"
+                        style={{ background: cardBg, borderColor: border, color: textPrimary }}>
+                        <option value="">Nincs márka</option>
+                        {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                      </select>
+                    )}
                     <button onClick={() => disconnectMutation.mutate({ profileId, connectionId: c.id })}
                       className="p-1.5 rounded" style={{ color: "var(--qa-danger)" }}>
                       <Trash2 size={14} />
