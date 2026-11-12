@@ -21,6 +21,7 @@ import {
   upsertDataConnection,
   deleteDataConnection,
   getMetricsByProfile,
+  countProfilePostsInPeriod,
   createReport,
   updateReport,
   listReports,
@@ -28,6 +29,7 @@ import {
   upsertReportSchedule,
 } from "../db";
 import { generateReportSummary } from "../ai/reportSummary";
+import { analyzeReportPeriod, previousPeriod } from "../ai/reportSignals";
 import { buildReportPdf, reportPdfFileName, PDF_MIME_TYPE } from "../reports/pdf";
 import { fetchMetrics, getMetricsSource, isDemoData, isSocialMetricPlatform, METRIC_PLATFORMS } from "../reports/connectors";
 import { syncProfileMetrics } from "../reports/syncProfile";
@@ -121,13 +123,27 @@ export const reportsRouter = router({
       });
 
       try {
-        // 1) Aktuális időszak metrikái. (Előző időszak összehasonlítás TODO —
-        //    a compareToPrevious input már figyelve, de a buildSummary most
-        //    csak a current-et fogadja. Következő iteráció.)
-        const current = await getMetricsByProfile(input.profileId, input.from, input.to);
-        const summaryData = buildSummary(current);
+        // 1) Aktuális és (compareToPrevious esetén) az előző, azonos napszámú
+        //    időszak metrikái + a kontextus-jelek forrásai (posztszám, szinkronhiba).
+        const prev = input.compareToPrevious ? previousPeriod(input.from, input.to) : null;
+        const [current, previous, postsCurrent, postsPrevious, connections] = await Promise.all([
+          getMetricsByProfile(input.profileId, input.from, input.to),
+          prev ? getMetricsByProfile(input.profileId, prev.from, prev.to) : Promise.resolve(null),
+          countProfilePostsInPeriod(input.profileId, input.from, input.to),
+          prev ? countProfilePostsInPeriod(input.profileId, prev.from, prev.to) : Promise.resolve(null),
+          listDataConnections(input.profileId),
+        ]);
+        const signals = analyzeReportPeriod({
+          from: input.from,
+          to: input.to,
+          currentRows: current,
+          previousRows: previous,
+          posts: { current: postsCurrent, previous: postsPrevious },
+          syncErrorPlatforms: connections.filter((c) => c.connected && c.lastSyncError).map((c) => c.platform),
+        });
+        const summaryData = { ...buildSummary(current, previous), signals };
 
-        // 2) AI vezetői összefoglaló magyar G2A brand-voice-ban
+        // 2) AI vezetői összefoglaló magyar G2A brand-voice-ban (előfeldolgozott jelekkel, számellenőrzéssel)
         const aiSummary = await generateReportSummary({
           profile,
           summaryData,
@@ -261,20 +277,32 @@ type Metric = {
   dimension?: Record<string, string> | null;
 };
 
-export function buildSummary(all: Metric[]) {
+/**
+ * `previousAll` (az előző, azonos hosszú időszak sorai) megadásakor a KPI-k
+ * `prevValue`-t, a csatornák `prevSpend`/`prevConversions`-t is kapnak.
+ */
+export function buildSummary(all: Metric[], previousAll?: Metric[] | null) {
   // A közösségi (Social Hub) sorok külön szakaszba mennek; a fizetett/forgalmi
   // KPI-kat, idősorokat és a csatornabontást nem torzítják (pl. impressions).
   const social = buildSocialSummary(all.filter((r) => isSocialMetricPlatform(r.platform)));
   const current = all.filter((r) => !isSocialMetricPlatform(r.platform));
+  const previous = previousAll ? previousAll.filter((r) => !isSocialMetricPlatform(r.platform)) : null;
   const sum = (key: string, rows: Metric[]) =>
     rows.filter((r) => r.metricKey === key).reduce((a, r) => a + r.value, 0);
+  const kpi = (key: string, label: string, unit?: string) => ({
+    key,
+    label,
+    value: Math.round(sum(key, current)),
+    ...(previous ? { prevValue: Math.round(sum(key, previous)) } : {}),
+    ...(unit ? { unit } : {}),
+  });
 
   const kpis = [
-    { key: "spend", label: "Költés", value: Math.round(sum("spend", current)), unit: "HUF" },
-    { key: "impressions", label: "Megjelenés", value: Math.round(sum("impressions", current)) },
-    { key: "clicks", label: "Kattintás", value: Math.round(sum("clicks", current)) },
-    { key: "conversions", label: "Konverzió", value: Math.round(sum("conversions", current)) },
-    { key: "sessions", label: "Munkamenet (GA4)", value: Math.round(sum("sessions", current)) },
+    kpi("spend", "Költés", "HUF"),
+    kpi("impressions", "Megjelenés"),
+    kpi("clicks", "Kattintás"),
+    kpi("conversions", "Konverzió"),
+    kpi("sessions", "Munkamenet (GA4)"),
   ];
 
   // Idősoros bontás — a UI napi vonaldiagramot rajzol ebből.
@@ -302,6 +330,12 @@ export function buildSummary(all: Metric[]) {
     platform: p,
     spend: Math.round(sum("spend", current.filter((r) => r.platform === p))),
     conversions: Math.round(sum("conversions", current.filter((r) => r.platform === p))),
+    ...(previous
+      ? {
+        prevSpend: Math.round(sum("spend", previous.filter((r) => r.platform === p))),
+        prevConversions: Math.round(sum("conversions", previous.filter((r) => r.platform === p))),
+      }
+      : {}),
   }));
 
   return { kpis, series, byPlatform, social };
