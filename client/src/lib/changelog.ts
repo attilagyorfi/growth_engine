@@ -32,6 +32,14 @@ export interface ChangelogEntry {
 // Legfrissebb elöl. A user "Újdonságok" drawer-je ebben a sorrendben mutatja.
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: "2026-11-riport-pdf-word",
+    date: "2026-11-11",
+    category: "feature",
+    title: "Havi riport letöltése PDF-ben és Wordben",
+    description: "A Riportok oldalon egy kattintással letöltheted a havi riportot kész PDF-fájlként, vagy Word-fájlként, ha még szerkesztenéd. Nyomtatni továbbra is tudsz a „Nyomtatás” gombbal.",
+    href: "/riportok",
+  },
+  {
     id: "2026-11-g0-social-hub",
     date: "2026-11-09",
     category: "improvement",
