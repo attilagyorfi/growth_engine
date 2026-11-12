@@ -1,4 +1,4 @@
-import { eq, ne, desc, and, gte, lte, inArray } from "drizzle-orm";
+import { eq, ne, desc, and, or, gte, lte, inArray, isNull } from "drizzle-orm";
 import { drizzle, type MySql2Database } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
 import mysql from "mysql2/promise";
@@ -1036,6 +1036,29 @@ export async function getMetricsByProfile(profileId: string, from: string, to: s
       lte(reportMetrics.date, toDate),
     ),
   );
+}
+
+/**
+ * A profil ütemezett/publikált posztjainak száma a [from, to] napokban (az AI-narratíva
+ * kontextus-jele). Publikált posztnál a publikálás, egyébként az ütemezés napja számít.
+ * null, ha nincs adatbázis (a jel ilyenkor „nem ismert”).
+ */
+export async function countProfilePostsInPeriod(profileId: string, from: string, to: string): Promise<number | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const start = new Date(`${from}T00:00:00.000Z`);
+  const end = new Date(`${to}T23:59:59.999Z`);
+  const rows = await db.select({ id: contentPosts.id }).from(contentPosts).where(
+    and(
+      eq(contentPosts.profileId, profileId),
+      inArray(contentPosts.status, ["scheduled", "published"]),
+      or(
+        and(gte(contentPosts.publishedAt, start), lte(contentPosts.publishedAt, end)),
+        and(isNull(contentPosts.publishedAt), gte(contentPosts.scheduledAt, start), lte(contentPosts.scheduledAt, end)),
+      ),
+    ),
+  );
+  return rows.length;
 }
 
 // ─── Reports ────────────────────────────────────────────────────────────
