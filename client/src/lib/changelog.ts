@@ -32,6 +32,14 @@ export interface ChangelogEntry {
 // Legfrissebb elöl. A user "Újdonságok" drawer-je ebben a sorrendben mutatja.
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: "2026-11-riport-napi-szinkron",
+    date: "2026-11-12",
+    category: "feature",
+    title: "A riportadatok minden hajnalban frissülnek",
+    description: "A riportokhoz tartozó adatokat minden hajnalban magunk frissítjük az előző pár napra, így a később beérkező számok is bekerülnek. Ha a frissítés nem sikerül, értesítést kapsz.",
+    href: "/riportok",
+  },
+  {
     id: "2026-11-riport-pdf-word",
     date: "2026-11-11",
     category: "feature",

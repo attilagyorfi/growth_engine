@@ -16,6 +16,7 @@ import { logLlmStartup } from "./llm";
 import { ENV } from "./env";
 import { seedDemoAccount } from "./demoAccount";
 import { startScheduler } from "../scheduler";
+import { isReportSyncEnabled, startReportSyncScheduler } from "../reportSyncScheduler";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -134,6 +135,9 @@ async function startServer() {
     // Ütemezett posztok közzététele — production-ben alapból be, SCHEDULER_ENABLED=false kikapcsolja.
     const schedulerEnv = process.env.SCHEDULER_ENABLED?.trim().toLowerCase();
     startScheduler({ enabled: schedulerEnv ? schedulerEnv === "true" : ENV.isProduction });
+    // Napi riport-adatszinkron (hajnalban, Europe/Budapest) — production-ben alapból be,
+    // REPORT_SYNC_SCHEDULER_ENABLED=false kikapcsolja.
+    startReportSyncScheduler({ enabled: isReportSyncEnabled(process.env.REPORT_SYNC_SCHEDULER_ENABLED, ENV.isProduction) });
   });
 }
 

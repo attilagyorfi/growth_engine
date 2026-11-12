@@ -20,8 +20,6 @@ import {
   listDataConnections,
   upsertDataConnection,
   deleteDataConnection,
-  insertReportMetrics,
-  replaceSocialReportMetrics,
   getMetricsByProfile,
   createReport,
   updateReport,
@@ -32,9 +30,9 @@ import {
 import { generateReportSummary } from "../ai/reportSummary";
 import { buildReportPdf, reportPdfFileName, PDF_MIME_TYPE } from "../reports/pdf";
 import { fetchMetrics, getMetricsSource, isDemoData, isSocialMetricPlatform, METRIC_PLATFORMS } from "../reports/connectors";
+import { syncProfileMetrics } from "../reports/syncProfile";
 import { buildReportDocx, reportDocxFileName, DOCX_MIME_TYPE } from "../reports/docx";
 import { buildSocialSection, buildSocialSummary, type ReportContentInput } from "../reports/content";
-import { syncSocialMetrics } from "../socialHub/metrics";
 
 // data_connections platformjai (OAuth-kapcsolatok). A közösségi csatorna NEM kapcsolat-sor:
 // a Social Hubból jön, a sync külön ágán (server/socialHub).
@@ -89,39 +87,10 @@ export const reportsRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
-      const conns = await listDataConnections(input.profileId);
-      const targets = input.platforms
-        ? conns.filter((c) => (input.platforms as string[]).includes(c.platform))
-        : conns;
-
-      let inserted = 0;
-      for (const conn of targets) {
-        try {
-          const rows = await fetchMetrics(conn, input.from, input.to);
-          const result = await insertReportMetrics(input.profileId, rows);
-          inserted += result.inserted;
-        } catch (err) {
-          console.error(`[reports.sync] ${conn.platform} failed:`, err);
-          // Nem dobjuk tovább — a többi platform szinkron menjen tovább
-        }
-      }
-
-      // Közösségi csatorna (Social Hub GET /metrics), a kapcsolat-ciklus mellett.
-      // Fail-closed: konfiguráció / external_ref / párosítás nélkül nincs hívás, csak ok-kód.
-      const profile = await getProfileById(input.profileId);
-      const social = await syncSocialMetrics(
-        {
-          profileId: input.profileId,
-          externalRef: profile?.externalRef,
-          from: input.from,
-          to: input.to,
-          requested: !input.platforms || input.platforms.some(isSocialMetricPlatform),
-        },
-        { replaceRows: replaceSocialReportMetrics },
-      );
-      if (social.status === "synced") inserted += social.inserted;
-
-      return { platforms: targets.map((t) => t.platform), inserted, social };
+      // Közös mag a napi háttér-szinkronnal (server/reportSyncScheduler.ts). A belső
+      // hibalistát itt elnyeljük: a kézi szinkron válasza változatlan marad.
+      const { platforms, inserted, social } = await syncProfileMetrics(input.profileId, input.from, input.to, input.platforms);
+      return { platforms, inserted, social };
     }),
 
   // ─── Riport legenerálása (összesítés → AI-narratíva) ─────────────────────

@@ -13,7 +13,14 @@ vi.mock("./db", async (importOriginal) => {
     ...actual,
     getProfileById: vi.fn(),
     listDataConnections: vi.fn(async () => []),
-    insertReportMetrics: vi.fn(async (profileId: string, rows: Row[]) => {
+    // A kapcsolat-platformok tranzakciós cseréje (platformonként), memóriában.
+    replaceReportMetrics: vi.fn(async (profileId: string, platform: string, from: string, to: string, rows: Row[]) => {
+      const lo = new Date(from).getTime();
+      const hi = new Date(to).getTime();
+      for (let i = store.length - 1; i >= 0; i--) {
+        const r = store[i];
+        if (r.profileId === profileId && r.platform === platform && r.date.getTime() >= lo && r.date.getTime() <= hi) store.splice(i, 1);
+      }
       store.push(...rows.map((r) => ({ ...r, profileId })));
       return { inserted: rows.length };
     }),
@@ -128,7 +135,7 @@ describe("reports.sync – közösségi ág", () => {
     expect(res.social).toEqual({ status: "skipped", reason });
     const expected = await fetchMetrics(conn, "2026-10-01", "2026-10-03");
     expect(res.inserted).toBe(expected.length);
-    expect(vi.mocked(db.insertReportMetrics)).toHaveBeenCalledWith("profile-a", expected);
+    expect(vi.mocked(db.replaceReportMetrics)).toHaveBeenCalledWith("profile-a", "google_ads", "2026-10-01", "2026-10-03", expected);
     expect(store.every((r) => r.platform === "google_ads")).toBe(true);
   });
 
