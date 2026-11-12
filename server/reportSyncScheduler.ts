@@ -15,6 +15,10 @@
  *     (a teljes profil-szinkron ismételhető, mert az írás idempotens). Egy profil hibája
  *     nem állítja meg a többit.
  *   - Tartós hibánál a profilhoz kötött aktív felhasználók rövid értesítést kapnak.
+ *   - Csak élő forrás: a kapcsolat-platformok közül csak a LIVE_METRIC_PLATFORMS-ban
+ *     szereplők, plusz a Social Hub-ág. A mock-ágú platformokat (ma mind a négy) az
+ *     éjszakai futás kihagyja, hogy az éles report_metrics táblába ne kerüljön
+ *     automatikusan mintaadat. A kézi „Frissítés” (reports.sync) ezt nem érinti.
  *
  * Spam elleni döntés: a „ma már lefutott” kapu csak memóriában él (újraindulás után
  * ugyanazon a napon újra futhat — ez ártalmatlan az idempotens írás miatt). Az
@@ -26,6 +30,7 @@
  * kulcs, stack vagy teljes err-objektum nem.
  */
 import { describeError, type SyncProfileResult } from "./reports/syncProfile";
+import { LIVE_METRIC_PLATFORMS, SOCIAL_METRIC_PLATFORMS, type MetricPlatform } from "./reports/connectors";
 
 export const REPORT_SYNC_TIME_ZONE = "Europe/Budapest";
 /** A hajnali futási ablak budapesti órában: [kezdet, vég). */
@@ -242,6 +247,21 @@ export async function runDailyReportSync(deps: ReportSyncDeps): Promise<DailySyn
   return outcome.acquired ? outcome.value : { status: "skipped", reason: outcome.reason };
 }
 
+// ─── Platformszűrő ──────────────────────────────────────────────────────────
+
+/**
+ * Az éjszakai futás platformjai: az élő kapcsolat-platformok és a közösségi
+ * (Social Hub) platformok. Mock-ágú platform nem kerül bele, így éjjel nem íródik
+ * mintaadat az éles táblába. Ha a lista csak közösségi platformokat tartalmaz, a
+ * kapcsolat-ág üres, a Social Hub-ág pedig a saját fail-closed szabályai szerint fut.
+ */
+export function nightlySyncPlatforms(
+  live: ReadonlySet<string> = LIVE_METRIC_PLATFORMS,
+): MetricPlatform[] {
+  const connectionPlatforms = (["google_ads", "ga4", "search_console", "meta_ads"] as const).filter((p) => live.has(p));
+  return [...connectionPlatforms, ...SOCIAL_METRIC_PLATFORMS];
+}
+
 // ─── Adatbázis-kötés + indítás ────────────────────────────────────────────
 
 async function createDbDeps(): Promise<ReportSyncDeps | null> {
@@ -254,7 +274,7 @@ async function createDbDeps(): Promise<ReportSyncDeps | null> {
     now: () => new Date(),
     withLock: (fn) => withMysqlLock(pool as unknown as LockPool, REPORT_SYNC_LOCK_NAME, fn),
     listActiveProfileIds: () => db.listActiveProfileIds(),
-    syncProfile: (profileId, from, to) => syncProfileMetrics(profileId, from, to),
+    syncProfile: (profileId, from, to) => syncProfileMetrics(profileId, from, to, nightlySyncPlatforms()),
     listRecipients: (profileId) => db.listActiveProfileUserIds(profileId),
     hasUnreadNotification: (appUserId, profileId, title) => db.hasUnreadNotification(appUserId, profileId, "system", title),
     notify: ({ appUserId, profileId, title, body, actionUrl }) =>
