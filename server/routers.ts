@@ -15,10 +15,11 @@ import { teamRouter } from "./routers/team";
 import { assistantRouter } from "./routers/assistant";
 import { ideasRouter } from "./routers/ideas";
 import { generateImage } from "./_core/imageGeneration";
+import { externalRefInput, EXTERNAL_REF_TAKEN_MESSAGE } from "./socialHub/externalRef";
 import { nanoid } from "nanoid";
 import { TRPCError } from "@trpc/server";
 import {
-  getAllProfiles, getProfileById, getProfilesByAppUser, upsertProfile, deleteProfile,
+  getAllProfiles, getProfileById, getProfilesByAppUser, upsertProfile, deleteProfile, setProfileExternalRef,
   getLeadsByProfile, getLeadById, createLead, updateLead, deleteLead,
   createContent,
   getStrategiesByProfile, getStrategyById, createStrategy, updateStrategy,
@@ -221,6 +222,17 @@ export const appRouter = router({
         // Új profil: a létrehozó a tulajdonos.
         const id = input.id ?? nanoid();
         return upsertProfile({ ...input, id, appUserId: ctx.appUser.id });
+      }),
+
+    // Social Hub-párosítás (G1): a profil external_ref-je. Üres → NULL (törlés).
+    // Ütközésnél általános üzenet: nem áruljuk el, melyik profilé az érték.
+    setExternalRef: appUserProcedure
+      .input(z.object({ id: z.string(), externalRef: externalRefInput }))
+      .mutation(async ({ input, ctx }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.id, ctx.appUser.profileId);
+        const result = await setProfileExternalRef(input.id, input.externalRef);
+        if (!result.ok) throw new TRPCError({ code: "CONFLICT", message: EXTERNAL_REF_TAKEN_MESSAGE });
+        return { externalRef: input.externalRef };
       }),
 
     delete: appUserProcedure

@@ -17,6 +17,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { useProfile } from "@/contexts/ProfileContext";
 import { trpc } from "@/lib/trpc";
 import { downloadBase64File } from "@/lib/downloadFile";
+import { socialSyncNotice } from "@/lib/socialSyncNotice";
 import { toast } from "sonner";
 import { Streamdown } from "streamdown";
 import {
@@ -79,14 +80,19 @@ export default function Reports() {
   // adapterek élnek (demo:false), a DEMO-jelzések automatikusan eltűnnek.
   const { data: dataSource } = trpc.reports.dataSource.useQuery();
   const isDemo = dataSource?.demo !== false;
+  // Kiválasztás nélkül a legfrissebb riportot töltjük be részletesen (a közösségi szakasz miatt).
+  const previewReportId = selectedReportId ?? reports[0]?.id ?? null;
   const { data: selectedReport } = trpc.reports.get.useQuery(
-    { profileId, reportId: selectedReportId ?? "" },
-    { enabled: !!profileId && !!selectedReportId }
+    { profileId, reportId: previewReportId ?? "" },
+    { enabled: !!profileId && !!previewReportId }
   );
 
+  // A közösségi csatorna (Social Hub) kimaradásának oka az utolsó szinkronból.
+  const [socialNotice, setSocialNotice] = useState<string | null>(null);
   const syncMutation = trpc.reports.sync.useMutation({
     onSuccess: (data) => {
       toast.success(`${data.inserted} metrika beszinkronizálva (${data.platforms.length} platform)`);
+      setSocialNotice(socialSyncNotice(data.social));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -124,6 +130,7 @@ export default function Reports() {
 
   const activeReport = selectedReport ?? (reports.length > 0 ? reports[0] : null);
   const summary = activeReport?.summaryData as any;
+  const socialSection = selectedReport && selectedReport.id === activeReport?.id ? selectedReport.socialSection : null;
 
   return (
     <DashboardLayout background="riportok">
@@ -184,6 +191,9 @@ export default function Reports() {
               DEMO adat — a riportok jelenleg mintaszámokat mutatnak (nem valós
               hirdetési/analitika adat). A valós adatforrás-integrációk fejlesztés alatt.
             </p>
+          )}
+          {socialNotice && (
+            <p className="text-xs font-medium w-full" style={{ color: "var(--qa-warning)" }}>{socialNotice}</p>
           )}
         </div>
 
@@ -360,6 +370,32 @@ export default function Reports() {
                           </PieChart>
                         </ResponsiveContainer>
                       </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Közösségi média (Social Hub) — ugyanaz a szakasz, mint a Word- és PDF-riportban */}
+                {socialSection && (
+                  <div className="rounded-xl border p-5" style={{ background: cardBg, borderColor: border }}>
+                    <h3 className="text-sm font-bold mb-3" style={{ color: textPrimary }}>{socialSection.title}</h3>
+                    <div className="space-y-3">
+                      {socialSection.blocks.map((b, i) =>
+                        b.kind === "table" ? (
+                          <table key={i} className="w-full text-sm">
+                            <tbody>
+                              {b.rows.map(([label, value]) => (
+                                <tr key={label} className="border-t" style={{ borderColor: border }}>
+                                  <td className="py-1.5" style={{ color: textMuted }}>{label}</td>
+                                  <td className="py-1.5 text-right font-semibold" style={{ color: textPrimary }}>{value}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        ) : b.kind === "subheading" ? (
+                          <p key={i} className="text-xs font-bold uppercase tracking-wider" style={{ color: textMuted }}>{b.text}</p>
+                        ) : (
+                          <p key={i} className="text-sm italic" style={{ color: textMuted }}>{b.text}</p>
+                        ))}
                     </div>
                   </div>
                 )}

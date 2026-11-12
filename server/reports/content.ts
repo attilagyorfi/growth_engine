@@ -8,14 +8,20 @@
  *   - fejléc: ügyfélnév + időszak (oldalfejlécben is), mintaadatnál jól látható jelölés
  *   - Összesítés: a riport KPI-jai
  *   - csatornánként számozott szakasz (a byPlatform sorrendjében): számok + sablonos értelmezés
+ *   - Közösségi média: a Social Hubból szinkronizált facebook/instagram/linkedin
+ *     report_metrics sorok összesítése (summaryData.social); ha nincs, rövid jelzés
  *   - utolsó szakasz: Vezetői értékelés (a tárolt AI-összefoglaló, markdown-jelölés nélkül)
  *
  * Minden szám a bemenetből jön, vagy abból egyszerű aránnyal képzett
  * (költség/konverzió csak konverzió > 0 esetén; részarány csak ha van összes konverzió).
  */
 
+import { SOCIAL_METRIC_PLATFORMS, isSocialMetricPlatform } from "./connectors";
+
 export type ReportKpi = { key: string; label: string; value: number; unit?: string };
 export type ReportPlatform = { platform: string; spend: number; conversions: number };
+/** Egy közösségi platform időszakos összesítése (a riport-pillanatképben tárolva). */
+export type SocialPlatformSummary = { platform: string; metrics: { key: string; value: number }[] };
 
 export type ReportContentInput = {
   clientName: string;
@@ -23,7 +29,7 @@ export type ReportContentInput = {
   periodFrom: string;
   /** YYYY-MM-DD */
   periodTo: string;
-  summaryData: { kpis: ReportKpi[]; byPlatform: ReportPlatform[] };
+  summaryData: { kpis: ReportKpi[]; byPlatform: ReportPlatform[]; social?: SocialPlatformSummary[] | null };
   aiSummary: string | null;
   demo: boolean;
 };
@@ -36,6 +42,8 @@ export const DEMO_NOTICE_TEXT =
 export const EXECUTIVE_SUMMARY_TITLE = "Vezetői értékelés";
 export const NO_SUMMARY_TEXT = "Ehhez a riporthoz nem készült vezetői összefoglaló.";
 export const TABLE_HEADER: [string, string] = ["Mutató", "Érték"];
+export const SOCIAL_SECTION_TITLE = "Közösségi média";
+export const NO_SOCIAL_TEXT = "Ehhez az időszakhoz nincs közösségi adat a Social Hubból.";
 
 /** Olvasható csatornanevek; ismeretlen kulcsnál maga a kulcs jelenik meg. */
 const PLATFORM_LABELS: Record<string, string> = {
@@ -43,6 +51,9 @@ const PLATFORM_LABELS: Record<string, string> = {
   meta_ads: "Meta Ads",
   ga4: "GA4 (analitika)",
   search_console: "Search Console",
+  facebook: "Facebook",
+  instagram: "Instagram",
+  linkedin: "LinkedIn",
 };
 
 export function platformLabel(platform: string): string {
@@ -164,6 +175,87 @@ function channelRows(p: ReportPlatform): [string, string][] {
   return rows;
 }
 
+// ─── Közösségi média (Social Hub) ────────────────────────────────────────────
+
+/**
+ * Állománymutatók: napról napra nem összeadhatók, ezért fiókonként az időszak
+ * utolsó napjának értéke számít (a fiókok értékei összeadódnak).
+ */
+const SOCIAL_STOCK_METRICS = new Set(["followers"]);
+
+/** Ismert Social Hub-mutatók sorrendje és címkéje; az ismeretlen kulcs a végére kerül, a nevével. */
+const SOCIAL_METRIC_LABELS: Record<string, string> = {
+  followers: "Követők (az időszak végén)",
+  reach: "Elérés",
+  impressions: "Megjelenés",
+  engagement: "Interakció",
+};
+const SOCIAL_METRIC_ORDER = Object.keys(SOCIAL_METRIC_LABELS);
+
+export function socialMetricLabel(key: string): string {
+  return SOCIAL_METRIC_LABELS[key] ?? key;
+}
+
+export type SocialSourceRow = {
+  platform: string;
+  date: Date | string;
+  metricKey: string;
+  value: number;
+  dimension?: Record<string, string> | null;
+};
+
+/**
+ * A report_metrics facebook/instagram/linkedin soraiból platformonkénti összesítés
+ * (tiszta függvény). Forgalmi mutató: összeg; állománymutató: fiókonként a
+ * legutolsó nap értéke. A nem közösségi platformok sorait figyelmen kívül hagyja.
+ */
+export function buildSocialSummary(rows: SocialSourceRow[]): SocialPlatformSummary[] {
+  const out: SocialPlatformSummary[] = [];
+  for (const platform of SOCIAL_METRIC_PLATFORMS) {
+    const own = rows.filter((r) => r.platform === platform && Number.isFinite(r.value));
+    if (!own.length) continue;
+    const totals = new Map<string, number>();
+    const latest = new Map<string, { metricKey: string; day: string; value: number }>();
+    for (const r of own) {
+      if (!SOCIAL_STOCK_METRICS.has(r.metricKey)) {
+        totals.set(r.metricKey, (totals.get(r.metricKey) ?? 0) + r.value);
+        continue;
+      }
+      const day = r.date instanceof Date ? r.date.toISOString().slice(0, 10) : String(r.date).slice(0, 10);
+      const k = `${r.metricKey}|${r.dimension?.socialAccountId ?? ""}`;
+      const prev = latest.get(k);
+      if (!prev || day >= prev.day) latest.set(k, { metricKey: r.metricKey, day, value: r.value });
+    }
+    latest.forEach(({ metricKey, value }) => totals.set(metricKey, (totals.get(metricKey) ?? 0) + value));
+    const rank = (key: string) => {
+      const i = SOCIAL_METRIC_ORDER.indexOf(key);
+      return i < 0 ? SOCIAL_METRIC_ORDER.length : i;
+    };
+    const metrics = Array.from(totals.entries())
+      .map(([key, value]) => ({ key, value: Math.round(value * 100) / 100 }))
+      .sort((a, b) => rank(a.key) - rank(b.key) || a.key.localeCompare(b.key));
+    out.push({ platform, metrics });
+  }
+  return out;
+}
+
+/**
+ * A „Közösségi média” szakasz: platformonként kiemelt sor + mutató-táblázat.
+ * Közösségi adat nélkül (vagy régebbi, ilyen mezőt nem tároló riportnál) rövid jelzés.
+ * Ugyanezt kapja a Word, a PDF és a webes előnézet (reports.get → socialSection).
+ */
+export function buildSocialSection(social: SocialPlatformSummary[] | null | undefined): ReportSection {
+  const platforms = (social ?? []).filter((p) => isSocialMetricPlatform(p.platform) && p.metrics.length > 0);
+  if (!platforms.length) return { title: SOCIAL_SECTION_TITLE, blocks: [{ kind: "note", text: NO_SOCIAL_TEXT }] };
+  return {
+    title: SOCIAL_SECTION_TITLE,
+    blocks: platforms.flatMap((p): ReportBlock[] => [
+      { kind: "subheading", text: platformLabel(p.platform) },
+      { kind: "table", rows: p.metrics.map((m): [string, string] => [socialMetricLabel(m.key), formatHuNumber(m.value)]) },
+    ]),
+  };
+}
+
 // ─── A dokumentum szerkezete (formátumfüggetlen) ─────────────────────────────
 
 export type ReportBlock =
@@ -194,7 +286,7 @@ export type ReportContent = {
   documentTitle: string;
   /** Mintaadatnál a jól látható jelölés, egyébként null. */
   demoNotice: { title: string; text: string } | null;
-  /** Összesítés (ha van KPI), számozott csatornaszakaszok, végül a Vezetői értékelés. */
+  /** Összesítés (ha van KPI), számozott csatornaszakaszok, Közösségi média, végül a Vezetői értékelés. */
   sections: ReportSection[];
 };
 
@@ -222,6 +314,8 @@ export function buildReportContent(input: ReportContentInput): ReportContent {
       ],
     });
   });
+
+  sections.push(buildSocialSection(summaryData.social));
 
   const summaryBlocks = aiSummary && aiSummary.trim() ? summaryToBlocks(aiSummary) : [];
   sections.push({

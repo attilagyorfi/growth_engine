@@ -51,6 +51,8 @@ export type ClientProfile = {
   brandVoice: BrandVoice;
   contentPillars: ContentPillar[];
   socialAccounts: SocialAccount[];
+  /** Social Hub-párosítókulcs; csak a profiles.setExternalRef írja. */
+  externalRef?: string | null;
   createdAt: string;
   active: boolean;
 };
@@ -75,6 +77,7 @@ function dbToProfile(row: any): ClientProfile {
     brandVoice: row.brandVoice ?? { tone: "", style: "", avoid: "", keywords: [] },
     contentPillars: row.contentPillars ?? [],
     socialAccounts: (row.socialAccounts ?? []) as SocialAccount[],
+    externalRef: row.externalRef ?? null,
     createdAt: row.createdAt ? new Date(row.createdAt).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
     active: row.active ?? true,
   };

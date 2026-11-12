@@ -21,6 +21,7 @@ import {
   upsertDataConnection,
   deleteDataConnection,
   insertReportMetrics,
+  replaceSocialReportMetrics,
   getMetricsByProfile,
   createReport,
   updateReport,
@@ -30,11 +31,16 @@ import {
 } from "../db";
 import { generateReportSummary } from "../ai/reportSummary";
 import { buildReportPdf, reportPdfFileName, PDF_MIME_TYPE } from "../reports/pdf";
-import { fetchMetrics, getMetricsSource, isDemoData } from "../reports/connectors";
+import { fetchMetrics, getMetricsSource, isDemoData, isSocialMetricPlatform, METRIC_PLATFORMS } from "../reports/connectors";
 import { buildReportDocx, reportDocxFileName, DOCX_MIME_TYPE } from "../reports/docx";
-import type { ReportContentInput } from "../reports/content";
+import { buildSocialSection, buildSocialSummary, type ReportContentInput } from "../reports/content";
+import { syncSocialMetrics } from "../socialHub/metrics";
 
+// data_connections platformjai (OAuth-kapcsolatok). A közösségi csatorna NEM kapcsolat-sor:
+// a Social Hubból jön, a sync külön ágán (server/socialHub).
 const platformEnum = z.enum(["google_ads", "ga4", "search_console", "meta_ads"]);
+// report_metrics platformjai: a kapcsolat-platformok + facebook/instagram/linkedin.
+const metricPlatformEnum = z.enum(METRIC_PLATFORMS);
 
 export const reportsRouter = router({
   // ─── Kapcsolatok (Ads/Analytics OAuth) ───────────────────────────────────
@@ -79,13 +85,13 @@ export const reportsRouter = router({
       profileId: z.string(),
       from: z.string(), // YYYY-MM-DD
       to: z.string(),
-      platforms: z.array(platformEnum).optional(),
+      platforms: z.array(metricPlatformEnum).optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
       const conns = await listDataConnections(input.profileId);
       const targets = input.platforms
-        ? conns.filter((c) => input.platforms!.includes(c.platform))
+        ? conns.filter((c) => (input.platforms as string[]).includes(c.platform))
         : conns;
 
       let inserted = 0;
@@ -99,7 +105,23 @@ export const reportsRouter = router({
           // Nem dobjuk tovább — a többi platform szinkron menjen tovább
         }
       }
-      return { platforms: targets.map((t) => t.platform), inserted };
+
+      // Közösségi csatorna (Social Hub GET /metrics), a kapcsolat-ciklus mellett.
+      // Fail-closed: konfiguráció / external_ref / párosítás nélkül nincs hívás, csak ok-kód.
+      const profile = await getProfileById(input.profileId);
+      const social = await syncSocialMetrics(
+        {
+          profileId: input.profileId,
+          externalRef: profile?.externalRef,
+          from: input.from,
+          to: input.to,
+          requested: !input.platforms || input.platforms.some(isSocialMetricPlatform),
+        },
+        { replaceRows: replaceSocialReportMetrics },
+      );
+      if (social.status === "synced") inserted += social.inserted;
+
+      return { platforms: targets.map((t) => t.platform), inserted, social };
     }),
 
   // ─── Riport legenerálása (összesítés → AI-narratíva) ─────────────────────
@@ -166,7 +188,11 @@ export const reportsRouter = router({
     .input(z.object({ profileId: z.string(), reportId: z.string() }))
     .query(async ({ input, ctx }) => {
       await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
-      return getReportById(input.profileId, input.reportId);
+      const report = await getReportById(input.profileId, input.reportId);
+      if (!report) return report;
+      // A webes előnézet ugyanazt a közösségi szakaszt kapja, mint a Word és a PDF.
+      const summaryData = report.summaryData as ReportContentInput["summaryData"] | null;
+      return { ...report, socialSection: buildSocialSection(summaryData?.social) };
     }),
 
   // ─── Word- és PDF-export (G1, TELJESÍTMÉNY MINTA szerkezet) ─────────────
@@ -263,9 +289,14 @@ type Metric = {
   metricKey: string;
   value: number;
   currency?: string | null;
+  dimension?: Record<string, string> | null;
 };
 
-export function buildSummary(current: Metric[]) {
+export function buildSummary(all: Metric[]) {
+  // A közösségi (Social Hub) sorok külön szakaszba mennek; a fizetett/forgalmi
+  // KPI-kat, idősorokat és a csatornabontást nem torzítják (pl. impressions).
+  const social = buildSocialSummary(all.filter((r) => isSocialMetricPlatform(r.platform)));
+  const current = all.filter((r) => !isSocialMetricPlatform(r.platform));
   const sum = (key: string, rows: Metric[]) =>
     rows.filter((r) => r.metricKey === key).reduce((a, r) => a + r.value, 0);
 
@@ -304,7 +335,7 @@ export function buildSummary(current: Metric[]) {
     conversions: Math.round(sum("conversions", current.filter((r) => r.platform === p))),
   }));
 
-  return { kpis, series, byPlatform };
+  return { kpis, series, byPlatform, social };
 }
 
 // ─── #15/#16 nézetek adat-rétege ─────────────────────────────────────────────
@@ -351,7 +382,7 @@ export async function loadExportableReport(
     clientName: profile?.name || report.title,
     periodFrom: toIsoDate(report.periodFrom),
     periodTo: toIsoDate(report.periodTo),
-    summaryData: { kpis: summaryData.kpis ?? [], byPlatform: summaryData.byPlatform ?? [] },
+    summaryData: { kpis: summaryData.kpis ?? [], byPlatform: summaryData.byPlatform ?? [], social: summaryData.social ?? [] },
     aiSummary: report.aiSummary ?? null,
     demo: isDemoData(),
   };
@@ -373,7 +404,8 @@ function resolveRange(from?: string, to?: string): { from: string; to: string } 
  */
 async function getViewMetrics(profileId: string, from: string, to: string): Promise<{ rows: Metric[]; demo: boolean }> {
   if (!isDemoData()) {
-    const real = await getMetricsByProfile(profileId, from, to);
+    // A közösségi sorok nem fizetett/forgalmi csatornák: az összesítőket nem torzíthatják.
+    const real = (await getMetricsByProfile(profileId, from, to)).filter((r) => !isSocialMetricPlatform(r.platform));
     return { rows: real as unknown as Metric[], demo: false };
   }
   const rows: Metric[] = [];

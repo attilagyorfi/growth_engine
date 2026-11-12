@@ -178,6 +178,18 @@ export default function Settings() {
     }
   });
 
+  // Social Hub-párosítás (G1): a profil external_ref-je; üresen mentve törlődik.
+  const [externalRef, setExternalRef] = useState(activeProfile.externalRef ?? "");
+  useEffect(() => { setExternalRef(activeProfile.externalRef ?? ""); }, [activeProfile.id, activeProfile.externalRef]);
+  const saveExternalRef = trpc.profiles.setExternalRef.useMutation({
+    onSuccess: (r) => {
+      utils.profiles.list.invalidate();
+      setExternalRef(r.externalRef ?? "");
+      toast.success(r.externalRef ? "Social Hub-azonosító mentve" : "Social Hub-párosítás törölve");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
   const { data: auditLogs, isLoading: auditLoading } = trpc.auditLog.list.useQuery(
     { profileId: activeProfile.id },
     { enabled: !!activeProfile.id && activeTab === "audit" }
@@ -525,6 +537,26 @@ export default function Settings() {
       {/* Integrations */}
       {activeTab === "integrations" && (
         <div className="space-y-4">
+          {/* Social Hub-párosítás: a riport közösségi adatai ezzel az azonosítóval jönnek. */}
+          <div className="rounded-xl border p-5" style={{ background: cardBg, borderColor: border }}>
+            <h3 className="text-sm font-bold" style={{ color: "var(--qa-fg2)" }}>Social Hub-párosítás</h3>
+            <p className="text-xs mt-0.5 mb-3" style={{ color: "var(--qa-fg4)" }}>
+              Írd be az ügyfél Social Hub-azonosítóját (pl. viba-team), így a havi riportba bekerülnek a közösségi számok. Üresen mentve a párosítás törlődik.
+            </p>
+            <form className="flex flex-wrap items-center gap-2"
+              onSubmit={(e) => { e.preventDefault(); saveExternalRef.mutate({ id: activeProfile.id, externalRef }); }}>
+              <input value={externalRef} onChange={(e) => setExternalRef(e.target.value)} maxLength={64}
+                placeholder="pl. viba-team" aria-label="Social Hub-azonosító"
+                className="px-3 py-2 rounded-lg text-sm border flex-1 min-w-[200px]"
+                style={{ background: "var(--qa-surface2)", borderColor: border, color: "var(--qa-fg)" }} />
+              <button type="submit" disabled={saveExternalRef.isPending}
+                className="px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-40"
+                style={{ background: "var(--qa-accent)", color: "var(--qa-accent-on)" }}>
+                {saveExternalRef.isPending ? "Mentés…" : "Mentés"}
+              </button>
+            </form>
+          </div>
+
           {/* Social Media Integrations */}
           <div className="rounded-xl border p-5" style={{ background: cardBg, borderColor: border }}>
             <div className="flex items-center justify-between mb-5">

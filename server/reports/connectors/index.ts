@@ -18,8 +18,20 @@
  */
 import type { DataConnection } from "../../../drizzle/schema";
 
+/** Közösségi platformok: ezek sorai a Social Hubból jönnek (server/socialHub), nem data_connections-ből. */
+export const SOCIAL_METRIC_PLATFORMS = ["facebook", "instagram", "linkedin"] as const;
+export type SocialMetricPlatform = (typeof SOCIAL_METRIC_PLATFORMS)[number];
+
+/** A report_metrics.platform összes értéke (a drizzle/schema.ts enumjával egyezik). */
+export const METRIC_PLATFORMS = ["google_ads", "ga4", "search_console", "meta_ads", ...SOCIAL_METRIC_PLATFORMS] as const;
+export type MetricPlatform = (typeof METRIC_PLATFORMS)[number];
+
+export function isSocialMetricPlatform(platform: string): platform is SocialMetricPlatform {
+  return (SOCIAL_METRIC_PLATFORMS as readonly string[]).includes(platform);
+}
+
 export type NormalizedMetricRow = {
-  platform: "google_ads" | "ga4" | "search_console" | "meta_ads";
+  platform: MetricPlatform;
   date: Date;
   metricKey: string;
   value: number;
