@@ -19,6 +19,7 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 // Explicit .js extension az imports-ban → egyértelmű fájl-resolution
 // (no ERR_UNSUPPORTED_DIR_IMPORT). TS bundler mode compile-time .ts-re mappeli.
 import { registerLinkedInOAuthRoutes } from "../server/linkedinOAuth.js";
+import { registerGoogleOAuthRoutes } from "../server/reports/google/routes.js";
 import { appRouter } from "../server/routers.js";
 import { createContext } from "../server/_core/context.js";
 import { handleStripeWebhook } from "../server/stripe/webhook.js";
@@ -39,6 +40,10 @@ function getApp(): express.Express {
 
   // LinkedIn OAuth callback (under /api/oauth/linkedin/callback).
   registerLinkedInOAuthRoutes(app);
+
+  // Google OAuth (GA4 + Search Console riportadat, G1) — /api/oauth/google/start|callback.
+  // A nonce süti-alapú, így a serverless példányok között is működik; env nélkül fail-closed.
+  registerGoogleOAuthRoutes(app);
 
   // tRPC API endpoint at /api/trpc/*.
   app.use(

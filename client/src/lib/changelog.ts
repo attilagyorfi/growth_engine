@@ -32,6 +32,14 @@ export interface ChangelogEntry {
 // Legfrissebb elöl. A user "Újdonságok" drawer-je ebben a sorrendben mutatja.
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: "2026-11-google-ga4-search-console",
+    date: "2026-11-13",
+    category: "feature",
+    title: "GA4 és Search Console Google-csatlakozással",
+    description: "A Riportok → Adatforrásoknál a „Csatlakozás Google-lel” gombbal hozzáadhatod a GA4-et és a Search Console-t, majd kiválaszthatod, melyik tulajdon adatait húzzuk be. Csak olvasási jogot kérünk. A gomb akkor aktív, amikor a Google-csatlakozást bekapcsoltuk.",
+    href: "/riportok",
+  },
+  {
     id: "2026-11-markankenti-riport",
     date: "2026-11-12",
     category: "feature",

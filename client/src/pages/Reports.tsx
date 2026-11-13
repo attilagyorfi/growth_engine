@@ -5,19 +5,21 @@
  * generálás, korábbi riportok listája + Recharts-preview.
  *
  * MVP korlátozások (a foundation-first scope-ban):
- *   - A kapcsolatok gomb egyelőre a "Coming soon" modal-t nyitja (a Google
- *     OAuth verification + Meta Ads Insights review a kritikus úton).
+ *   - Az Adatforrások modalban a GA4 és a Search Console Google OAuth-tal
+ *     csatlakoztatható (property/site választóval); a Google Ads és a Meta Ads még nem.
  *   - Mock adatot generálunk minden platformra a `sync` mutation-ben.
  *   - A „PDF letöltése” a szerveren készült .pdf-et (reports.exportPdf), a
  *     „Word letöltése” a .docx-et (reports.exportDocx) tölti le, közös segéddel.
  *   - A „Nyomtatás” gomb `window.print()`-et hív (print CSS: index.css).
  */
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useProfile } from "@/contexts/ProfileContext";
 import { trpc } from "@/lib/trpc";
 import { downloadBase64File } from "@/lib/downloadFile";
 import { socialSyncNotice } from "@/lib/socialSyncNotice";
+import { connectionStatusText, googleReturnNotice } from "@/lib/googleConnect";
+import { GoogleAccountPicker, GoogleConnectButtons } from "@/components/GoogleDataSources";
 import { toast } from "sonner";
 import { Streamdown } from "streamdown";
 import {
@@ -75,6 +77,14 @@ export default function Reports() {
   const { data: connections = [], refetch: refetchConns } = trpc.reports.connections.list.useQuery(
     { profileId }, { enabled: !!profileId }
   );
+  // Visszatérés a Google OAuth-ból: csak állapotjelző jön (?google=…), token soha.
+  useEffect(() => {
+    const notice = googleReturnNotice(window.location.search);
+    if (!notice) return;
+    if (notice.kind === "success") toast.success(notice.text); else toast.error(notice.text);
+    setShowConnectionsModal(true);
+    window.history.replaceState({}, "", window.location.pathname);
+  }, []);
   const { data: brands = [] } = trpc.brands.list.useQuery({ profileId }, { enabled: !!profileId });
   const hasBrands = brands.length > 0;
   const listBrandInput = !hasBrands || listBrandFilter === "all"
@@ -463,24 +473,35 @@ export default function Reports() {
               <button onClick={() => setShowConnectionsModal(false)} style={{ color: textMuted }}><X size={18} /></button>
             </div>
 
+            <GoogleConnectButtons profileId={profileId} />
             {connections.length === 0 ? (
               <div className="text-center py-6">
                 <p className="text-sm mb-3" style={{ color: textMuted }}>Még nincs csatlakoztatott adatforrás.</p>
                 <p className="text-xs" style={{ color: textMuted }}>
-                  A Google Ads / GA4 / Search Console / Meta Ads OAuth flow-i a Google Cloud OAuth verification és Meta Ads Insights review lezárása után lesznek elérhetők (2-6 hét platformonként). Addig a mock adapter fut demo módban.
+                  A GA4-et és a Search Console-t fent tudod csatlakoztatni. A Google Ads és a Meta Ads később jön, addig mintaadatot látsz.
                 </p>
               </div>
             ) : (
               <div className="space-y-2 mb-4">
                 {connections.map(c => (
-                  <div key={c.id} className="flex items-center justify-between p-3 rounded-lg" style={{ background: "var(--qa-surface2)" }}>
+                  <div key={c.id} className="flex items-start justify-between p-3 rounded-lg" style={{ background: "var(--qa-surface2)" }}>
                     <div className="flex items-center gap-2">
                       {PLATFORM_META[c.platform]?.icon}
                       <div>
                         <p className="text-sm font-semibold" style={{ color: textPrimary }}>
                           {PLATFORM_META[c.platform]?.label ?? c.platform}
                         </p>
-                        <p className="text-xs" style={{ color: textMuted }}>{c.externalAccountName ?? c.externalAccountId}</p>
+                        <p className="text-xs" style={{ color: textMuted }}>
+                          {c.needsSelection ? "Még nincs kiválasztva tulajdon" : (c.externalAccountName ?? c.externalAccountId)}
+                          {" · "}
+                          <span style={{ color: c.connected ? green : textMuted }}>{connectionStatusText(c)}</span>
+                        </p>
+                        {!c.connected && c.lastSyncError && (
+                          <p className="text-xs" style={{ color: "var(--qa-danger)" }}>{c.lastSyncError}</p>
+                        )}
+                        {c.needsSelection && (
+                          <GoogleAccountPicker profileId={profileId} connectionId={c.id} onSaved={() => refetchConns()} />
+                        )}
                       </div>
                     </div>
                     {hasBrands && (
