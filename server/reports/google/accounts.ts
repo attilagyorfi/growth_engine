@@ -1,8 +1,10 @@
 /**
- * G2A Growth Engine – a csatlakozás után választható GA4-property-k és
- * Search Console-tulajdonok listája (GA4 Admin API accountSummaries, GSC sites.list).
+ * G2A Growth Engine – a csatlakozás után választható GA4-property-k,
+ * Search Console-tulajdonok és Google Ads-ügyfélfiókok listája
+ * (GA4 Admin API accountSummaries, GSC sites.list, Google Ads listAccessibleCustomers).
  */
 import type { DataConnection } from "../../../drizzle/schema";
+import { listGoogleAdsCustomers, type GoogleAdsConfig } from "./ads";
 import { googleRequest, withGoogleAuth, type GoogleDeps } from "./client";
 
 export const GA4_ADMIN_API = "https://analyticsadmin.googleapis.com/v1beta";
@@ -33,7 +35,15 @@ export function mapSites(json: any): GoogleAccountOption[] {
     .map((s: any) => ({ id: s.siteUrl, name: String(s.siteUrl).slice(0, 255) }));
 }
 
-export async function listGoogleAccounts(conn: DataConnection, deps: GoogleDeps): Promise<GoogleAccountOption[]> {
+export async function listGoogleAccounts(
+  conn: DataConnection,
+  deps: GoogleDeps,
+  adsConfig?: GoogleAdsConfig | null,
+): Promise<GoogleAccountOption[]> {
+  if (conn.platform === "google_ads") {
+    // Ügyfélfiókok kötőjel nélküli id-val, névként a formázott id (123-456-7890).
+    return listGoogleAdsCustomers(conn, deps, adsConfig); // undefined → env-beli beállítás
+  }
   return withGoogleAuth(conn, deps, async (accessToken) => {
     if (conn.platform === "search_console") {
       return mapSites(await googleRequest("Search Console sites.list", GSC_SITES_URL, { method: "GET", accessToken }, deps));

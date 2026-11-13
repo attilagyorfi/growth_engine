@@ -79,8 +79,8 @@ describe("reports.connections.upsert", () => {
   });
 
   it("más platformnál a token titkosítva íródik, és a válaszban sincs token", async () => {
-    const res = await caller().reports.connections.upsert({ profileId: "profile-a", platform: "google_ads", externalAccountId: "123", accessToken: "plain-access", refreshToken: "plain-refresh" });
-    const written = db.dataConnectionWriteValues({ profileId: "p", platform: "google_ads", externalAccountId: "1", accessToken: "plain-access", refreshToken: "plain-refresh" }, "x");
+    const res = await caller().reports.connections.upsert({ profileId: "profile-a", platform: "meta_ads", externalAccountId: "123", accessToken: "plain-access", refreshToken: "plain-refresh" });
+    const written = db.dataConnectionWriteValues({ profileId: "p", platform: "meta_ads", externalAccountId: "1", accessToken: "plain-access", refreshToken: "plain-refresh" }, "x");
     expect(written.accessToken!.startsWith("enc:v1:")).toBe(true);
     expect(decryptToken(written.accessToken)).toBe("plain-access");
     expect(decryptToken(written.refreshToken)).toBe("plain-refresh");
@@ -90,9 +90,15 @@ describe("reports.connections.upsert", () => {
 
 describe("reports.connections.google", () => {
   it("status: csak egy boolean flag, env-érték nélkül", async () => {
-    expect(await caller().reports.connections.google.status()).toEqual({ googleConfigured: true });
+    ENV.googleAdsDeveloperToken = "";
+    expect(await caller().reports.connections.google.status()).toEqual({ googleConfigured: true, googleAdsConfigured: false });
+    ENV.googleAdsDeveloperToken = "DEV-TOKEN-SECRET";
+    const on = await caller().reports.connections.google.status();
+    expect(on).toEqual({ googleConfigured: true, googleAdsConfigured: true });
+    expect(JSON.stringify(on)).not.toContain("DEV-TOKEN-SECRET");
     ENV.googleOAuthRedirectUrl = "";
-    expect(await caller().reports.connections.google.status()).toEqual({ googleConfigured: false });
+    expect(await caller().reports.connections.google.status()).toEqual({ googleConfigured: false, googleAdsConfigured: false });
+    ENV.googleAdsDeveloperToken = "";
   });
 
   it("accounts (GA4): a mockolt accountSummaries-válaszból", async () => {

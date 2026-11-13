@@ -6,9 +6,9 @@
  * value, currency, dimension} sorok, amiket a `report_metrics` táblába
  * insertelünk.
  *
- * Élő adapter: GA4 (./ga4.ts) és Search Console (./searchConsole.ts), a
- * LIVE_METRIC_PLATFORMS env-vel platformonként bekapcsolva. A többi platform
- * (és env nélkül mind) mock adatot ad; a Google Ads és a Meta Ads külön körben jön.
+ * Élő adapter: GA4 (./ga4.ts), Search Console (./searchConsole.ts) és Google Ads
+ * (../google/ads.ts), a LIVE_METRIC_PLATFORMS env-vel platformonként bekapcsolva.
+ * A többi platform (és env nélkül mind) mock adatot ad; a Meta Ads külön körben jön.
  *
  * A mock generátor determinisztikus (nap + platform + metricKey → seed):
  * ugyanaz a from/to ugyanazokat a számokat adja vissza, így a UI-fejlesztés
@@ -104,10 +104,10 @@ const METRIC_CONFIG: Record<string, Array<{ key: string; base: number; variance:
  * mezőket a helper egészíti ki.
  */
 // ─── Adapter-forrás: env-kapcsoló (LIVE_METRIC_PLATFORMS) ─────────────────────
-// Élő adapter: ga4, search_console (Google OAuth, server/reports/google). Platformonként
-// a LIVE_METRIC_PLATFORMS env kapcsolja be (pl. "ga4,search_console"); alapból üres →
-// MINDEN platform mock adatot ad, a UI DEMO-t jelöl. Döntés: a még adapter nélküli
-// google_ads / meta_ads env-ben megadva is figyelmen kívül marad (figyelmeztetéssel),
+// Élő adapter: ga4, search_console, google_ads (Google OAuth, server/reports/google).
+// Platformonként a LIVE_METRIC_PLATFORMS env kapcsolja be (pl. "ga4,search_console,google_ads");
+// alapból üres → MINDEN platform mock adatot ad, a UI DEMO-t jelöl. Döntés: a még
+// adapter nélküli meta_ads env-ben megadva is figyelmen kívül marad (figyelmeztetéssel),
 // tehát mock + DEMO-jelölés marad, és az éjszakai szinkron sem húzza — így nem
 // keletkezhet csendben hamis „élő” adat.
 const CONNECTION_PLATFORMS = ["google_ads", "ga4", "search_console", "meta_ads"] as const;
@@ -116,7 +116,7 @@ type ConnectionRows = Array<Omit<NormalizedMetricRow, "platform"> & { platform: 
 export type LiveAdapter = (conn: DataConnection, from: string, to: string) => Promise<ConnectionRows>;
 
 /** A platformok, amelyekhez van valós adapter (csak ezek kapcsolhatók élőre). */
-export const LIVE_ADAPTER_PLATFORMS: ReadonlySet<ConnectionPlatform> = new Set<ConnectionPlatform>(["ga4", "search_console"]);
+export const LIVE_ADAPTER_PLATFORMS: ReadonlySet<ConnectionPlatform> = new Set<ConnectionPlatform>(["ga4", "search_console", "google_ads"]);
 
 /**
  * LIVE_METRIC_PLATFORMS env → élő platformok halmaza. Vesszővel elválasztott,
@@ -166,6 +166,10 @@ async function defaultLiveAdapter(platform: ConnectionPlatform): Promise<LiveAda
   if (platform === "search_console") {
     const { fetchSearchConsoleMetrics } = await import("./searchConsole");
     return (conn, from, to) => fetchSearchConsoleMetrics(conn, from, to, defaultGoogleDeps());
+  }
+  if (platform === "google_ads") {
+    const { fetchGoogleAdsMetrics } = await import("../google/ads");
+    return (conn, from, to) => fetchGoogleAdsMetrics(conn, from, to, defaultGoogleDeps());
   }
   return null;
 }

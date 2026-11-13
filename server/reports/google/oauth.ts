@@ -1,9 +1,11 @@
 /**
- * G2A Growth Engine – Google OAuth 2.0 (GA4 + Search Console, G1)
+ * G2A Growth Engine – Google OAuth 2.0 (GA4, Search Console, Google Ads – G1)
  *
- * Nyers fetch, új függőség nélkül. Csak olvasó scope-ok:
- *   - https://www.googleapis.com/auth/analytics.readonly   (GA4 Data + Admin API)
- *   - https://www.googleapis.com/auth/webmasters.readonly  (Search Console API)
+ * Nyers fetch, új függőség nélkül. Platformonkénti scope-ok (`scopesFor`):
+ *   - ga4, search_console: https://www.googleapis.com/auth/analytics.readonly   (GA4 Data + Admin API)
+ *                          https://www.googleapis.com/auth/webmasters.readonly  (Search Console API)
+ *   - google_ads:          https://www.googleapis.com/auth/adwords (a Google Ads API egyetlen
+ *                          scope-ja; az adapter csak olvas: listAccessibleCustomers, searchStream)
  *
  * Fail-closed: a GOOGLE_OAUTH_CLIENT_ID / _SECRET / _REDIRECT_URL bármelyike vagy a
  * JWT_SECRET (state-aláírás + token-titkosítás) hiányában `getGoogleOAuthConfig()`
@@ -23,12 +25,18 @@ export const GOOGLE_SCOPES = [
   "https://www.googleapis.com/auth/analytics.readonly",
   "https://www.googleapis.com/auth/webmasters.readonly",
 ] as const;
+export const GOOGLE_ADS_SCOPE = "https://www.googleapis.com/auth/adwords";
 
 /** A Google-lel csatlakoztatható adatkapcsolat-platformok. */
-export const GOOGLE_PLATFORMS = ["ga4", "search_console"] as const;
+export const GOOGLE_PLATFORMS = ["ga4", "search_console", "google_ads"] as const;
 export type GooglePlatform = (typeof GOOGLE_PLATFORMS)[number];
 export function isGooglePlatform(p: string): p is GooglePlatform {
   return (GOOGLE_PLATFORMS as readonly string[]).includes(p);
+}
+
+/** A platform által kért scope-ok (a GA4/GSC a korábbi közös lista, változatlan sorrendben). */
+export function scopesFor(platform: GooglePlatform): readonly string[] {
+  return platform === "google_ads" ? [GOOGLE_ADS_SCOPE] : GOOGLE_SCOPES;
 }
 
 /** A kiválasztásra váró kapcsolat externalAccountId-ja: `pending:<connId>` (az oszlop notNull). */
@@ -161,12 +169,12 @@ export function readCookie(header: string | undefined, name: string): string | n
 
 // ─── Authorize URL ──────────────────────────────────────────────────────────
 
-export function buildGoogleAuthorizeUrl(config: GoogleOAuthConfig, state: string): string {
+export function buildGoogleAuthorizeUrl(config: GoogleOAuthConfig, state: string, platform: GooglePlatform): string {
   const params = new URLSearchParams({
     client_id: config.clientId,
     redirect_uri: config.redirectUrl,
     response_type: "code",
-    scope: GOOGLE_SCOPES.join(" "),
+    scope: scopesFor(platform).join(" "),
     access_type: "offline",
     prompt: "consent",
     include_granted_scopes: "true",
@@ -194,7 +202,7 @@ async function readJson(res: Response): Promise<any> {
   }
 }
 
-function toTokenSet(json: any, now: Date): GoogleTokenSet {
+function toTokenSet(json: any, now: Date, fallbackScopes: readonly string[]): GoogleTokenSet {
   if (!json || typeof json.access_token !== "string" || !json.access_token) {
     throw new GoogleApiError("Google token-csere", 502, "hiányos válasz");
   }
@@ -203,15 +211,19 @@ function toTokenSet(json: any, now: Date): GoogleTokenSet {
     accessToken: json.access_token,
     refreshToken: typeof json.refresh_token === "string" && json.refresh_token ? json.refresh_token : null,
     expiresAt: new Date(now.getTime() + (Number.isFinite(expiresIn) && expiresIn > 0 ? expiresIn : 3600) * 1000),
-    scopes: typeof json.scope === "string" ? json.scope.split(" ").filter(Boolean) : [...GOOGLE_SCOPES],
+    scopes: typeof json.scope === "string" ? json.scope.split(" ").filter(Boolean) : [...fallbackScopes],
   };
 }
 
-/** code → token csere (POST-törzzsel: a code és a secret nem kerül URL-be). */
+/**
+ * code → token csere (POST-törzzsel: a code és a secret nem kerül URL-be).
+ * Ha a válaszban nincs `scope`, a platform kért scope-jai kerülnek a tokenkészletbe.
+ */
 export async function exchangeGoogleCode(
   config: GoogleOAuthConfig,
   code: string,
   fetchImpl: FetchLike,
+  platform: GooglePlatform,
   now = new Date(),
 ): Promise<GoogleTokenSet> {
   const res = await fetchImpl(GOOGLE_TOKEN_URL, {
@@ -227,7 +239,7 @@ export async function exchangeGoogleCode(
   });
   const json = await readJson(res);
   if (!res.ok) throw new GoogleApiError("Google token-csere", res.status);
-  return toTokenSet(json, now);
+  return toTokenSet(json, now, scopesFor(platform));
 }
 
 /** refresh_token → új access token. invalid_grant → GoogleAuthRevokedError. */
@@ -252,7 +264,8 @@ export async function refreshGoogleAccessToken(
     if (json?.error === "invalid_grant") throw new GoogleAuthRevokedError();
     throw new GoogleApiError("Google token-frissítés", res.status);
   }
-  return toTokenSet(json, now);
+  // A frissítés scope-listája nem kerül mentésre (csak az access token és a lejárat).
+  return toTokenSet(json, now, []);
 }
 
 /** Google-oldali visszavonás bontáskor — best effort, hibája nem akadályozza a bontást. */

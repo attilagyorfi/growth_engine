@@ -5,15 +5,17 @@
  *      Ha már van ilyen sor (pl. újracsatlakozás), azt frissíti (brandId megmarad),
  *      különben újat szúr be. A sor „kiválasztásra vár”: externalAccountId =
  *      `pending:<connId>` (az oszlop notNull), connected=false. A tokenek titkosítva.
- *   2. Property/site kiválasztás → `selectGoogleAccount`: ugyanazt a sort frissíti
- *      id alapján (externalAccountId = „properties/<id>” vagy a GSC site URL), connected=true.
+ *   2. Property/site/fiók kiválasztás → `selectGoogleAccount`: ugyanazt a sort frissíti
+ *      id alapján (externalAccountId = „properties/<id>”, a GSC site URL, vagy a Google Ads
+ *      ügyfélazonosító kötőjelek nélkül, pl. „1234567890”), connected=true.
  *   3. A szinkron a pending és a connected=false sorokat kihagyja (syncProfile).
  */
 import { nanoid } from "nanoid";
 import type { DataConnection, InsertDataConnection } from "../../../drizzle/schema";
 import { encryptToken } from "../../_core/tokenCrypto";
 import { isValidGscSiteUrl } from "../connectors/searchConsole";
-import { PENDING_ACCOUNT_PREFIX, isPendingAccountId, type GooglePlatform, type GoogleTokenSet } from "./oauth";
+import { formatCustomerId, normalizeCustomerId } from "./ads";
+import { PENDING_ACCOUNT_PREFIX, isGooglePlatform, isPendingAccountId, type GooglePlatform, type GoogleTokenSet } from "./oauth";
 
 export type DataConnectionStore = {
   findByProfilePlatform(profileId: string, platform: DataConnection["platform"]): Promise<DataConnection[]>;
@@ -54,17 +56,30 @@ export class GoogleSelectionError extends Error {
   }
 }
 
-/** A kiválasztás formai ellenőrzése platformonként. */
-export function isValidGoogleAccountId(platform: GooglePlatform, externalAccountId: string): boolean {
-  return platform === "ga4" ? /^properties\/\d+$/.test(externalAccountId) : isValidGscSiteUrl(externalAccountId);
+/** A kiválasztás formai ellenőrzése és tárolási alakja platformonként (érvénytelen → null). */
+export function normalizeGoogleAccountId(platform: GooglePlatform, externalAccountId: string): string | null {
+  if (isPendingAccountId(externalAccountId)) return null;
+  if (platform === "google_ads") return normalizeCustomerId(externalAccountId);
+  if (platform === "ga4") return /^properties\/\d+$/.test(externalAccountId) ? externalAccountId : null;
+  return isValidGscSiteUrl(externalAccountId) ? externalAccountId : null;
 }
+
+export function isValidGoogleAccountId(platform: GooglePlatform, externalAccountId: string): boolean {
+  return normalizeGoogleAccountId(platform, externalAccountId) !== null;
+}
+
+const SELECT_HINT: Record<GooglePlatform, string> = {
+  ga4: "Válassz egy GA4-tulajdont.",
+  search_console: "Válassz egy Search Console-tulajdont.",
+  google_ads: "Válassz egy Google Ads-fiókot.",
+};
 
 /** A profil Google-kapcsolata (más profilé → FORBIDDEN, nem Google → BAD_REQUEST). */
 export async function loadGoogleConnection(store: DataConnectionStore, profileId: string, connectionId: string): Promise<DataConnection> {
   const conn = await store.getById(connectionId);
   if (!conn) throw new GoogleSelectionError("NOT_FOUND", "A kapcsolat nem található.");
   if (conn.profileId !== profileId) throw new GoogleSelectionError("FORBIDDEN", "Nincs jogosultságod ehhez a kapcsolathoz.");
-  if (conn.platform !== "ga4" && conn.platform !== "search_console") {
+  if (!isGooglePlatform(conn.platform)) {
     throw new GoogleSelectionError("BAD_REQUEST", "Ez nem Google-kapcsolat.");
   }
   if (!conn.refreshToken && !conn.accessToken) {
@@ -79,16 +94,16 @@ export async function selectGoogleAccount(
 ): Promise<{ connectionId: string; externalAccountId: string }> {
   const conn = await loadGoogleConnection(store, input.profileId, input.connectionId);
   const platform = conn.platform as GooglePlatform;
-  if (!isValidGoogleAccountId(platform, input.externalAccountId) || isPendingAccountId(input.externalAccountId)) {
-    throw new GoogleSelectionError("BAD_REQUEST", platform === "ga4" ? "Válassz egy GA4-tulajdont." : "Válassz egy Search Console-tulajdont.");
-  }
+  const externalAccountId = normalizeGoogleAccountId(platform, input.externalAccountId);
+  if (!externalAccountId) throw new GoogleSelectionError("BAD_REQUEST", SELECT_HINT[platform]);
+  const defaultName = platform === "google_ads" ? formatCustomerId(externalAccountId) : externalAccountId;
   await store.update(conn.id, {
-    externalAccountId: input.externalAccountId,
-    externalAccountName: (input.externalAccountName ?? input.externalAccountId).slice(0, 255),
+    externalAccountId,
+    externalAccountName: (input.externalAccountName ?? defaultName).slice(0, 255),
     connected: true,
     lastSyncError: null,
   });
-  return { connectionId: conn.id, externalAccountId: input.externalAccountId };
+  return { connectionId: conn.id, externalAccountId };
 }
 
 /** A kliensnek kimenő, titokmentes kapcsolat-nézet (explicit mezőlista). */

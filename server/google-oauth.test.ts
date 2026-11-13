@@ -120,7 +120,7 @@ describe("authorize URL és state", () => {
     expect((await a.call("start", { profileId: "profile-b", platform: "ga4" })).statusCode).toBe(403);
     const b = setup({ user: null });
     expect((await b.call("start", { profileId: "profile-a", platform: "ga4" })).statusCode).toBe(401);
-    expect((await b.call("start", { profileId: "profile-a", platform: "google_ads" })).statusCode).toBe(400);
+    expect((await b.call("start", { profileId: "profile-a", platform: "meta_ads" })).statusCode).toBe(400);
     expect(a.fetch).not.toHaveBeenCalled();
   });
 });

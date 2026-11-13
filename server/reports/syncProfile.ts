@@ -18,14 +18,18 @@
  * Google-kapcsolatok (GA4, Search Console): a kiválasztásra váró (`pending:`) és a
  * bontott (connected=false) kapcsolat kimarad. Visszavont hozzáférésnél
  * (GoogleAuthRevokedError) a kapcsolat connected=false lesz, rövid lastSyncError-ral.
+ * Google Ads-hibánál (GoogleAdsApiError) a kapcsolat csatlakoztatva marad, a lastSyncError
+ * csak a hibakódot kapja (pl. „Google Ads-hiba: AUTHORIZATION_ERROR/…”); a következő sikeres
+ * lekérés törli.
  *
  * A kapcsolat-hibák nem dobódnak tovább (a többi platform menjen), hanem az
  * `errors` listába kerülnek. A mutation ezt elnyeli, az ütemező újrapróbál/értesít.
  */
 import type { DataConnection } from "../../drizzle/schema";
-import { getProfileById, listDataConnections, listProfileBrands, markDataConnectionDisconnected, replaceReportMetrics, replaceSocialReportMetrics } from "../db";
+import { getProfileById, listDataConnections, listProfileBrands, markDataConnectionDisconnected, replaceReportMetrics, replaceSocialReportMetrics, setDataConnectionSyncError } from "../db";
 import { syncSocialMetrics, type SocialSyncResult } from "../socialHub/metrics";
 import { fetchMetrics, isSocialMetricPlatform, type MetricPlatform } from "./connectors";
+import { GoogleAdsApiError } from "./google/ads";
 import { GoogleAuthRevokedError, isPendingAccountId } from "./google/oauth";
 
 type ConnectionRows = Awaited<ReturnType<typeof fetchMetrics>>;
@@ -41,6 +45,8 @@ export type SyncProfileDeps = {
   listBrands?(profileId: string): Promise<Array<{ id: string; socialHubExternalRef?: string | null }>>;
   /** Visszavont hozzáférés: a kapcsolat connected=false + rövid, titokmentes lastSyncError. */
   markDisconnected?(connectionId: string, lastSyncError: string): Promise<void>;
+  /** Csatlakoztatva maradó kapcsolat hibakódja (null = törlés sikeres lekérés után). */
+  markSyncError?(connectionId: string, lastSyncError: string | null): Promise<void>;
 };
 
 /** A visszavont Google-hozzáférés lastSyncError-szövege (titok és Google-válasz nélkül). */
@@ -78,6 +84,7 @@ export const defaultSyncProfileDeps: SyncProfileDeps = {
   }),
   listBrands: (profileId) => listProfileBrands(profileId),
   markDisconnected: (connectionId, lastSyncError) => markDataConnectionDisconnected(connectionId, lastSyncError),
+  markSyncError: (connectionId, lastSyncError) => setDataConnectionSyncError(connectionId, lastSyncError),
 };
 
 /**
@@ -125,11 +132,18 @@ export async function syncProfileMetrics(
       for (const conn of group) {
         try {
           rows.push(...(await deps.fetchMetrics(conn, from, to)));
+          if (conn.lastSyncError && deps.markSyncError) await deps.markSyncError(conn.id, null).catch(() => {});
         } catch (err) {
           // Visszavont hozzáférés: a kapcsolat „nincs csatlakoztatva” lesz; a csoport
           // régi adata marad (nincs csere), a többi platform megy tovább.
           if (err instanceof GoogleAuthRevokedError && deps.markDisconnected) {
             await deps.markDisconnected(conn.id, REVOKED_SYNC_ERROR).catch((markErr) => {
+              const info = describeError(markErr);
+              console.error(`[reports.sync] kapcsolat=${conn.id} állapotírás sikertelen: ${info.name}: ${info.message}`);
+            });
+          } else if (err instanceof GoogleAdsApiError && deps.markSyncError) {
+            // Csak a hibakód (az üzenet szövege, token soha).
+            await deps.markSyncError(conn.id, err.message).catch((markErr) => {
               const info = describeError(markErr);
               console.error(`[reports.sync] kapcsolat=${conn.id} állapotírás sikertelen: ${info.name}: ${info.message}`);
             });

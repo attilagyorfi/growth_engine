@@ -59,6 +59,12 @@ export const ENV = {
   googleOAuthClientId: (process.env.GOOGLE_OAUTH_CLIENT_ID ?? "").trim(),
   googleOAuthClientSecret: (process.env.GOOGLE_OAUTH_CLIENT_SECRET ?? "").trim(),
   googleOAuthRedirectUrl: (process.env.GOOGLE_OAUTH_REDIRECT_URL ?? "").trim(),
+  // ─── Google Ads API (G1) ──────────────────────────────────────────────
+  // A developer token nélkül a Google Ads-csatlakozás „nincs beállítva” (fail-closed).
+  // A kezelői (MCC) fiók azonosítója opcionális: érvényes 10 számjegy esetén
+  // login-customer-id fejlécként megy. Beállítás: DEVELOPER_HANDBOOK.md.
+  googleAdsDeveloperToken: (process.env.GOOGLE_ADS_DEVELOPER_TOKEN ?? "").trim(),
+  googleAdsLoginCustomerId: (process.env.GOOGLE_ADS_LOGIN_CUSTOMER_ID ?? "").trim(),
   // APP_URL — production base URL minden OAuth callback redirectjéhez.
   // A LinkedIn OAuth biztonsági javításával lett bevezetve (audit #2 fix).
   appUrl: (process.env.APP_URL ?? "").trim().replace(/\/+$/, ""),

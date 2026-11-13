@@ -41,7 +41,7 @@ function getApp(): express.Express {
   // LinkedIn OAuth callback (under /api/oauth/linkedin/callback).
   registerLinkedInOAuthRoutes(app);
 
-  // Google OAuth (GA4 + Search Console riportadat, G1) — /api/oauth/google/start|callback.
+  // Google OAuth (GA4, Search Console, Google Ads riportadat, G1) — /api/oauth/google/start|callback.
   // A nonce süti-alapú, így a serverless példányok között is működik; env nélkül fail-closed.
   registerGoogleOAuthRoutes(app);
 
