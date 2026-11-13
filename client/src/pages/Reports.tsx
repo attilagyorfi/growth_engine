@@ -5,8 +5,8 @@
  * generálás, korábbi riportok listája + Recharts-preview.
  *
  * MVP korlátozások (a foundation-first scope-ban):
- *   - Az Adatforrások modalban a GA4 és a Search Console Google OAuth-tal
- *     csatlakoztatható (property/site választóval); a Google Ads és a Meta Ads még nem.
+ *   - Az Adatforrások modalban a GA4, a Search Console és a Google Ads Google OAuth-tal
+ *     csatlakoztatható (property/site/fiók választóval); a Meta Ads még nem.
  *   - Mock adatot generálunk minden platformra a `sync` mutation-ben.
  *   - A „PDF letöltése” a szerveren készült .pdf-et (reports.exportPdf), a
  *     „Word letöltése” a .docx-et (reports.exportDocx) tölti le, közös segéddel.
@@ -18,7 +18,7 @@ import { useProfile } from "@/contexts/ProfileContext";
 import { trpc } from "@/lib/trpc";
 import { downloadBase64File } from "@/lib/downloadFile";
 import { socialSyncNotice } from "@/lib/socialSyncNotice";
-import { connectionStatusText, googleReturnNotice } from "@/lib/googleConnect";
+import { connectionStatusText, googleReturnNotice, googleSelectionNoun } from "@/lib/googleConnect";
 import { GoogleAccountPicker, GoogleConnectButtons } from "@/components/GoogleDataSources";
 import { toast } from "sonner";
 import { Streamdown } from "streamdown";
@@ -478,7 +478,7 @@ export default function Reports() {
               <div className="text-center py-6">
                 <p className="text-sm mb-3" style={{ color: textMuted }}>Még nincs csatlakoztatott adatforrás.</p>
                 <p className="text-xs" style={{ color: textMuted }}>
-                  A GA4-et és a Search Console-t fent tudod csatlakoztatni. A Google Ads és a Meta Ads később jön, addig mintaadatot látsz.
+                  A GA4-et, a Search Console-t és a Google Ads-et fent tudod csatlakoztatni. A Meta Ads később jön, addig mintaadatot látsz.
                 </p>
               </div>
             ) : (
@@ -492,15 +492,15 @@ export default function Reports() {
                           {PLATFORM_META[c.platform]?.label ?? c.platform}
                         </p>
                         <p className="text-xs" style={{ color: textMuted }}>
-                          {c.needsSelection ? "Még nincs kiválasztva tulajdon" : (c.externalAccountName ?? c.externalAccountId)}
+                          {c.needsSelection ? `Még nincs kiválasztva ${googleSelectionNoun(c.platform)}` : (c.externalAccountName ?? c.externalAccountId)}
                           {" · "}
                           <span style={{ color: c.connected ? green : textMuted }}>{connectionStatusText(c)}</span>
                         </p>
-                        {!c.connected && c.lastSyncError && (
+                        {c.lastSyncError && (
                           <p className="text-xs" style={{ color: "var(--qa-danger)" }}>{c.lastSyncError}</p>
                         )}
                         {c.needsSelection && (
-                          <GoogleAccountPicker profileId={profileId} connectionId={c.id} onSaved={() => refetchConns()} />
+                          <GoogleAccountPicker profileId={profileId} connectionId={c.id} platform={c.platform} onSaved={() => refetchConns()} />
                         )}
                       </div>
                     </div>

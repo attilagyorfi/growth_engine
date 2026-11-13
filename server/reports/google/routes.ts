@@ -1,10 +1,10 @@
 /**
- * G2A Growth Engine – Google OAuth route-ok (GA4 + Search Console)
+ * G2A Growth Engine – Google OAuth route-ok (GA4, Search Console, Google Ads)
  *
  * Flow:
- *   1. GET /api/oauth/google/start?profileId=…&platform=ga4|search_console
+ *   1. GET /api/oauth/google/start?profileId=…&platform=ga4|search_console|google_ads
  *      (bejelentkezett, a profilra jogosult felhasználó) → Google authorize URL
- *      (offline access, prompt=consent, csak olvasó scope-ok, aláírt state).
+ *      (offline access, prompt=consent, a platform scope-jai — `scopesFor` —, aláírt state).
  *   2. GET /api/oauth/google/callback?code&state
  *      a) state: HMAC-aláírás, ≤10 perces lejárat, és a nonce egyezik az indításkor
  *         beállított httpOnly sütiével (állapotmentes, így Vercel serverlessen is
@@ -13,12 +13,14 @@
  *      c) code → token csere, majd „kiválasztásra vár” kapcsolatsor (titkosított tokenek);
  *      d) visszairányítás: /riportok?google=connected|denied|error|unavailable&platform=…
  *         — token, code vagy Google-hibarészlet soha nem kerül az URL-be vagy a naplóba.
- * Fail-closed: hiányzó Google-env esetén sem az indítás, sem a callback nem hív Google-t.
+ * Fail-closed: hiányzó Google-env esetén sem az indítás, sem a callback nem hív Google-t;
+ * a google_ads ezen felül developer token (GOOGLE_ADS_DEVELOPER_TOKEN) nélkül sem indul.
  */
 import type { Express, Request, Response } from "express";
 import { getPublicAppOrigin } from "../../_core/env";
 import { assertProfileOwnership } from "../../_core/ownership";
 import { describeError } from "../syncProfile";
+import { isGoogleAdsConfigured } from "./ads";
 import { saveGoogleTokens, type DataConnectionStore } from "./connections";
 import {
   buildGoogleAuthorizeUrl,
@@ -35,6 +37,7 @@ import {
   verifyGoogleState,
   type FetchLike,
   type GoogleOAuthConfig,
+  type GooglePlatform,
 } from "./oauth";
 
 export type SessionUser = { id: string; role: string; profileId: string | null };
@@ -47,6 +50,8 @@ export type GoogleOAuthRouteDeps = {
   store: DataConnectionStore;
   now(): number;
   appOrigin(): string;
+  /** Google Ads: OAuth-env ÉS developer token is be van-e állítva (hiányában false → fail-closed). */
+  adsConfigured?(): boolean;
 };
 
 type Status = "connected" | "denied" | "error" | "unavailable";
@@ -58,6 +63,8 @@ function back(res: Response, deps: GoogleOAuthRouteDeps, status: Status, platfor
 }
 
 export function createGoogleOAuthHandlers(deps: GoogleOAuthRouteDeps) {
+  const platformAvailable = (platform: GooglePlatform) => platform !== "google_ads" || deps.adsConfigured?.() === true;
+
   async function start(req: Request, res: Response) {
     const { profileId, platform } = req.query as { profileId?: string; platform?: string };
     const config = deps.config();
@@ -66,6 +73,7 @@ export function createGoogleOAuthHandlers(deps: GoogleOAuthRouteDeps) {
       res.status(400).json({ error: "Hiányzó vagy érvénytelen paraméter." });
       return;
     }
+    if (!platformAvailable(platform)) return back(res, deps, "unavailable", platform);
     const user = await deps.getSessionUser(req);
     if (!user) { res.status(401).json({ error: "Jelentkezz be újra." }); return; }
     try {
@@ -84,7 +92,7 @@ export function createGoogleOAuthHandlers(deps: GoogleOAuthRouteDeps) {
       path: GOOGLE_NONCE_COOKIE_PATH,
       maxAge: GOOGLE_STATE_TTL_MS,
     });
-    res.redirect(buildGoogleAuthorizeUrl(config, state));
+    res.redirect(buildGoogleAuthorizeUrl(config, state, platform));
   }
 
   async function callback(req: Request, res: Response) {
@@ -101,6 +109,7 @@ export function createGoogleOAuthHandlers(deps: GoogleOAuthRouteDeps) {
       return back(res, deps, "error");
     }
     if (error) return back(res, deps, "denied", payload.platform); // pl. access_denied — részlet nem kell
+    if (!platformAvailable(payload.platform)) return back(res, deps, "unavailable", payload.platform);
     if (!code) return back(res, deps, "error", payload.platform);
 
     const user = await deps.getSessionUser(req);
@@ -116,7 +125,7 @@ export function createGoogleOAuthHandlers(deps: GoogleOAuthRouteDeps) {
     }
 
     try {
-      const tokens = await exchangeGoogleCode(config, code, deps.fetch, new Date(deps.now()));
+      const tokens = await exchangeGoogleCode(config, code, deps.fetch, payload.platform, new Date(deps.now()));
       await saveGoogleTokens(deps.store, { profileId: payload.profileId, platform: payload.platform, tokens });
       return back(res, deps, "connected", payload.platform);
     } catch (err) {
@@ -167,6 +176,7 @@ export async function defaultGoogleOAuthRouteDeps(): Promise<GoogleOAuthRouteDep
     store: dataConnectionStore,
     now: () => Date.now(),
     appOrigin: getPublicAppOrigin,
+    adsConfigured: isGoogleAdsConfigured,
   };
 }
 

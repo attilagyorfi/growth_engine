@@ -1175,6 +1175,15 @@ export async function markDataConnectionDisconnected(connectionId: string, lastS
     .where(eq(dataConnections.id, connectionId));
 }
 
+/** Csatlakoztatva maradó kapcsolat szinkronhibája (csak hibakód) — null törli. */
+export async function setDataConnectionSyncError(connectionId: string, lastSyncError: string | null) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(dataConnections)
+    .set({ lastSyncError: lastSyncError ? lastSyncError.slice(0, 500) : null })
+    .where(eq(dataConnections.id, connectionId));
+}
+
 /** A server/reports/google/connections.ts tárfelülete a data_connections táblán. */
 export const dataConnectionStore = {
   async findByProfilePlatform(profileId: string, platform: DataConnection["platform"]) {

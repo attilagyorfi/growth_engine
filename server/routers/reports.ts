@@ -33,6 +33,7 @@ import {
 } from "../db";
 import { isGoogleOAuthConfigured, isGooglePlatform, GoogleAuthRevokedError } from "../reports/google/oauth";
 import { defaultGoogleDeps } from "../reports/google/client";
+import { isGoogleAdsConfigured } from "../reports/google/ads";
 import { listGoogleAccounts } from "../reports/google/accounts";
 import { GoogleSelectionError, loadGoogleConnection, selectGoogleAccount, toSafeConnection } from "../reports/google/connections";
 import { assertBrandInProfile } from "./brands";
@@ -67,8 +68,8 @@ export const reportsRouter = router({
         return (await listDataConnections(input.profileId)).map(toSafeConnection);
       }),
 
-    // Kézi kapcsolat-rögzítés a még OAuth nélküli platformokhoz (google_ads, meta_ads).
-    // A GA4 / Search Console tokenje KIZÁRÓLAG a Google OAuth-callbackből jöhet
+    // Kézi kapcsolat-rögzítés a még OAuth nélküli platformhoz (meta_ads).
+    // A GA4 / Search Console / Google Ads tokenje KIZÁRÓLAG a Google OAuth-callbackből jöhet
     // (server/reports/google/routes.ts) — itt klienstől érkező tokent nem fogadunk el.
     upsert: appUserProcedure
       .input(z.object({
@@ -91,12 +92,18 @@ export const reportsRouter = router({
         return row ? toSafeConnection(row) : null;
       }),
 
-    // ─── Google (GA4 + Search Console) ─────────────────────────────────────
+    // ─── Google (GA4, Search Console, Google Ads) ───────────────────────────
     // A csatlakozás a /api/oauth/google/start route-on indul; itt csak az állapot,
-    // a választható property/site lista és a kiválasztás mentése van.
+    // a választható property/site/fiók lista és a kiválasztás mentése van.
     google: router({
-      /** Csak boolean: be van-e állítva a Google OAuth (env-érték soha nem megy ki). */
-      status: appUserProcedure.query(() => ({ googleConfigured: isGoogleOAuthConfigured() })),
+      /**
+       * Csak booleanok (env-érték soha nem megy ki): a Google OAuth, illetve a Google Ads
+       * (OAuth + developer token) be van-e állítva.
+       */
+      status: appUserProcedure.query(() => ({
+        googleConfigured: isGoogleOAuthConfigured(),
+        googleAdsConfigured: isGoogleAdsConfigured(),
+      })),
 
       accounts: appUserProcedure
         .input(z.object({ profileId: z.string(), connectionId: z.string() }))

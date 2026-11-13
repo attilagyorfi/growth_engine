@@ -4,7 +4,9 @@
  *   - `googleRequest`: JSON-hívás korlátozott újrapróbálással. Csak 429,
  *     RESOURCE_EXHAUSTED és 5xx (meg hálózati hiba) esetén próbál újra, legfeljebb
  *     `maxRetries`-szor (alapból 3), exponenciális backoff-fal, injektált sleep-pel.
- *     401 → GoogleUnauthorizedError (a hívó frissít), más 4xx → azonnal GoogleApiError.
+ *     401 → GoogleUnauthorizedError (a hívó frissít), más 4xx → azonnal GoogleApiError
+ *     (vagy a hívó `toError`-ja, pl. a Google Ads csak-hibakódos hibája). Extra fejlécek
+ *     (`headers`, pl. developer-token) az Authorization mellé kerülnek.
  *   - `withGoogleAuth`: érvényes access tokent ad (lejárt vagy 60 mp-en belül lejáró
  *     tokennél előbb frissít, és az új titkosított tokent + lejáratot visszaírja), 401-re
  *     egyszer frissít és újrapróbál; ha utána is 401 / invalid_grant → GoogleAuthRevokedError.
@@ -58,13 +60,25 @@ async function readJson(res: Response): Promise<any> {
 }
 
 function isRetryable(status: number, json: any): boolean {
-  return status === 429 || status >= 500 || json?.error?.status === "RESOURCE_EXHAUSTED";
+  // A streamelő végpontok (pl. Google Ads searchStream) a hibát tömbbe csomagolva is adhatják.
+  const error = Array.isArray(json) ? json[0]?.error : json?.error;
+  return status === 429 || status >= 500 || error?.status === "RESOURCE_EXHAUSTED";
 }
+
+export type GoogleRequestInit = {
+  method: "GET" | "POST";
+  accessToken: string;
+  body?: unknown;
+  /** További fejlécek (az Authorization-t nem írhatják felül). */
+  headers?: Record<string, string>;
+  /** Saját, titokmentes hiba a nem 401-es hibaválaszból (alapból GoogleApiError). */
+  toError?: (status: number, json: any) => Error;
+};
 
 export async function googleRequest<T = any>(
   label: string,
   url: string,
-  init: { method: "GET" | "POST"; accessToken: string; body?: unknown },
+  init: GoogleRequestInit,
   deps: GoogleHttpDeps,
 ): Promise<T> {
   const maxRetries = deps.maxRetries ?? GOOGLE_MAX_RETRIES;
@@ -74,6 +88,7 @@ export async function googleRequest<T = any>(
       res = await deps.fetch(url, {
         method: init.method,
         headers: {
+          ...init.headers,
           Authorization: `Bearer ${init.accessToken}`,
           ...(init.body !== undefined ? { "Content-Type": "application/json" } : {}),
         },
@@ -94,9 +109,9 @@ export async function googleRequest<T = any>(
         await deps.sleep(GOOGLE_RETRY_BASE_MS * 2 ** attempt);
         continue;
       }
-      throw new GoogleApiError(label, res.status, `${maxRetries} újrapróbálás után is kvóta-/szerverhiba`);
+      throw init.toError?.(res.status, json) ?? new GoogleApiError(label, res.status, `${maxRetries} újrapróbálás után is kvóta-/szerverhiba`);
     }
-    throw new GoogleApiError(label, res.status);
+    throw init.toError?.(res.status, json) ?? new GoogleApiError(label, res.status);
   }
 }
 

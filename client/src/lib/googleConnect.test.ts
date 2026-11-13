@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { connectionStatusText, googleConnectUrl, googleReturnNotice, GOOGLE_NOT_CONFIGURED_TEXT } from "./googleConnect";
+import {
+  connectionStatusText,
+  googleConnectEnabled,
+  googleConnectUrl,
+  googleReturnNotice,
+  GOOGLE_ADS_NOT_CONFIGURED_TEXT,
+  GOOGLE_NOT_CONFIGURED_TEXT,
+} from "./googleConnect";
 
 describe("googleConnect", () => {
   it("az indító URL csak profilt és platformot visz", () => {
@@ -14,6 +21,17 @@ describe("googleConnect", () => {
     expect(googleReturnNotice("?google=denied")?.kind).toBe("error");
     expect(googleReturnNotice("?google=bármi")?.text).toBe("Nem sikerült a Google-csatlakozás. Próbáld újra.");
     expect(googleReturnNotice("?tab=x")).toBeNull();
+  });
+
+  it("Google Ads: fiókválasztás szövege, és developer token nélkül nem indítható", () => {
+    expect(googleReturnNotice("?google=connected&platform=google_ads")?.text)
+      .toBe("Google Ads csatlakoztatva. Válaszd ki, melyik fiók adatait húzzuk be.");
+    expect(googleReturnNotice("?google=unavailable&platform=google_ads")?.text).toBe(GOOGLE_ADS_NOT_CONFIGURED_TEXT);
+    expect(googleConnectEnabled("google_ads", { googleConfigured: true, googleAdsConfigured: false })).toBe(false);
+    expect(googleConnectEnabled("google_ads", { googleConfigured: false, googleAdsConfigured: true })).toBe(false);
+    expect(googleConnectEnabled("google_ads", { googleConfigured: true, googleAdsConfigured: true })).toBe(true);
+    expect(googleConnectEnabled("ga4", { googleConfigured: true, googleAdsConfigured: false })).toBe(true);
+    expect(googleConnectEnabled("ga4", undefined)).toBe(false);
   });
 
   it("állapotszöveg", () => {

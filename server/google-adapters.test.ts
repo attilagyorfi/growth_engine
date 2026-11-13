@@ -111,10 +111,11 @@ describe("LIVE_METRIC_PLATFORMS – env-kapcsoló", () => {
     expect(parseLivePlatforms("").size).toBe(0);
   });
 
-  it("google_ads / meta_ads env-ben is kimarad (nincs adapter) → mintaadat + DEMO marad", () => {
+  it("google_ads élesíthető; a meta_ads env-ben is kimarad (nincs adapter) → mintaadat + DEMO marad", () => {
     const ignored: string[] = [];
-    expect(parseLivePlatforms("google_ads,meta_ads", (v) => ignored.push(v)).size).toBe(0);
-    expect(ignored).toEqual(["google_ads", "meta_ads"]);
+    expect(parseLivePlatforms("google_ads,meta_ads", (v) => ignored.push(v))).toEqual(new Set(["google_ads"]));
+    expect(ignored).toEqual(["meta_ads"]);
+    expect(parseLivePlatforms("ga4,search_console,google_ads")).toEqual(new Set(["ga4", "search_console", "google_ads"]));
   });
 
   it("env nélkül: üres halmaz, 'mock' forrás, és minden platformra bájtra a korábbi mintaadat", async () => {
@@ -138,16 +139,18 @@ describe("LIVE_METRIC_PLATFORMS – env-kapcsoló", () => {
     expect(mod.isDemoData()).toBe(true);
   });
 
-  it("LIVE_METRIC_PLATFORMS=google_ads,meta_ads → figyelmeztetés, 'mock', és a google_ads mintaadatot ad", async () => {
+  it("LIVE_METRIC_PLATFORMS=meta_ads → figyelmeztetés, 'mock', és a meta_ads (és env nélkül a google_ads) mintaadatot ad", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    vi.stubEnv("LIVE_METRIC_PLATFORMS", "google_ads,meta_ads");
+    vi.stubEnv("LIVE_METRIC_PLATFORMS", "meta_ads");
     vi.resetModules();
     const mod = await import("./reports/connectors");
     expect(mod.LIVE_METRIC_PLATFORMS.size).toBe(0);
     expect(mod.getMetricsSource()).toBe("mock");
-    expect(warn).toHaveBeenCalledTimes(2);
-    const conn = { id: "g", platform: "google_ads" } as DataConnection;
-    expect(await mod.fetchMetrics(conn, "2026-11-01", "2026-11-01")).toEqual(legacyMock(conn, "2026-11-01", "2026-11-01"));
+    expect(warn).toHaveBeenCalledTimes(1);
+    for (const platform of ["meta_ads", "google_ads"] as const) {
+      const conn = { id: "g", platform } as DataConnection;
+      expect(await mod.fetchMetrics(conn, "2026-11-01", "2026-11-01")).toEqual(legacyMock(conn, "2026-11-01", "2026-11-01"));
+    }
   });
 
   it("élő ga4 / search_console: a valós adapter fut (mock fetch-csel), nem a mock", async () => {
@@ -168,8 +171,8 @@ describe("LIVE_METRIC_PLATFORMS – env-kapcsoló", () => {
     expect(getMetricsSource(live)).toBe("mixed");
   });
 
-  it("adapter nélküli élő platform (google_ads) hangos hibát dob, nem ad csendben mintaadatot", async () => {
-    await expect(fetchMetrics({ id: "g", platform: "google_ads" } as DataConnection, "2026-11-01", "2026-11-01", { live: new Set(["google_ads"]) }))
+  it("adapter nélküli élő platform (meta_ads) hangos hibát dob, nem ad csendben mintaadatot", async () => {
+    await expect(fetchMetrics({ id: "m", platform: "meta_ads" } as DataConnection, "2026-11-01", "2026-11-01", { live: new Set(["meta_ads"]) }))
       .rejects.toThrow(/not implemented/);
   });
 });
