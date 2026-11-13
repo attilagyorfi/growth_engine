@@ -100,7 +100,7 @@ export function signGoogleState(payload: GoogleStatePayload, secret = ENV.cookie
   return `${body}.${sig}`;
 }
 
-/** Aláírás + lejárat ellenőrzése (a nonce egyszeri felhasználását a NonceStore végzi). */
+/** Aláírás + lejárat ellenőrzése (a nonce egyszeri felhasználását a süti-összevetés végzi, lásd lent). */
 export function verifyGoogleState(state: string | undefined, now = Date.now(), secret = ENV.cookieSecret): GoogleStatePayload | null {
   if (!state || !secret) return null;
   const dot = state.lastIndexOf(".");
@@ -121,33 +121,43 @@ export function verifyGoogleState(state: string | undefined, now = Date.now(), s
 }
 
 /**
- * Egyszer használható nonce-ok tára. Folyamaton belüli memória: egy példányon
- * (Railway, egy replika) ez elég; újraindulás után a függőben lévő csatlakozások
- * state-je érvénytelen lesz (a felhasználó újrakezdi) — ez fail-closed. Több
- * replikánál közös tár (DB/Redis) kellene.
+ * Egyszer használható nonce, állapotmentesen: az indításkor kiadott nonce egy rövid
+ * életű, httpOnly sütibe kerül (csak a /api/oauth/google útvonalra), és az aláírt
+ * state is tartalmazza. A callback a kettőt összeveti, majd a sütit mindenképp törli.
+ * Így bármelyik példány (Vercel serverless, Railway) ellenőrizni tudja, a state csak
+ * abban a böngészőben használható fel, ahol a csatlakozás indult, és csak egyszer.
  */
-export class NonceStore {
-  private readonly nonces = new Map<string, number>();
-  issue(now = Date.now()): { nonce: string; exp: number } {
-    this.prune(now);
-    const nonce = randomBytes(16).toString("base64url");
-    const exp = now + GOOGLE_STATE_TTL_MS;
-    this.nonces.set(nonce, exp);
-    return { nonce, exp };
-  }
-  /** Igaz, ha a nonce ismert és nem járt le; mindenképp törli (egyszer használható). */
-  consume(nonce: string, now = Date.now()): boolean {
-    const exp = this.nonces.get(nonce);
-    this.nonces.delete(nonce);
-    this.prune(now);
-    return exp !== undefined && now <= exp;
-  }
-  private prune(now: number) {
-    for (const [n, exp] of Array.from(this.nonces.entries())) if (now > exp) this.nonces.delete(n);
-  }
+export const GOOGLE_NONCE_COOKIE = "g2a_google_oauth_nonce";
+export const GOOGLE_NONCE_COOKIE_PATH = "/api/oauth/google";
+
+export function issueGoogleNonce(now = Date.now()): { nonce: string; exp: number } {
+  return { nonce: randomBytes(16).toString("base64url"), exp: now + GOOGLE_STATE_TTL_MS };
 }
 
-export const googleNonceStore = new NonceStore();
+/** Időzítés-biztos összevetés; üres vagy hiányzó érték soha nem egyezik. */
+export function googleNonceMatches(cookieNonce: string | null | undefined, stateNonce: string | null | undefined): boolean {
+  if (!cookieNonce || !stateNonce) return false;
+  const a = Buffer.from(cookieNonce);
+  const b = Buffer.from(stateNonce);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
+/** Egy süti értéke a Cookie fejlécből (cookie-parser nélkül). */
+export function readCookie(header: string | undefined, name: string): string | null {
+  if (!header) return null;
+  for (const part of header.split(";")) {
+    const eq = part.indexOf("=");
+    if (eq < 0) continue;
+    if (part.slice(0, eq).trim() === name) {
+      try {
+        return decodeURIComponent(part.slice(eq + 1).trim());
+      } catch {
+        return null;
+      }
+    }
+  }
+  return null;
+}
 
 // ─── Authorize URL ──────────────────────────────────────────────────────────
 

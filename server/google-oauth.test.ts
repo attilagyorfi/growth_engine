@@ -8,7 +8,7 @@ import type { DataConnection, InsertDataConnection } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import { decryptToken } from "./_core/tokenCrypto";
 import { createGoogleOAuthHandlers, type GoogleOAuthRouteDeps, type SessionUser } from "./reports/google/routes";
-import { NonceStore, getGoogleOAuthConfig, isGoogleOAuthConfigured, signGoogleState, verifyGoogleState, GOOGLE_STATE_TTL_MS } from "./reports/google/oauth";
+import { GOOGLE_NONCE_COOKIE, getGoogleOAuthConfig, isGoogleOAuthConfigured, signGoogleState, verifyGoogleState, GOOGLE_STATE_TTL_MS } from "./reports/google/oauth";
 import type { DataConnectionStore } from "./reports/google/connections";
 
 const SECRET = "TEST-CLIENT-SECRET-xyz";
@@ -51,27 +51,32 @@ function setup(opts: { user?: SessionUser | null; store?: ReturnType<typeof memo
       if (user.profileId !== profileId) throw new Error("FORBIDDEN");
     }),
     fetch,
-    nonces: new NonceStore(),
     store,
     now: () => now,
     appOrigin: () => "https://app.example.test",
   };
   const h = createGoogleOAuthHandlers(deps);
-  const call = async (handler: "start" | "callback", query: Record<string, string>) => {
+  // Egyszerű „böngésző-sütitár”: a start beállítja a nonce-sütit, a callback elküldi és törli.
+  const jar = new Map<string, string>();
+  const cookieOptions: Array<Record<string, unknown>> = [];
+  const call = async (handler: "start" | "callback", query: Record<string, string>, opts: { cookies?: boolean } = {}) => {
     const res: any = {
-      redirectedTo: "", statusCode: 200, body: null,
+      redirectedTo: "", statusCode: 200, body: null, headersSent: false,
       redirect(url: string) { this.redirectedTo = url; },
       status(c: number) { this.statusCode = c; return this; },
       json(b: unknown) { this.body = b; return this; },
+      cookie(name: string, value: string, o: Record<string, unknown>) { jar.set(name, value); cookieOptions.push(o); return this; },
+      clearCookie(name: string) { jar.delete(name); return this; },
     };
-    await h[handler]({ query, headers: {} } as any, res);
+    const cookie = opts.cookies === false ? "" : Array.from(jar.entries()).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("; ");
+    await h[handler]({ query, headers: cookie ? { cookie } : {} } as any, res);
     return res;
   };
   const startState = async (profileId = "profile-a", platform = "ga4") => {
     const res = await call("start", { profileId, platform });
     return new URL(res.redirectedTo).searchParams.get("state")!;
   };
-  return { deps, store, fetch, call, startState, advance: (ms: number) => { now += ms; } };
+  return { deps, store, fetch, call, startState, jar, cookieOptions, advance: (ms: number) => { now += ms; } };
 }
 
 let logSpies: Array<ReturnType<typeof vi.spyOn>> = [];
@@ -157,6 +162,25 @@ describe("callback – elutasítások (nincs token-hívás, nincs írás)", () =
     expect(ctx.store.writes).toBe(writes);
   });
 
+  it("nonce-süti nélkül (pl. másik böngésző) vagy eltérő sütivel", async () => {
+    const ctx = setup();
+    const state = await ctx.startState();
+    expectRejected(ctx, await ctx.call("callback", { code: CODE, state }, { cookies: false }));
+    const other = setup();
+    const otherState = await other.startState();
+    // ctx sütitára üres lett az előző callbacktől; egy másik indítás nonce-ával sem fogad el
+    ctx.jar.set(GOOGLE_NONCE_COOKIE, verifyGoogleState(otherState, T0)!.nonce);
+    expectRejected(ctx, await ctx.call("callback", { code: CODE, state }));
+  });
+
+  it("a nonce-süti httpOnly, Lax, csak a Google OAuth-útvonalon, a state élettartamáig", async () => {
+    const ctx = setup();
+    await ctx.startState();
+    expect(ctx.cookieOptions[0]).toMatchObject({
+      httpOnly: true, secure: true, sameSite: "lax", path: "/api/oauth/google", maxAge: GOOGLE_STATE_TTL_MS,
+    });
+  });
+
   it("más felhasználó sessionjével", async () => {
     const ctx = setup();
     const state = await ctx.startState();
@@ -166,7 +190,8 @@ describe("callback – elutasítások (nincs token-hívás, nincs írás)", () =
 
   it("jogosulatlan profilhoz tartozó state (pl. a jogosultság közben megszűnt)", async () => {
     const ctx = setup();
-    const state = signGoogleState({ userId: "user-a", profileId: "profile-b", platform: "ga4", ...ctx.deps.nonces.issue(T0) });
+    const started = verifyGoogleState(await ctx.startState(), T0)!;
+    const state = signGoogleState({ ...started, profileId: "profile-b" });
     expectRejected(ctx, await ctx.call("callback", { code: CODE, state }));
   });
 

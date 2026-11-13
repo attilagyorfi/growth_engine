@@ -6,7 +6,9 @@
  *      (bejelentkezett, a profilra jogosult felhasználó) → Google authorize URL
  *      (offline access, prompt=consent, csak olvasó scope-ok, aláírt state).
  *   2. GET /api/oauth/google/callback?code&state
- *      a) state: HMAC-aláírás, ≤10 perces lejárat, egyszer használható nonce;
+ *      a) state: HMAC-aláírás, ≤10 perces lejárat, és a nonce egyezik az indításkor
+ *         beállított httpOnly sütiével (állapotmentes, így Vercel serverlessen is
+ *         működik); a süti a callbackben mindig törlődik → egyszer használható;
  *      b) a session-süti felhasználója = a state userId-ja, és jogosult a profilra;
  *      c) code → token csere, majd „kiválasztásra vár” kapcsolatsor (titkosított tokenek);
  *      d) visszairányítás: /riportok?google=connected|denied|error|unavailable&platform=…
@@ -22,13 +24,17 @@ import {
   buildGoogleAuthorizeUrl,
   exchangeGoogleCode,
   getGoogleOAuthConfig,
-  googleNonceStore,
+  GOOGLE_NONCE_COOKIE,
+  GOOGLE_NONCE_COOKIE_PATH,
+  GOOGLE_STATE_TTL_MS,
+  googleNonceMatches,
+  issueGoogleNonce,
+  readCookie,
   isGooglePlatform,
   signGoogleState,
   verifyGoogleState,
   type FetchLike,
   type GoogleOAuthConfig,
-  type NonceStore,
 } from "./oauth";
 
 export type SessionUser = { id: string; role: string; profileId: string | null };
@@ -38,7 +44,6 @@ export type GoogleOAuthRouteDeps = {
   getSessionUser(req: Request): Promise<SessionUser | null>;
   assertOwnership(user: SessionUser, profileId: string): Promise<void>;
   fetch: FetchLike;
-  nonces: NonceStore;
   store: DataConnectionStore;
   now(): number;
   appOrigin(): string;
@@ -69,8 +74,16 @@ export function createGoogleOAuthHandlers(deps: GoogleOAuthRouteDeps) {
       res.status(403).json({ error: "Nincs jogosultságod ehhez a profilhoz." });
       return;
     }
-    const { nonce, exp } = deps.nonces.issue(deps.now());
+    const { nonce, exp } = issueGoogleNonce(deps.now());
     const state = signGoogleState({ userId: user.id, profileId, platform, nonce, exp });
+    res.cookie(GOOGLE_NONCE_COOKIE, nonce, {
+      httpOnly: true,
+      secure: deps.appOrigin().startsWith("https://"),
+      // Lax: a Google-ról visszatérő felső szintű GET-navigáció elviszi a sütit.
+      sameSite: "lax",
+      path: GOOGLE_NONCE_COOKIE_PATH,
+      maxAge: GOOGLE_STATE_TTL_MS,
+    });
     res.redirect(buildGoogleAuthorizeUrl(config, state));
   }
 
@@ -79,8 +92,11 @@ export function createGoogleOAuthHandlers(deps: GoogleOAuthRouteDeps) {
     const config = deps.config();
     if (!config) return back(res, deps, "unavailable");
 
+    const cookieNonce = readCookie(req.headers.cookie, GOOGLE_NONCE_COOKIE);
+    // A süti egyszer használható: minden callback-próbálkozás törli.
+    res.clearCookie(GOOGLE_NONCE_COOKIE, { path: GOOGLE_NONCE_COOKIE_PATH });
     const payload = verifyGoogleState(state, deps.now());
-    if (!payload || !deps.nonces.consume(payload.nonce, deps.now())) {
+    if (!payload || !googleNonceMatches(cookieNonce, payload.nonce)) {
       console.warn("[Google OAuth] érvénytelen, lejárt vagy már felhasznált state");
       return back(res, deps, "error");
     }
@@ -148,7 +164,6 @@ export async function defaultGoogleOAuthRouteDeps(): Promise<GoogleOAuthRouteDep
     },
     assertOwnership: (user, profileId) => assertProfileOwnership(user.id, user.role, profileId, user.profileId),
     fetch: (url, init) => fetch(url, init),
-    nonces: googleNonceStore,
     store: dataConnectionStore,
     now: () => Date.now(),
     appOrigin: getPublicAppOrigin,
