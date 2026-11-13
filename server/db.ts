@@ -1,4 +1,4 @@
-import { eq, ne, desc, and, or, gte, lte, inArray, isNull } from "drizzle-orm";
+import { eq, ne, asc, desc, and, or, gte, lte, inArray, isNull } from "drizzle-orm";
 import { drizzle, type MySql2Database } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
 import mysql from "mysql2/promise";
@@ -1115,6 +1115,19 @@ export async function listDataConnections(profileId: string) {
   return db.select().from(dataConnections).where(eq(dataConnections.profileId, profileId));
 }
 
+/**
+ * Az upsertDataConnection írandó értékei: a tokeneket MINDIG titkosítva tároljuk
+ * (at rest, enc:v1:). A decrypt a felhasználás helyén történik (Google-adapterek:
+ * server/reports/google/client.ts).
+ */
+export function dataConnectionWriteValues(input: Omit<InsertDataConnection, "id"> & { connected?: boolean }, id: string) {
+  return {
+    ...input, id, connected: input.connected ?? true,
+    accessToken: encryptToken(input.accessToken ?? null),
+    refreshToken: encryptToken(input.refreshToken ?? null),
+  };
+}
+
 export async function upsertDataConnection(input: Omit<InsertDataConnection, "id"> & { connected?: boolean }) {
   const db = await getDb();
   if (!db) return null;
@@ -1127,14 +1140,7 @@ export async function upsertDataConnection(input: Omit<InsertDataConnection, "id
     ),
   ).limit(1);
   const id = existing[0]?.id ?? nanoid();
-  // A tokeneket titkosítva tároljuk (at rest). A decrypt a felhasználás
-  // helyén történik (jelenleg a mock connector nem olvassa; a jövőbeli valós
-  // adapter a decryptToken-nel fejti vissza).
-  const values = {
-    ...input, id, connected: input.connected ?? true,
-    accessToken: encryptToken(input.accessToken ?? null),
-    refreshToken: encryptToken(input.refreshToken ?? null),
-  };
+  const values = dataConnectionWriteValues(input, id);
   if (existing[0]) {
     await db.update(dataConnections).set(values).where(eq(dataConnections.id, id));
   } else {
@@ -1143,6 +1149,63 @@ export async function upsertDataConnection(input: Omit<InsertDataConnection, "id
   const rows = await db.select().from(dataConnections).where(eq(dataConnections.id, id)).limit(1);
   return rows[0] ?? null;
 }
+
+export async function getDataConnectionById(connectionId: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(dataConnections).where(eq(dataConnections.id, connectionId)).limit(1);
+  return rows[0] ?? null;
+}
+
+/** Google-tokenfrissítés után: az új (már titkosított) access token és lejárata. */
+export async function updateDataConnectionAccessToken(connectionId: string, encryptedAccessToken: string, tokenExpiry: Date) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(dataConnections)
+    .set({ accessToken: encryptedAccessToken, tokenExpiry })
+    .where(eq(dataConnections.id, connectionId));
+}
+
+/** Visszavont hozzáférés: a kapcsolat „nincs csatlakoztatva”, rövid, titokmentes hibaszöveggel. */
+export async function markDataConnectionDisconnected(connectionId: string, lastSyncError: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(dataConnections)
+    .set({ connected: false, lastSyncError: lastSyncError.slice(0, 500) })
+    .where(eq(dataConnections.id, connectionId));
+}
+
+/** A server/reports/google/connections.ts tárfelülete a data_connections táblán. */
+export const dataConnectionStore = {
+  async findByProfilePlatform(profileId: string, platform: DataConnection["platform"]) {
+    const db = await getDb();
+    if (!db) return [];
+    return db.select().from(dataConnections)
+      .where(and(eq(dataConnections.profileId, profileId), eq(dataConnections.platform, platform)))
+      .orderBy(asc(dataConnections.createdAt));
+  },
+  async getById(connectionId: string) {
+    return getDataConnectionById(connectionId);
+  },
+  async insert(values: InsertDataConnection) {
+    const db = await getDb();
+    if (!db) throw new Error("Az adatbázis nem elérhető.");
+    // A tokenek titkosítva kerülnek be (a hívó már titkosított — az encryptToken nem dupláz).
+    await db.insert(dataConnections).values({
+      ...values,
+      accessToken: encryptToken(values.accessToken ?? null),
+      refreshToken: encryptToken(values.refreshToken ?? null),
+    });
+  },
+  async update(connectionId: string, patch: Partial<InsertDataConnection>) {
+    const db = await getDb();
+    if (!db) throw new Error("Az adatbázis nem elérhető.");
+    const values = { ...patch };
+    if ("accessToken" in values) values.accessToken = encryptToken(values.accessToken ?? null);
+    if ("refreshToken" in values) values.refreshToken = encryptToken(values.refreshToken ?? null);
+    await db.update(dataConnections).set(values).where(eq(dataConnections.id, connectionId));
+  },
+};
 
 export async function deleteDataConnection(profileId: string, connectionId: string) {
   const db = await getDb();

@@ -40,7 +40,7 @@ A G2A Growth Engine egy teljes körű SaaS platform, amely mesterséges intellig
 | LLM | **Anthropic Claude** az élő szolgáltató; **OpenAI** tartalékként env-ből visszaállítható. Minden AI-hívás egyetlen ponton, az `invokeLLM`-en megy át | `server/_core/llm.ts`, `server/_core/anthropicAdapter.ts`, `server/_core/env.ts` |
 | Fizetés | **Stripe** Checkout + webhook (`/api/stripe/webhook`), HUF-árak, csomagok: Starter / Pro / Agency | `server/stripe/` |
 | Tartalomstúdió | AI-tartalomgyártás, naptár, jóváhagyás, időzítés (`/tartalom-studio`) | `client/src/pages/ContentStudio.tsx`, `server/routers/content.ts` |
-| Riportok | Havi riport AI-összefoglalóval (`/riportok`), letölthető PDF-ként és Word-fájlként (szerveroldali export, `reports.exportPdf` / `exportDocx`) — **egyelőre mintaadattal**, a valós Google-/Meta-adapterek a G1-ben jönnek (`LIVE_METRIC_PLATFORMS` jelenleg üres) | `server/routers/reports.ts`, `server/reports/` |
+| Riportok | Havi riport AI-összefoglalóval (`/riportok`), letölthető PDF-ként és Word-fájlként (szerveroldali export, `reports.exportPdf` / `exportDocx`) — alapból **mintaadattal**; a GA4 és a Search Console Google-csatlakozással élő adatot ad, ha a `LIVE_METRIC_PLATFORMS` bekapcsolja (a Google Ads és a Meta Ads adaptere még hátravan) | `server/routers/reports.ts`, `server/reports/` |
 | Egyéb | Onboarding, Cégintelligencia, Stratégia, Kampányok, Analitika, AI-író, SEO-audit, Copilot-asszisztens, értesítések, projektek (admin) | `client/src/App.tsx` útvonalai |
 | Közösségi kapcsolatok | **LinkedIn** csatlakoztatás és közzététel működik; a meglévő FB/IG-kapcsolatok is működnek (lásd lent) | `server/routers/social.ts`, `server/scheduler.ts` |
 | Fájltárolás | Vercel Blob | `server/storage.ts` |
@@ -584,6 +584,8 @@ growth_engine/
 | `LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET` | LinkedIn csatlakozás | ⬜ |
 | `SOCIAL_HUB_API_URL`, `SOCIAL_HUB_API_KEY` | Social Hub `/api/v1` alap-URL-je (pl. `https://…/api/v1`) és szervezeti API-kulcsa (Bearer). A riport-szinkron közösségi (FB/IG/LinkedIn) metrikái ezzel jönnek; bármelyik hiányában a közösségi csatorna kimarad, és a Riportok oldal ezt jelzi | ⬜ |
 | `SCHEDULER_ENABLED` | Időzítő; productionben alapból be, `false` kikapcsolja | ⬜ |
+| `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_REDIRECT_URL` | Google OAuth webes kliens a GA4 és a Search Console riportadatához (csak olvasó scope-ok). A redirect URL: `<APP_URL>/api/oauth/google/callback`. Bármelyik hiányában a csatlakozás gomb le van tiltva (fail-closed). Beállítás: DEVELOPER_HANDBOOK → „Google-adatforrások (GA4 + Search Console)” | ⬜ |
+| `LIVE_METRIC_PLATFORMS` | Élő riportadat platformonként, vesszővel: `ga4`, `search_console`. Alapból üres → minden platform mintaadat. A `google_ads` / `meta_ads` még nem élesíthető (figyelmeztetéssel kimarad, mintaadat marad) | ⬜ |
 | `REPORT_SYNC_SCHEDULER_ENABLED` | Napi riport-adatszinkron (hajnalban, Europe/Budapest, az előző 3 napra); productionben alapból be, `false` kikapcsolja | ⬜ |
 | `SOCIAL_META_TIKTOK_ENABLED`, `HEYGEN_VIDEO_ENABLED`, `NEWSLETTER_ENABLED` | Funkciókapcsolók, alapból ki (lásd [Állapot a G0 után](#állapot-a-g0-után)) | ⬜ |
 | `PAGESPEED_API_KEY`, `SENTRY_DSN`, `HEYGEN_API_KEY` | Opcionális szolgáltatások | ⬜ |

@@ -385,6 +385,32 @@ RESEND_API_KEY            Email küldés
 
 ---
 
+### Google-adatforrások (GA4 + Search Console)
+
+Env-változók (értéket ide soha ne írj; Railway → Variables):
+
+```
+GOOGLE_OAUTH_CLIENT_ID       Google OAuth webes kliens azonosítója
+GOOGLE_OAUTH_CLIENT_SECRET   A kliens titka (csak szerveren; naplóba, kliensre nem kerül)
+GOOGLE_OAUTH_REDIRECT_URL    <APP_URL>/api/oauth/google/callback (a Google Cloudban is pontosan ez)
+LIVE_METRIC_PLATFORMS        Élő platformok vesszővel: ga4,search_console (alapból üres → mintaadat)
+```
+
+A három `GOOGLE_OAUTH_*` vagy a `JWT_SECRET` hiányában a Google-csatlakozás ki van kapcsolva: a `/api/oauth/google/start` és a `/callback` Google-hívás nélkül a `/riportok?google=unavailable` címre irányít, a Riportok → Adatforrások gombja letiltva, „A Google-csatlakozás még nincs beállítva.” szöveggel (a kliens csak egy `googleConfigured` booleant kap). A `LIVE_METRIC_PLATFORMS`-ban megadott `google_ads` / `meta_ads` figyelmeztetéssel kimarad (nincs adapter), így ezek mintaadata DEMO-jelöléssel marad, és az éjszakai szinkron sem húzza.
+
+Google Cloud-beállítás lépései:
+
+1. Google Cloud Console → projekt a Growth Engine-nek.
+2. APIs & Services → Library: engedélyezd a **Google Analytics Data API**-t, a **Google Analytics Admin API**-t és a **Google Search Console API**-t.
+3. OAuth consent screen: „External”, alkalmazásnév, támogatási e-mail, a domain; scope-ok: `https://www.googleapis.com/auth/analytics.readonly` és `https://www.googleapis.com/auth/webmasters.readonly` (csak olvasó). Ezek érzékeny scope-ok: éles használathoz a Google **app-verifikációja** kell (adatvédelmi nyilatkozat, domain-ellenőrzés, a használat bemutatása). Addig „Testing” állapotban csak a felvett tesztfelhasználók csatlakozhatnak, és a refresh tokenjük 7 nap után lejár (a kapcsolat ekkor „Nincs csatlakoztatva” lesz, újra kell csatlakozni).
+4. Credentials → Create credentials → OAuth client ID → **Web application**; Authorized redirect URI: `<APP_URL>/api/oauth/google/callback` (= `GOOGLE_OAUTH_REDIRECT_URL`).
+5. Az azonosítót és a titkot a Railway-en állítsd be, soha ne a repóban.
+6. Élesítés: `LIVE_METRIC_PLATFORMS=ga4,search_console` (vagy csak az egyik). A kézi és a napi szinkron ekkor a kiválasztott tulajdon valós adatát húzza; a forrás „mixed”, a DEMO-jelölés marad, amíg a Google Ads és a Meta Ads is élő nem lesz. Visszaállás: az env törlése.
+
+Működés: a callback a code→token csere után „kiválasztásra vár” sort ír (`externalAccountId = pending:<id>`, `connected = false`; profilonként és platformonként egy sor, a `brandId` újracsatlakozáskor megmarad). **Újracsatlakozáskor a property-t / site-ot újra ki kell választani.** A választóval mentett GA4 `properties/<id>` vagy Search Console-tulajdon után `connected = true`. A tokenek `enc:v1:` (AES-256-GCM, a JWT_SECRET-ből származtatott kulcs) formában a `data_connections.accessToken/refreshToken` oszlopokban vannak — a `drizzle/schema.ts` „plaintext” megjegyzése elavult, de a sémafájlhoz nem nyúltunk. Lejárat előtt 60 mp-cel frissítés; `invalid_grant` vagy frissítés utáni 401 esetén `connected = false`, rövid `lastSyncError`, a szinkron a többi forrással megy tovább. A `reports.connections.list` tokenmentes, explicit mezőlistát ad. **A state nonce-tára folyamaton belüli memória:** több példány vagy újraindítás esetén a folyamatban lévő csatlakozás megszakad (újra kell kezdeni). Nyitott: Google-oldali visszavonás bontáskor (`revokeGoogleToken` kész, nincs bekötve), Google Ads (developer token), Meta Ads.
+
+---
+
 ## 12. GitHub repo
 
 ```

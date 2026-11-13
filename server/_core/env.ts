@@ -53,6 +53,12 @@ export const ENV = {
   facebookLoginConfigId: (process.env.FACEBOOK_LOGIN_CONFIG_ID ?? "").trim(),
   tiktokClientKey: (process.env.TIKTOK_CLIENT_KEY ?? "").trim(),
   tiktokClientSecret: (process.env.TIKTOK_CLIENT_SECRET ?? "").trim(),
+  // ─── Google OAuth (GA4 + Search Console riportadat, G1) ────────────────
+  // Csak olvasó scope-ok. Bármelyik hiányában a Google-csatlakozás ki van
+  // kapcsolva (fail-closed). Beállítás: DEVELOPER_HANDBOOK.md „Google-adatforrások”.
+  googleOAuthClientId: (process.env.GOOGLE_OAUTH_CLIENT_ID ?? "").trim(),
+  googleOAuthClientSecret: (process.env.GOOGLE_OAUTH_CLIENT_SECRET ?? "").trim(),
+  googleOAuthRedirectUrl: (process.env.GOOGLE_OAUTH_REDIRECT_URL ?? "").trim(),
   // APP_URL — production base URL minden OAuth callback redirectjéhez.
   // A LinkedIn OAuth biztonsági javításával lett bevezetve (audit #2 fix).
   appUrl: (process.env.APP_URL ?? "").trim().replace(/\/+$/, ""),

@@ -15,13 +15,18 @@
  * external_ref-jével brandId=NULL-lal fut (a márkák előtti viselkedés), majd minden
  * Social Hub-azonosítóval rendelkező márkára külön, az ő brandId-jával.
  *
+ * Google-kapcsolatok (GA4, Search Console): a kiválasztásra váró (`pending:`) és a
+ * bontott (connected=false) kapcsolat kimarad. Visszavont hozzáférésnél
+ * (GoogleAuthRevokedError) a kapcsolat connected=false lesz, rövid lastSyncError-ral.
+ *
  * A kapcsolat-hibák nem dobódnak tovább (a többi platform menjen), hanem az
  * `errors` listába kerülnek. A mutation ezt elnyeli, az ütemező újrapróbál/értesít.
  */
 import type { DataConnection } from "../../drizzle/schema";
-import { getProfileById, listDataConnections, listProfileBrands, replaceReportMetrics, replaceSocialReportMetrics } from "../db";
+import { getProfileById, listDataConnections, listProfileBrands, markDataConnectionDisconnected, replaceReportMetrics, replaceSocialReportMetrics } from "../db";
 import { syncSocialMetrics, type SocialSyncResult } from "../socialHub/metrics";
 import { fetchMetrics, isSocialMetricPlatform, type MetricPlatform } from "./connectors";
+import { GoogleAuthRevokedError, isPendingAccountId } from "./google/oauth";
 
 type ConnectionRows = Awaited<ReturnType<typeof fetchMetrics>>;
 
@@ -34,7 +39,17 @@ export type SyncProfileDeps = {
   syncSocial(input: { profileId: string; externalRef: string | null | undefined; from: string; to: string; requested: boolean; brandId?: string | null }): Promise<SocialSyncResult>;
   /** A profil márkái (a Social Hub-azonosítós márkák közösségi szinkronjához). Hiányában nincs márkás ág. */
   listBrands?(profileId: string): Promise<Array<{ id: string; socialHubExternalRef?: string | null }>>;
+  /** Visszavont hozzáférés: a kapcsolat connected=false + rövid, titokmentes lastSyncError. */
+  markDisconnected?(connectionId: string, lastSyncError: string): Promise<void>;
 };
+
+/** A visszavont Google-hozzáférés lastSyncError-szövege (titok és Google-válasz nélkül). */
+export const REVOKED_SYNC_ERROR = "A Google-hozzáférés megszűnt. Csatlakoztasd újra a forrást.";
+
+/** Szinkronizálható-e a kapcsolat: a bontott (connected=false) és a kiválasztásra váró kimarad. */
+export function isSyncableConnection(conn: Pick<DataConnection, "connected" | "externalAccountId">): boolean {
+  return conn.connected !== false && !isPendingAccountId(conn.externalAccountId);
+}
 
 export type SyncProfileError = { platform: string; name: string; message: string };
 
@@ -62,6 +77,7 @@ export const defaultSyncProfileDeps: SyncProfileDeps = {
       : replaceSocialReportMetrics(profileId, from, to, rows),
   }),
   listBrands: (profileId) => listProfileBrands(profileId),
+  markDisconnected: (connectionId, lastSyncError) => markDataConnectionDisconnected(connectionId, lastSyncError),
 };
 
 /**
@@ -88,7 +104,7 @@ export async function syncProfileMetrics(
   platforms?: readonly MetricPlatform[],
   deps: SyncProfileDeps = defaultSyncProfileDeps,
 ): Promise<SyncProfileResult> {
-  const conns = await deps.listConnections(profileId);
+  const conns = (await deps.listConnections(profileId)).filter(isSyncableConnection);
   const targets = platforms ? conns.filter((c) => (platforms as readonly string[]).includes(c.platform)) : conns;
 
   // Csoport = platform + márka: a csere profil + platform + brandId hatókörű.
@@ -106,7 +122,21 @@ export async function syncProfileMetrics(
   for (const { platform, brandId, conns: group } of Array.from(groups.values())) {
     try {
       const rows: ConnectionRows = [];
-      for (const conn of group) rows.push(...(await deps.fetchMetrics(conn, from, to)));
+      for (const conn of group) {
+        try {
+          rows.push(...(await deps.fetchMetrics(conn, from, to)));
+        } catch (err) {
+          // Visszavont hozzáférés: a kapcsolat „nincs csatlakoztatva” lesz; a csoport
+          // régi adata marad (nincs csere), a többi platform megy tovább.
+          if (err instanceof GoogleAuthRevokedError && deps.markDisconnected) {
+            await deps.markDisconnected(conn.id, REVOKED_SYNC_ERROR).catch((markErr) => {
+              const info = describeError(markErr);
+              console.error(`[reports.sync] kapcsolat=${conn.id} állapotírás sikertelen: ${info.name}: ${info.message}`);
+            });
+          }
+          throw err;
+        }
+      }
       // Márka nélkül a régi, 5 argumentumos hívás (változatlan viselkedés).
       const result = brandId
         ? await deps.replaceRows(profileId, platform, from, to, rows, brandId)

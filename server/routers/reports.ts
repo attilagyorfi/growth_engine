@@ -28,13 +28,19 @@ import {
   getReportById,
   upsertReportSchedule,
   setDataConnectionBrand,
+  dataConnectionStore,
+  markDataConnectionDisconnected,
 } from "../db";
+import { isGoogleOAuthConfigured, isGooglePlatform, GoogleAuthRevokedError } from "../reports/google/oauth";
+import { defaultGoogleDeps } from "../reports/google/client";
+import { listGoogleAccounts } from "../reports/google/accounts";
+import { GoogleSelectionError, loadGoogleConnection, selectGoogleAccount, toSafeConnection } from "../reports/google/connections";
 import { assertBrandInProfile } from "./brands";
 import { generateReportSummary } from "../ai/reportSummary";
 import { analyzeReportPeriod, previousPeriod } from "../ai/reportSignals";
 import { buildReportPdf, reportPdfFileName, PDF_MIME_TYPE } from "../reports/pdf";
-import { fetchMetrics, getMetricsSource, isDemoData, isSocialMetricPlatform, METRIC_PLATFORMS } from "../reports/connectors";
-import { syncProfileMetrics } from "../reports/syncProfile";
+import { mockMetrics, getMetricsSource, isDemoData, isSocialMetricPlatform, METRIC_PLATFORMS } from "../reports/connectors";
+import { describeError, REVOKED_SYNC_ERROR, syncProfileMetrics } from "../reports/syncProfile";
 import { buildReportDocx, reportDocxFileName, DOCX_MIME_TYPE } from "../reports/docx";
 import { buildSocialSection, buildSocialSummary, type ReportContentInput } from "../reports/content";
 
@@ -44,6 +50,12 @@ const platformEnum = z.enum(["google_ads", "ga4", "search_console", "meta_ads"])
 // report_metrics platformjai: a kapcsolat-platformok + facebook/instagram/linkedin.
 const metricPlatformEnum = z.enum(METRIC_PLATFORMS);
 
+/** A Google-kiválasztás hibái tRPC-hibaként (a többi hiba változatlanul tovább). */
+function toTrpcError(err: unknown): never {
+  if (err instanceof GoogleSelectionError) throw new TRPCError({ code: err.code, message: err.message });
+  throw err;
+}
+
 export const reportsRouter = router({
   // ─── Kapcsolatok (Ads/Analytics OAuth) ───────────────────────────────────
   connections: router({
@@ -51,27 +63,71 @@ export const reportsRouter = router({
       .input(z.object({ profileId: z.string() }))
       .query(async ({ input, ctx }) => {
         await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
-        return listDataConnections(input.profileId);
+        // Explicit mezőlista: token (access/refresh) soha nem megy ki a kliensre.
+        return (await listDataConnections(input.profileId)).map(toSafeConnection);
       }),
 
-    // Az OAuth callback után hívva (jelenleg mock, a valós OAuth flow-k
-    // külön PR-ekben jönnek: googleAdsOAuth, gscOAuth, ga4OAuth, meta ads
-    // scope kiterjesztése a meglévő facebookOAuth.ts-hez).
+    // Kézi kapcsolat-rögzítés a még OAuth nélküli platformokhoz (google_ads, meta_ads).
+    // A GA4 / Search Console tokenje KIZÁRÓLAG a Google OAuth-callbackből jöhet
+    // (server/reports/google/routes.ts) — itt klienstől érkező tokent nem fogadunk el.
     upsert: appUserProcedure
       .input(z.object({
         profileId: z.string(),
         platform: platformEnum,
         externalAccountId: z.string(),
         externalAccountName: z.string().optional(),
-        accessToken: z.string(),
+        accessToken: z.string().optional(),
         refreshToken: z.string().optional(),
         tokenExpiry: z.date().optional(),
         scopes: z.array(z.string()).optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
-        return upsertDataConnection({ ...input, connected: true });
+        if (isGooglePlatform(input.platform)) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Ezt a forrást a „Csatlakozás Google-lel” gombbal add hozzá." });
+        }
+        // Az upsertDataConnection a tokeneket titkosítva írja.
+        const row = await upsertDataConnection({ ...input, connected: true });
+        return row ? toSafeConnection(row) : null;
       }),
+
+    // ─── Google (GA4 + Search Console) ─────────────────────────────────────
+    // A csatlakozás a /api/oauth/google/start route-on indul; itt csak az állapot,
+    // a választható property/site lista és a kiválasztás mentése van.
+    google: router({
+      /** Csak boolean: be van-e állítva a Google OAuth (env-érték soha nem megy ki). */
+      status: appUserProcedure.query(() => ({ googleConfigured: isGoogleOAuthConfigured() })),
+
+      accounts: appUserProcedure
+        .input(z.object({ profileId: z.string(), connectionId: z.string() }))
+        .query(async ({ input, ctx }) => {
+          await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+          const conn = await loadGoogleConnection(dataConnectionStore, input.profileId, input.connectionId).catch(toTrpcError);
+          try {
+            return { accounts: await listGoogleAccounts(conn, defaultGoogleDeps()) };
+          } catch (err) {
+            if (err instanceof GoogleAuthRevokedError) {
+              await markDataConnectionDisconnected(conn.id, REVOKED_SYNC_ERROR);
+              throw new TRPCError({ code: "PRECONDITION_FAILED", message: "A Google-hozzáférés megszűnt. Csatlakozz újra." });
+            }
+            const info = describeError(err);
+            console.error(`[reports.google.accounts] kapcsolat=${conn.id}: ${info.name}: ${info.message}`);
+            throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Most nem sikerült lekérni a listát. Próbáld újra később." });
+          }
+        }),
+
+      select: appUserProcedure
+        .input(z.object({
+          profileId: z.string(),
+          connectionId: z.string(),
+          externalAccountId: z.string().min(1).max(255),
+          externalAccountName: z.string().max(255).optional(),
+        }))
+        .mutation(async ({ input, ctx }) => {
+          await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+          return selectGoogleAccount(dataConnectionStore, input).catch(toTrpcError);
+        }),
+    }),
 
     disconnect: appUserProcedure
       .input(z.object({ profileId: z.string(), connectionId: z.string() }))
@@ -457,7 +513,8 @@ async function getViewMetrics(profileId: string, from: string, to: string): Prom
   const rows: Metric[] = [];
   for (const c of VIEW_CHANNELS) {
     const conn = { id: `demo-${profileId}-${c.platform}`, platform: c.platform } as any;
-    const r = await fetchMetrics(conn, from, to);
+    // Mindig a mintaadat: a DEMO-nézet álkapcsolatára élő adapter nem futhat.
+    const r = mockMetrics(conn, from, to);
     rows.push(...(r as unknown as Metric[]));
   }
   return { rows, demo: true };

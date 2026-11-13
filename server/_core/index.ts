@@ -8,6 +8,7 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerLinkedInOAuthRoutes } from "../linkedinOAuth";
 import { registerFacebookOAuthRoutes } from "../facebookOAuth";
 import { registerTikTokOAuthRoutes } from "../tiktokOAuth";
+import { registerGoogleOAuthRoutes } from "../reports/google/routes";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
@@ -93,6 +94,8 @@ async function startServer() {
   registerLinkedInOAuthRoutes(app);
   registerFacebookOAuthRoutes(app);
   registerTikTokOAuthRoutes(app);
+  // GA4 + Search Console riportadat (G1) — Google-env nélkül fail-closed.
+  registerGoogleOAuthRoutes(app);
   // tRPC API
   app.use(
     "/api/trpc",
