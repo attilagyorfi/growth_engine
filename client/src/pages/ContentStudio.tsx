@@ -16,6 +16,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { AiLimitBanner } from "@/components/AiLimitBanner";
 import UpgradePrompt from "@/components/UpgradePrompt";
 import { useSubscription } from "@/hooks/useSubscription";
+import SocialHubSendDialog, { type SendSelection } from "@/components/SocialHubSendDialog";
 import { trpc } from "@/lib/trpc";
 import { getScheduleWarning } from "@/lib/scheduleWarning";
 import { useProfile } from "@/contexts/ProfileContext";
@@ -144,6 +145,9 @@ export default function ContentStudio() {
   const [aiCtaText, setAiCtaText] = useState<string | null>(null);
 
   const utils = trpc.useUtils();
+  // Küldés a Social Hubba (G2): csak ha a szerveren elérhető.
+  const { data: socialHub } = trpc.socialHub.available.useQuery();
+  const [socialHubSelection, setSocialHubSelection] = useState<SendSelection | null>(null);
   const { data: posts = [], isLoading } = trpc.content.list.useQuery(
     { profileId: activeProfile.id },
     { enabled: !!activeProfile.id }
@@ -876,6 +880,12 @@ export default function ContentStudio() {
                   )}
                 </button>
               )}
+              {socialHub?.available && (
+                <button onClick={() => setSocialHubSelection({ month: `${calendarYear}-${String(calendarMonth + 1).padStart(2, "0")}` })}
+                  className="h-8 px-3 rounded-lg text-xs font-semibold flex items-center gap-1.5" style={{ background: "var(--qa-surface2)", color: "var(--qa-accent)" }}>
+                  <Send size={12} /> Küldés a Social Hubba
+                </button>
+              )}
               <button onClick={() => setCalendarDate(new Date(calendarYear, calendarMonth - 1, 1))}
                 className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "var(--qa-surface2)" }}>
                 <ChevronLeft size={14} style={{ color: "oklch(0.7 0.015 240)" }} />
@@ -1368,6 +1378,13 @@ export default function ContentStudio() {
                   <Send size={13} /> Publikálás
                 </button>
               )}
+              {socialHub?.available && (
+                <button onClick={() => { setSocialHubSelection({ postId: selectedPost.id }); setSelectedPost(null); }}
+                  className="flex-1 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5"
+                  style={{ background: "oklch(from var(--qa-accent) l c h / 15%)", color: "var(--qa-accent)" }}>
+                  <Send size={13} /> Küldés a Social Hubba
+                </button>
+              )}
               <button onClick={() => handleDelete(selectedPost.id)}
                 className="flex-1 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5"
                 style={{ background: "oklch(0.65 0.22 25 / 15%)", color: "var(--qa-danger)" }}>
@@ -1424,6 +1441,10 @@ export default function ContentStudio() {
             </div>
           </div>
         </div>
+      )}
+
+      {socialHubSelection && (
+        <SocialHubSendDialog profileId={activeProfile.id} selection={socialHubSelection} onClose={() => setSocialHubSelection(null)} />
       )}
     </DashboardLayout>
   );

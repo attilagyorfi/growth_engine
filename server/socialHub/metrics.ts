@@ -12,12 +12,13 @@
 import type { NormalizedMetricRow, SocialMetricPlatform } from "../reports/connectors";
 import {
   createSocialHubClient,
-  getSocialHubConfig,
+  findClientByExternalRef,
   SocialHubError,
   type SocialHubApi,
   type SocialHubConfig,
   type SocialHubMetricsResponse,
 } from "./client";
+import { resolveSocialHubConfig, SOCIAL_HUB_RESOLVE_ERROR } from "./config";
 
 /**
  * A Social Hub analytics_daily.provider értékei → report_metrics.platform.
@@ -89,14 +90,20 @@ export async function syncSocialMetrics(
   deps: SocialSyncDeps,
 ): Promise<SocialSyncResult> {
   if (input.requested === false) return { status: "skipped", reason: "not_requested" };
-  const config = deps.config === undefined ? getSocialHubConfig() : deps.config;
+  let config = deps.config;
+  if (config === undefined) {
+    const resolved = await resolveSocialHubConfig();
+    // Tárolt, de olvashatatlan kapcsolat: fail-closed, nincs env-visszaesés.
+    if (resolved.status === "error") return { status: "failed", reason: "error", message: SOCIAL_HUB_RESOLVE_ERROR };
+    config = resolved.status === "ok" ? resolved.config : null;
+  }
   if (!config) return { status: "skipped", reason: "not_configured" };
   const externalRef = input.externalRef?.trim();
   if (!externalRef) return { status: "skipped", reason: "no_external_ref" };
 
   const client = (deps.createClient ?? createSocialHubClient)(config);
   try {
-    const match = (await client.listClients()).find((c) => c.external_ref === externalRef);
+    const match = findClientByExternalRef(await client.listClients(), externalRef);
     if (!match) return { status: "skipped", reason: "no_match" };
     const response = await client.getClientMetricsRange(match.id, input.from, input.to);
     const { rows, skippedAccounts } = mapSocialHubMetrics(response);

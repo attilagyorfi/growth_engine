@@ -24,6 +24,7 @@ import { useTour } from "@/hooks/useTour";
 import { connectionHealth, formatHuDate, needsReconnect } from "@/lib/connectionHealth";
 import { toast } from "sonner";
 import BrandManager from "@/components/BrandManager";
+import SocialHubConnection from "@/components/SocialHubConnection";
 
 type Tab = "brand" | "integrations" | "team" | "audit" | "admin" | "fiok" | "billing" | "ai-memory";
 
@@ -538,6 +539,9 @@ export default function Settings() {
       {/* Integrations */}
       {activeTab === "integrations" && (
         <div className="space-y-4">
+          {/* Social Hub-kapcsolat: csak rendszergazda kezeli. */}
+          {isSuperAdmin && <SocialHubConnection cardBg={cardBg} border={border} />}
+
           {/* Social Hub-párosítás: a riport közösségi adatai ezzel az azonosítóval jönnek. */}
           <div className="rounded-xl border p-5" style={{ background: cardBg, borderColor: border }}>
             <h3 className="text-sm font-bold" style={{ color: "var(--qa-fg2)" }}>Social Hub-párosítás</h3>
