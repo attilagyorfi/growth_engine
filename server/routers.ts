@@ -17,6 +17,7 @@ import { teamRouter } from "./routers/team";
 import { assistantRouter } from "./routers/assistant";
 import { ideasRouter } from "./routers/ideas";
 import { generateImage } from "./_core/imageGeneration";
+import { syncBrandAfterSave } from "./socialHub/brandSync";
 import { externalRefInput, EXTERNAL_REF_TAKEN_MESSAGE } from "./socialHub/externalRef";
 import { nanoid } from "nanoid";
 import { TRPCError } from "@trpc/server";
@@ -214,16 +215,22 @@ export const appRouter = router({
         // tulajdonos (appUserId) nem változhat. Korábban bárki, aki ismert egy
         // profil-azonosítót, a mentéssel magához rendelhette egy másik ügyfél profilját
         // (és super_admin szerkesztéskor is leválasztotta a profilt az ügyfélről).
+        // A márkaadat a mentés UTÁN átmegy a Social Hubba; a szinkron a mentést nem buktathatja el.
+        const save = async (profile: Parameters<typeof upsertProfile>[0]) => {
+          const saved = await upsertProfile(profile);
+          if (input.brandVoice !== undefined || input.contentPillars !== undefined) await syncBrandAfterSave(profile.id);
+          return saved;
+        };
         if (input.id) {
           const existing = await getProfileById(input.id);
           if (existing) {
             await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.id, ctx.appUser.profileId);
-            return upsertProfile({ ...input, id: input.id, appUserId: existing.appUserId });
+            return save({ ...input, id: input.id, appUserId: existing.appUserId });
           }
         }
         // Új profil: a létrehozó a tulajdonos.
         const id = input.id ?? nanoid();
-        return upsertProfile({ ...input, id, appUserId: ctx.appUser.id });
+        return save({ ...input, id, appUserId: ctx.appUser.id });
       }),
 
     // Social Hub-párosítás (G1): a profil external_ref-je. Üres → NULL (törlés).

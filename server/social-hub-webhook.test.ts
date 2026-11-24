@@ -279,10 +279,11 @@ describe("0027-es migráció", () => {
     expect(statements[3]).toContain("UNIQUE(`postId`,`decision`)");
   });
 
-  it("a journalban az utolsó, a profilos táblák a profiltörlésben", () => {
+  it("a journalban a 0026 után áll, a profilos táblák a profiltörlésben", () => {
     const { entries } = JSON.parse(readFileSync("drizzle/meta/_journal.json", "utf8"));
-    expect(entries.at(-1)).toMatchObject({ idx: 18, tag: "0027_social_hub_webhook" });
-    expect(entries.at(-1).when).toBeGreaterThan(entries.at(-2).when);
+    const at = entries.findIndex((e: any) => e.tag === "0027_social_hub_webhook");
+    expect(entries[at]).toMatchObject({ idx: 18 });
+    expect(entries[at].when).toBeGreaterThan(entries[at - 1].when);
     expect(PROFILE_OWNED_TABLES).toEqual(expect.arrayContaining(["socialHubWebhookEvents", "socialHubPostStates", "socialHubMemoryMarks"]));
     expect(PROFILE_OWNED_TABLES).not.toContain("socialHubWebhookSecret");
   });

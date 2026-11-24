@@ -398,7 +398,8 @@ describe("router az adatbázisos tárolóval", () => {
 
   it("a végpontok a közös appRouteren élnek, amelyet a Vercel-belépő is használ", () => {
     const paths = Object.keys((appRouter as any)._def.procedures).filter((p) => p.startsWith("socialHub."));
-    expect(paths.sort()).toEqual(["socialHub.available", "socialHub.connection.check", "socialHub.connection.disconnect", "socialHub.connection.get",
+    expect(paths.sort()).toEqual(["socialHub.available", "socialHub.brandRules.get", "socialHub.brandRules.save", "socialHub.brandRules.sync",
+      "socialHub.connection.check", "socialHub.connection.disconnect", "socialHub.connection.get",
       "socialHub.connection.save", "socialHub.postStates", "socialHub.previewSend", "socialHub.repeat", "socialHub.send",
       "socialHub.webhook.deleteSecret", "socialHub.webhook.get", "socialHub.webhook.saveSecret"]);
     expect(readFileSync("api/[...path].ts", "utf8")).toMatch(/router: appRouter/);

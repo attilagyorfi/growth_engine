@@ -23,7 +23,9 @@ import { useAppAuth } from "@/hooks/useAppAuth";
 import { useTour } from "@/hooks/useTour";
 import { connectionHealth, formatHuDate, needsReconnect } from "@/lib/connectionHealth";
 import { toast } from "sonner";
+import { brandFormFor } from "@/lib/brandForm";
 import BrandManager from "@/components/BrandManager";
+import BrandRulesSync from "@/components/BrandRulesSync";
 import SocialHubConnection from "@/components/SocialHubConnection";
 
 type Tab = "brand" | "integrations" | "team" | "audit" | "admin" | "fiok" | "billing" | "ai-memory";
@@ -163,19 +165,22 @@ export default function Settings() {
     },
     onError: (e) => toast.error(e.message),
   });
-  const [brandForm, setBrandForm] = useState<any>({
-    primaryColor: activeProfile.primaryColor ?? "#6366f1",
-    secondaryColor: activeProfile.secondaryColor ?? "#10b981",
-    fontHeading: activeProfile.fontHeading ?? "Sora",
-    fontBody: activeProfile.fontBody ?? "Inter",
-    brandVoice: activeProfile.brandVoice ?? { tone: "", style: "", avoid: "", keywords: [] },
-  });
+  const [brandForm, setBrandForm] = useState<any>(() => brandFormFor(activeProfile));
   const [newKeyword, setNewKeyword] = useState("");
+  // Profilváltáskor (csak akkor, háttérfrissítéskor nem) az űrlap az új profil adataira áll át,
+  // még a kirajzolás előtt: egyik ügyfél adata sem menthető a másikhoz.
+  const [brandProfileId, setBrandProfileId] = useState(activeProfile.id);
+  if (brandProfileId !== activeProfile.id) {
+    setBrandProfileId(activeProfile.id);
+    setBrandForm(brandFormFor(activeProfile));
+    setNewKeyword("");
+  }
   const utils = trpc.useUtils();
 
   const upsertProfile = trpc.profiles.upsert.useMutation({
     onSuccess: () => {
       utils.profiles.list.invalidate();
+      utils.socialHub.brandRules.get.invalidate();
       toast.success("Brand beállítások mentve");
     }
   });
@@ -287,7 +292,8 @@ export default function Settings() {
   }, []);
 
   const handleSaveBrand = async () => {
-    await upsertProfile.mutateAsync({ id: activeProfile.id, name: activeProfile.name, initials: activeProfile.initials, ...brandForm });
+    if (!brandProfileId || brandProfileId !== activeProfile.id) return;
+    await upsertProfile.mutateAsync({ id: brandProfileId, name: activeProfile.name, initials: activeProfile.initials, ...brandForm });
   };
 
   const FONT_OPTIONS = ["Sora", "Inter", "Poppins", "Roboto", "Montserrat", "Playfair Display", "Raleway"];
@@ -533,6 +539,8 @@ export default function Settings() {
             {upsertProfile.isPending ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
             Brand beállítások mentése
           </button>
+
+          {activeProfile.id && <BrandRulesSync key={activeProfile.id} profileId={activeProfile.id} cardBg={cardBg} border={border} />}
         </div>
       )}
 

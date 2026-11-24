@@ -1103,3 +1103,28 @@ export const socialHubMemoryMarks = mysqlTable("social_hub_memory_marks", {
 }, (t) => [
   unique("social_hub_memory_marks_post_decision_unique").on(t.postId, t.decision),
 ]);
+
+// ─── Social Hub-márkaprofil (G2, 0028) ───────────────────────────────────────
+// Csak a server/socialHub/brandStore.ts olvassa és írja: a kötelező és tiltott kifejezések,
+// a záradék és a szinkron állapota. A bérlet az adatbázis órájával, ezredmásodpercben fut.
+export const socialHubBrandProfiles = mysqlTable("social_hub_brand_profiles", {
+  profileId: varchar("profileId", { length: 64 }).primaryKey(),
+  requiredPhrases: json("requiredPhrases").$type<string[]>().notNull(),
+  forbiddenPhrases: json("forbiddenPhrases").$type<string[]>().notNull(),
+  requiredDisclaimer: text("requiredDisclaimer"),
+  requestedRev: bigint("requestedRev", { mode: "number" }).notNull(),
+  syncedRev: bigint("syncedRev", { mode: "number" }).notNull(),
+  leaseToken: varchar("leaseToken", { length: 64 }),
+  leaseUntilMs: bigint("leaseUntilMs", { mode: "number" }),
+  // A legutóbbi küldés célja; a küldés ELŐTT rögzül.
+  targetRef: varchar("targetRef", { length: 64 }),
+  targetUrlHash: varchar("targetUrlHash", { length: 64 }),
+  targetClientId: varchar("targetClientId", { length: 64 }),
+  // Ehhez a célhoz ment-e már (vagy mehetett-e) profil.
+  maybeSent: boolean("maybeSent").notNull(),
+  sentHash: varchar("sentHash", { length: 64 }),
+  sentAtMs: bigint("sentAtMs", { mode: "number" }),
+  lastErrorCode: varchar("lastErrorCode", { length: 32 }),
+  lastErrorAtMs: bigint("lastErrorAtMs", { mode: "number" }),
+  lastErrorTarget: varchar("lastErrorTarget", { length: 64 }),
+});

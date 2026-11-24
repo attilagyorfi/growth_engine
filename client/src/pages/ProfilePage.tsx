@@ -88,10 +88,24 @@ export default function ProfilePage() {
   const [editingSocial, setEditingSocial] = useState(false);
   const [socialDraft, setSocialDraft] = useState<SocialAccount[]>(activeProfile.socialAccounts);
 
+  // Profilváltáskor (máshonnan is, pl. a globális választóból) a félkész szerkesztés eldobódik,
+  // és a mentés mindig a megnyitott profilra megy: egyik ügyfél adata sem kerülhet a másikhoz.
+  const [editProfileId, setEditProfileId] = useState(activeProfile.id);
+  if (editProfileId !== activeProfile.id) {
+    setEditProfileId(activeProfile.id);
+    setEditMode(false);
+    setEditData(activeProfile);
+    setEditingSocial(false);
+    setSocialDraft(activeProfile.socialAccounts);
+    setNewKeyword("");
+    setNewPillar({ name: "", description: "", percentage: 25 });
+    setShowDeleteConfirm(false);
+  }
+
   const availablePlatforms = ["linkedin", "facebook", "instagram", "twitter"] as const;
 
   const handleSaveSocial = () => {
-    updateProfile(activeProfile.id, { socialAccounts: socialDraft });
+    updateProfile(editProfileId, { socialAccounts: socialDraft });
     setEditingSocial(false);
     toast.success("Social fiókok mentve!");
   };
@@ -124,7 +138,8 @@ export default function ProfilePage() {
   };
 
   const handleSaveEdit = () => {
-    updateProfile(activeProfile.id, editData);
+    if (editData.id !== editProfileId) return;
+    updateProfile(editProfileId, editData);
     setEditMode(false);
     toast.success("Profil sikeresen mentve!");
   };
