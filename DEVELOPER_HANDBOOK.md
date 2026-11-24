@@ -435,13 +435,34 @@ Működés: a callback a code→token csere után „kiválasztásra vár” sor
 
 **Végpontok** (tRPC, a közös appRouteren, így Vercelen is): `socialHub.connection.get/save/check/disconnect` (superAdminProcedure), `socialHub.available/previewSend/send/repeat` (a profilosak `assertProfileOwnership`-pel). A csapatmeghívók „viewer” szerepe még nem él (a meghívó elfogadása nincs megírva), ezért külön szerkesztői ellenőrzés egyelőre nem kell; ha elkészül, a küldést ahhoz kell kötni.
 
-**Táblák** (`drizzle/0026_social_hub_send.sql`, csak új táblák; csak a `server/socialHub/store.ts` használja): `social_hub_connection` (egyetlen sor), `social_hub_send_attempts` (idempotencia-kulcs, cél ügyfél, pontos törzs), `social_hub_post_deliveries` (poszt + Social Hub-ügyfél szerint egyedi napló: hash, idő, állapot, azonosító). A két `profileId`-s tábla a profiltörlés kaszkádjában is szerepel.
+**Táblák** (`drizzle/0026_social_hub_send.sql`, csak új táblák; a `server/socialHub/store.ts` kezeli, a webhook-fogadó csak olvassa és zárolja): `social_hub_connection` (egyetlen sor), `social_hub_send_attempts` (idempotencia-kulcs, cél ügyfél, pontos törzs), `social_hub_post_deliveries` (poszt + Social Hub-ügyfél szerint egyedi napló: hash, idő, állapot, azonosító). A két `profileId`-s tábla a profiltörlés kaszkádjában is szerepel.
 
 **Tárolóhibák:** minden művelet egy közös burkolón megy át, amely rögzített, rövid hibát dob (`SocialHubStoreError`, SQL, paraméter és eredeti ok nélkül); a naplóba csak a művelet neve és a MySQL-hibakód kerül. Elérhetetlen adatbázisnál nincs env-visszaesés és nincs HTTP. Ha a 0026-os tábla még hiányzik (1146), a kapcsolat az env-ből jön, így a metrika-szinkron él, a küldés pedig hibát ad `POST /drafts` nélkül. A foglalás `INSERT IGNORE` + `SELECT … FOR UPDATE` + feltételes `UPDATE` egy tranzakcióban; a mysql2 `FOUND_ROWS` miatt a beszúrás `affectedRows`-ára nem épít.
 
 **Idempotencia:** a kulcs és a pontos törzs a hívás előtt tárolódik. Bizonytalan eredmény (időtúllépés, hálózati hiba, 5xx, 429, 409, rossz 2xx, 90 mp-nél régebbi „folyamatban”) csak ugyanazzal a kulccsal és törzzsel ismételhető, 23 órán belül; utána csak külön megerősítéssel, új kulccsal. Végleges 4xx után a poszt újra küldhető. Bizonytalan vagy hozzáférési hiba után a többi darab nem indul el, és folytatható. A 100 karakternél hosszabb pillérnév rövidítve megy.
 
 **Párosítás – csak rendszergazda:** a `profiles.setExternalRef` `superAdminProcedure`, a márkák `socialHubExternalRef` mezőjét a `brands.create` / `brands.update` csak `super_admin`-tól fogadja el (a tulajdonos a nevet továbbra is módosíthatja). Ez dönti el, melyik Social Hub-ügyfél adatai jönnek be, és kihez mennek a vázlatok. A korábban (2026-11-24 előtt) tulajdonos által beállított azonosítók megmaradnak, ezeket érdemes egyszer átnézni.
+
+## 11/c. Social Hub webhook-fogadó (G2)
+
+**Állapot:** kész (2026-11-24). Valódi Social Hubbal és valódi adatbázissal még nem futott; a tesztek memóriabeli hamis adatbázison mennek (`server/social-hub-webhook.test.ts`). A szerződés a socialhub repó `ARCHITECTURE.md` „Webhooks” fejezete.
+
+**Bekötés:** a Beállítások → Integrációk → Social Hub kiírja a webhook-címet (`getPublicAppOrigin()` + `/api/social-hub/webhook`); ezt kell a Social Hubban végpontként felvenni, majd az ott egyszer megjelenő `whsec_…` titkot a Beállításokban megadni. Csak rendszergazda (`socialHub.webhook.get/saveSecret/deleteSecret`). A titok `enc:v1:` alakban tárolódik (`JWT_SECRET` nélkül nem menthető), és soha nem megy vissza a kliensre. Bontáskor és az API-cím cseréjekor ugyanabban a tranzakcióban törlődik, puszta kulcscserénél megmarad. Env-es kapcsolatnál is megadható; ha az env-es címet cseréled, a titkot kézzel kell cserélni.
+
+**Fogadó** (`server/socialHub/webhook.ts`, `registerSocialHubWebhook`): a `server/_core/index.ts` és az `api/[...path].ts` is az `express.json` előtt hívja. Nyers törzs (64 KB, tömörítés nélkül, bármely Content-Type). Sorrend: titok (503) → időbélyeg ±300 mp és HMAC-SHA256 állandó idejű összehasonlítással (401) → JSON → fejléc és törzs azonosítójának, típusának egyezése (400) → ismeretlen típus kihagyva (200) → feldolgozás. Feldolgozási hibánál 503, a Social Hub újraküldi. A válaszban és a naplóban nincs törzs, titok, aláírás.
+
+**Feldolgozás** (`webhookStore.ts`): eseményenként egy tranzakció, külső hívás nélkül. Csak a `social_hub_post_deliveries` sora hat (`socialHubClientId` + `socialHubPostId`, és a poszt profilja is egyezik); minden más 2xx, írás nélkül. A döntést megalapozó olvasások `FOR UPDATE`-ek (a TiDB sima SELECT-je pillanatképet ad). Zárolási sorrend: napló-sor (elsődleges kulcs) → poszt → állapot → értesítés; a küldési kísérletet szándékosan nem zároljuk, mert a `finishSent` fordított sorrendben zárol.
+
+**Szabályok:**
+- Állapot (`postState.ts`): csak az események halmazától függ, az érkezési sorrendtől nem. Régebbi nem ír felül újabbat (ezredmásodperc), azonos időnél rangsor; ha a poszt valaha megjelent, a `post.failed` soha nem érvényes.
+- A `content_posts`-ot csak a `post.published` írja (`published` + `publishedAt`, a meglévő `publishedAt` marad). Így a régi ütemező (`status='scheduled'`, feltételes foglalás és visszaállítás) nem küldi ki újra; a `scheduled_posts` sorait semmi nem küldi ki.
+- Értesítés: `post.failed` és `post.changes_requested`, ha az állapot érvényre jutott; posztonként és állapotonként egy olvasatlan, az aktív profilfelhasználóknak.
+- AI-memória: `post.approved` → `approved_pattern`, `post.changes_requested` → `rejected_pattern`, a küldéskori szövegből (sikeres kísérlet törzse, a `sentHash`-sel igazolva; a hash-összetétel a `drafts.ts` `hashDraftContent`-je, nem változhat), legfeljebb 500 karakter. Ha a szöveg nem azonosítható, nem íródik. Ok nincs benne, mert a webhook nem küldi.
+- Jelvény: `socialHub.postStates` (`assertProfileOwnership`), a poszt legutóbb sikeresen küldött változatáé; nem hív Social Hubot, hiányzó táblánál üres.
+
+**Táblák** (`drizzle/0027_social_hub_webhook.sql`, csak új táblák): `social_hub_webhook_secret`, `social_hub_webhook_events`, `social_hub_post_states`, `social_hub_memory_marks`. A három `profileId`-s a profiltörlés kaszkádjában is szerepel.
+
+**Ismert korlátok:** az ismeretlen vagy újraküldéssel felülírt `socialHubPostId` eseményei kimaradnak (2xx). Egyszerre egy titok él, titokcserénél a Social Hub is azonnal az újjal ír alá, ezért a két oldalt egymás után kell átállítani (közben 401, amit a Social Hub kb. 2,5 óráig újraküld). A régi ütemezőn éppen kimenő posztot a `post.published` nem állítja meg. A feldolgozott események sorai nem törlődnek maguktól.
 
 ## 12. GitHub repo
 

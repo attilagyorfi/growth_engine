@@ -44,7 +44,7 @@ function isPublicHttpsUrl(value: string): boolean {
 }
 
 /** Legfeljebb `max` UTF-16 egység, emoji közepén nem vágva. */
-function truncate(value: string, max: number): string {
+export function truncate(value: string, max: number): string {
   if (value.length <= max) return value;
   const cut = value.slice(0, max);
   return /[\uD800-\uDBFF]$/.test(cut) ? cut.slice(0, -1) : cut;
@@ -54,6 +54,16 @@ export type DraftContent = Omit<OutboundDraft, "targets">;
 export type PostContent =
   | { ok: true; content: DraftContent; hash: string; imageDropped: boolean; pillarShortened: boolean }
   | { ok: false };
+
+/**
+ * A tartalom hash-e. Az összetétel nem változhat: a naplózott sentHash-ek ezzel készültek,
+ * eltérésnél minden korábbi küldés „módosítottnak” látszana.
+ */
+export function hashDraftContent(content: DraftContent, platform: string): string {
+  return createHash("sha256")
+    .update(JSON.stringify(["v1", content.text, platform, content.suggested_at ?? null, content.media_urls?.[0] ?? null, content.pillar ?? null]))
+    .digest("hex");
+}
 
 /** A poszt célfiók nélküli tartalma és hash-e (a fiók cseréje nem számít változásnak). */
 export function buildPostContent(
@@ -73,10 +83,7 @@ export function buildPostContent(
     ...(pillar ? { pillar } : {}),
     source: "growth_engine",
   };
-  const hash = createHash("sha256")
-    .update(JSON.stringify(["v1", body, post.platform, suggestedAt, imageOk ? image : null, pillar]))
-    .digest("hex");
-  return { ok: true, content, hash, imageDropped: image !== null && !imageOk, pillarShortened: pillar !== fullPillar };
+  return { ok: true, content, hash: hashDraftContent(content, post.platform), imageDropped: image !== null && !imageOk, pillarShortened: pillar !== fullPillar };
 }
 
 /** Kész vázlat a célfiókkal; null, ha nem felel meg a szerződésnek. */

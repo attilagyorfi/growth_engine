@@ -13,6 +13,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { handleStripeWebhook } from "../stripe/webhook";
+import { registerSocialHubWebhook } from "../socialHub/webhook";
 import { logLlmStartup } from "./llm";
 import { ENV } from "./env";
 import { seedDemoAccount } from "./demoAccount";
@@ -71,6 +72,8 @@ async function startServer() {
 
   // ─── Stripe webhook MUST be registered before express.json() ─────────────
   app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), handleStripeWebhook);
+  // A Social Hub webhookja szintén a nyers törzset írja alá, ezért ez is az express.json() ELŐTT van.
+  registerSocialHubWebhook(app);
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));

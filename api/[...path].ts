@@ -23,6 +23,7 @@ import { registerGoogleOAuthRoutes } from "../server/reports/google/routes.js";
 import { appRouter } from "../server/routers.js";
 import { createContext } from "../server/_core/context.js";
 import { handleStripeWebhook } from "../server/stripe/webhook.js";
+import { registerSocialHubWebhook } from "../server/socialHub/webhook.js";
 
 let appInstance: express.Express | null = null;
 
@@ -33,6 +34,9 @@ function getApp(): express.Express {
   // Stripe webhook MUST be registered before express.json() so the raw body
   // is preserved for signature verification.
   app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), handleStripeWebhook);
+
+  // Social Hub webhook (nyers törzs) — szintén az express.json() ELŐTT.
+  registerSocialHubWebhook(app);
 
   // Standard body parsers with generous limits for file uploads.
   app.use(express.json({ limit: "50mb" }));

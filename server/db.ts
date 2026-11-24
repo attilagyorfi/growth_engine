@@ -180,6 +180,7 @@ export const PROFILE_OWNED_TABLES = [
   "scheduledPosts", "socialProfileCache", "seoAudits", "heygenVideos", "dataConnections",
   "reportMetrics", "reports", "reportSchedules", "teamInvites", "assistantThreads",
   "contentIdeas", "profileBrands", "socialHubSendAttempts", "socialHubPostDeliveries",
+  "socialHubWebhookEvents", "socialHubPostStates", "socialHubMemoryMarks",
 ] as const;
 
 export async function deleteProfile(id: string) {

@@ -41,7 +41,18 @@ export async function resolveSocialHubConfig(deps: ResolveDeps = {}): Promise<So
   return env ? { status: "ok", source: "env", config: { ...env, source: "env" } } : { status: "not_configured" };
 }
 
-/** Titkosítja a kulcsot; null, ha nem lehet (JWT_SECRET nélkül az encryptToken nyers szöveget adna). */
+/** A webhook-titok nyersen; null, ha nincs, nem olvasható vagy nem fejthető vissza (fail-closed). */
+export async function resolveWebhookSecret(): Promise<string | null> {
+  try {
+    const stored = await getSocialHubStore()?.getWebhookSecret();
+    const secret = stored?.secretEnc.startsWith(ENC_PREFIX) ? decryptToken(stored.secretEnc) : null;
+    return secret && !secret.startsWith(ENC_PREFIX) ? secret : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Titkosítja a kulcsot (vagy a webhook-titkot); null, ha nem lehet (JWT_SECRET nélkül az encryptToken nyers szöveget adna). */
 export function encryptApiKey(apiKey: string): string | null {
   if (apiKey.startsWith(ENC_PREFIX)) return null;
   const enc = encryptToken(apiKey);

@@ -1,5 +1,6 @@
 /**
- * A Social Hub-kapcsolat és a küldési napló tárolója (G2, 0026-os táblák).
+ * A Social Hub-kapcsolat, a webhook-titok és a küldési napló tárolója (G2, 0026-os táblák és
+ * a 0027-es titoktábla).
  *
  * Amit garantál:
  *   - claim: EGY tranzakció; poszt + Social Hub-ügyfél szerint egyedi napló-sor, amelyet csak
@@ -10,6 +11,8 @@
  *   - finishSent: a runTokentől független (a késve érkező siker is rögzül), de csak a saját
  *     kísérlet napló-sorait írja.
  *   - finishUnsent: csak a saját runTokennel, és soha nem írja felül a már „sent” állapotot.
+ *   - A webhook-titok a kapcsolattal együtt él: bontáskor és a cím cseréjekor ugyanabban a
+ *     tranzakcióban törlődik. A titoktábla hiánya a kapcsolat kezelését nem akasztja meg.
  *   - Elérhetetlen adatbázisnál minden művelet dob (SocialHubStoreError), hogy ne legyen
  *     env-visszaesés vagy dupla küldés. A hibában nincs SQL, paraméter vagy eredeti ok.
  */
@@ -17,7 +20,7 @@ import { TRPCError } from "@trpc/server";
 import { and, asc, eq, inArray, ne, or, sql, type SQL } from "drizzle-orm";
 import type { MySql2Database } from "drizzle-orm/mysql2";
 import { nanoid } from "nanoid";
-import { socialHubConnection, socialHubPostDeliveries, socialHubSendAttempts } from "../../drizzle/schema";
+import { socialHubConnection, socialHubPostDeliveries, socialHubSendAttempts, socialHubWebhookSecret } from "../../drizzle/schema";
 import { getDb } from "../db";
 
 export type StoredConnection = {
@@ -26,6 +29,8 @@ export type StoredConnection = {
   apiKeyLast4: string;
   updatedAt: Date | null;
 };
+
+export type StoredWebhookSecret = { secretEnc: string; updatedAt: Date };
 
 export type SendAttemptStatus = "sending" | "sent" | "uncertain" | "failed";
 export type DeliveryStatus = SendAttemptStatus | "new";
@@ -75,8 +80,15 @@ export type ClaimInput = Omit<SendAttempt, "body" | "postIds" | "status"> & {
 
 export interface SocialHubStore {
   getConnection(): Promise<StoredConnection | null>;
-  saveConnection(input: { baseUrl: string; apiKeyEnc: string; apiKeyLast4: string; updatedBy: string }): Promise<void>;
+  /** Ha a cím eltér az addig érvényestől (tárolt, ennek hiányában env), a webhook-titok törlődik. */
+  saveConnection(input: {
+    baseUrl: string; apiKeyEnc: string; apiKeyLast4: string; updatedBy: string; envBaseUrl?: string | null;
+  }): Promise<void>;
+  /** A webhook-titkot is törli. */
   deleteConnection(): Promise<void>;
+  getWebhookSecret(): Promise<StoredWebhookSecret | null>;
+  saveWebhookSecret(input: { secretEnc: string; updatedBy: string }): Promise<void>;
+  deleteWebhookSecret(): Promise<void>;
   getDeliveries(socialHubClientId: string, postIds: string[]): Promise<PostDelivery[]>;
   getAttempts(ids: string[]): Promise<SendAttempt[]>;
   /** Csak a valóban lefoglalt posztokból készül kísérlet; ha egy sem, null. */
@@ -108,7 +120,7 @@ function mysqlErrorCode(err: unknown): string | null {
 }
 
 /** Minden művelet közös burkolója: naplóba csak a művelet neve és a hibakód kerül. */
-async function run<T>(operation: string, work: (db: MySql2Database) => Promise<T>, onMissingTable?: () => T): Promise<T> {
+export async function run<T>(operation: string, work: (db: MySql2Database) => Promise<T>, onMissingTable?: () => T): Promise<T> {
   let code: string | null;
   try {
     const db = await getDb();
@@ -124,6 +136,7 @@ async function run<T>(operation: string, work: (db: MySql2Database) => Promise<T
 }
 
 const CONNECTION_ID = "default";
+const SECRET_ID = "default";
 const MAX_ERROR_LENGTH = 255;
 /** A le nem zárt kísérlet állapotai. */
 const OPEN_STATUSES: SendAttemptStatus[] = ["sending", "uncertain"];
@@ -135,6 +148,28 @@ const deliveries = socialHubPostDeliveries;
 const casePostId = (values: { postId: string; value: string }[]): SQL<string> =>
   sql<string>`case ${deliveries.postId} ${sql.join(values.map((v) => sql`when ${v.postId} then ${v.value}`), sql` `)} end`;
 
+export type Tx = Parameters<Parameters<MySql2Database["transaction"]>[0]>[0];
+
+/** A hiányzó titoktábla (a 0027 előtti indulás) nem akasztja meg a kapcsolat mentését és bontását. */
+async function removeSecret(tx: Tx): Promise<void> {
+  try {
+    await tx.delete(socialHubWebhookSecret).where(eq(socialHubWebhookSecret.id, SECRET_ID));
+  } catch (err) {
+    if (mysqlErrorCode(err) !== "ER_NO_SUCH_TABLE") throw err;
+  }
+}
+
+function sameBaseUrl(a: string, b: string): boolean {
+  const normalize = (value: string) => {
+    try {
+      return new URL(value.trim()).toString().replace(/\/+$/, "");
+    } catch {
+      return value;
+    }
+  };
+  return normalize(a) === normalize(b);
+}
+
 const databaseStore: SocialHubStore = {
   // A migráció előtti indulásnál (nincs tábla) az env-kapcsolat él tovább.
   getConnection: () => run<StoredConnection | null>("getConnection", async (db) => {
@@ -142,14 +177,32 @@ const databaseStore: SocialHubStore = {
     return row ? { baseUrl: row.baseUrl, apiKeyEnc: row.apiKeyEnc, apiKeyLast4: row.apiKeyLast4, updatedAt: row.updatedAt } : null;
   }, () => null),
 
-  saveConnection: (input) => run("saveConnection", async (db) => {
+  saveConnection: ({ envBaseUrl, ...input }) => run("saveConnection", (db) => db.transaction(async (tx) => {
     const values = { ...input, updatedAt: new Date() };
-    await db.insert(socialHubConnection).values({ id: CONNECTION_ID, ...values }).onDuplicateKeyUpdate({ set: values });
+    const [current] = await tx.select({ baseUrl: socialHubConnection.baseUrl }).from(socialHubConnection)
+      .where(eq(socialHubConnection.id, CONNECTION_ID)).for("update");
+    await tx.insert(socialHubConnection).values({ id: CONNECTION_ID, ...values }).onDuplicateKeyUpdate({ set: values });
+    const previous = current?.baseUrl ?? envBaseUrl ?? null;
+    if (previous === null || !sameBaseUrl(previous, input.baseUrl)) await removeSecret(tx);
+  })),
+
+  deleteConnection: () => run("deleteConnection", (db) => db.transaction(async (tx) => {
+    await tx.delete(socialHubConnection).where(eq(socialHubConnection.id, CONNECTION_ID));
+    await removeSecret(tx);
+  })),
+
+  getWebhookSecret: () => run<StoredWebhookSecret | null>("getWebhookSecret", async (db) => {
+    const [row] = await db.select({ secretEnc: socialHubWebhookSecret.secretEnc, updatedAt: socialHubWebhookSecret.updatedAt })
+      .from(socialHubWebhookSecret).where(eq(socialHubWebhookSecret.id, SECRET_ID)).limit(1);
+    return row ?? null;
+  }, () => null),
+
+  saveWebhookSecret: (input) => run("saveWebhookSecret", async (db) => {
+    const values = { ...input, updatedAt: new Date() };
+    await db.insert(socialHubWebhookSecret).values({ id: SECRET_ID, ...values }).onDuplicateKeyUpdate({ set: values });
   }),
 
-  deleteConnection: () => run("deleteConnection", async (db) => {
-    await db.delete(socialHubConnection).where(eq(socialHubConnection.id, CONNECTION_ID));
-  }),
+  deleteWebhookSecret: () => run("deleteWebhookSecret", (db) => db.transaction(removeSecret)),
 
   getDeliveries: (socialHubClientId, postIds) => run("getDeliveries", async (db) => {
     if (!postIds.length) return [];
