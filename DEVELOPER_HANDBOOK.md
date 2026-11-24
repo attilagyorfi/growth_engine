@@ -441,7 +441,7 @@ Működés: a callback a code→token csere után „kiválasztásra vár” sor
 
 **Idempotencia:** a kulcs és a pontos törzs a hívás előtt tárolódik. Bizonytalan eredmény (időtúllépés, hálózati hiba, 5xx, 429, 409, rossz 2xx, 90 mp-nél régebbi „folyamatban”) csak ugyanazzal a kulccsal és törzzsel ismételhető, 23 órán belül; utána csak külön megerősítéssel, új kulccsal. Végleges 4xx után a poszt újra küldhető. Bizonytalan vagy hozzáférési hiba után a többi darab nem indul el, és folytatható. A 100 karakternél hosszabb pillérnév rövidítve megy.
 
-**Ismert kockázat:** a `profiles.setExternalRef`-et bármely profiltulajdonos beállíthatja, így egy kitalált, még szabad azonosítóval idegen Social Hub-ügyfélhez is küldhet vázlatot. A küldéssel ez már valós kockázat, nem csak elméleti: a párosítást érdemes mielőbb rendszergazdához kötni.
+**Párosítás – csak rendszergazda:** a `profiles.setExternalRef` `superAdminProcedure`, a márkák `socialHubExternalRef` mezőjét a `brands.create` / `brands.update` csak `super_admin`-tól fogadja el (a tulajdonos a nevet továbbra is módosíthatja). Ez dönti el, melyik Social Hub-ügyfél adatai jönnek be, és kihez mennek a vázlatok. A korábban (2026-11-24 előtt) tulajdonos által beállított azonosítók megmaradnak, ezeket érdemes egyszer átnézni.
 
 ## 12. GitHub repo
 

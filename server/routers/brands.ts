@@ -6,6 +6,9 @@
  * socialHubExternalRef párosít (ugyanaz a validáció, mint a profil external_ref-jénél,
  * és nem ütközhet sem másik márkáéval, sem bármely profiléval).
  *
+ * A socialHubExternalRef-et csak rendszergazda adhatja meg, módosíthatja vagy törölheti
+ * (az dönti el, melyik Social Hub-ügyfélhez mennek a vázlatok); a nevet a tulajdonos is.
+ *
  * Mindenhol assertProfileOwnership; a márkára mindig profileId + brandId párral
  * hivatkozunk, így más profil márkája NOT_FOUND.
  */
@@ -21,7 +24,7 @@ import {
   deleteProfileBrand,
   type BrandWriteResult,
 } from "../db";
-import { externalRefInput, EXTERNAL_REF_TAKEN_MESSAGE } from "../socialHub/externalRef";
+import { externalRefInput, EXTERNAL_REF_ADMIN_ONLY_MESSAGE, EXTERNAL_REF_TAKEN_MESSAGE } from "../socialHub/externalRef";
 
 export const BRAND_NOT_FOUND_MESSAGE = "A márka nem található.";
 export const BRAND_NAME_TAKEN_MESSAGE = "Ilyen nevű márka már van ennél az ügyfélnél. Adj meg másikat.";
@@ -51,6 +54,12 @@ function unwrapBrandWrite(result: BrandWriteResult) {
   throw new TRPCError({ code: "NOT_FOUND", message: BRAND_NOT_FOUND_MESSAGE });
 }
 
+/** A párosítás változna-e; ha igen, csak rendszergazdának engedett. */
+function assertCanChangeRef(role: string, current: string | null, next: string | null | undefined) {
+  if (next === undefined || next === current || role === "super_admin") return;
+  throw new TRPCError({ code: "FORBIDDEN", message: EXTERNAL_REF_ADMIN_ONLY_MESSAGE });
+}
+
 export const brandsRouter = router({
   list: appUserProcedure
     .input(z.object({ profileId: z.string() }))
@@ -67,6 +76,7 @@ export const brandsRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      assertCanChangeRef(ctx.appUser.role, null, input.socialHubExternalRef);
       return unwrapBrandWrite(await createProfileBrand(input.profileId, {
         name: input.name,
         socialHubExternalRef: input.socialHubExternalRef ?? null,
@@ -83,7 +93,8 @@ export const brandsRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
-      await assertBrandInProfile(input.profileId, input.brandId);
+      const brand = await assertBrandInProfile(input.profileId, input.brandId);
+      assertCanChangeRef(ctx.appUser.role, brand.socialHubExternalRef, input.socialHubExternalRef);
       const patch: { name?: string; socialHubExternalRef?: string | null } = {};
       if (input.name !== undefined) patch.name = input.name;
       if (input.socialHubExternalRef !== undefined) patch.socialHubExternalRef = input.socialHubExternalRef;

@@ -85,7 +85,7 @@ Függés: a Social Hub F1 (`GET /metrics`) kész.
 
 Függés: a Social Hub F1 (LinkedIn és `/api/v1`) kész és legalább egy hónapja élesben fut.
 
-- [x] Social Hub kapcsolat a Beállításokban, `external_ref` párosítás (2026-11-24: Beállítások → Integrációk → Social Hub, csak rendszergazdának: mentés, ellenőrzés, bontás; a kulcs titkosítva, SSRF-védelem; tárolt kapcsolat > env > fail-closed, a metrika-szinkronnal közös feloldóval; `social_hub_connection` (0026). Nyitott kockázat: az `external_ref`-et a profil tulajdonosa maga állíthatja)
+- [x] Social Hub kapcsolat a Beállításokban, `external_ref` párosítás (2026-11-24: Beállítások → Integrációk → Social Hub, csak rendszergazdának: mentés, ellenőrzés, bontás; a kulcs titkosítva, SSRF-védelem; tárolt kapcsolat > env > fail-closed, a metrika-szinkronnal közös feloldóval; `social_hub_connection` (0026). A párosítást – profilon és márkán is – csak rendszergazda módosíthatja)
 - [x] „Küldés a Social Hubba” (egy poszt / teljes hónap), a „Közzétesz most” és az ütemezés helyett (2026-11-24: Content Studio, megerősítő ablakkal, vázlatként; küldési napló és idempotens kísérletek a `social_hub_send_attempts` és `social_hub_post_deliveries` táblában (0026). A „Közzétesz most” és az ütemezés egyelőre marad)
 - [ ] Webhook-fogadó, állapotfrissítés, AI-memória táplálása a jóváhagyási döntésekből
 - [ ] Márkaprofil-szinkron (`PUT /brand-profile`) mentéskor

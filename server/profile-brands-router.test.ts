@@ -34,7 +34,7 @@ import * as db from "./db";
 import { generateReportSummary, buildReportSummaryPrompt } from "./ai/reportSummary";
 import { appRouter } from "./routers";
 import { BRAND_HAS_CONNECTIONS_MESSAGE, BRAND_NAME_TAKEN_MESSAGE } from "./routers/brands";
-import { EXTERNAL_REF_TAKEN_MESSAGE } from "./socialHub/externalRef";
+import { EXTERNAL_REF_ADMIN_ONLY_MESSAGE, EXTERNAL_REF_TAKEN_MESSAGE } from "./socialHub/externalRef";
 import { loadExportableReport, reportTitle } from "./routers/reports";
 import { buildReportDocx } from "./reports/docx";
 import { buildReportPdfWithLayout } from "./reports/pdf";
@@ -48,6 +48,8 @@ const appUser = {
   onboardingCompleted: true, profileId: "profile-a", active: true, createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(),
 } as NonNullable<TrpcContext["appUser"]>;
 const caller = () => appRouter.createCaller({ appUser, req: {} as any, res: {} as any } as unknown as TrpcContext);
+
+const admin = () => appRouter.createCaller({ appUser: { ...appUser, role: "super_admin" }, req: {} as any, res: {} as any } as unknown as TrpcContext);
 
 const PROFILES: Record<string, any> = {
   "profile-a": { id: "profile-a", appUserId: "user-a", name: "Ste-Ba", industry: null, brandVoice: null },
@@ -112,15 +114,53 @@ describe("márkák kezelése – hibák tegező üzenettel", () => {
   });
 
   it("Social Hub-azonosító: a profiléval azonos validáció, ütközésnél CONFLICT; foglalt név: CONFLICT", async () => {
-    await expect(caller().brands.create({ profileId: "profile-a", name: "Chery", socialHubExternalRef: "rossz azonosító" }))
+    await expect(admin().brands.create({ profileId: "profile-a", name: "Chery", socialHubExternalRef: "rossz azonosító" }))
       .rejects.toThrow(/csak kisbetű, szám és kötőjel/);
     vi.mocked(db.createProfileBrand).mockResolvedValueOnce({ ok: false, reason: "ref_taken" });
-    const taken = await caller().brands.create({ profileId: "profile-a", name: "Chery", socialHubExternalRef: " STEBA-Chery " }).catch((e) => e);
+    const taken = await admin().brands.create({ profileId: "profile-a", name: "Chery", socialHubExternalRef: " STEBA-Chery " }).catch((e) => e);
     expect(db.createProfileBrand).toHaveBeenLastCalledWith("profile-a", { name: "Chery", socialHubExternalRef: "steba-chery" });
     expect(taken).toMatchObject({ code: "CONFLICT", message: EXTERNAL_REF_TAKEN_MESSAGE });
     vi.mocked(db.createProfileBrand).mockResolvedValueOnce({ ok: false, reason: "name_taken" });
     await expect(caller().brands.create({ profileId: "profile-a", name: "Nissan" })).rejects.toMatchObject({ code: "CONFLICT", message: BRAND_NAME_TAKEN_MESSAGE });
     await expect(caller().brands.create({ profileId: "profile-a", name: "   " })).rejects.toThrow(/Adj nevet a márkának/);
+  });
+});
+
+describe("Social Hub-azonosító – csak rendszergazda", () => {
+  const PAIRED = { ...NISSAN, socialHubExternalRef: "steba-nissan" };
+  const forbidden = { code: "FORBIDDEN", message: EXTERNAL_REF_ADMIN_ONLY_MESSAGE };
+
+  it("a tulajdonos nem adhat meg, nem írhat át és nem törölhet azonosítót", async () => {
+    vi.mocked(db.getProfileBrand).mockResolvedValue(PAIRED as any);
+    const c = caller();
+    await expect(c.brands.create({ profileId: "profile-a", name: "Chery", socialHubExternalRef: "mmi" })).rejects.toMatchObject(forbidden);
+    for (const socialHubExternalRef of ["mmi", "", null]) {
+      await expect(c.brands.update({ profileId: "profile-a", brandId: NISSAN.id, name: "Új", socialHubExternalRef })).rejects.toMatchObject(forbidden);
+    }
+    expect(db.createProfileBrand).not.toHaveBeenCalled();
+    expect(db.updateProfileBrand).not.toHaveBeenCalled();
+  });
+
+  it("a tulajdonos nevet továbbra is adhat és módosíthat (változatlan azonosítóval is)", async () => {
+    vi.mocked(db.getProfileBrand).mockResolvedValue(PAIRED as any);
+    vi.mocked(db.createProfileBrand).mockResolvedValue({ ok: true, brand: NISSAN } as any);
+    vi.mocked(db.updateProfileBrand).mockResolvedValue({ ok: true, brand: PAIRED } as any);
+    const c = caller();
+    await c.brands.create({ profileId: "profile-a", name: "Chery" });
+    await c.brands.create({ profileId: "profile-a", name: "Chery", socialHubExternalRef: "" });
+    await c.brands.update({ profileId: "profile-a", brandId: NISSAN.id, name: "Új" });
+    expect(db.updateProfileBrand).toHaveBeenLastCalledWith("profile-a", NISSAN.id, { name: "Új" });
+    await c.brands.update({ profileId: "profile-a", brandId: NISSAN.id, name: "Új", socialHubExternalRef: "steba-nissan" });
+    expect(db.updateProfileBrand).toHaveBeenCalledTimes(2);
+  });
+
+  it("a rendszergazda átírhatja és törölheti", async () => {
+    vi.mocked(db.getProfileBrand).mockResolvedValue(PAIRED as any);
+    vi.mocked(db.updateProfileBrand).mockResolvedValue({ ok: true, brand: PAIRED } as any);
+    await admin().brands.update({ profileId: "profile-a", brandId: NISSAN.id, socialHubExternalRef: "steba-uj" });
+    expect(db.updateProfileBrand).toHaveBeenLastCalledWith("profile-a", NISSAN.id, { socialHubExternalRef: "steba-uj" });
+    await admin().brands.update({ profileId: "profile-a", brandId: NISSAN.id, socialHubExternalRef: "" });
+    expect(db.updateProfileBrand).toHaveBeenLastCalledWith("profile-a", NISSAN.id, { socialHubExternalRef: null });
   });
 });
 

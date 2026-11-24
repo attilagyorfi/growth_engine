@@ -228,7 +228,9 @@ export const appRouter = router({
 
     // Social Hub-párosítás (G1): a profil external_ref-je. Üres → NULL (törlés).
     // Ütközésnél általános üzenet: nem áruljuk el, melyik profilé az érték.
-    setExternalRef: appUserProcedure
+    // Csak rendszergazdának: az azonosító dönti el, melyik Social Hub-ügyfél adatai jönnek
+    // ide, és kihez mennek a vázlatok, ezért a profil tulajdonosa nem írhatja át.
+    setExternalRef: superAdminProcedure
       .input(z.object({ id: z.string(), externalRef: externalRefInput }))
       .mutation(async ({ input, ctx }) => {
         await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.id, ctx.appUser.profileId);
