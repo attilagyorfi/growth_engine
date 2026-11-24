@@ -175,7 +175,8 @@ describe("router: jogosultság és kulcsvédelem", () => {
     await expect(caller("user").socialHub.send({ ...base, targetId: "brand-b" })).rejects.toMatchObject({ code: "NOT_FOUND" });
     expect(fetchMock).not.toHaveBeenCalled();
   });
-  it("tároló nélkül (nincs migráció) a küldés és a mentés nem érhető el", async () => {
+  it("tároló nélkül a küldés és a mentés nem érhető el, env-kapcsolattal sem", async () => {
+    vi.stubEnv("SOCIAL_HUB_API_URL", "https://env.test/v1"); vi.stubEnv("SOCIAL_HUB_API_KEY", KEY);
     expect(await caller("user").socialHub.available()).toEqual({ available: false });
     await expect(caller("super_admin").socialHub.connection.save({ baseUrl: "https://hub.test", apiKey: KEY })).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
   });

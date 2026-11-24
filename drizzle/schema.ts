@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, json, double, date, index, unique } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, json, double, date, index, unique, mediumtext } from "drizzle-orm/mysql-core";
 
 // ─── Client Profiles ─────────────────────────────────────────────────────────
 
@@ -1011,3 +1011,51 @@ export const contentIdeas = mysqlTable("content_ideas", {
 });
 export type ContentIdea = typeof contentIdeas.$inferSelect;
 export type InsertContentIdea = typeof contentIdeas.$inferInsert;
+
+// ─── Social Hub-kapcsolat és vázlatküldés (G2, 0026) ─────────────────────────
+// Csak a server/socialHub/store.ts olvassa és írja. Az időket a kód adja (nincs
+// automatikus frissítés): a firstTriedAt-re épül az ismétlési ablak.
+
+// A kapcsolat egyetlen sora (fix id); a kulcs csak enc:v1: alakban.
+export const socialHubConnection = mysqlTable("social_hub_connection", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  baseUrl: varchar("baseUrl", { length: 500 }).notNull(),
+  apiKeyEnc: text("apiKeyEnc").notNull(),
+  apiKeyLast4: varchar("apiKeyLast4", { length: 4 }).notNull(),
+  updatedBy: varchar("updatedBy", { length: 64 }).notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+// Egy küldési kísérlet: a kulcs és a pontos kimenő törzs a hívás előtt tárolódik.
+export const socialHubSendAttempts = mysqlTable("social_hub_send_attempts", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  profileId: varchar("profileId", { length: 64 }).notNull(),
+  socialHubClientId: varchar("socialHubClientId", { length: 64 }).notNull(),
+  baseUrlHash: varchar("baseUrlHash", { length: 64 }).notNull(),
+  idempotencyKey: varchar("idempotencyKey", { length: 128 }).notNull().unique(),
+  body: mediumtext("body").notNull(),
+  postIds: json("postIds").$type<string[]>().notNull(),
+  status: varchar("status", { length: 20 }).notNull(),
+  runToken: varchar("runToken", { length: 64 }).notNull(),
+  firstTriedAt: timestamp("firstTriedAt").defaultNow().notNull(),
+  lastTriedAt: timestamp("lastTriedAt").defaultNow().notNull(),
+  lastError: varchar("lastError", { length: 255 }),
+  createdBy: varchar("createdBy", { length: 64 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+// Poszt + Social Hub-ügyfél szerint egyedi napló: mi ment át, mikor, milyen tartalommal.
+export const socialHubPostDeliveries = mysqlTable("social_hub_post_deliveries", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  profileId: varchar("profileId", { length: 64 }).notNull(),
+  postId: varchar("postId", { length: 64 }).notNull(),
+  socialHubClientId: varchar("socialHubClientId", { length: 64 }).notNull(),
+  status: varchar("status", { length: 20 }).notNull(),
+  attemptId: varchar("attemptId", { length: 64 }),
+  contentHash: varchar("contentHash", { length: 64 }),
+  sentHash: varchar("sentHash", { length: 64 }),
+  socialHubPostId: varchar("socialHubPostId", { length: 64 }),
+  sentAt: timestamp("sentAt"),
+}, (t) => [
+  unique("social_hub_post_deliveries_post_client_unique").on(t.postId, t.socialHubClientId),
+]);

@@ -427,19 +427,21 @@ Működés: a callback a code→token csere után „kiválasztásra vár” sor
 
 ## 11/b. Social Hub-kapcsolat és vázlatküldés (G2)
 
-**Állapot:** a kód és a felület kész, de a tároláshoz új táblák kellenek (0026-os migráció, jóváhagyásra vár). Addig a `getSocialHubStore()` `null`: a kapcsolat az env-ből jön, a mentés és a küldés nem érhető el, a felület nem mutatja.
+**Állapot:** kész (2026-11-24). A Content Studióból egy poszt vagy egy naptári hónap vázlatként átküldhető a Social Hubba. A „Közzétesz most”, az ütemezés és a közösségi OAuth változatlanul megmarad. A gomb akkor látszik, ha van tároló (`DATABASE_URL`), és a kapcsolat nem hiányzik teljesen (`socialHub.available`). A Beállítások → Integrációk → Social Hub részt csak rendszergazda látja. A tároló a tesztekben hamis adatbázis-kapcsolaton fut, valódi adatbázis ellen még nem futott.
 
 **Feloldási sorrend** (`server/socialHub/config.ts`, `resolveSocialHubConfig` – a metrika-szinkron, a párosítás és a küldés közös feloldója): tárolt kapcsolat > `SOCIAL_HUB_API_URL` / `SOCIAL_HUB_API_KEY` > fail-closed. Olvasási hibánál vagy visszafejthetetlen kulcsnál hiba, nincs env-visszaesés. A kulcs csak `enc:v1:` alakban tárolható, `JWT_SECRET` nélkül a mentés hibát ad.
 
 **SSRF** (`urlGuard.ts`): csak https, hitelesítő adat nélkül, nyilvános címre; mentéskor és a tárolt címre menő minden kérés előtt, DNS után is. Localhost csak `NODE_ENV=development` mellett. Átirányítást a kliens nem követ. Maradék kockázat: DNS-átkötés az ellenőrzés és a kapcsolódás között.
 
-**Végpontok** (tRPC, a közös appRouteren, így Vercelen is): `socialHub.connection.get/save/check/disconnect` (superAdminProcedure), `socialHub.available/previewSend/send/repeat` (a profilosak `assertProfileOwnership`-pel).
+**Végpontok** (tRPC, a közös appRouteren, így Vercelen is): `socialHub.connection.get/save/check/disconnect` (superAdminProcedure), `socialHub.available/previewSend/send/repeat` (a profilosak `assertProfileOwnership`-pel). A csapatmeghívók „viewer” szerepe még nem él (a meghívó elfogadása nincs megírva), ezért külön szerkesztői ellenőrzés egyelőre nem kell; ha elkészül, a küldést ahhoz kell kötni.
 
-**Tárolók** (szerződés: `store.ts`; tervezett táblák): `social_hub_connection` (egy sor), `social_hub_send_attempts` (kulcs, cél ügyfél, pontos törzs), `social_hub_post_deliveries` (poszt + Social Hub-ügyfél szerint egyedi napló: hash, idő, állapot, azonosító).
+**Táblák** (`drizzle/0026_social_hub_send.sql`, csak új táblák; csak a `server/socialHub/store.ts` használja): `social_hub_connection` (egyetlen sor), `social_hub_send_attempts` (idempotencia-kulcs, cél ügyfél, pontos törzs), `social_hub_post_deliveries` (poszt + Social Hub-ügyfél szerint egyedi napló: hash, idő, állapot, azonosító). A két `profileId`-s tábla a profiltörlés kaszkádjában is szerepel.
+
+**Tárolóhibák:** minden művelet egy közös burkolón megy át, amely rögzített, rövid hibát dob (`SocialHubStoreError`, SQL, paraméter és eredeti ok nélkül); a naplóba csak a művelet neve és a MySQL-hibakód kerül. Elérhetetlen adatbázisnál nincs env-visszaesés és nincs HTTP. Ha a 0026-os tábla még hiányzik (1146), a kapcsolat az env-ből jön, így a metrika-szinkron él, a küldés pedig hibát ad `POST /drafts` nélkül. A foglalás `INSERT IGNORE` + `SELECT … FOR UPDATE` + feltételes `UPDATE` egy tranzakcióban; a mysql2 `FOUND_ROWS` miatt a beszúrás `affectedRows`-ára nem épít.
 
 **Idempotencia:** a kulcs és a pontos törzs a hívás előtt tárolódik. Bizonytalan eredmény (időtúllépés, hálózati hiba, 5xx, 429, 409, rossz 2xx, 90 mp-nél régebbi „folyamatban”) csak ugyanazzal a kulccsal és törzzsel ismételhető, 23 órán belül; utána csak külön megerősítéssel, új kulccsal. Végleges 4xx után a poszt újra küldhető. Bizonytalan vagy hozzáférési hiba után a többi darab nem indul el, és folytatható. A 100 karakternél hosszabb pillérnév rövidítve megy.
 
-**Ismert kockázat:** a `profiles.setExternalRef`-et bármely profiltulajdonos beállíthatja, így egy kitalált, még szabad azonosítóval idegen Social Hub-ügyfélhez is küldhet vázlatot. A küldés élesítése előtt érdemes rendszergazdához kötni.
+**Ismert kockázat:** a `profiles.setExternalRef`-et bármely profiltulajdonos beállíthatja, így egy kitalált, még szabad azonosítóval idegen Social Hub-ügyfélhez is küldhet vázlatot. A küldéssel ez már valós kockázat, nem csak elméleti: a párosítást érdemes mielőbb rendszergazdához kötni.
 
 ## 12. GitHub repo
 

@@ -60,8 +60,13 @@ const id = z.string().min(1).max(64);
 const accountChoices = z.record(z.string().max(32), z.string().max(64));
 
 export const socialHubRouter = router({
-  /** Elérhető-e a küldés (van-e tároló) — a felület e szerint mutatja a gombokat. */
-  available: appUserProcedure.query(() => ({ available: getSocialHubStore() !== null })),
+  /**
+   * Mutassa-e a felület a küldés gombjait: van tároló, és a kapcsolat nem hiányzik teljesen.
+   * Olvashatatlan kapcsolatnál is igaz: az okot a küldő ablak írja ki.
+   */
+  available: appUserProcedure.query(async () => ({
+    available: getSocialHubStore() !== null && (await resolveSocialHubConfig()).status !== "not_configured",
+  })),
 
   connection: router({
     get: superAdminProcedure.query(async () => {
