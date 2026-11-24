@@ -12,6 +12,7 @@ import { seoRouter } from "./routers/seo";
 import { newsletterRouter } from "./routers/newsletter";
 import { reportsRouter } from "./routers/reports";
 import { brandsRouter } from "./routers/brands";
+import { socialHubRouter } from "./routers/socialHub";
 import { teamRouter } from "./routers/team";
 import { assistantRouter } from "./routers/assistant";
 import { ideasRouter } from "./routers/ideas";
@@ -227,7 +228,9 @@ export const appRouter = router({
 
     // Social Hub-párosítás (G1): a profil external_ref-je. Üres → NULL (törlés).
     // Ütközésnél általános üzenet: nem áruljuk el, melyik profilé az érték.
-    setExternalRef: appUserProcedure
+    // Csak rendszergazdának: az azonosító dönti el, melyik Social Hub-ügyfél adatai jönnek
+    // ide, és kihez mennek a vázlatok, ezért a profil tulajdonosa nem írhatja át.
+    setExternalRef: superAdminProcedure
       .input(z.object({ id: z.string(), externalRef: externalRefInput }))
       .mutation(async ({ input, ctx }) => {
         await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.id, ctx.appUser.profileId);
@@ -1189,6 +1192,7 @@ export const appRouter = router({
   // ─── Riportgenerátor (Google Ads / GA4 / Search Console / Meta Ads) ─────
   reports: reportsRouter,
   brands: brandsRouter,
+  socialHub: socialHubRouter,
 
   // ─── HeyGen Videókészítő ──────────────────────────────────────────────────────────────────────
   heygen: heygenRouter,

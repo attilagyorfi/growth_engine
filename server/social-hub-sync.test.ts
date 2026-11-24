@@ -50,9 +50,9 @@ import type { TrpcContext } from "./_core/context";
 
 const API_KEY = "sh_live_SECRET-sync-key";
 
-function caller(profileId = "profile-a") {
+function caller(profileId = "profile-a", role: "user" | "super_admin" = "user") {
   const appUser = {
-    id: "user-a", email: "a@example.com", name: "A", role: "user", subscriptionPlan: "free",
+    id: "user-a", email: "a@example.com", name: "A", role, subscriptionPlan: "free",
     onboardingCompleted: true, profileId, active: true, createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(),
   } as NonNullable<TrpcContext["appUser"]>;
   return appRouter.createCaller({ appUser, req: {} as any, res: {} as any } as unknown as TrpcContext);
@@ -183,13 +183,21 @@ describe("reports.sync – közösségi ág", () => {
 });
 
 describe("profiles.setExternalRef", () => {
+  const admin = () => caller("profile-a", "super_admin");
   beforeEach(() => vi.mocked(db.setProfileExternalRef).mockClear());
 
+  it("a profil tulajdonosa nem állíthatja és nem törölheti, csak rendszergazda", async () => {
+    for (const externalRef of ["mmi", "", null]) {
+      await expect(caller().profiles.setExternalRef({ id: "profile-a", externalRef })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    }
+    expect(db.setProfileExternalRef).not.toHaveBeenCalled();
+  });
+
   it("trimel és kisbetűsít; az üres érték NULL-ként mentődik", async () => {
-    await caller().profiles.setExternalRef({ id: "profile-a", externalRef: "  VIBA-Team " });
+    await admin().profiles.setExternalRef({ id: "profile-a", externalRef: "  VIBA-Team " });
     expect(db.setProfileExternalRef).toHaveBeenLastCalledWith("profile-a", "viba-team");
     for (const empty of ["", "   ", null]) {
-      const res = await caller().profiles.setExternalRef({ id: "profile-a", externalRef: empty });
+      const res = await admin().profiles.setExternalRef({ id: "profile-a", externalRef: empty });
       expect(res).toEqual({ externalRef: null });
       expect(db.setProfileExternalRef).toHaveBeenLastCalledWith("profile-a", null);
     }
@@ -197,14 +205,14 @@ describe("profiles.setExternalRef", () => {
 
   it("formátumhibánál magyar üzenet, mentés nélkül", async () => {
     for (const bad of ["viba team", "ügyfél", "a".repeat(65), "x/../y"]) {
-      await expect(caller().profiles.setExternalRef({ id: "profile-a", externalRef: bad })).rejects.toThrow(/csak kisbetű, szám és kötőjel/);
+      await expect(admin().profiles.setExternalRef({ id: "profile-a", externalRef: bad })).rejects.toThrow(/csak kisbetű, szám és kötőjel/);
     }
     expect(db.setProfileExternalRef).not.toHaveBeenCalled();
   });
 
   it("ütközésnél CONFLICT, általános tegező üzenet, ami nem fedi fel a másik profilt", async () => {
     vi.mocked(db.setProfileExternalRef).mockResolvedValueOnce({ ok: false, reason: "taken" });
-    const err = await caller().profiles.setExternalRef({ id: "profile-a", externalRef: "mmi" }).catch((e) => e);
+    const err = await admin().profiles.setExternalRef({ id: "profile-a", externalRef: "mmi" }).catch((e) => e);
     expect(err.code).toBe("CONFLICT");
     expect(err.message).toBe(EXTERNAL_REF_TAKEN_MESSAGE);
     expect(err.message).not.toMatch(/profile-|mmi/);

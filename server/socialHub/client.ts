@@ -10,18 +10,28 @@
  *       posts: [{ post_id, target_id, provider, captured_at, metrics }] }
  *     (getClientMetrics; a tartomány legfeljebb 92 nap, mindkét végét beleszámítva)
  *
- * Konfiguráció env-ből: SOCIAL_HUB_API_URL (pl. https://…/api/v1), SOCIAL_HUB_API_KEY
- * (Authorization: Bearer). Bármelyik hiányában a kliens nem jön létre (fail-closed).
+ *   - POST /clients/{id}/drafts (Idempotency-Key) → 201 { data: [{ id, ... }] }
+ *     (createApiDrafts; a köteg atomi, a válasz a vázlatok sorrendjében)
+ *
+ * Konfiguráció: server/socialHub/config.ts resolveSocialHubConfig (tárolt kapcsolat, ennek
+ * hiányában env: SOCIAL_HUB_API_URL, SOCIAL_HUB_API_KEY; egyik sem → fail-closed).
  *
  * Biztonság: a kulcs CSAK az Authorization fejlécben szerepel. Naplóba és a hívónak
  * visszaadott hibába csak a végpont-sablon, a HTTP-státusz és rövid ok kerül —
- * soha a kulcs, a fejlécek vagy a teljes URL.
+ * soha a kulcs, a fejlécek vagy a teljes URL. Átirányítást nem követünk (a Bearer-fejléc
+ * nem mehet más hosztra), a tárolt címet minden kérés előtt újraellenőrizzük (SSRF).
  */
 import { z } from "zod";
+import { assertSocialHubUrl, type SocialHubLookup } from "./urlGuard";
 
-export type SocialHubConfig = { baseUrl: string; apiKey: string };
+export type SocialHubConfig = {
+  baseUrl: string;
+  apiKey: string;
+  /** "stored" esetén minden kérés előtt fut a cím (DNS is) ellenőrzése. */
+  source?: "stored" | "env";
+};
 
-/** Env-ből olvasott konfiguráció; ha bármelyik érték hiányzik, null (fail-closed). */
+/** A feloldó belső lépése: env-ből olvasott konfiguráció; ha bármelyik érték hiányzik, null. */
 export function getSocialHubConfig(env: Record<string, string | undefined> = process.env): SocialHubConfig | null {
   const baseUrl = (env.SOCIAL_HUB_API_URL ?? "").trim().replace(/\/+$/, "");
   const apiKey = (env.SOCIAL_HUB_API_KEY ?? "").trim();
@@ -66,12 +76,14 @@ const metricsResponseSchema = z.object({
   })).default([]),
 });
 
+const draftsResponseSchema = z.object({ data: z.array(z.object({ id: z.string().min(1).max(64) })) });
+
 export type SocialHubClient = z.infer<typeof clientsResponseSchema>["data"][number];
 export type SocialHubMetricsResponse = z.infer<typeof metricsResponseSchema>;
 
 // ─── Hibák ───────────────────────────────────────────────────────────────────
 
-export type SocialHubErrorKind = "timeout" | "http" | "network" | "invalid_response";
+export type SocialHubErrorKind = "timeout" | "http" | "network" | "invalid_response" | "blocked";
 
 /** A hívónak és a naplónak szánt hiba: csak végpont-sablon, státusz és rövid ok. */
 export class SocialHubError extends Error {
@@ -79,11 +91,16 @@ export class SocialHubError extends Error {
     readonly kind: SocialHubErrorKind,
     readonly endpoint: string,
     readonly status: number | null = null,
+    /** A Social Hub hibakódja (pl. ACCOUNT_NOT_CONNECTED), csak POST-nál. */
+    readonly code: string | null = null,
+    /** Ugyanebben a hívásban volt korábbi 5xx: a kérés hatása nem zárható ki. */
+    readonly ambiguous = false,
   ) {
     super(
       kind === "http" ? `Social Hub ${endpoint}: HTTP ${status}`
         : kind === "timeout" ? `Social Hub ${endpoint}: időtúllépés`
         : kind === "network" ? `Social Hub ${endpoint}: hálózati hiba`
+        : kind === "blocked" ? `Social Hub ${endpoint}: nem engedélyezett cím`
         : `Social Hub ${endpoint}: érvénytelen válasz`,
     );
     this.name = "SocialHubError";
@@ -132,14 +149,31 @@ export type SocialHubClientOptions = {
   maxRetries?: number;
   /** Egy várakozás felső korlátja (ms), a Retry-After-re is. */
   maxRetryDelayMs?: number;
+  /** DNS-feloldás a tárolt cím ellenőrzéséhez — teszt injektálja. */
+  lookup?: SocialHubLookup;
+  /** Az összes kérés közös határideje (epoch ms); ezen túl nincs várakozás és újrapróbálás. */
+  deadlineAt?: number;
 };
 
 const DEFAULTS = { timeoutMs: 15_000, maxRetries: 2, maxRetryDelayMs: 10_000 };
 const BASE_BACKOFF_MS = 500;
+/** Határidős hívásnál ennyi időnek kell maradnia egy újrapróbálásra a várakozás után. */
+const MIN_RETRY_WINDOW_MS = 5_000;
 
 const defaultSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 const isRetryable = (status: number) => status === 429 || status >= 500;
+
+/** A Social Hub hibakódja a hibatörzsből ({ error: { code } }); csak biztonságos alakú kód. */
+async function readErrorCode(res: Response): Promise<string | null> {
+  try {
+    const body = (await res.json()) as { error?: { code?: unknown } | null; code?: unknown } | null;
+    const code = body?.error?.code ?? body?.code;
+    return typeof code === "string" && /^[A-Z][A-Z0-9_]{0,63}$/.test(code) ? code : null;
+  } catch {
+    return null;
+  }
+}
 
 /** Retry-After (másodperc vagy HTTP-dátum) → ms; ismeretlennél null. */
 export function parseRetryAfter(header: string | null, now = Date.now()): number | null {
@@ -150,6 +184,12 @@ export function parseRetryAfter(header: string | null, now = Date.now()): number
   return Number.isNaN(date) ? null : Math.max(0, date - now);
 }
 
+/** Az external_ref-fel párosított Social Hub-ügyfél (metrika-szinkron és küldés közös logikája). */
+export function findClientByExternalRef(clients: SocialHubClient[], externalRef: string | null | undefined): SocialHubClient | undefined {
+  const ref = externalRef?.trim();
+  return ref ? clients.find((c) => c.external_ref === ref) : undefined;
+}
+
 export function createSocialHubClient(config: SocialHubConfig, options: SocialHubClientOptions = {}) {
   const doFetch = options.fetch ?? fetch;
   const sleep = options.sleep ?? defaultSleep;
@@ -157,41 +197,68 @@ export function createSocialHubClient(config: SocialHubConfig, options: SocialHu
   const maxRetries = options.maxRetries ?? DEFAULTS.maxRetries;
   const maxRetryDelayMs = options.maxRetryDelayMs ?? DEFAULTS.maxRetryDelayMs;
 
+  const remainingMs = () => (options.deadlineAt === undefined ? Infinity : options.deadlineAt - Date.now());
+
   /** `endpoint` a naplózható sablon (pl. "/clients/{id}/metrics"); `path` a valódi útvonal. */
-  async function getJson(endpoint: string, path: string): Promise<unknown> {
+  async function requestJson(
+    endpoint: string,
+    path: string,
+    post?: { idempotencyKey: string; body: string },
+  ): Promise<unknown> {
+    let ambiguous = false;
     for (let attempt = 0; ; attempt++) {
+      if (config.source === "stored") {
+        try {
+          await assertSocialHubUrl(config.baseUrl, { lookup: options.lookup });
+        } catch {
+          throw new SocialHubError("blocked", endpoint, null, null, ambiguous);
+        }
+      }
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
-      let res: Response;
+      const timer = setTimeout(() => controller.abort(), Math.max(1, Math.min(timeoutMs, remainingMs())));
+      let delay = 0;
       try {
-        res = await doFetch(`${config.baseUrl}${path}`, {
-          method: "GET",
-          headers: { Authorization: `Bearer ${config.apiKey}`, Accept: "application/json" },
-          signal: controller.signal,
-        });
-      } catch {
-        // Az eredeti hibát szándékosan nem adjuk tovább: a kérés adatait tartalmazhatja.
-        throw new SocialHubError(controller.signal.aborted ? "timeout" : "network", endpoint);
+        let res: Response;
+        try {
+          res = await doFetch(`${config.baseUrl}${path}`, {
+            method: post ? "POST" : "GET",
+            headers: {
+              Authorization: `Bearer ${config.apiKey}`,
+              Accept: "application/json",
+              ...(post ? { "Content-Type": "application/json", "Idempotency-Key": post.idempotencyKey } : {}),
+            },
+            ...(post ? { body: post.body } : {}),
+            // 3xx = hiba: a Bearer-fejléc nem mehet más hosztra.
+            redirect: "manual",
+            signal: controller.signal,
+          });
+        } catch {
+          // Az eredeti hibát szándékosan nem adjuk tovább: a kérés adatait tartalmazhatja.
+          throw new SocialHubError(controller.signal.aborted ? "timeout" : "network", endpoint, null, null, ambiguous);
+        }
+        if (res.ok) {
+          try {
+            return await res.json();
+          } catch {
+            throw new SocialHubError(controller.signal.aborted ? "timeout" : "invalid_response", endpoint, res.status, null, ambiguous);
+          }
+        }
+        const retryAfter = parseRetryAfter(res.headers.get("retry-after"));
+        delay = Math.min(retryAfter ?? BASE_BACKOFF_MS * 2 ** attempt, maxRetryDelayMs);
+        const retry = isRetryable(res.status) && attempt < maxRetries && remainingMs() > delay + MIN_RETRY_WINDOW_MS;
+        if (!retry) {
+          throw new SocialHubError("http", endpoint, res.status, post ? await readErrorCode(res) : null, ambiguous);
+        }
+        if (res.status >= 500) ambiguous = true;
+        console.warn(`[socialHub] ${endpoint}: HTTP ${res.status}, újrapróbálás ${attempt + 1}/${maxRetries} (${delay} ms múlva)`);
       } finally {
         clearTimeout(timer);
       }
-
-      if (res.ok) {
-        try {
-          return await res.json();
-        } catch {
-          throw new SocialHubError("invalid_response", endpoint, res.status);
-        }
-      }
-      if (!isRetryable(res.status) || attempt >= maxRetries) {
-        throw new SocialHubError("http", endpoint, res.status);
-      }
-      const retryAfter = parseRetryAfter(res.headers.get("retry-after"));
-      const delay = Math.min(retryAfter ?? BASE_BACKOFF_MS * 2 ** attempt, maxRetryDelayMs);
-      console.warn(`[socialHub] ${endpoint}: HTTP ${res.status}, újrapróbálás ${attempt + 1}/${maxRetries} (${delay} ms múlva)`);
       await sleep(delay);
     }
   }
+
+  const getJson = (endpoint: string, path: string) => requestJson(endpoint, path);
 
   async function listClients(): Promise<SocialHubClient[]> {
     const parsed = clientsResponseSchema.safeParse(await getJson("/clients", "/clients"));
@@ -232,7 +299,22 @@ export function createSocialHubClient(config: SocialHubConfig, options: SocialHu
     return merged;
   }
 
-  return { listClients, getClientMetrics, getClientMetricsRange };
+  /**
+   * Vázlatok feltöltése. A `body` a tárolt, pontos kimenő JSON (ismétléskor is ugyanaz).
+   * Siker: a létrejött posztok azonosítói a vázlatok sorrendjében; minden más SocialHubError.
+   */
+  async function createDrafts(clientId: string, idempotencyKey: string, body: string, expectedCount: number): Promise<string[]> {
+    const endpoint = "/clients/{id}/drafts";
+    const raw = await requestJson(endpoint, `/clients/${encodeURIComponent(clientId)}/drafts`, { idempotencyKey, body });
+    const parsed = draftsResponseSchema.safeParse(raw);
+    const ids = parsed.success ? parsed.data.data.map((d) => d.id) : [];
+    if (ids.length !== expectedCount || new Set(ids).size !== ids.length) {
+      throw new SocialHubError("invalid_response", endpoint);
+    }
+    return ids;
+  }
+
+  return { listClients, getClientMetrics, getClientMetricsRange, createDrafts };
 }
 
 export type SocialHubApi = ReturnType<typeof createSocialHubClient>;

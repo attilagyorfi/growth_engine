@@ -20,7 +20,7 @@
 import { lookup } from "node:dns/promises";
 import net from "node:net";
 
-function isPrivateIp(ip: string): boolean {
+export function isPrivateIp(ip: string): boolean {
   const v = ip.replace(/^::ffff:/i, ""); // IPv4-mapped IPv6 lecsupaszítása
   if (net.isIPv4(v)) {
     const [a, b] = v.split(".").map(Number);

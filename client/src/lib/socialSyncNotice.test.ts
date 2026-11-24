@@ -10,8 +10,8 @@ describe("socialSyncNotice – a Riportok oldal üzenete a közösségi ág ered
 
   it("minden kimaradási okra rövid, tegező magyar szöveg", () => {
     expect(socialSyncNotice({ status: "skipped", reason: "not_configured" })).toMatch(/kimaradtak.*nincs beállítva/);
-    expect(socialSyncNotice({ status: "skipped", reason: "no_external_ref" })).toMatch(/add meg/);
-    expect(socialSyncNotice({ status: "skipped", reason: "no_match" })).toMatch(/Nézd meg/);
+    expect(socialSyncNotice({ status: "skipped", reason: "no_external_ref" })).toMatch(/rendszergazda állítja be/);
+    expect(socialSyncNotice({ status: "skipped", reason: "no_match" })).toMatch(/Szólj a rendszergazdának/);
     expect(socialSyncNotice({ status: "failed", reason: "error", message: "Social Hub /clients: HTTP 503" })).toMatch(/Próbáld újra/);
   });
 });

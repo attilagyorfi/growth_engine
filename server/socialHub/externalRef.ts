@@ -11,6 +11,8 @@ export const EXTERNAL_REF_FORMAT_MESSAGE =
 export const EXTERNAL_REF_TAKEN_MESSAGE =
   "Ezt a Social Hub-azonosítót már egy másik profil vagy márka használja. Adj meg másikat.";
 
+export const EXTERNAL_REF_ADMIN_ONLY_MESSAGE = "A Social Hub-azonosítót csak rendszergazda állíthatja be.";
+
 export const externalRefInput = z
   .string()
   .max(200, EXTERNAL_REF_FORMAT_MESSAGE)

@@ -24,6 +24,7 @@ import { useTour } from "@/hooks/useTour";
 import { connectionHealth, formatHuDate, needsReconnect } from "@/lib/connectionHealth";
 import { toast } from "sonner";
 import BrandManager from "@/components/BrandManager";
+import SocialHubConnection from "@/components/SocialHubConnection";
 
 type Tab = "brand" | "integrations" | "team" | "audit" | "admin" | "fiok" | "billing" | "ai-memory";
 
@@ -538,13 +539,20 @@ export default function Settings() {
       {/* Integrations */}
       {activeTab === "integrations" && (
         <div className="space-y-4">
+          {/* Social Hub-kapcsolat: csak rendszergazda kezeli. */}
+          {isSuperAdmin && <SocialHubConnection cardBg={cardBg} border={border} />}
+
           {/* Social Hub-párosítás: a riport közösségi adatai ezzel az azonosítóval jönnek. */}
           <div className="rounded-xl border p-5" style={{ background: cardBg, borderColor: border }}>
             <h3 className="text-sm font-bold" style={{ color: "var(--qa-fg2)" }}>Social Hub-párosítás</h3>
             <p className="text-xs mt-0.5 mb-3" style={{ color: "var(--qa-fg4)" }}>
-              Írd be az ügyfél Social Hub-azonosítóját (pl. viba-team), így a havi riportba bekerülnek a közösségi számok. Üresen mentve a párosítás törlődik.
+              {isSuperAdmin
+                ? "Írd be az ügyfél Social Hub-azonosítóját (pl. viba-team), így a havi riportba bekerülnek a közösségi számok. Üresen mentve a párosítás törlődik."
+                : activeProfile.externalRef
+                  ? `Párosítva ezzel: ${activeProfile.externalRef}. A párosítást a rendszergazda állítja be.`
+                  : "Még nincs párosítva. A párosítást a rendszergazda állítja be."}
             </p>
-            <form className="flex flex-wrap items-center gap-2"
+            {isSuperAdmin && <form className="flex flex-wrap items-center gap-2"
               onSubmit={(e) => { e.preventDefault(); saveExternalRef.mutate({ id: activeProfile.id, externalRef }); }}>
               <input value={externalRef} onChange={(e) => setExternalRef(e.target.value)} maxLength={64}
                 placeholder="pl. viba-team" aria-label="Social Hub-azonosító"
@@ -555,7 +563,7 @@ export default function Settings() {
                 style={{ background: "var(--qa-accent)", color: "var(--qa-accent-on)" }}>
                 {saveExternalRef.isPending ? "Mentés…" : "Mentés"}
               </button>
-            </form>
+            </form>}
           </div>
 
           {/* Márkák (alárkák): a profilon belüli márkacímkék, márkánkénti riporthoz. */}

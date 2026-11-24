@@ -14,9 +14,9 @@ export function socialSyncNotice(social: SocialSyncOutcome | null | undefined): 
     case "not_configured":
       return "A közösségi adatok kimaradtak: a Social Hub-kapcsolat még nincs beállítva.";
     case "no_external_ref":
-      return "A közösségi adatok kimaradtak: add meg a profil Social Hub-azonosítóját a Beállítások → Integrációk alatt.";
+      return "A közösségi adatok kimaradtak: az ügyfélnek még nincs Social Hub-azonosítója. Ezt a rendszergazda állítja be.";
     case "no_match":
-      return "A közösségi adatok kimaradtak: a Social Hubban nincs ilyen azonosítójú ügyfél. Nézd meg, jól írtad-e be.";
+      return "A közösségi adatok kimaradtak: a Social Hubban nincs ilyen azonosítójú ügyfél. Szólj a rendszergazdának.";
     default:
       return null;
   }
