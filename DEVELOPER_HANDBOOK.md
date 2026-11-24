@@ -464,6 +464,27 @@ Működés: a callback a code→token csere után „kiválasztásra vár” sor
 
 **Ismert korlátok:** az ismeretlen vagy újraküldéssel felülírt `socialHubPostId` eseményei kimaradnak (2xx). Egyszerre egy titok él, titokcserénél a Social Hub is azonnal az újjal ír alá, ezért a két oldalt egymás után kell átállítani (közben 401, amit a Social Hub kb. 2,5 óráig újraküld). A régi ütemezőn éppen kimenő posztot a `post.published` nem állítja meg. A feldolgozott események sorai nem törlődnek maguktól.
 
+## 11/d. Márkaprofil-szinkron a Social Hubba (G2)
+
+**Állapot:** kész (2026-11-24). Valódi Social Hubbal és valódi adatbázissal még nem futott; a tesztek mock HTTP-vel és hamis tárolóval mennek (`server/social-hub-brand.test.ts`, `server/social-hub-brand-store.test.ts`). Szerződés: `PUT /clients/{id}/brand-profile`, a teljes szinkronizált profilt cseréli, ezért mindig a teljes állapot megy.
+
+**Leképezés** (`brandProfile.ts`, tiszta függvények): `voice` = hangnem, stílus, kerülendő és javasolt kulcsszavak szövege; `pillars` = csak az aktív pillérek, vágás után is egyedi névvel; `required_phrases`, `forbidden_phrases`, `required_disclaimer` = kizárólag az új mezők. A Social Hub ezek alapján megállítja a posztot, ezért a `brandVoice.keywords` és `.avoid` soha nem kerülhet a listákba. Ami nem fér bele, arról figyelmeztetés készül (`BRAND_LIMITS`, UTF-16 egység). Az új mezők mentése a korlátot túllépő adatot elutasítja, és azt is, ha egy tiltott kifejezés (kisbetűsítve, részszövegként) kötelezőben vagy a záradékban szerepel.
+
+**Végpontok:** `socialHub.brandRules.get/save/sync` (`assertProfileOwnership`). A `get` nem hív Social Hubot: a függő változást a jelenlegi párosításból, a kapcsolat címének hash-éből és a tárolt tartalomhash-ből számolja.
+
+**Mikor fut:** a `profiles.upsert` után, ha a bemenetben `brandVoice` vagy `contentPillars` van (az új profil ágán is; szerveroldalon más nem ír márkaadatot), és az új mezők mentése után. Csak párosított profilra, olvasható kapcsolattal, különben néma kihagyás. A mentés legfeljebb kb. 2 mp-ig vár (az adatbázis-műveletekkel együtt), a hiba soha nem jut ki. Vercelen a háttérrész megállhat: az elmaradt változást a felület mutatja, a „Szinkronizálás most” pótolja. Önálló háttér-újrapróbálás nincs.
+
+**Tábla** (`drizzle/0028_social_hub_brand_profile.sql`, csak új tábla; csak a `brandStore.ts` kezeli): `social_hub_brand_profiles`, profilonként egy sor: az új mezők, `requestedRev`/`syncedRev`, bérlet (token, lejárat ezredmásodpercben, az adatbázis órájával), a legutóbbi cél (azonosító, ügyfél, címhash), `maybeSent`, tartalomhash, utolsó siker, hibakód. A profiltörlés kaszkádjában szerepel. Sort csak a profilsor zárolásával hoz létre, és a `deleteProfile` is a profilsort zárolja először, így törölt profilhoz nem jön (vissza) sor. Hiányzó táblánál a mentés működik, szinkron nincs.
+
+**Sorrendvédelem:** mentés után nő a `requestedRev`; profilonként egy bérlet. A birtokos a változásszám kiolvasása után olvassa a teljes állapotot; a cél és a kísérlet ténye a PUT előtt, a bérletet és a párosítást ellenőrző egyetlen UPDATE-ben rögzül; közben érkezett mentésnél legfeljebb 3 körig ismétel; lejárt bérlettel nem küld és nem ír. Bizonytalan kimenet (időtúllépés, hálózat, 5xx, rossz 2xx, 429 – a `classifyFailure` szerint) után 60 mp-ig nem indul új küldés. A 400/401/404 biztos hiba, ha ugyanabban a hívásban nem volt előtte 5xx. Teljesen üres profil csak akkor megy ki, ha erre a párosításra már ment (vagy mehetett) valami.
+
+**Ismert korlátok:**
+- Az alárkákra (`profile_brands`) nincs szinkron, mert nincs saját márkaprofiljuk.
+- Párosítás megszüntetésekor, ügyfél- vagy kapcsolatváltáskor a régi Social Hub-ügyfélnél maradó márkaprofilt nem töröljük. Új párosítás után az első szinkron a következő mentéskor vagy a gombbal indul.
+- Ha a Social Hub a védelmi időn túl dolgoz fel egy késve beérő kérést, az felülírhatja az újabbat; a következő mentés vagy a gomb helyreállítja.
+
+**Űrlapok:** a Beállítások → Márka és a profiloldal szerkesztője `activeProfile.id` váltásakor (csak akkor) áll át az új profil adataira, így egyik ügyfél adata nem menthető a másikhoz.
+
 ## 12. GitHub repo
 
 ```

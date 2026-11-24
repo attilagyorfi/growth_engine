@@ -181,6 +181,7 @@ export const PROFILE_OWNED_TABLES = [
   "reportMetrics", "reports", "reportSchedules", "teamInvites", "assistantThreads",
   "contentIdeas", "profileBrands", "socialHubSendAttempts", "socialHubPostDeliveries",
   "socialHubWebhookEvents", "socialHubPostStates", "socialHubMemoryMarks",
+  "socialHubBrandProfiles",
 ] as const;
 
 export async function deleteProfile(id: string) {
@@ -190,6 +191,10 @@ export async function deleteProfile(id: string) {
   const { eq, inArray } = await import("drizzle-orm");
 
   await db.transaction(async (tx: any) => {
+    // 0) A profilsor zárolása: a márkaprofil-szinkron ugyanezt zárolja, mielőtt sort hoz
+    //    létre, így törlés közben sem maradhat árva sor (socialHub/brandStore.ts).
+    await tx.select({ id: clientProfiles.id }).from(clientProfiles).where(eq(clientProfiles.id, id)).for("update");
+
     // 1) Assistant-üzenetek a profil threadjein keresztül (threadId, nem profileId).
     const threads = await tx.select({ id: schema.assistantThreads.id })
       .from(schema.assistantThreads)

@@ -5,6 +5,8 @@
  * soha nem megy vissza a kliensre, legfeljebb az utolsó 4 karaktere; a teljes ügyféllista is
  * csak itt látszik.
  * webhook.*: a webhook-titok kezelése, csak rendszergazdának; a titok soha nem megy vissza.
+ * brandRules.*: a márkaprofil új mezői és szinkronja (assertProfileOwnership); a get nem hív
+ * Social Hubot.
  * postStates: a posztok Social Hub-állapota a saját naplóból (assertProfileOwnership).
  * previewSend / send / repeat: a profilhoz hozzáférő felhasználónak (assertProfileOwnership).
  * A posztokat mindig a profil saját posztjai közül vesszük, így idegen poszt NOT_FOUND.
@@ -15,6 +17,9 @@ import { getPublicAppOrigin } from "../_core/env";
 import { router, appUserProcedure, superAdminProcedure } from "../_core/trpc";
 import { assertProfileOwnership } from "../_core/ownership";
 import { getContentByProfile, getProfileById, listProfileBrands } from "../db";
+import { BrandRulesError, normalizeBrandRules, type BrandRules } from "../socialHub/brandProfile";
+import { getBrandStore } from "../socialHub/brandStore";
+import { getBrandSyncStatus, syncBrandAfterSave, syncBrandNow } from "../socialHub/brandSync";
 import { createSocialHubClient, getSocialHubConfig } from "../socialHub/client";
 import { encryptApiKey, resolveSocialHubConfig, resolveWebhookSecret, SOCIAL_HUB_RESOLVE_ERROR } from "../socialHub/config";
 import { isInBudapestMonth } from "../socialHub/drafts";
@@ -26,6 +31,7 @@ import { listPostStates } from "../socialHub/webhookStore";
 import { assertBrandInProfile } from "./brands";
 
 export const PROFILE_TARGET = "profile";
+const BRAND_SAVE_ERROR = "A szabályokat most nem sikerült menteni. Próbáld újra.";
 
 function requireStore(): SocialHubStore {
   const store = getSocialHubStore();
@@ -169,6 +175,48 @@ export const socialHubRouter = router({
       await guardStorage(() => store.deleteWebhookSecret(), "A titkot most nem sikerült törölni. Próbáld újra.");
       return { ok: true as const };
     }),
+  }),
+
+  /** Kötelező és tiltott kifejezések, záradék és a márkaprofil-szinkron (alárkákra nincs). */
+  brandRules: router({
+    get: appUserProcedure
+      .input(z.object({ profileId: id }))
+      .query(async ({ input, ctx }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        return getBrandSyncStatus(input.profileId);
+      }),
+
+    // A pontos korlátokat a normalizeBrandRules adja érthető hibával; itt csak a méretet fogjuk meg.
+    save: appUserProcedure
+      .input(z.object({
+        profileId: id,
+        requiredPhrases: z.array(z.string().max(100_000)).max(10_000),
+        forbiddenPhrases: z.array(z.string().max(100_000)).max(10_000),
+        requiredDisclaimer: z.string().max(100_000).nullable(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        const { profileId, ...raw } = input;
+        const store = getBrandStore();
+        if (!store) throw new TRPCError({ code: "PRECONDITION_FAILED", message: BRAND_SAVE_ERROR });
+        let rules: BrandRules;
+        try {
+          rules = normalizeBrandRules(raw);
+        } catch (err) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: err instanceof BrandRulesError ? err.message : BRAND_SAVE_ERROR });
+        }
+        const saved = await guardStorage(() => store.saveRules(profileId, rules), BRAND_SAVE_ERROR);
+        if (!saved) throw new TRPCError({ code: "NOT_FOUND", message: "Az ügyfél nem található." });
+        await syncBrandAfterSave(profileId, { bump: false });
+        return rules;
+      }),
+
+    sync: appUserProcedure
+      .input(z.object({ profileId: id }))
+      .mutation(async ({ input, ctx }) => {
+        await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+        return syncBrandNow(input.profileId);
+      }),
   }),
 
   postStates: appUserProcedure
