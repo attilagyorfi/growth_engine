@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, json, double, date, index, unique, mediumtext } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, json, double, date, index, unique, mediumtext, bigint } from "drizzle-orm/mysql-core";
 
 // ─── Client Profiles ─────────────────────────────────────────────────────────
 
@@ -1058,4 +1058,48 @@ export const socialHubPostDeliveries = mysqlTable("social_hub_post_deliveries", 
   sentAt: timestamp("sentAt"),
 }, (t) => [
   unique("social_hub_post_deliveries_post_client_unique").on(t.postId, t.socialHubClientId),
+]);
+
+// ─── Social Hub webhook-fogadó (G2, 0027) ────────────────────────────────────
+// A titkot a server/socialHub/store.ts, a többit a server/socialHub/webhookStore.ts kezeli.
+
+// A titok egyetlen sora (fix id), csak enc:v1: alakban.
+export const socialHubWebhookSecret = mysqlTable("social_hub_webhook_secret", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  secretEnc: text("secretEnc").notNull(),
+  updatedBy: varchar("updatedBy", { length: 64 }).notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+// Feldolgozott események: ugyanaz az eseményazonosító másodszor már nem hat.
+export const socialHubWebhookEvents = mysqlTable("social_hub_webhook_events", {
+  eventId: varchar("eventId", { length: 64 }).primaryKey(),
+  profileId: varchar("profileId", { length: 64 }).notNull(),
+  socialHubPostId: varchar("socialHubPostId", { length: 64 }).notNull(),
+  type: varchar("type", { length: 32 }).notNull(),
+  processedAt: timestamp("processedAt").defaultNow().notNull(),
+});
+
+// A Social Hub-poszt állapota (a látszó állapotot a server/socialHub/postState.ts számolja ebből).
+export const socialHubPostStates = mysqlTable("social_hub_post_states", {
+  socialHubPostId: varchar("socialHubPostId", { length: 64 }).primaryKey(),
+  profileId: varchar("profileId", { length: 64 }).notNull(),
+  postId: varchar("postId", { length: 64 }).notNull(),
+  socialHubClientId: varchar("socialHubClientId", { length: 64 }).notNull(),
+  latestStatus: varchar("latestStatus", { length: 32 }),
+  latestAtMs: bigint("latestAtMs", { mode: "number" }),
+  failedAtMs: bigint("failedAtMs", { mode: "number" }),
+  publishedAtMs: bigint("publishedAtMs", { mode: "number" }),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+// Posztonként és döntésenként egy AI-memória.
+export const socialHubMemoryMarks = mysqlTable("social_hub_memory_marks", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  profileId: varchar("profileId", { length: 64 }).notNull(),
+  postId: varchar("postId", { length: 64 }).notNull(),
+  decision: varchar("decision", { length: 32 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (t) => [
+  unique("social_hub_memory_marks_post_decision_unique").on(t.postId, t.decision),
 ]);

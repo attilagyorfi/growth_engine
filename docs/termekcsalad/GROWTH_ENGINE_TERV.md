@@ -46,7 +46,7 @@ A Growth Engine a Social Hub `/api/v1` API-jának kliense. A végpontok pontos l
 - **Kapcsolat beállítása.** Beállítások → Integrációk → Social Hub: API-kulcs és webhook-titok, titkosítva tárolva (a meglévő `tokenCrypto` mintájára).
 - **Ügyfél-párosítás.** A `client_profiles` tábla új `external_ref` mezőt kap; a párosítás a Social Hub `GET /clients` listájából választható.
 - **„Küldés a Social Hubba” gomb.** A Tartalom Stúdióban, a naptárban és a Copilot-javaslatoknál a „Közzétesz most” és az ütemezés helyére kerül. Egy poszt vagy egy teljes hónap megy `POST /drafts`-szal, idempotencia-kulccsal.
-- **Állapot visszafelé.** Webhook-fogadó (`/api/integrations/socialhub`): `post.approved`, `post.changes_requested`, `post.published`, `post.failed`. A `content_posts` állapota ebből frissül, a Growth Engine már nem állítja át magától.
+- **Állapot visszafelé.** Webhook-fogadó (`/api/social-hub/webhook`): `post.approved`, `post.changes_requested`, `post.published`, `post.failed`. A Social Hub-állapot külön tárolódik és jelvényként látszik; a `content_posts` állapotát csak a `post.published` írja, hogy a kivezetésig élő régi publikáló ne induljon el tőle.
 - **AI-memória.** A jóváhagyott és visszaküldött posztok (az ügyfél megjegyzésével) betáplálják az `ai_memories` táblát.
 - **Márkaprofil.** A márka-DNS, a márkahang, a tiltott/kötelező kifejezések és a pillérek mentéskor `PUT /brand-profile`-lal mennek át. A Social Hub ezekkel blokkolja a szabálysértő posztot.
 - **Metrikák.** A riport-szinkron a közösségi (FB, IG, LinkedIn, később Meta Ads) adatot `GET /metrics`-szel kéri le, a `report_metrics` táblába írja, a Google-adat mellé.
@@ -87,7 +87,7 @@ Függés: a Social Hub F1 (LinkedIn és `/api/v1`) kész és legalább egy hóna
 
 - [x] Social Hub kapcsolat a Beállításokban, `external_ref` párosítás (2026-11-24: Beállítások → Integrációk → Social Hub, csak rendszergazdának: mentés, ellenőrzés, bontás; a kulcs titkosítva, SSRF-védelem; tárolt kapcsolat > env > fail-closed, a metrika-szinkronnal közös feloldóval; `social_hub_connection` (0026). A párosítást – profilon és márkán is – csak rendszergazda módosíthatja)
 - [x] „Küldés a Social Hubba” (egy poszt / teljes hónap), a „Közzétesz most” és az ütemezés helyett (2026-11-24: Content Studio, megerősítő ablakkal, vázlatként; küldési napló és idempotens kísérletek a `social_hub_send_attempts` és `social_hub_post_deliveries` táblában (0026). A „Közzétesz most” és az ütemezés egyelőre marad)
-- [ ] Webhook-fogadó, állapotfrissítés, AI-memória táplálása a jóváhagyási döntésekből
+- [x] Webhook-fogadó, állapotfrissítés, AI-memória táplálása a jóváhagyási döntésekből (2026-11-24: `POST /api/social-hub/webhook` mindkét belépőn, aláírás a nyers törzsön; eseményenként egy tranzakció, egyedi eseményazonosítóval; állapot a `social_hub_post_states` táblában (0027), jelvény a Content Studióban; `content_posts`-ot csak a `post.published` írja; értesítés hibánál és módosításkérésnél; AI-memória a küldéskori szövegből, posztonként és döntésenként egyszer. A titkot rendszergazda adja meg a Beállításokban. Éles Social Hubbal még nem próbáltuk.)
 - [ ] Márkaprofil-szinkron (`PUT /brand-profile`) mentéskor
 - [ ] Törlés: `scheduler.ts`, `socialPublisher.ts`, `publishing.ts`, a közösségi OAuth-fájlok, `social_connections`, `scheduled_posts`, `social_tokens` táblák
 

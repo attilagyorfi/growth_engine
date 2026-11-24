@@ -4,20 +4,25 @@
  * connection.*: a kapcsolat kezelése, csak rendszergazdának (superAdminProcedure). A kulcs
  * soha nem megy vissza a kliensre, legfeljebb az utolsó 4 karaktere; a teljes ügyféllista is
  * csak itt látszik.
+ * webhook.*: a webhook-titok kezelése, csak rendszergazdának; a titok soha nem megy vissza.
+ * postStates: a posztok Social Hub-állapota a saját naplóból (assertProfileOwnership).
  * previewSend / send / repeat: a profilhoz hozzáférő felhasználónak (assertProfileOwnership).
  * A posztokat mindig a profil saját posztjai közül vesszük, így idegen poszt NOT_FOUND.
  */
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { getPublicAppOrigin } from "../_core/env";
 import { router, appUserProcedure, superAdminProcedure } from "../_core/trpc";
 import { assertProfileOwnership } from "../_core/ownership";
 import { getContentByProfile, getProfileById, listProfileBrands } from "../db";
 import { createSocialHubClient, getSocialHubConfig } from "../socialHub/client";
-import { encryptApiKey, resolveSocialHubConfig, SOCIAL_HUB_RESOLVE_ERROR } from "../socialHub/config";
+import { encryptApiKey, resolveSocialHubConfig, resolveWebhookSecret, SOCIAL_HUB_RESOLVE_ERROR } from "../socialHub/config";
 import { isInBudapestMonth } from "../socialHub/drafts";
 import { previewSend, repeatAttempt, sendPosts, userMessage, type SendTargetRef } from "../socialHub/send";
 import { getSocialHubStore, type SocialHubStore, type StoredConnection } from "../socialHub/store";
 import { assertSocialHubUrl, SocialHubUrlError } from "../socialHub/urlGuard";
+import { SOCIAL_HUB_WEBHOOK_PATH } from "../socialHub/webhook";
+import { listPostStates } from "../socialHub/webhookStore";
 import { assertBrandInProfile } from "./brands";
 
 export const PROFILE_TARGET = "profile";
@@ -29,11 +34,11 @@ function requireStore(): SocialHubStore {
 }
 
 /** A tárolóhiba eredeti szövege (SQL-paraméterek) nem kerülhet naplóba vagy válaszba. */
-async function guardStorage<T>(work: () => Promise<T>): Promise<T> {
+async function guardStorage<T>(work: () => Promise<T>, message = "A kapcsolatot most nem sikerült menteni. Próbáld újra."): Promise<T> {
   try {
     return await work();
   } catch {
-    throw new TRPCError({ code: "PRECONDITION_FAILED", message: "A kapcsolatot most nem sikerült menteni. Próbáld újra." });
+    throw new TRPCError({ code: "PRECONDITION_FAILED", message });
   }
 }
 
@@ -108,7 +113,7 @@ export const socialHubRouter = router({
           throw new TRPCError({ code: "PRECONDITION_FAILED", message: "A kulcsot most nem tudjuk biztonságosan tárolni, ezért nem mentettük el." });
         }
         const keyLast4 = input.apiKey.slice(-4);
-        await guardStorage(() => store.saveConnection({ baseUrl, apiKeyEnc, apiKeyLast4: keyLast4, updatedBy: ctx.appUser.id }));
+        await guardStorage(() => store.saveConnection({ baseUrl, apiKeyEnc, apiKeyLast4: keyLast4, updatedBy: ctx.appUser.id, envBaseUrl: getSocialHubConfig()?.baseUrl ?? null }));
         return { baseUrl, keyLast4 };
       }),
 
@@ -130,6 +135,48 @@ export const socialHubRouter = router({
       return { ok: true as const };
     }),
   }),
+
+  webhook: router({
+    get: superAdminProcedure.query(async () => {
+      const store = getSocialHubStore();
+      const stored = store ? await store.getWebhookSecret() : null;
+      // A visszafejthetetlen titokkal a fogadó sem működik, ezért az is „nincs beállítva”.
+      const secretSet = stored !== null && (await resolveWebhookSecret()) !== null;
+      return {
+        available: store !== null,
+        url: `${getPublicAppOrigin()}${SOCIAL_HUB_WEBHOOK_PATH}`,
+        secretSet,
+        updatedAt: secretSet ? stored.updatedAt : null,
+      };
+    }),
+
+    saveSecret: superAdminProcedure
+      .input(z.object({ secret: z.string().trim().regex(/^whsec_[\x21-\x7e]{16,500}$/, "Add meg a teljes titkot (whsec_ kezdetű).") }))
+      .mutation(async ({ input, ctx }) => {
+        const store = requireStore();
+        const connected = await guardStorage(async () => (await store.getConnection()) !== null) || getSocialHubConfig() !== null;
+        if (!connected) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Előbb kösd be a Social Hubot." });
+        const secretEnc = encryptApiKey(input.secret);
+        if (!secretEnc) {
+          throw new TRPCError({ code: "PRECONDITION_FAILED", message: "A titkot most nem tudjuk biztonságosan tárolni, ezért nem mentettük el." });
+        }
+        await guardStorage(() => store.saveWebhookSecret({ secretEnc, updatedBy: ctx.appUser.id }), "A titkot most nem sikerült menteni. Próbáld újra.");
+        return { ok: true as const };
+      }),
+
+    deleteSecret: superAdminProcedure.mutation(async () => {
+      const store = requireStore();
+      await guardStorage(() => store.deleteWebhookSecret(), "A titkot most nem sikerült törölni. Próbáld újra.");
+      return { ok: true as const };
+    }),
+  }),
+
+  postStates: appUserProcedure
+    .input(z.object({ profileId: id }))
+    .query(async ({ input, ctx }) => {
+      await assertProfileOwnership(ctx.appUser.id, ctx.appUser.role, input.profileId, ctx.appUser.profileId);
+      return getSocialHubStore() ? listPostStates(input.profileId) : [];
+    }),
 
   previewSend: appUserProcedure
     .input(z.object({

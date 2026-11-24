@@ -1,6 +1,7 @@
 /** Social Hub-kapcsolat a Beállításokban (G2). Csak rendszergazdának; a kulcs soha nem jön vissza. */
 import { useState } from "react";
 import { toast } from "sonner";
+import SocialHubWebhook from "@/components/SocialHubWebhook";
 import { trpc } from "@/lib/trpc";
 
 const inputStyle = { background: "var(--qa-surface2)", borderColor: "var(--qa-border)", color: "var(--qa-fg)" };
@@ -18,7 +19,8 @@ export default function SocialHubConnection({ cardBg, border }: { cardBg: string
   const { data } = trpc.socialHub.connection.get.useQuery();
   const [baseUrl, setBaseUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
-  const refresh = () => utils.socialHub.connection.get.invalidate();
+  // A bontás és a címcsere a webhook-titkot is törli.
+  const refresh = () => { utils.socialHub.connection.get.invalidate(); utils.socialHub.webhook.get.invalidate(); };
   const onError = (err: { message: string }) => toast.error(err.message);
   const save = trpc.socialHub.connection.save.useMutation({
     onSuccess: () => { setBaseUrl(""); setApiKey(""); refresh(); toast.success("Kapcsolat mentve"); }, onError,
@@ -66,6 +68,7 @@ export default function SocialHubConnection({ cardBg, border }: { cardBg: string
           {check.data.clients.map((c, i) => <li key={i}>{c.name}: {c.externalRef ?? "nincs azonosítója"}</li>)}
         </ul>
       )}
+      {data.source !== "none" && <SocialHubWebhook border={border} />}
     </div>
   );
 }

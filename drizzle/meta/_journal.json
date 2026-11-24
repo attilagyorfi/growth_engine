@@ -127,6 +127,13 @@
       "when": 1795478400000,
       "tag": "0026_social_hub_send",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "5",
+      "when": 1795564800000,
+      "tag": "0027_social_hub_webhook",
+      "breakpoints": true
     }
   ]
 }

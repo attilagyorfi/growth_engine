@@ -16,6 +16,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { AiLimitBanner } from "@/components/AiLimitBanner";
 import UpgradePrompt from "@/components/UpgradePrompt";
 import { useSubscription } from "@/hooks/useSubscription";
+import { socialHubBadge } from "@/lib/socialHubStatus";
 import SocialHubSendDialog, { type SendSelection } from "@/components/SocialHubSendDialog";
 import { trpc } from "@/lib/trpc";
 import { getScheduleWarning } from "@/lib/scheduleWarning";
@@ -147,6 +148,16 @@ export default function ContentStudio() {
   const utils = trpc.useUtils();
   // Küldés a Social Hubba (G2): csak ha a szerveren elérhető.
   const { data: socialHub } = trpc.socialHub.available.useQuery();
+  const { data: socialHubStates = [] } = trpc.socialHub.postStates.useQuery(
+    { profileId: activeProfile.id },
+    { enabled: !!activeProfile.id, retry: false }
+  );
+  const SocialHubBadge = ({ postId }: { postId: string }) => {
+    const badge = socialHubBadge(socialHubStates, postId);
+    return badge && (
+      <span className="text-xs px-1.5 py-0.5 rounded border" style={{ borderColor: badge.color, color: badge.color }}>{badge.label}</span>
+    );
+  };
   const [socialHubSelection, setSocialHubSelection] = useState<SendSelection | null>(null);
   const { data: posts = [], isLoading } = trpc.content.list.useQuery(
     { profileId: activeProfile.id },
@@ -524,10 +535,11 @@ export default function ContentStudio() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold truncate" style={{ color: "var(--qa-fg2)", fontFamily: "var(--font-heading)" }}>{post.title}</p>
-            <div className="flex items-center gap-2 mt-0.5">
+            <div className="flex flex-wrap items-center gap-2 mt-0.5">
               <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: `${STATUS_COLORS[post.status]} / 15%`, color: STATUS_COLORS[post.status] }}>
                 {STATUS_LABELS[post.status]}
               </span>
+              <SocialHubBadge postId={post.id} />
               {post.pillar && <span className="text-xs" style={{ color: "var(--qa-fg4)" }}>{post.pillar}</span>}
             </div>
           </div>
@@ -1357,6 +1369,7 @@ export default function ContentStudio() {
               </div>
               <button onClick={() => setSelectedPost(null)} style={{ color: "var(--qa-fg4)" }}><X size={18} /></button>
             </div>
+            <div className="mb-3 empty:hidden"><SocialHubBadge postId={selectedPost.id} /></div>
             {selectedPost.imageUrl && <img src={selectedPost.imageUrl} alt={selectedPost.title} className="w-full h-40 object-cover rounded-xl mb-4" />}
             <p className="text-sm leading-relaxed mb-4" style={{ color: "oklch(0.72 0.015 240)" }}>{selectedPost.content}</p>
             {selectedPost.scheduledAt && (

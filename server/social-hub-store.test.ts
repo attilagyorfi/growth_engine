@@ -132,7 +132,8 @@ describe("0026-os migráció", () => {
 
   it("a naplóban (journal) és a profiltörlés kaszkádjában is szerepel", () => {
     const { entries } = JSON.parse(readFileSync("drizzle/meta/_journal.json", "utf8"));
-    const [prev, last] = entries.slice(-2);
+    const at = entries.findIndex((e: any) => e.tag === "0026_social_hub_send");
+    const [prev, last] = entries.slice(at - 1, at + 1);
     expect(last).toMatchObject({ idx: 17, tag: "0026_social_hub_send", breakpoints: true });
     expect(prev.tag).toBe("0025_profile_brands");
     expect(last.when).toBeGreaterThan(prev.when);
@@ -398,7 +399,8 @@ describe("router az adatbázisos tárolóval", () => {
   it("a végpontok a közös appRouteren élnek, amelyet a Vercel-belépő is használ", () => {
     const paths = Object.keys((appRouter as any)._def.procedures).filter((p) => p.startsWith("socialHub."));
     expect(paths.sort()).toEqual(["socialHub.available", "socialHub.connection.check", "socialHub.connection.disconnect", "socialHub.connection.get",
-      "socialHub.connection.save", "socialHub.previewSend", "socialHub.repeat", "socialHub.send"]);
+      "socialHub.connection.save", "socialHub.postStates", "socialHub.previewSend", "socialHub.repeat", "socialHub.send",
+      "socialHub.webhook.deleteSecret", "socialHub.webhook.get", "socialHub.webhook.saveSecret"]);
     expect(readFileSync("api/[...path].ts", "utf8")).toMatch(/router: appRouter/);
   });
 
